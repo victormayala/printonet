@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Palette, Layers, ShoppingCart, Sparkles, ArrowRight } from "lucide-react";
+import { Palette, Layers, ShoppingCart, ArrowRight } from "lucide-react";
+import logo from "@/assets/customizer-studio-logo.png";
 
 const features = [
   {
