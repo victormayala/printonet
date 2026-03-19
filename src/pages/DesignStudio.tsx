@@ -11,8 +11,52 @@ import {
   Sparkles, ArrowLeft, Type, Square, CircleIcon, TriangleIcon,
   Upload, Undo2, Redo2, Trash2, Eye, EyeOff, Lock, Unlock,
   ChevronUp, ChevronDown, Layers as LayersIcon, Palette, Save,
-  ShoppingCart, ImageIcon,
+  ShoppingCart, ImageIcon, Sticker,
+  Heart, Star, Flame, Zap, Music, Sun, Moon, Cloud,
+  Coffee, Camera, Anchor, Award, Bell, Bookmark, Crown,
+  Diamond, Flag, Gift, Globe, Key, Leaf, Mountain,
+  Rocket, Shield, Smile, Snowflake, Target, Umbrella, Wifi,
 } from "lucide-react";
+import ReactDOMServer from "react-dom/server";
+import React from "react";
+
+const CLIPART_CATEGORIES = {
+  "Popular": [
+    { name: "Heart", icon: Heart },
+    { name: "Star", icon: Star },
+    { name: "Smile", icon: Smile },
+    { name: "Crown", icon: Crown },
+    { name: "Diamond", icon: Diamond },
+    { name: "Flame", icon: Flame },
+    { name: "Zap", icon: Zap },
+    { name: "Rocket", icon: Rocket },
+  ],
+  "Nature": [
+    { name: "Sun", icon: Sun },
+    { name: "Moon", icon: Moon },
+    { name: "Cloud", icon: Cloud },
+    { name: "Leaf", icon: Leaf },
+    { name: "Mountain", icon: Mountain },
+    { name: "Snowflake", icon: Snowflake },
+    { name: "Umbrella", icon: Umbrella },
+  ],
+  "Objects": [
+    { name: "Coffee", icon: Coffee },
+    { name: "Camera", icon: Camera },
+    { name: "Anchor", icon: Anchor },
+    { name: "Award", icon: Award },
+    { name: "Bell", icon: Bell },
+    { name: "Bookmark", icon: Bookmark },
+    { name: "Flag", icon: Flag },
+    { name: "Gift", icon: Gift },
+    { name: "Globe", icon: Globe },
+    { name: "Key", icon: Key },
+    { name: "Shield", icon: Shield },
+    { name: "Target", icon: Target },
+    { name: "Music", icon: Music },
+    { name: "Wifi", icon: Wifi },
+  ],
+};
 
 type ViewSide = "front" | "back" | "side1" | "side2";
 
@@ -62,7 +106,7 @@ export default function DesignStudio() {
   const [fillColor, setFillColor] = useState("#7c3aed");
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
-
+  const [clipartCategory, setClipartCategory] = useState<string>("Popular");
   // Load inventory product
   useEffect(() => {
     if (!isInventoryProduct || !productId) return;
@@ -370,10 +414,35 @@ export default function DesignStudio() {
     );
   }
 
+
+  function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const svgString = ReactDOMServer.renderToStaticMarkup(
+      React.createElement(clipartItem.icon, { size: 120, color: fillColor, strokeWidth: 1.5 })
+    );
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const imgEl = new Image();
+    imgEl.onload = () => {
+      const img = new FabricImage(imgEl, {
+        left: 150, top: 200,
+        scaleX: 1, scaleY: 1,
+      });
+      (img as any).customName = `Clipart: ${clipartItem.name}`;
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      saveState();
+      URL.revokeObjectURL(url);
+    };
+    imgEl.src = url;
+  }
+
   const tools = [
     { id: "select", icon: ImageIcon, label: "Select" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
+    { id: "clipart", icon: Sticker, label: "Clipart" },
     { id: "upload", icon: Upload, label: "Upload" },
   ];
 
@@ -543,6 +612,42 @@ export default function DesignStudio() {
                 <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
                 <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
               </div>
+            )}
+
+            {activeTool === "clipart" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Color</label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                    <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+                  </div>
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  {Object.keys(CLIPART_CATEGORIES).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setClipartCategory(cat)}
+                      className={`px-2.5 py-1 text-xs rounded-full transition-colors ${clipartCategory === cat ? "bg-primary text-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {CLIPART_CATEGORIES[clipartCategory as keyof typeof CLIPART_CATEGORIES]?.map((item) => (
+                    <button
+                      key={item.name}
+                      onClick={() => addClipart(item)}
+                      className="flex flex-col items-center gap-1 p-2 rounded-lg border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors"
+                      title={item.name}
+                    >
+                      <item.icon className="h-6 w-6" style={{ color: fillColor }} />
+                      <span className="text-[9px] text-muted-foreground truncate w-full text-center">{item.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
