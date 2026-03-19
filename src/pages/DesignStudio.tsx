@@ -16,6 +16,18 @@ import {
   Coffee, Camera, Anchor, Award, Bell, Bookmark, Crown,
   Diamond, Flag, Gift, Globe, Key, Leaf, Mountain,
   Rocket, Shield, Smile, Snowflake, Target, Umbrella, Wifi,
+  Hexagon, Pentagon, Minus, ArrowRight, RectangleHorizontal,
+  Cat, Dog, Fish, Bird, Bug, Flower2, TreePine, Waves,
+  Bike, Car, Plane, Train, Ship,
+  Gamepad2, Trophy, Dumbbell, Timer, Headphones,
+  Pizza, Apple, IceCreamCone, Cake, Wine,
+  Laptop, Smartphone, Monitor, Printer, Watch,
+  Paintbrush, Pen, Scissors, Ruler, Eraser,
+  Home, Building2, Church, Landmark, Store,
+  Baby, Users, UserCircle, GraduationCap, Briefcase,
+  ThumbsUp, ThumbsDown, PartyPopper, Laugh, Angry,
+  Lightbulb, Atom, Microscope, Telescope, Dna,
+  Swords, Bomb, Skull, Ghost, Wand2,
 } from "lucide-react";
 import ReactDOMServer from "react-dom/server";
 import React from "react";
