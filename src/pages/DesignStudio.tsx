@@ -147,51 +147,16 @@ export default function DesignStudio() {
     };
   }, []);
 
-  // Set product image as canvas background
+  // Keep the Fabric canvas transparent for inventory products so the product mockup
+  // can render reliably as a layer behind it.
   useEffect(() => {
     if (!canvasReady || !fabricRef.current) return;
     const canvas = fabricRef.current;
+    const hasInventoryBackground = Boolean(getCurrentImageUrl());
 
-    // For inventory products, get image URL from the loaded product
-    let url: string | null = null;
-    if (invProduct) {
-      const map: Record<ViewSide, string | null> = {
-        front: invProduct.image_front,
-        back: invProduct.image_back,
-        side1: invProduct.image_side1,
-        side2: invProduct.image_side2,
-      };
-      url = map[activeView] || null;
-    }
-
-    if (url) {
-      const imgEl = new Image();
-      imgEl.crossOrigin = "anonymous";
-      imgEl.onload = () => {
-        if (!fabricRef.current) return;
-        const scaleX = fabricRef.current.width! / imgEl.width;
-        const scaleY = fabricRef.current.height! / imgEl.height;
-        const scale = Math.max(scaleX, scaleY);
-        const bgImg = new FabricImage(imgEl, {
-          originX: "center",
-          originY: "center",
-          left: fabricRef.current.width! / 2,
-          top: fabricRef.current.height! / 2,
-          scaleX: scale,
-          scaleY: scale,
-        });
-        fabricRef.current.backgroundImage = bgImg;
-        fabricRef.current.renderAll();
-      };
-      imgEl.onerror = () => {
-        console.error("Failed to load product image:", url);
-      };
-      imgEl.src = url;
-    } else {
-      canvas.backgroundImage = undefined;
-      canvas.backgroundColor = selectedVariant?.hex || "#ffffff";
-      canvas.renderAll();
-    }
+    canvas.backgroundImage = undefined;
+    canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+    canvas.renderAll();
   }, [activeView, invProduct, selectedVariant, canvasReady]);
 
   function handleSelection(e: any) {
@@ -568,10 +533,20 @@ export default function DesignStudio() {
         {/* Canvas Area */}
         <div className="flex-1 flex items-center justify-center bg-editor-bg overflow-auto p-8">
           <div className="relative">
-            <div
-              className="rounded-lg shadow-2xl overflow-hidden border border-sidebar-border"
-            >
-              <canvas ref={canvasRef} />
+            <div className="relative h-[700px] w-[600px] rounded-lg border border-sidebar-border shadow-2xl overflow-hidden bg-background">
+              {bgImageUrl ? (
+                <img
+                  src={bgImageUrl}
+                  alt={`${productName} ${VIEW_LABELS[activeView]} view`}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  draggable={false}
+                />
+              ) : productIcon ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10rem]">
+                  {productIcon}
+                </div>
+              ) : null}
+              <canvas ref={canvasRef} className="absolute inset-0 z-10" />
             </div>
             <div className="mt-3 text-center text-xs text-muted-foreground">
               {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
