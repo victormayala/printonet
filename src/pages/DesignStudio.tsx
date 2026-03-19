@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, FabricImage } from "fabric";
+import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage } from "fabric";
 import { getProductById, type Product, type ProductVariant } from "@/data/products";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,23 @@ import {
   Coffee, Camera, Anchor, Award, Bell, Bookmark, Crown,
   Diamond, Flag, Gift, Globe, Key, Leaf, Mountain,
   Rocket, Shield, Smile, Snowflake, Target, Umbrella, Wifi,
+  Hexagon, Pentagon, Minus, ArrowRight, RectangleHorizontal,
+  Cat, Dog, Fish, Bird, Bug, Flower2, TreePine, Waves,
+  Bike, Car, Plane, Train, Ship,
+  Gamepad2, Trophy, Dumbbell, Timer, Headphones,
+  Pizza, Apple, IceCreamCone, Cake, Wine,
+  Laptop, Smartphone, Monitor, Printer, Watch,
+  Paintbrush, Pen, Scissors, Ruler, Eraser,
+  Home, Building2, Church, Landmark, Store,
+  Baby, Users, UserCircle, GraduationCap, Briefcase,
+  ThumbsUp, ThumbsDown, PartyPopper, Laugh, Angry,
+  Lightbulb, Atom, Microscope, Telescope, Dna,
+  Swords, Bomb, Skull, Ghost, Wand2,
 } from "lucide-react";
 import ReactDOMServer from "react-dom/server";
 import React from "react";
 
-const CLIPART_CATEGORIES = {
+const CLIPART_CATEGORIES: Record<string, { name: string; icon: React.ComponentType<any> }[]> = {
   "Popular": [
     { name: "Heart", icon: Heart },
     { name: "Star", icon: Star },
@@ -30,6 +42,17 @@ const CLIPART_CATEGORIES = {
     { name: "Flame", icon: Flame },
     { name: "Zap", icon: Zap },
     { name: "Rocket", icon: Rocket },
+    { name: "Thumbs Up", icon: ThumbsUp },
+    { name: "Party", icon: PartyPopper },
+    { name: "Lightbulb", icon: Lightbulb },
+    { name: "Trophy", icon: Trophy },
+  ],
+  "Animals": [
+    { name: "Cat", icon: Cat },
+    { name: "Dog", icon: Dog },
+    { name: "Fish", icon: Fish },
+    { name: "Bird", icon: Bird },
+    { name: "Bug", icon: Bug },
   ],
   "Nature": [
     { name: "Sun", icon: Sun },
@@ -39,22 +62,92 @@ const CLIPART_CATEGORIES = {
     { name: "Mountain", icon: Mountain },
     { name: "Snowflake", icon: Snowflake },
     { name: "Umbrella", icon: Umbrella },
+    { name: "Flower", icon: Flower2 },
+    { name: "Tree", icon: TreePine },
+    { name: "Waves", icon: Waves },
+  ],
+  "Food": [
+    { name: "Pizza", icon: Pizza },
+    { name: "Apple", icon: Apple },
+    { name: "Ice Cream", icon: IceCreamCone },
+    { name: "Cake", icon: Cake },
+    { name: "Wine", icon: Wine },
+    { name: "Coffee", icon: Coffee },
+  ],
+  "Travel": [
+    { name: "Bike", icon: Bike },
+    { name: "Car", icon: Car },
+    { name: "Plane", icon: Plane },
+    { name: "Train", icon: Train },
+    { name: "Ship", icon: Ship },
+    { name: "Globe", icon: Globe },
+    { name: "Anchor", icon: Anchor },
+  ],
+  "Tech": [
+    { name: "Laptop", icon: Laptop },
+    { name: "Phone", icon: Smartphone },
+    { name: "Monitor", icon: Monitor },
+    { name: "Watch", icon: Watch },
+    { name: "Headphones", icon: Headphones },
+    { name: "Gamepad", icon: Gamepad2 },
+    { name: "Camera", icon: Camera },
+  ],
+  "Sports": [
+    { name: "Trophy", icon: Trophy },
+    { name: "Dumbbell", icon: Dumbbell },
+    { name: "Timer", icon: Timer },
+    { name: "Target", icon: Target },
+    { name: "Shield", icon: Shield },
+  ],
+  "Tools": [
+    { name: "Paintbrush", icon: Paintbrush },
+    { name: "Pen", icon: Pen },
+    { name: "Scissors", icon: Scissors },
+    { name: "Ruler", icon: Ruler },
+    { name: "Eraser", icon: Eraser },
+    { name: "Wand", icon: Wand2 },
+  ],
+  "People": [
+    { name: "Baby", icon: Baby },
+    { name: "Users", icon: Users },
+    { name: "Person", icon: UserCircle },
+    { name: "Graduate", icon: GraduationCap },
+    { name: "Business", icon: Briefcase },
+  ],
+  "Buildings": [
+    { name: "Home", icon: Home },
+    { name: "Building", icon: Building2 },
+    { name: "Church", icon: Church },
+    { name: "Landmark", icon: Landmark },
+    { name: "Store", icon: Store },
+  ],
+  "Emojis": [
+    { name: "Smile", icon: Smile },
+    { name: "Laugh", icon: Laugh },
+    { name: "Angry", icon: Angry },
+    { name: "Thumbs Up", icon: ThumbsUp },
+    { name: "Thumbs Down", icon: ThumbsDown },
+    { name: "Ghost", icon: Ghost },
+    { name: "Skull", icon: Skull },
+  ],
+  "Science": [
+    { name: "Atom", icon: Atom },
+    { name: "Microscope", icon: Microscope },
+    { name: "Telescope", icon: Telescope },
+    { name: "DNA", icon: Dna },
+    { name: "Lightbulb", icon: Lightbulb },
   ],
   "Objects": [
-    { name: "Coffee", icon: Coffee },
-    { name: "Camera", icon: Camera },
-    { name: "Anchor", icon: Anchor },
     { name: "Award", icon: Award },
     { name: "Bell", icon: Bell },
     { name: "Bookmark", icon: Bookmark },
     { name: "Flag", icon: Flag },
     { name: "Gift", icon: Gift },
-    { name: "Globe", icon: Globe },
     { name: "Key", icon: Key },
-    { name: "Shield", icon: Shield },
-    { name: "Target", icon: Target },
     { name: "Music", icon: Music },
     { name: "Wifi", icon: Wifi },
+    { name: "Bomb", icon: Bomb },
+    { name: "Swords", icon: Swords },
   ],
 };
 
@@ -401,14 +494,74 @@ export default function DesignStudio() {
         obj = new Rect({ ...commonProps, width: 120, height: 100, rx: 8, ry: 8 });
         (obj as any).customName = "Rectangle";
         break;
+      case "roundedRect":
+        obj = new Rect({ ...commonProps, width: 120, height: 80, rx: 24, ry: 24 });
+        (obj as any).customName = "Rounded Rect";
+        break;
       case "circle":
         obj = new Circle({ ...commonProps, radius: 60 });
         (obj as any).customName = "Circle";
+        break;
+      case "ellipse":
+        obj = new Ellipse({ ...commonProps, rx: 80, ry: 50 });
+        (obj as any).customName = "Ellipse";
         break;
       case "triangle":
         obj = new Triangle({ ...commonProps, width: 120, height: 100 });
         (obj as any).customName = "Triangle";
         break;
+      case "pentagon": {
+        const pts = Array.from({ length: 5 }, (_, i) => {
+          const a = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+          return { x: 60 + 60 * Math.cos(a), y: 60 + 60 * Math.sin(a) };
+        });
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Pentagon";
+        break;
+      }
+      case "hexagon": {
+        const pts = Array.from({ length: 6 }, (_, i) => {
+          const a = (Math.PI * 2 * i) / 6 - Math.PI / 6;
+          return { x: 60 + 60 * Math.cos(a), y: 60 + 60 * Math.sin(a) };
+        });
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Hexagon";
+        break;
+      }
+      case "star": {
+        const pts: { x: number; y: number }[] = [];
+        for (let i = 0; i < 10; i++) {
+          const a = (Math.PI * 2 * i) / 10 - Math.PI / 2;
+          const r = i % 2 === 0 ? 60 : 28;
+          pts.push({ x: 60 + r * Math.cos(a), y: 60 + r * Math.sin(a) });
+        }
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Star";
+        break;
+      }
+      case "arrow": {
+        const pts = [
+          { x: 0, y: 30 }, { x: 80, y: 30 }, { x: 80, y: 10 },
+          { x: 120, y: 45 }, { x: 80, y: 80 }, { x: 80, y: 60 }, { x: 0, y: 60 },
+        ];
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Arrow";
+        break;
+      }
+      case "line":
+        obj = new FabricLine([0, 0, 150, 0], { ...commonProps, stroke: fillColor, strokeWidth: 4, fill: undefined });
+        (obj as any).customName = "Line";
+        break;
+      case "cross": {
+        const pts = [
+          { x: 30, y: 0 }, { x: 60, y: 0 }, { x: 60, y: 30 }, { x: 90, y: 30 },
+          { x: 90, y: 60 }, { x: 60, y: 60 }, { x: 60, y: 90 }, { x: 30, y: 90 },
+          { x: 30, y: 60 }, { x: 0, y: 60 }, { x: 0, y: 30 }, { x: 30, y: 30 },
+        ];
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Cross";
+        break;
+      }
       default: return;
     }
     canvas.add(obj);
@@ -710,11 +863,35 @@ export default function DesignStudio() {
                   <Button variant="outline" onClick={() => addShape("rect")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
                     <Square className="h-5 w-5" /><span className="text-[10px]">Rectangle</span>
                   </Button>
+                  <Button variant="outline" onClick={() => addShape("roundedRect")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <RectangleHorizontal className="h-5 w-5" /><span className="text-[10px]">Rounded</span>
+                  </Button>
                   <Button variant="outline" onClick={() => addShape("circle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
                     <CircleIcon className="h-5 w-5" /><span className="text-[10px]">Circle</span>
                   </Button>
+                  <Button variant="outline" onClick={() => addShape("ellipse")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <CircleIcon className="h-5 w-5 scale-x-125" /><span className="text-[10px]">Ellipse</span>
+                  </Button>
                   <Button variant="outline" onClick={() => addShape("triangle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
                     <TriangleIcon className="h-5 w-5" /><span className="text-[10px]">Triangle</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("pentagon")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Pentagon className="h-5 w-5" /><span className="text-[10px]">Pentagon</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("hexagon")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Hexagon className="h-5 w-5" /><span className="text-[10px]">Hexagon</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("star")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Star className="h-5 w-5" /><span className="text-[10px]">Star</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("arrow")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <ArrowRight className="h-5 w-5" /><span className="text-[10px]">Arrow</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("line")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Minus className="h-5 w-5" /><span className="text-[10px]">Line</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("cross")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <span className="text-lg font-bold">✚</span><span className="text-[10px]">Cross</span>
                   </Button>
                 </div>
               </>
