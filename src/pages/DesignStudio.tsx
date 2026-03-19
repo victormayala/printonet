@@ -533,10 +533,20 @@ export default function DesignStudio() {
         {/* Canvas Area */}
         <div className="flex-1 flex items-center justify-center bg-editor-bg overflow-auto p-8">
           <div className="relative">
-            <div
-              className="rounded-lg shadow-2xl overflow-hidden border border-sidebar-border"
-            >
-              <canvas ref={canvasRef} />
+            <div className="relative h-[700px] w-[600px] rounded-lg border border-sidebar-border shadow-2xl overflow-hidden bg-background">
+              {bgImageUrl ? (
+                <img
+                  src={bgImageUrl}
+                  alt={`${productName} ${VIEW_LABELS[activeView]} view`}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  draggable={false}
+                />
+              ) : productIcon ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10rem]">
+                  {productIcon}
+                </div>
+              ) : null}
+              <canvas ref={canvasRef} className="absolute inset-0 z-10" />
             </div>
             <div className="mt-3 text-center text-xs text-muted-foreground">
               {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
