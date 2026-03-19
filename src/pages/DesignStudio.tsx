@@ -146,8 +146,8 @@ export default function DesignStudio() {
 
   // Set product image as canvas background
   useEffect(() => {
+    if (!canvasReady || !fabricRef.current) return;
     const canvas = fabricRef.current;
-    if (!canvas) return;
 
     // For inventory products, get image URL from the loaded product
     let url: string | null = null;
@@ -165,7 +165,6 @@ export default function DesignStudio() {
       const imgEl = new Image();
       imgEl.crossOrigin = "anonymous";
       imgEl.onload = () => {
-        // Re-check canvas is still valid
         if (!fabricRef.current) return;
         const scaleX = fabricRef.current.width! / imgEl.width;
         const scaleY = fabricRef.current.height! / imgEl.height;
@@ -190,7 +189,7 @@ export default function DesignStudio() {
       canvas.backgroundColor = selectedVariant?.hex || "#ffffff";
       canvas.renderAll();
     }
-  }, [activeView, invProduct, selectedVariant]);
+  }, [activeView, invProduct, selectedVariant, canvasReady]);
 
   function handleSelection(e: any) {
     const obj = e.selected?.[0];
