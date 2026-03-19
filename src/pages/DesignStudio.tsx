@@ -106,7 +106,7 @@ export default function DesignStudio() {
   const [fillColor, setFillColor] = useState("#7c3aed");
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
-
+  const [clipartCategory, setClipartCategory] = useState<string>("Popular");
   // Load inventory product
   useEffect(() => {
     if (!isInventoryProduct || !productId) return;
