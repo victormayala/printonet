@@ -58,6 +58,83 @@ const CLIPART_CATEGORIES = {
   ],
 };
 
+interface TextTemplateLine {
+  text: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight?: string;
+  fontStyle?: string;
+  textTransform?: string;
+  letterSpacing?: string;
+}
+
+interface TextTemplate {
+  name: string;
+  lines: TextTemplateLine[];
+}
+
+const TEXT_TEMPLATES: TextTemplate[] = [
+  {
+    name: "Bold Statement",
+    lines: [
+      { text: "MAKE IT", fontFamily: "Arial Black, sans-serif", fontSize: 48, fontWeight: "900", textTransform: "uppercase", letterSpacing: "2px" },
+      { text: "HAPPEN", fontFamily: "Arial Black, sans-serif", fontSize: 64, fontWeight: "900", textTransform: "uppercase", letterSpacing: "4px" },
+    ],
+  },
+  {
+    name: "Vintage Label",
+    lines: [
+      { text: "— ESTABLISHED —", fontFamily: "Georgia, serif", fontSize: 18, letterSpacing: "4px", textTransform: "uppercase" },
+      { text: "Premium Quality", fontFamily: "Georgia, serif", fontSize: 42, fontStyle: "italic" },
+      { text: "SINCE 2024", fontFamily: "Georgia, serif", fontSize: 20, letterSpacing: "6px", textTransform: "uppercase" },
+    ],
+  },
+  {
+    name: "Modern Minimal",
+    lines: [
+      { text: "less is", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 28, fontWeight: "300" },
+      { text: "more.", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 52, fontWeight: "700" },
+    ],
+  },
+  {
+    name: "Street Style",
+    lines: [
+      { text: "NO LIMITS", fontFamily: "Impact, sans-serif", fontSize: 56, textTransform: "uppercase", letterSpacing: "3px" },
+      { text: "BREAK THE RULES", fontFamily: "Impact, sans-serif", fontSize: 24, textTransform: "uppercase", letterSpacing: "8px" },
+    ],
+  },
+  {
+    name: "Elegant Script",
+    lines: [
+      { text: "forever", fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", letterSpacing: "6px", textTransform: "lowercase" },
+      { text: "Grateful", fontFamily: "Georgia, serif", fontSize: 52, fontStyle: "italic" },
+    ],
+  },
+  {
+    name: "Retro Badge",
+    lines: [
+      { text: "★ ORIGINAL ★", fontFamily: "Courier New, monospace", fontSize: 18, textTransform: "uppercase", letterSpacing: "3px" },
+      { text: "AUTHENTIC", fontFamily: "Courier New, monospace", fontSize: 44, fontWeight: "700", textTransform: "uppercase" },
+      { text: "GOODS & SUPPLY CO.", fontFamily: "Courier New, monospace", fontSize: 16, letterSpacing: "4px", textTransform: "uppercase" },
+    ],
+  },
+  {
+    name: "Motivational",
+    lines: [
+      { text: "STAY", fontFamily: "Arial, sans-serif", fontSize: 32, fontWeight: "300", letterSpacing: "10px", textTransform: "uppercase" },
+      { text: "HUNGRY", fontFamily: "Arial Black, sans-serif", fontSize: 58, fontWeight: "900", textTransform: "uppercase" },
+      { text: "stay foolish", fontFamily: "Georgia, serif", fontSize: 22, fontStyle: "italic" },
+    ],
+  },
+  {
+    name: "Clean & Simple",
+    lines: [
+      { text: "good vibes", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 36, fontWeight: "300" },
+      { text: "ONLY", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 48, fontWeight: "800", letterSpacing: "8px", textTransform: "uppercase" },
+    ],
+  },
+];
+
 type ViewSide = "front" | "back" | "side1" | "side2";
 
 interface InventoryProduct {
