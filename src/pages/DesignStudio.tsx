@@ -863,11 +863,35 @@ export default function DesignStudio() {
                   <Button variant="outline" onClick={() => addShape("rect")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
                     <Square className="h-5 w-5" /><span className="text-[10px]">Rectangle</span>
                   </Button>
+                  <Button variant="outline" onClick={() => addShape("roundedRect")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <RectangleHorizontal className="h-5 w-5" /><span className="text-[10px]">Rounded</span>
+                  </Button>
                   <Button variant="outline" onClick={() => addShape("circle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
                     <CircleIcon className="h-5 w-5" /><span className="text-[10px]">Circle</span>
                   </Button>
+                  <Button variant="outline" onClick={() => addShape("ellipse")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <CircleIcon className="h-5 w-5 scale-x-125" /><span className="text-[10px]">Ellipse</span>
+                  </Button>
                   <Button variant="outline" onClick={() => addShape("triangle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
                     <TriangleIcon className="h-5 w-5" /><span className="text-[10px]">Triangle</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("pentagon")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Pentagon className="h-5 w-5" /><span className="text-[10px]">Pentagon</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("hexagon")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Hexagon className="h-5 w-5" /><span className="text-[10px]">Hexagon</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("star")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Star className="h-5 w-5" /><span className="text-[10px]">Star</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("arrow")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <ArrowRight className="h-5 w-5" /><span className="text-[10px]">Arrow</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("line")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <Minus className="h-5 w-5" /><span className="text-[10px]">Line</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => addShape("cross")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
+                    <span className="text-lg font-bold">✚</span><span className="text-[10px]">Cross</span>
                   </Button>
                 </div>
               </>
