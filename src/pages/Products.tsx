@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { products, categories } from "@/data/products";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight, Package, ImageIcon } from "lucide-react";
+import { ArrowRight, Package, ImageIcon } from "lucide-react";
+import logo from "@/assets/customizer-studio-logo.png";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
