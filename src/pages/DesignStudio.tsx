@@ -145,24 +145,41 @@ export default function DesignStudio() {
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const url = getCurrentImageUrl();
+
+    // For inventory products, get image URL from the loaded product
+    let url: string | null = null;
+    if (invProduct) {
+      const map: Record<ViewSide, string | null> = {
+        front: invProduct.image_front,
+        back: invProduct.image_back,
+        side1: invProduct.image_side1,
+        side2: invProduct.image_side2,
+      };
+      url = map[activeView] || null;
+    }
+
     if (url) {
       const imgEl = new Image();
       imgEl.crossOrigin = "anonymous";
       imgEl.onload = () => {
-        const scaleX = canvas.width! / imgEl.width;
-        const scaleY = canvas.height! / imgEl.height;
+        // Re-check canvas is still valid
+        if (!fabricRef.current) return;
+        const scaleX = fabricRef.current.width! / imgEl.width;
+        const scaleY = fabricRef.current.height! / imgEl.height;
         const scale = Math.max(scaleX, scaleY);
         const bgImg = new FabricImage(imgEl, {
           originX: "center",
           originY: "center",
-          left: canvas.width! / 2,
-          top: canvas.height! / 2,
+          left: fabricRef.current.width! / 2,
+          top: fabricRef.current.height! / 2,
           scaleX: scale,
           scaleY: scale,
         });
-        canvas.backgroundImage = bgImg;
-        canvas.renderAll();
+        fabricRef.current.backgroundImage = bgImg;
+        fabricRef.current.renderAll();
+      };
+      imgEl.onerror = () => {
+        console.error("Failed to load product image:", url);
       };
       imgEl.src = url;
     } else {
