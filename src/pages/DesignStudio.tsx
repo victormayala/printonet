@@ -414,7 +414,6 @@ export default function DesignStudio() {
     );
   }
 
-  const [clipartCategory, setClipartCategory] = useState<string>("Popular");
 
   function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
     const canvas = fabricRef.current;
