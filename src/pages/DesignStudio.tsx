@@ -110,12 +110,15 @@ export default function DesignStudio() {
   }
 
   // Initialize canvas
+  const canvasInitialized = useRef(false);
+
   useEffect(() => {
-    if (!canvasRef.current || fabricRef.current) return;
+    if (!canvasRef.current || canvasInitialized.current) return;
+    canvasInitialized.current = true;
 
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: 500,
-      height: 600,
+      width: 600,
+      height: 700,
       backgroundColor: "#ffffff",
       selection: true,
     });
@@ -134,8 +137,40 @@ export default function DesignStudio() {
     return () => {
       canvas.dispose();
       fabricRef.current = null;
+      canvasInitialized.current = false;
     };
   }, []);
+
+  // Set product image as canvas background
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const url = getCurrentImageUrl();
+    if (url) {
+      const imgEl = new Image();
+      imgEl.crossOrigin = "anonymous";
+      imgEl.onload = () => {
+        const scaleX = canvas.width! / imgEl.width;
+        const scaleY = canvas.height! / imgEl.height;
+        const scale = Math.max(scaleX, scaleY);
+        const bgImg = new FabricImage(imgEl, {
+          originX: "center",
+          originY: "center",
+          left: canvas.width! / 2,
+          top: canvas.height! / 2,
+          scaleX: scale,
+          scaleY: scale,
+        });
+        canvas.backgroundImage = bgImg;
+        canvas.renderAll();
+      };
+      imgEl.src = url;
+    } else {
+      canvas.backgroundImage = undefined;
+      canvas.backgroundColor = selectedVariant?.hex || "#ffffff";
+      canvas.renderAll();
+    }
+  }, [activeView, invProduct, selectedVariant]);
 
   function handleSelection(e: any) {
     const obj = e.selected?.[0];
