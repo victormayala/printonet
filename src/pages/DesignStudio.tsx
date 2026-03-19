@@ -363,6 +363,34 @@ export default function DesignStudio() {
     saveState();
   }
 
+  function addTextTemplate(template: TextTemplate) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    let yOffset = 200;
+    template.lines.forEach((line) => {
+      const text = new FabricText(line.text, {
+        left: 100,
+        top: yOffset,
+        fontSize: line.fontSize,
+        fill: fillColor,
+        fontFamily: line.fontFamily,
+        fontWeight: (line.fontWeight || "normal") as any,
+        fontStyle: (line.fontStyle || "normal") as any,
+        charSpacing: line.letterSpacing ? parseInt(line.letterSpacing) * 10 : 0,
+      });
+      if (line.textTransform === "uppercase") {
+        text.set("text", line.text.toUpperCase());
+      } else if (line.textTransform === "lowercase") {
+        text.set("text", line.text.toLowerCase());
+      }
+      (text as any).customName = `Text: "${line.text.slice(0, 12)}"`;
+      canvas.add(text);
+      yOffset += line.fontSize + 8;
+    });
+    canvas.renderAll();
+    saveState();
+  }
+
   function addShape(shape: string) {
     const canvas = fabricRef.current;
     if (!canvas) return;
