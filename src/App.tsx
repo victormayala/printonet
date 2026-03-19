@@ -8,6 +8,12 @@ import Products from "./pages/Products";
 import DesignStudio from "./pages/DesignStudio";
 import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
+import { useParams } from "react-router-dom";
+
+function DesignStudioWrapper() {
+  const { productId } = useParams();
+  return <DesignStudio key={productId} />;
+}
 
 const queryClient = new QueryClient();
 
