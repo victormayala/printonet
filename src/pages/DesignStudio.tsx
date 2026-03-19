@@ -11,8 +11,52 @@ import {
   Sparkles, ArrowLeft, Type, Square, CircleIcon, TriangleIcon,
   Upload, Undo2, Redo2, Trash2, Eye, EyeOff, Lock, Unlock,
   ChevronUp, ChevronDown, Layers as LayersIcon, Palette, Save,
-  ShoppingCart, ImageIcon,
+  ShoppingCart, ImageIcon, Sticker,
+  Heart, Star, Flame, Zap, Music, Sun, Moon, Cloud,
+  Coffee, Camera, Anchor, Award, Bell, Bookmark, Crown,
+  Diamond, Flag, Gift, Globe, Key, Leaf, Mountain,
+  Rocket, Shield, Smile, Snowflake, Target, Umbrella, Wifi,
 } from "lucide-react";
+import ReactDOMServer from "react-dom/server";
+import React from "react";
+
+const CLIPART_CATEGORIES = {
+  "Popular": [
+    { name: "Heart", icon: Heart },
+    { name: "Star", icon: Star },
+    { name: "Smile", icon: Smile },
+    { name: "Crown", icon: Crown },
+    { name: "Diamond", icon: Diamond },
+    { name: "Flame", icon: Flame },
+    { name: "Zap", icon: Zap },
+    { name: "Rocket", icon: Rocket },
+  ],
+  "Nature": [
+    { name: "Sun", icon: Sun },
+    { name: "Moon", icon: Moon },
+    { name: "Cloud", icon: Cloud },
+    { name: "Leaf", icon: Leaf },
+    { name: "Mountain", icon: Mountain },
+    { name: "Snowflake", icon: Snowflake },
+    { name: "Umbrella", icon: Umbrella },
+  ],
+  "Objects": [
+    { name: "Coffee", icon: Coffee },
+    { name: "Camera", icon: Camera },
+    { name: "Anchor", icon: Anchor },
+    { name: "Award", icon: Award },
+    { name: "Bell", icon: Bell },
+    { name: "Bookmark", icon: Bookmark },
+    { name: "Flag", icon: Flag },
+    { name: "Gift", icon: Gift },
+    { name: "Globe", icon: Globe },
+    { name: "Key", icon: Key },
+    { name: "Shield", icon: Shield },
+    { name: "Target", icon: Target },
+    { name: "Music", icon: Music },
+    { name: "Wifi", icon: Wifi },
+  ],
+};
 
 type ViewSide = "front" | "back" | "side1" | "side2";
 
