@@ -46,6 +46,7 @@ export default function DesignStudio() {
   const [loading, setLoading] = useState(isInventoryProduct);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,21 +110,24 @@ export default function DesignStudio() {
     return map[activeView] || null;
   }
 
-  // Initialize canvas
+  // Initialize canvas with responsive sizing
   const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !containerRef.current) return;
 
-    // Clean up any existing canvas first
     if (fabricRef.current) {
       fabricRef.current.dispose();
       fabricRef.current = null;
     }
 
+    const container = containerRef.current;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: 600,
-      height: 700,
+      width: w,
+      height: h,
       backgroundColor: "#ffffff",
       selection: true,
     });
@@ -140,7 +144,20 @@ export default function DesignStudio() {
     saveState();
     setCanvasReady(true);
 
+    // Resize observer to keep canvas responsive
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0 && fabricRef.current) {
+          fabricRef.current.setDimensions({ width, height });
+          fabricRef.current.renderAll();
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       canvas.dispose();
       fabricRef.current = null;
       setCanvasReady(false);
@@ -531,26 +548,24 @@ export default function DesignStudio() {
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 flex items-center justify-center bg-editor-bg overflow-auto p-8">
-          <div className="relative">
-            <div className="relative h-[700px] w-[600px] rounded-lg border border-sidebar-border shadow-2xl overflow-hidden bg-background">
-              {bgImageUrl ? (
-                <img
-                  src={bgImageUrl}
-                  alt={`${productName} ${VIEW_LABELS[activeView]} view`}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  draggable={false}
-                />
-              ) : productIcon ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10rem]">
-                  {productIcon}
-                </div>
-              ) : null}
-              <canvas ref={canvasRef} className="absolute inset-0 z-10" />
-            </div>
-            <div className="mt-3 text-center text-xs text-muted-foreground">
-              {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
-            </div>
+        <div className="flex-1 flex flex-col bg-editor-bg overflow-hidden p-4">
+          <div ref={containerRef} className="relative flex-1 rounded-lg border border-sidebar-border shadow-2xl overflow-hidden bg-background">
+            {bgImageUrl ? (
+              <img
+                src={bgImageUrl}
+                alt={`${productName} ${VIEW_LABELS[activeView]} view`}
+                className="absolute inset-0 h-full w-full object-contain"
+                draggable={false}
+              />
+            ) : productIcon ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10rem]">
+                {productIcon}
+              </div>
+            ) : null}
+            <canvas ref={canvasRef} className="absolute inset-0 z-10" />
+          </div>
+          <div className="mt-2 text-center text-xs text-muted-foreground">
+            {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
           </div>
         </div>
 
