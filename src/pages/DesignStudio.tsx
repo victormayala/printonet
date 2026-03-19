@@ -110,12 +110,16 @@ export default function DesignStudio() {
   }
 
   // Initialize canvas
-  const canvasInitialized = useRef(false);
   const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current || canvasInitialized.current) return;
-    canvasInitialized.current = true;
+    if (!canvasRef.current) return;
+
+    // Clean up any existing canvas first
+    if (fabricRef.current) {
+      fabricRef.current.dispose();
+      fabricRef.current = null;
+    }
 
     const canvas = new FabricCanvas(canvasRef.current, {
       width: 600,
@@ -139,7 +143,6 @@ export default function DesignStudio() {
     return () => {
       canvas.dispose();
       fabricRef.current = null;
-      canvasInitialized.current = false;
       setCanvasReady(false);
     };
   }, []);
