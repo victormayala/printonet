@@ -1,22 +1,49 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, FabricImage } from "fabric";
 import { getProductById, type Product, type ProductVariant } from "@/data/products";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import {
-  Sparkles, ArrowLeft, Type, Square, CircleIcon, TriangleIcon, Star,
+  Sparkles, ArrowLeft, Type, Square, CircleIcon, TriangleIcon,
   Upload, Undo2, Redo2, Trash2, Eye, EyeOff, Lock, Unlock,
   ChevronUp, ChevronDown, Layers as LayersIcon, Palette, Save,
   ShoppingCart, ImageIcon,
 } from "lucide-react";
 
+type ViewSide = "front" | "back" | "side1" | "side2";
+
+interface InventoryProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  base_price: number;
+  image_front: string | null;
+  image_back: string | null;
+  image_side1: string | null;
+  image_side2: string | null;
+}
+
+const VIEW_LABELS: Record<ViewSide, string> = {
+  front: "Front",
+  back: "Back",
+  side1: "Side 1",
+  side2: "Side 2",
+};
+
 export default function DesignStudio() {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
-  const product = getProductById(productId || "");
+
+  const isInventoryProduct = productId?.startsWith("inv-");
+  const staticProduct = !isInventoryProduct ? getProductById(productId || "") : null;
+
+  const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
+  const [loading, setLoading] = useState(isInventoryProduct);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
@@ -24,7 +51,8 @@ export default function DesignStudio() {
 
   const [activeTool, setActiveTool] = useState<string>("select");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
-  const [activeView, setActiveView] = useState<"front" | "back">("front");
+  const [activeView, setActiveView] = useState<ViewSide>("front");
+  const [availableViews, setAvailableViews] = useState<ViewSide[]>(["front"]);
   const [layers, setLayers] = useState<any[]>([]);
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const [objectProps, setObjectProps] = useState({ opacity: 100, fill: "#000000" });
@@ -34,10 +62,52 @@ export default function DesignStudio() {
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
 
+  // Load inventory product
   useEffect(() => {
-    if (!product) return;
-    setSelectedVariant(product.variants[0]);
-  }, [product]);
+    if (!isInventoryProduct || !productId) return;
+    const dbId = productId.replace("inv-", "");
+    supabase
+      .from("inventory_products")
+      .select("*")
+      .eq("id", dbId)
+      .single()
+      .then(({ data, error }) => {
+        if (data) {
+          setInvProduct(data as InventoryProduct);
+          const views: ViewSide[] = [];
+          if (data.image_front) views.push("front");
+          if (data.image_back) views.push("back");
+          if (data.image_side1) views.push("side1");
+          if (data.image_side2) views.push("side2");
+          if (views.length === 0) views.push("front");
+          setAvailableViews(views);
+          setActiveView(views[0]);
+        }
+        setLoading(false);
+      });
+  }, [productId, isInventoryProduct]);
+
+  // Set up static product
+  useEffect(() => {
+    if (staticProduct) {
+      setSelectedVariant(staticProduct.variants[0]);
+      const views: ViewSide[] = ["front"];
+      if (staticProduct.hasFrontBack) views.push("back");
+      setAvailableViews(views);
+    }
+  }, [staticProduct]);
+
+  // Get current background image URL
+  function getCurrentImageUrl(): string | null {
+    if (!invProduct) return null;
+    const map: Record<ViewSide, string | null> = {
+      front: invProduct.image_front,
+      back: invProduct.image_back,
+      side1: invProduct.image_side1,
+      side2: invProduct.image_side2,
+    };
+    return map[activeView] || null;
+  }
 
   // Initialize canvas
   useEffect(() => {
@@ -54,19 +124,10 @@ export default function DesignStudio() {
 
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
-    canvas.on("selection:cleared", () => {
-      setSelectedObject(null);
-    });
-    canvas.on("object:modified", () => {
-      saveState();
-      updateLayers();
-    });
-    canvas.on("object:added", () => {
-      updateLayers();
-    });
-    canvas.on("object:removed", () => {
-      updateLayers();
-    });
+    canvas.on("selection:cleared", () => setSelectedObject(null));
+    canvas.on("object:modified", () => { saveState(); updateLayers(); });
+    canvas.on("object:added", () => updateLayers());
+    canvas.on("object:removed", () => updateLayers());
 
     saveState();
 
@@ -117,10 +178,7 @@ export default function DesignStudio() {
     setRedoStack((prev) => [...prev, current]);
     const prev = newUndo[newUndo.length - 1];
     setUndoStack(newUndo);
-    canvas.loadFromJSON(prev).then(() => {
-      canvas.renderAll();
-      updateLayers();
-    });
+    canvas.loadFromJSON(prev).then(() => { canvas.renderAll(); updateLayers(); });
   }
 
   function redo() {
@@ -130,21 +188,14 @@ export default function DesignStudio() {
     const next = newRedo.pop()!;
     setRedoStack(newRedo);
     setUndoStack((prev) => [...prev, next]);
-    canvas.loadFromJSON(next).then(() => {
-      canvas.renderAll();
-      updateLayers();
-    });
+    canvas.loadFromJSON(next).then(() => { canvas.renderAll(); updateLayers(); });
   }
 
   function addText() {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const text = new FabricText(textInput, {
-      left: 150,
-      top: 250,
-      fontSize,
-      fill: fillColor,
-      fontFamily: "Inter",
+      left: 150, top: 250, fontSize, fill: fillColor, fontFamily: "Inter",
     });
     (text as any).customName = `Text: "${textInput.slice(0, 12)}"`;
     canvas.add(text);
@@ -155,10 +206,8 @@ export default function DesignStudio() {
   function addShape(shape: string) {
     const canvas = fabricRef.current;
     if (!canvas) return;
-
     let obj: any;
     const commonProps = { left: 180, top: 220, fill: fillColor };
-
     switch (shape) {
       case "rect":
         obj = new Rect({ ...commonProps, width: 120, height: 100, rx: 8, ry: 8 });
@@ -172,8 +221,7 @@ export default function DesignStudio() {
         obj = new Triangle({ ...commonProps, width: 120, height: 100 });
         (obj as any).customName = "Triangle";
         break;
-      default:
-        return;
+      default: return;
     }
     canvas.add(obj);
     canvas.setActiveObject(obj);
@@ -184,14 +232,12 @@ export default function DesignStudio() {
     const canvas = fabricRef.current;
     const file = e.target.files?.[0];
     if (!canvas || !file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const imgEl = new Image();
       imgEl.onload = () => {
         const img = new FabricImage(imgEl, {
-          left: 100,
-          top: 100,
+          left: 100, top: 100,
           scaleX: Math.min(300 / imgEl.width, 1),
           scaleY: Math.min(300 / imgEl.height, 1),
         });
@@ -210,11 +256,7 @@ export default function DesignStudio() {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (active) {
-      canvas.remove(active);
-      setSelectedObject(null);
-      saveState();
-    }
+    if (active) { canvas.remove(active); setSelectedObject(null); saveState(); }
   }
 
   function toggleVisibility(layerObj: any) {
@@ -242,11 +284,8 @@ export default function DesignStudio() {
     const reversedIndex = objects.length - 1 - index;
     const obj = objects[reversedIndex];
     if (!obj) return;
-    if (direction === "up") {
-      canvas.bringObjectForward(obj);
-    } else {
-      canvas.sendObjectBackwards(obj);
-    }
+    if (direction === "up") canvas.bringObjectForward(obj);
+    else canvas.sendObjectBackwards(obj);
     canvas.renderAll();
     updateLayers();
     saveState();
@@ -265,7 +304,21 @@ export default function DesignStudio() {
     saveState();
   }
 
-  if (!product) {
+  // Determine product info
+  const productName = invProduct?.name || staticProduct?.name || "Product";
+  const productIcon = staticProduct?.icon;
+  const productVariants = staticProduct?.variants || [];
+  const bgImageUrl = getCurrentImageUrl();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-editor-bg text-sidebar-foreground">
+        <p>Loading product...</p>
+      </div>
+    );
+  }
+
+  if (!staticProduct && !invProduct) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -290,12 +343,12 @@ export default function DesignStudio() {
       {/* Top Bar */}
       <div className="flex h-14 items-center justify-between border-b border-sidebar-border bg-toolbar-bg px-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="text-sidebar-foreground hover:bg-sidebar-accent">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-sidebar-foreground hover:bg-sidebar-accent">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
           <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-display font-semibold text-sm">{product.name}</span>
+          <span className="font-display font-semibold text-sm">{productName}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -305,37 +358,39 @@ export default function DesignStudio() {
           <Button variant="ghost" size="icon" onClick={redo} disabled={redoStack.length === 0} className="text-sidebar-foreground hover:bg-sidebar-accent">
             <Redo2 className="h-4 w-4" />
           </Button>
-          <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
 
-          {/* Product color switcher */}
-          <div className="flex gap-1.5 items-center">
-            {product.variants.map((v) => (
-              <button
-                key={v.color}
-                className={`h-6 w-6 rounded-full border-2 transition-all ${selectedVariant?.color === v.color ? "border-primary scale-110" : "border-sidebar-border"}`}
-                style={{ backgroundColor: v.hex }}
-                onClick={() => setSelectedVariant(v)}
-                title={v.colorName}
-              />
-            ))}
-          </div>
+          {/* Variant color switcher (static products only) */}
+          {productVariants.length > 0 && (
+            <>
+              <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
+              <div className="flex gap-1.5 items-center">
+                {productVariants.map((v) => (
+                  <button
+                    key={v.color}
+                    className={`h-6 w-6 rounded-full border-2 transition-all ${selectedVariant?.color === v.color ? "border-primary scale-110" : "border-sidebar-border"}`}
+                    style={{ backgroundColor: v.hex }}
+                    onClick={() => setSelectedVariant(v)}
+                    title={v.colorName}
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
-          {product.hasFrontBack && (
+          {/* View switcher — only show available views */}
+          {availableViews.length > 1 && (
             <>
               <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
               <div className="flex rounded-lg overflow-hidden border border-sidebar-border">
-                <button
-                  className={`px-3 py-1 text-xs font-medium transition-colors ${activeView === "front" ? "bg-primary text-primary-foreground" : "bg-sidebar-accent hover:bg-sidebar-accent/80"}`}
-                  onClick={() => setActiveView("front")}
-                >
-                  Front
-                </button>
-                <button
-                  className={`px-3 py-1 text-xs font-medium transition-colors ${activeView === "back" ? "bg-primary text-primary-foreground" : "bg-sidebar-accent hover:bg-sidebar-accent/80"}`}
-                  onClick={() => setActiveView("back")}
-                >
-                  Back
-                </button>
+                {availableViews.map((view) => (
+                  <button
+                    key={view}
+                    className={`px-3 py-1 text-xs font-medium transition-colors ${activeView === view ? "bg-primary text-primary-foreground" : "bg-sidebar-accent hover:bg-sidebar-accent/80"}`}
+                    onClick={() => setActiveView(view)}
+                  >
+                    {VIEW_LABELS[view]}
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -353,7 +408,6 @@ export default function DesignStudio() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Toolbar */}
         <div className="flex w-72 flex-col border-r border-sidebar-border bg-toolbar-bg">
-          {/* Tool tabs */}
           <div className="flex border-b border-sidebar-border">
             {tools.map((t) => (
               <button
@@ -370,18 +424,12 @@ export default function DesignStudio() {
             ))}
           </div>
 
-          {/* Tool panel content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {activeTool === "text" && (
               <>
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">Text</label>
-                  <Input
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    placeholder="Enter text..."
-                    className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
-                  />
+                  <Input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Enter text..." className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">Font Size: {fontSize}px</label>
@@ -394,9 +442,7 @@ export default function DesignStudio() {
                     <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
                   </div>
                 </div>
-                <Button onClick={addText} className="w-full gap-2">
-                  <Type className="h-4 w-4" /> Add Text
-                </Button>
+                <Button onClick={addText} className="w-full gap-2"><Type className="h-4 w-4" /> Add Text</Button>
               </>
             )}
 
@@ -411,16 +457,13 @@ export default function DesignStudio() {
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Button variant="outline" onClick={() => addShape("rect")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <Square className="h-5 w-5" />
-                    <span className="text-[10px]">Rectangle</span>
+                    <Square className="h-5 w-5" /><span className="text-[10px]">Rectangle</span>
                   </Button>
                   <Button variant="outline" onClick={() => addShape("circle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <CircleIcon className="h-5 w-5" />
-                    <span className="text-[10px]">Circle</span>
+                    <CircleIcon className="h-5 w-5" /><span className="text-[10px]">Circle</span>
                   </Button>
                   <Button variant="outline" onClick={() => addShape("triangle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <TriangleIcon className="h-5 w-5" />
-                    <span className="text-[10px]">Triangle</span>
+                    <TriangleIcon className="h-5 w-5" /><span className="text-[10px]">Triangle</span>
                   </Button>
                 </div>
               </>
@@ -459,9 +502,7 @@ export default function DesignStudio() {
               <div className="text-center py-8">
                 <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
-                <Button onClick={() => fileInputRef.current?.click()} className="gap-2">
-                  <Upload className="h-4 w-4" /> Choose File
-                </Button>
+                <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
               </div>
             )}
           </div>
@@ -470,21 +511,29 @@ export default function DesignStudio() {
         {/* Canvas Area */}
         <div className="flex-1 flex items-center justify-center bg-editor-bg overflow-auto p-8">
           <div className="relative">
-            {/* Product mockup background */}
-            <div
-              className="absolute inset-0 flex items-center justify-center text-[180px] opacity-10 pointer-events-none select-none"
-              style={{ zIndex: 0 }}
-            >
-              {product.icon}
-            </div>
+            {/* Product image background for inventory products */}
+            {bgImageUrl && (
+              <img
+                src={bgImageUrl}
+                alt={`${productName} ${activeView}`}
+                className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none rounded-lg"
+                style={{ zIndex: 0, opacity: 0.3 }}
+              />
+            )}
+            {/* Emoji icon background for static products */}
+            {!bgImageUrl && productIcon && (
+              <div className="absolute inset-0 flex items-center justify-center text-[180px] opacity-10 pointer-events-none select-none" style={{ zIndex: 0 }}>
+                {productIcon}
+              </div>
+            )}
             <div
               className="rounded-lg shadow-2xl overflow-hidden border border-sidebar-border"
-              style={{ backgroundColor: selectedVariant?.hex || "#ffffff" }}
+              style={{ backgroundColor: selectedVariant?.hex || (bgImageUrl ? "transparent" : "#ffffff") }}
             >
               <canvas ref={canvasRef} />
             </div>
             <div className="mt-3 text-center text-xs text-muted-foreground">
-              {activeView === "front" ? "Front" : "Back"} View • {selectedVariant?.colorName || ""}
+              {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
             </div>
           </div>
         </div>
