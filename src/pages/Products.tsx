@@ -17,9 +17,14 @@ export default function Products() {
             <Sparkles className="h-6 w-6 text-primary" />
             <span className="font-display text-xl font-bold">Customizer Studio</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Link to="/products">
               <Button variant="ghost">Browse Products</Button>
+            </Link>
+            <Link to="/inventory">
+              <Button variant="outline" className="gap-2">
+                <Package className="h-4 w-4" /> Inventory
+              </Button>
             </Link>
           </div>
         </div>
