@@ -111,6 +111,7 @@ export default function DesignStudio() {
 
   // Initialize canvas
   const canvasInitialized = useRef(false);
+  const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
     if (!canvasRef.current || canvasInitialized.current) return;
@@ -133,11 +134,13 @@ export default function DesignStudio() {
     canvas.on("object:removed", () => updateLayers());
 
     saveState();
+    setCanvasReady(true);
 
     return () => {
       canvas.dispose();
       fabricRef.current = null;
       canvasInitialized.current = false;
+      setCanvasReady(false);
     };
   }, []);
 
