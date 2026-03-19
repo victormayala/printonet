@@ -135,8 +135,7 @@ export default function Index() {
       <footer className="border-t py-8">
         <div className="container flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="font-display font-semibold text-foreground">Customizer Studio</span>
+            <img src={logo} alt="Customizer Studio" className="h-6" />
           </div>
           <p>© {new Date().getFullYear()} All rights reserved.</p>
         </div>
