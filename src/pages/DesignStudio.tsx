@@ -414,10 +414,36 @@ export default function DesignStudio() {
     );
   }
 
+  const [clipartCategory, setClipartCategory] = useState<string>("Popular");
+
+  function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const svgString = ReactDOMServer.renderToStaticMarkup(
+      React.createElement(clipartItem.icon, { size: 120, color: fillColor, strokeWidth: 1.5 })
+    );
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const imgEl = new Image();
+    imgEl.onload = () => {
+      const img = new FabricImage(imgEl, {
+        left: 150, top: 200,
+        scaleX: 1, scaleY: 1,
+      });
+      (img as any).customName = `Clipart: ${clipartItem.name}`;
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      saveState();
+      URL.revokeObjectURL(url);
+    };
+    imgEl.src = url;
+  }
+
   const tools = [
     { id: "select", icon: ImageIcon, label: "Select" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
+    { id: "clipart", icon: Sticker, label: "Clipart" },
     { id: "upload", icon: Upload, label: "Upload" },
   ];
 
