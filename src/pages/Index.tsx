@@ -36,8 +36,7 @@ export default function Index() {
       <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="font-display text-xl font-bold">Customizer Studio</span>
+            <img src={logo} alt="Customizer Studio" className="h-8" />
           </Link>
           <div className="flex items-center gap-4">
             <Link to="/products">
