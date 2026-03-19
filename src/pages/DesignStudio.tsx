@@ -58,6 +58,83 @@ const CLIPART_CATEGORIES = {
   ],
 };
 
+interface TextTemplateLine {
+  text: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight?: string;
+  fontStyle?: string;
+  textTransform?: string;
+  letterSpacing?: string;
+}
+
+interface TextTemplate {
+  name: string;
+  lines: TextTemplateLine[];
+}
+
+const TEXT_TEMPLATES: TextTemplate[] = [
+  {
+    name: "Bold Statement",
+    lines: [
+      { text: "MAKE IT", fontFamily: "Arial Black, sans-serif", fontSize: 48, fontWeight: "900", textTransform: "uppercase", letterSpacing: "2px" },
+      { text: "HAPPEN", fontFamily: "Arial Black, sans-serif", fontSize: 64, fontWeight: "900", textTransform: "uppercase", letterSpacing: "4px" },
+    ],
+  },
+  {
+    name: "Vintage Label",
+    lines: [
+      { text: "— ESTABLISHED —", fontFamily: "Georgia, serif", fontSize: 18, letterSpacing: "4px", textTransform: "uppercase" },
+      { text: "Premium Quality", fontFamily: "Georgia, serif", fontSize: 42, fontStyle: "italic" },
+      { text: "SINCE 2024", fontFamily: "Georgia, serif", fontSize: 20, letterSpacing: "6px", textTransform: "uppercase" },
+    ],
+  },
+  {
+    name: "Modern Minimal",
+    lines: [
+      { text: "less is", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 28, fontWeight: "300" },
+      { text: "more.", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 52, fontWeight: "700" },
+    ],
+  },
+  {
+    name: "Street Style",
+    lines: [
+      { text: "NO LIMITS", fontFamily: "Impact, sans-serif", fontSize: 56, textTransform: "uppercase", letterSpacing: "3px" },
+      { text: "BREAK THE RULES", fontFamily: "Impact, sans-serif", fontSize: 24, textTransform: "uppercase", letterSpacing: "8px" },
+    ],
+  },
+  {
+    name: "Elegant Script",
+    lines: [
+      { text: "forever", fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", letterSpacing: "6px", textTransform: "lowercase" },
+      { text: "Grateful", fontFamily: "Georgia, serif", fontSize: 52, fontStyle: "italic" },
+    ],
+  },
+  {
+    name: "Retro Badge",
+    lines: [
+      { text: "★ ORIGINAL ★", fontFamily: "Courier New, monospace", fontSize: 18, textTransform: "uppercase", letterSpacing: "3px" },
+      { text: "AUTHENTIC", fontFamily: "Courier New, monospace", fontSize: 44, fontWeight: "700", textTransform: "uppercase" },
+      { text: "GOODS & SUPPLY CO.", fontFamily: "Courier New, monospace", fontSize: 16, letterSpacing: "4px", textTransform: "uppercase" },
+    ],
+  },
+  {
+    name: "Motivational",
+    lines: [
+      { text: "STAY", fontFamily: "Arial, sans-serif", fontSize: 32, fontWeight: "300", letterSpacing: "10px", textTransform: "uppercase" },
+      { text: "HUNGRY", fontFamily: "Arial Black, sans-serif", fontSize: 58, fontWeight: "900", textTransform: "uppercase" },
+      { text: "stay foolish", fontFamily: "Georgia, serif", fontSize: 22, fontStyle: "italic" },
+    ],
+  },
+  {
+    name: "Clean & Simple",
+    lines: [
+      { text: "good vibes", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 36, fontWeight: "300" },
+      { text: "ONLY", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 48, fontWeight: "800", letterSpacing: "8px", textTransform: "uppercase" },
+    ],
+  },
+];
+
 type ViewSide = "front" | "back" | "side1" | "side2";
 
 interface InventoryProduct {
@@ -283,6 +360,34 @@ export default function DesignStudio() {
     (text as any).customName = `Text: "${textInput.slice(0, 12)}"`;
     canvas.add(text);
     canvas.setActiveObject(text);
+    saveState();
+  }
+
+  function addTextTemplate(template: TextTemplate) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    let yOffset = 200;
+    template.lines.forEach((line) => {
+      const text = new FabricText(line.text, {
+        left: 100,
+        top: yOffset,
+        fontSize: line.fontSize,
+        fill: fillColor,
+        fontFamily: line.fontFamily,
+        fontWeight: (line.fontWeight || "normal") as any,
+        fontStyle: (line.fontStyle || "normal") as any,
+        charSpacing: line.letterSpacing ? parseInt(line.letterSpacing) * 10 : 0,
+      });
+      if (line.textTransform === "uppercase") {
+        text.set("text", line.text.toUpperCase());
+      } else if (line.textTransform === "lowercase") {
+        text.set("text", line.text.toLowerCase());
+      }
+      (text as any).customName = `Text: "${line.text.slice(0, 12)}"`;
+      canvas.add(text);
+      yOffset += line.fontSize + 8;
+    });
+    canvas.renderAll();
     saveState();
   }
 
@@ -535,8 +640,46 @@ export default function DesignStudio() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {activeTool === "text" && (
               <>
+                {/* Text Templates */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Text</label>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Templates</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TEXT_TEMPLATES.map((tmpl, i) => (
+                      <button
+                        key={i}
+                        onClick={() => addTextTemplate(tmpl)}
+                        className="group relative border border-sidebar-border rounded-lg p-3 hover:border-primary/50 hover:bg-sidebar-accent transition-all text-left overflow-hidden"
+                      >
+                        <div className="space-y-0.5">
+                          {tmpl.lines.map((line, li) => (
+                            <p
+                              key={li}
+                              className="truncate leading-tight"
+                              style={{
+                                fontFamily: line.fontFamily,
+                                fontSize: `${Math.min(line.fontSize / 4, 14)}px`,
+                                fontWeight: line.fontWeight || "normal",
+                                fontStyle: line.fontStyle || "normal",
+                                textTransform: line.textTransform as any || "none",
+                                letterSpacing: line.letterSpacing || "normal",
+                                color: "currentColor",
+                              }}
+                            >
+                              {line.text}
+                            </p>
+                          ))}
+                        </div>
+                        <span className="absolute bottom-1 right-1.5 text-[8px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">{tmpl.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator className="bg-sidebar-border" />
+
+                {/* Custom Text */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Custom Text</label>
                   <Input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Enter text..." className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground" />
                 </div>
                 <div className="space-y-2">
