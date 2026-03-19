@@ -110,21 +110,24 @@ export default function DesignStudio() {
     return map[activeView] || null;
   }
 
-  // Initialize canvas
+  // Initialize canvas with responsive sizing
   const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !containerRef.current) return;
 
-    // Clean up any existing canvas first
     if (fabricRef.current) {
       fabricRef.current.dispose();
       fabricRef.current = null;
     }
 
+    const container = containerRef.current;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: 600,
-      height: 700,
+      width: w,
+      height: h,
       backgroundColor: "#ffffff",
       selection: true,
     });
@@ -141,7 +144,20 @@ export default function DesignStudio() {
     saveState();
     setCanvasReady(true);
 
+    // Resize observer to keep canvas responsive
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0 && fabricRef.current) {
+          fabricRef.current.setDimensions({ width, height });
+          fabricRef.current.renderAll();
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       canvas.dispose();
       fabricRef.current = null;
       setCanvasReady(false);
