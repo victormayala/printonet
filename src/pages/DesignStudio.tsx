@@ -613,6 +613,42 @@ export default function DesignStudio() {
                 <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
               </div>
             )}
+
+            {activeTool === "clipart" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Color</label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                    <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+                  </div>
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  {Object.keys(CLIPART_CATEGORIES).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setClipartCategory(cat)}
+                      className={`px-2.5 py-1 text-xs rounded-full transition-colors ${clipartCategory === cat ? "bg-primary text-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {CLIPART_CATEGORIES[clipartCategory as keyof typeof CLIPART_CATEGORIES]?.map((item) => (
+                    <button
+                      key={item.name}
+                      onClick={() => addClipart(item)}
+                      className="flex flex-col items-center gap-1 p-2 rounded-lg border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors"
+                      title={item.name}
+                    >
+                      <item.icon className="h-6 w-6" style={{ color: fillColor }} />
+                      <span className="text-[9px] text-muted-foreground truncate w-full text-center">{item.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
