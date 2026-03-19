@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { products, categories } from "@/data/products";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight, Package } from "lucide-react";
 import { useState } from "react";
 
 export default function Products() {
