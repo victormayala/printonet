@@ -111,6 +111,7 @@ export default function DesignStudio() {
 
   // Initialize canvas
   const canvasInitialized = useRef(false);
+  const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
     if (!canvasRef.current || canvasInitialized.current) return;
@@ -133,36 +134,54 @@ export default function DesignStudio() {
     canvas.on("object:removed", () => updateLayers());
 
     saveState();
+    setCanvasReady(true);
 
     return () => {
       canvas.dispose();
       fabricRef.current = null;
       canvasInitialized.current = false;
+      setCanvasReady(false);
     };
   }, []);
 
   // Set product image as canvas background
   useEffect(() => {
+    if (!canvasReady || !fabricRef.current) return;
     const canvas = fabricRef.current;
-    if (!canvas) return;
-    const url = getCurrentImageUrl();
+
+    // For inventory products, get image URL from the loaded product
+    let url: string | null = null;
+    if (invProduct) {
+      const map: Record<ViewSide, string | null> = {
+        front: invProduct.image_front,
+        back: invProduct.image_back,
+        side1: invProduct.image_side1,
+        side2: invProduct.image_side2,
+      };
+      url = map[activeView] || null;
+    }
+
     if (url) {
       const imgEl = new Image();
       imgEl.crossOrigin = "anonymous";
       imgEl.onload = () => {
-        const scaleX = canvas.width! / imgEl.width;
-        const scaleY = canvas.height! / imgEl.height;
+        if (!fabricRef.current) return;
+        const scaleX = fabricRef.current.width! / imgEl.width;
+        const scaleY = fabricRef.current.height! / imgEl.height;
         const scale = Math.max(scaleX, scaleY);
         const bgImg = new FabricImage(imgEl, {
           originX: "center",
           originY: "center",
-          left: canvas.width! / 2,
-          top: canvas.height! / 2,
+          left: fabricRef.current.width! / 2,
+          top: fabricRef.current.height! / 2,
           scaleX: scale,
           scaleY: scale,
         });
-        canvas.backgroundImage = bgImg;
-        canvas.renderAll();
+        fabricRef.current.backgroundImage = bgImg;
+        fabricRef.current.renderAll();
+      };
+      imgEl.onerror = () => {
+        console.error("Failed to load product image:", url);
       };
       imgEl.src = url;
     } else {
@@ -170,7 +189,7 @@ export default function DesignStudio() {
       canvas.backgroundColor = selectedVariant?.hex || "#ffffff";
       canvas.renderAll();
     }
-  }, [activeView, invProduct, selectedVariant]);
+  }, [activeView, invProduct, selectedVariant, canvasReady]);
 
   function handleSelection(e: any) {
     const obj = e.selected?.[0];
