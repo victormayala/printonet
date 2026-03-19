@@ -46,6 +46,7 @@ export default function DesignStudio() {
   const [loading, setLoading] = useState(isInventoryProduct);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
