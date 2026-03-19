@@ -546,24 +546,8 @@ export default function DesignStudio() {
         {/* Canvas Area */}
         <div className="flex-1 flex items-center justify-center bg-editor-bg overflow-auto p-8">
           <div className="relative">
-            {/* Product image background for inventory products */}
-            {bgImageUrl && (
-              <img
-                src={bgImageUrl}
-                alt={`${productName} ${activeView}`}
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none rounded-lg"
-                style={{ zIndex: 0, opacity: 0.3 }}
-              />
-            )}
-            {/* Emoji icon background for static products */}
-            {!bgImageUrl && productIcon && (
-              <div className="absolute inset-0 flex items-center justify-center text-[180px] opacity-10 pointer-events-none select-none" style={{ zIndex: 0 }}>
-                {productIcon}
-              </div>
-            )}
             <div
               className="rounded-lg shadow-2xl overflow-hidden border border-sidebar-border"
-              style={{ backgroundColor: selectedVariant?.hex || (bgImageUrl ? "transparent" : "#ffffff") }}
             >
               <canvas ref={canvasRef} />
             </div>
