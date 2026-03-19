@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { products, categories } from "@/data/products";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight, Package, ImageIcon } from "lucide-react";
+import { ArrowRight, Package, ImageIcon } from "lucide-react";
+import logo from "@/assets/customizer-studio-logo.png";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,8 +49,7 @@ export default function Products() {
       <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="font-display text-xl font-bold">Customizer Studio</span>
+            <img src={logo} alt="Customizer Studio" className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
             <Link to="/products">
@@ -97,37 +97,35 @@ export default function Products() {
             <h2 className="font-display text-xl font-semibold mb-4">Your Products</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
               {filteredInv.map((product) => (
-                <Link
+                <div
                   key={product.id}
-                  to={`/design/inv-${product.id}`}
                   className="group rounded-xl border bg-card overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
                 >
-                  <div className="flex h-48 items-center justify-center bg-muted/50 overflow-hidden">
+                  <div className="aspect-square w-full bg-muted/50 overflow-hidden">
                     {product.image_front ? (
                       <img
                         src={product.image_front}
                         alt={product.name}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
                     ) : (
-                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      </div>
                     )}
                   </div>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-display text-lg font-semibold">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{product.description || product.category}</p>
-                      </div>
-                      <span className="text-sm font-semibold text-primary">${product.base_price}</span>
+                  <div className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-display font-semibold truncate">{product.name}</h3>
+                      <span className="text-sm font-semibold text-primary">${product.base_price.toFixed(2)}</span>
                     </div>
-                    <div className="mt-4 flex items-center justify-end">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 group-hover:text-primary transition-colors">
-                        Customize <ArrowRight className="h-3 w-3" />
-                      </span>
-                    </div>
+                    <Link to={`/design/inv-${product.id}`}>
+                      <Button size="sm" className="gap-1.5 shrink-0">
+                        Customize <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </>
@@ -141,39 +139,25 @@ export default function Products() {
             )}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredStatic.map((product) => (
-                <Link
+                <div
                   key={product.id}
-                  to={`/design/${product.id}`}
                   className="group rounded-xl border bg-card overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
                 >
-                  <div className="flex h-48 items-center justify-center bg-muted/50 text-7xl transition-transform group-hover:scale-110">
+                  <div className="aspect-square w-full bg-muted/50 flex items-center justify-center text-7xl transition-transform group-hover:scale-105">
                     {product.icon}
                   </div>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-display text-lg font-semibold">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
-                      </div>
-                      <span className="text-sm font-semibold text-primary">${product.basePrice}</span>
+                  <div className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-display font-semibold truncate">{product.name}</h3>
+                      <span className="text-sm font-semibold text-primary">${product.basePrice.toFixed(2)}</span>
                     </div>
-                    <div className="mt-4 flex items-center gap-3">
-                      <div className="flex gap-1.5">
-                        {product.variants.map((v) => (
-                          <div
-                            key={v.color}
-                            className="h-5 w-5 rounded-full border shadow-sm"
-                            style={{ backgroundColor: v.hex }}
-                            title={v.colorName}
-                          />
-                        ))}
-                      </div>
-                      <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1 group-hover:text-primary transition-colors">
-                        Customize <ArrowRight className="h-3 w-3" />
-                      </span>
-                    </div>
+                    <Link to={`/design/${product.id}`}>
+                      <Button size="sm" className="gap-1.5 shrink-0">
+                        Customize <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </>
