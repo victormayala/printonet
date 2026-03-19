@@ -494,14 +494,74 @@ export default function DesignStudio() {
         obj = new Rect({ ...commonProps, width: 120, height: 100, rx: 8, ry: 8 });
         (obj as any).customName = "Rectangle";
         break;
+      case "roundedRect":
+        obj = new Rect({ ...commonProps, width: 120, height: 80, rx: 24, ry: 24 });
+        (obj as any).customName = "Rounded Rect";
+        break;
       case "circle":
         obj = new Circle({ ...commonProps, radius: 60 });
         (obj as any).customName = "Circle";
+        break;
+      case "ellipse":
+        obj = new Ellipse({ ...commonProps, rx: 80, ry: 50 });
+        (obj as any).customName = "Ellipse";
         break;
       case "triangle":
         obj = new Triangle({ ...commonProps, width: 120, height: 100 });
         (obj as any).customName = "Triangle";
         break;
+      case "pentagon": {
+        const pts = Array.from({ length: 5 }, (_, i) => {
+          const a = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+          return { x: 60 + 60 * Math.cos(a), y: 60 + 60 * Math.sin(a) };
+        });
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Pentagon";
+        break;
+      }
+      case "hexagon": {
+        const pts = Array.from({ length: 6 }, (_, i) => {
+          const a = (Math.PI * 2 * i) / 6 - Math.PI / 6;
+          return { x: 60 + 60 * Math.cos(a), y: 60 + 60 * Math.sin(a) };
+        });
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Hexagon";
+        break;
+      }
+      case "star": {
+        const pts: { x: number; y: number }[] = [];
+        for (let i = 0; i < 10; i++) {
+          const a = (Math.PI * 2 * i) / 10 - Math.PI / 2;
+          const r = i % 2 === 0 ? 60 : 28;
+          pts.push({ x: 60 + r * Math.cos(a), y: 60 + r * Math.sin(a) });
+        }
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Star";
+        break;
+      }
+      case "arrow": {
+        const pts = [
+          { x: 0, y: 30 }, { x: 80, y: 30 }, { x: 80, y: 10 },
+          { x: 120, y: 45 }, { x: 80, y: 80 }, { x: 80, y: 60 }, { x: 0, y: 60 },
+        ];
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Arrow";
+        break;
+      }
+      case "line":
+        obj = new FabricLine([0, 0, 150, 0], { ...commonProps, stroke: fillColor, strokeWidth: 4, fill: undefined });
+        (obj as any).customName = "Line";
+        break;
+      case "cross": {
+        const pts = [
+          { x: 30, y: 0 }, { x: 60, y: 0 }, { x: 60, y: 30 }, { x: 90, y: 30 },
+          { x: 90, y: 60 }, { x: 60, y: 60 }, { x: 60, y: 90 }, { x: 30, y: 90 },
+          { x: 30, y: 60 }, { x: 0, y: 60 }, { x: 0, y: 30 }, { x: 30, y: 30 },
+        ];
+        obj = new Polygon(pts, { ...commonProps });
+        (obj as any).customName = "Cross";
+        break;
+      }
       default: return;
     }
     canvas.add(obj);
