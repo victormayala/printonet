@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { store_url, access_token } = await req.json();
+    const { store_url, access_token, user_id } = await req.json();
     if (!store_url || !access_token) {
       return new Response(JSON.stringify({ error: "store_url and access_token are required" }), {
         status: 400,
