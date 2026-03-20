@@ -185,6 +185,7 @@ function ProductForm({
 }
 
 function ShopifyImport({ onDone }: { onDone: () => void }) {
+  const { user } = useAuth();
   const [storeUrl, setStoreUrl] = useState("");
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -197,7 +198,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("import-shopify-products", {
-        body: { store_url: storeUrl.trim().replace(/\/$/, ""), access_token: token.trim() },
+        body: { store_url: storeUrl.trim().replace(/\/$/, ""), access_token: token.trim(), user_id: user?.id },
       });
       if (error) throw error;
       toast({ title: `Imported ${data.imported_count} products from Shopify` });
