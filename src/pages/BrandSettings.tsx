@@ -211,35 +211,20 @@ export default function BrandSettings() {
   const previewSidebarAccent = config.theme === "dark" ? "hsl(240 8% 14%)" : "hsl(0 0% 94%)";
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <img src={logo} alt="Customizer Studio" className="h-7" />
-            <Separator orientation="vertical" className="h-6" />
-            <h1 className="font-display text-lg font-bold">Brand Settings</h1>
+    <div className="bg-background">
+      <div className="p-6 lg:p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="font-display text-2xl font-bold">Brand Settings</h2>
+            <p className="mt-1 text-muted-foreground">
+              Configure colors, logo, and fonts to match your brand.
+            </p>
           </div>
           <Button onClick={handleSave} disabled={saving} className="gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {saving ? "Saving..." : savedConfigId ? "Update" : "Save Settings"}
           </Button>
         </div>
-      </nav>
-
-      <div className="container py-10">
-        <div className="max-w-5xl mx-auto">
-          <div className="mb-8">
-            <h2 className="font-display text-2xl font-bold">White-Label Customizer</h2>
-            <p className="mt-2 text-muted-foreground">
-              Configure colors, logo, and fonts to match your brand. Preview changes live below.
-            </p>
-          </div>
 
           <div className="grid lg:grid-cols-[360px_1fr] gap-8">
             {/* Settings Panel */}
