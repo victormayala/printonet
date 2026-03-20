@@ -1049,6 +1049,12 @@ export default function DesignStudio() {
                   </div>
                 </div>
                 <Button onClick={addText} className="w-full gap-2"><Type className="h-4 w-4" /> Add Text</Button>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
               </>
             )}
 
@@ -1086,44 +1092,29 @@ export default function DesignStudio() {
                     </button>
                   ))}
                 </div>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
               </>
-            )}
-
-            {activeTool === "select" && selectedObject && (
-              <>
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Properties</h4>
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Opacity: {objectProps.opacity}%</label>
-                    <Slider value={[objectProps.opacity]} onValueChange={([v]) => updateSelectedProp("opacity", v)} min={0} max={100} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Fill</label>
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
-                      <Input value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-                    </div>
-                  </div>
-                  <Button variant="destructive" size="sm" onClick={deleteSelected} className="w-full gap-2">
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
-                  </Button>
-                </div>
-              </>
-            )}
-
-            {activeTool === "select" && !selectedObject && (
-              <div className="text-center py-8 text-muted-foreground">
-                <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Click an object on the canvas to edit its properties</p>
-              </div>
             )}
 
             {activeTool === "upload" && (
-              <div className="text-center py-8">
-                <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
-                <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
-              </div>
+              <>
+                <div className="text-center py-8">
+                  <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
+                  <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
+                </div>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
+              </>
             )}
 
             {activeTool === "clipart" && (
