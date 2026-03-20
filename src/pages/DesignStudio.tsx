@@ -844,12 +844,67 @@ export default function DesignStudio() {
   }
 
   const tools = [
-    { id: "select", icon: ImageIcon, label: "Select" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
     { id: "clipart", icon: Sticker, label: "Clipart" },
     { id: "upload", icon: Upload, label: "Upload" },
   ];
+
+  function updateSelectedText(newText: string) {
+    if (!selectedObject || selectedObject.type !== "text") return;
+    selectedObject.set("text", newText);
+    (selectedObject as any).customName = `Text: "${newText.slice(0, 12)}"`;
+    fabricRef.current?.renderAll();
+    updateLayers();
+    saveState();
+  }
+
+  function updateSelectedFontSize(size: number) {
+    if (!selectedObject || selectedObject.type !== "text") return;
+    selectedObject.set("fontSize", size);
+    fabricRef.current?.renderAll();
+    saveState();
+  }
+
+  const selectedPropertiesPanel = selectedObject ? (
+    <div className="space-y-3 border border-sidebar-border rounded-lg p-3 bg-sidebar-accent/30">
+      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Selected Object</h4>
+      {selectedObject.type === "text" && (
+        <>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Text</label>
+            <Input
+              value={selectedObject.text || ""}
+              onChange={(e) => updateSelectedText(e.target.value)}
+              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Font Size: {selectedObject.fontSize}px</label>
+            <Slider
+              value={[selectedObject.fontSize || 32]}
+              onValueChange={([v]) => updateSelectedFontSize(v)}
+              min={12} max={120} step={1}
+            />
+          </div>
+        </>
+      )}
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">Opacity: {objectProps.opacity}%</label>
+        <Slider value={[objectProps.opacity]} onValueChange={([v]) => updateSelectedProp("opacity", v)} min={0} max={100} />
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">Color</label>
+        <div className="flex items-center gap-2">
+          <input type="color" value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+          <Input value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+        </div>
+      </div>
+      <Button variant="destructive" size="sm" onClick={deleteSelected} className="w-full gap-2">
+        <Trash2 className="h-3.5 w-3.5" /> Delete
+      </Button>
+    </div>
+  ) : null;
 
   return (
     <div className="flex h-screen flex-col bg-editor-bg text-sidebar-foreground overflow-hidden">
