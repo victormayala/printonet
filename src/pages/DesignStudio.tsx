@@ -819,37 +819,6 @@ export default function DesignStudio() {
       </div>
     );
   }
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const GOOGLE_FONTS = [
-  "Inter", "Space Grotesk", "Roboto", "Open Sans", "Lato", "Montserrat",
-  "Poppins", "Oswald", "Raleway", "Playfair Display", "Merriweather",
-  "Bebas Neue", "Lobster", "Pacifico", "Dancing Script", "Permanent Marker",
-  "Bangers", "Righteous", "Abril Fatface", "Alfa Slab One", "Anton",
-  "Archivo Black", "Bungee", "Caveat", "Comfortaa", "Concert One",
-  "Fredoka One", "Gloria Hallelujah", "Indie Flower", "Josefin Sans",
-  "Kalam", "Lilita One", "Luckiest Guy", "Nunito", "Passion One",
-  "Patrick Hand", "Press Start 2P", "Rubik", "Sacramento", "Satisfy",
-  "Shadows Into Light", "Source Sans 3", "Titan One", "Ubuntu",
-  "Vollkorn", "Yanone Kaffeesatz", "Zilla Slab",
-];
-
-const loadedFonts = new Set<string>(["Inter", "Space Grotesk"]);
-
-function loadGoogleFont(fontFamily: string) {
-  if (loadedFonts.has(fontFamily)) return;
-  loadedFonts.add(fontFamily);
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/ /g, "+")}&display=swap`;
-  document.head.appendChild(link);
-}
 
 
   function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
