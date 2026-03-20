@@ -165,6 +165,7 @@
 
     var productId = (el.getAttribute('data-product-id') || '').trim();
     var productName = (el.getAttribute('data-product-name') || '').trim();
+    var wcProductId = (el.getAttribute('data-wc-product-id') || '').trim();
 
     fetchProducts(function (err, products) {
       if (err || !products) {
@@ -181,13 +182,12 @@
       }
 
       if (match) {
-        openForProduct(match);
+        openForProduct(match, wcProductId);
       } else if (!productId && !productName) {
         showPicker(products);
       } else {
         console.warn('[CustomizerLoader] Product not found. Searched for:', productId ? 'id=' + productId : 'name=' + productName);
         console.warn('[CustomizerLoader] Available products:', products.map(function(p) { return { id: p.id, name: p.name }; }));
-        // Fallback: show picker so the user isn't stuck
         showPicker(products);
       }
     });
