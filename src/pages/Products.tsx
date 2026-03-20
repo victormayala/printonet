@@ -235,6 +235,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
 }
 
 function WooCommerceImport({ onDone }: { onDone: () => void }) {
+  const { user } = useAuth();
   const [siteUrl, setSiteUrl] = useState("");
   const [consumerKey, setConsumerKey] = useState("");
   const [consumerSecret, setConsumerSecret] = useState("");
@@ -252,6 +253,7 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
           site_url: siteUrl.trim().replace(/\/$/, ""),
           consumer_key: consumerKey.trim(),
           consumer_secret: consumerSecret.trim(),
+          user_id: user?.id,
         },
       });
       if (error) throw error;
