@@ -1131,13 +1131,15 @@ export default function DesignStudio() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {activeTool === "text" && (
+            {/* Show selected object properties panel for any object type */}
+            {selectedObject && selectedPropertiesPanel && (
               <>
-                {selectedObject && selectedObject.type === "text" ? (
-                  <>
-                    {selectedPropertiesPanel}
-                  </>
-                ) : (
+                {selectedPropertiesPanel}
+                <Separator className="bg-sidebar-border" />
+              </>
+            )}
+
+            {activeTool === "text" && !selectedObject && (
                   <>
                     <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
                       <Type className="h-4 w-4" /> Add Custom Text
