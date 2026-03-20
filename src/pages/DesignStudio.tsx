@@ -1125,6 +1125,96 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     imgEl.src = url;
   }
 
+  // Export all views as PNGs and post result
+  async function exportAndComplete() {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    setExporting(true);
+
+    try {
+      // Save current view state
+      viewStatesRef.current[activeView] = JSON.stringify(canvas.toJSON());
+
+      const sides: Array<{ view: string; designPNG: string; canvasJSON: string }> = [];
+
+      for (const view of availableViews) {
+        const stateJson = viewStatesRef.current[view];
+        if (!stateJson) {
+          sides.push({ view, designPNG: "", canvasJSON: "{}" });
+          continue;
+        }
+
+        // Load the view state temporarily to export
+        await canvas.loadFromJSON(stateJson);
+        canvas.backgroundColor = "rgba(0,0,0,0)";
+        canvas.backgroundImage = undefined;
+        canvas.renderAll();
+
+        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
+
+        // Upload to storage
+        const blob = await (await fetch(dataUrl)).blob();
+        const fileName = `${sessionId || "export"}_${view}_${Date.now()}.png`;
+
+        const { data: uploadData } = await supabase.storage
+          .from("design-exports")
+          .upload(fileName, blob, { contentType: "image/png" });
+
+        const publicUrl = uploadData
+          ? supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl
+          : dataUrl;
+
+        sides.push({
+          view,
+          designPNG: publicUrl,
+          canvasJSON: stateJson,
+        });
+      }
+
+      // Restore current view
+      const currentState = viewStatesRef.current[activeView];
+      if (currentState) {
+        await canvas.loadFromJSON(currentState);
+        canvas.renderAll();
+      }
+
+      const result = {
+        sessionId,
+        sides,
+        variant: selectedVariant || null,
+      };
+
+      // If embed mode, complete session and post message to parent
+      if (embedMode && sessionId) {
+        await supabase.functions.invoke("complete-session", {
+          body: { sessionId, designOutput: result },
+        });
+
+        window.parent.postMessage(
+          { source: "customizer-studio", type: "design-complete", payload: result },
+          "*"
+        );
+      }
+
+      return result;
+    } catch (err) {
+      console.error("Export error:", err);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function handleCancel() {
+    if (embedMode) {
+      window.parent.postMessage(
+        { source: "customizer-studio", type: "design-cancel" },
+        "*"
+      );
+    } else {
+      navigate(-1);
+    }
+  }
+
   const tools = [
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
