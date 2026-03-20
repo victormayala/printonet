@@ -600,8 +600,8 @@ export default function DesignStudio() {
       // Use Fabric's utility to compute the final transform for each item
       const itemTransform = item.calcTransformMatrix();
       // Decompose to get position, scale, angle
-      const fullTransform = fabric.util.multiplyTransformMatrices(groupTransform, itemTransform);
-      const decomposed = fabric.util.qrDecompose(fullTransform);
+      const fullTransform = util.multiplyTransformMatrices(groupTransform, itemTransform);
+      const decomposed = util.qrDecompose(fullTransform);
       item.set({
         left: decomposed.translateX,
         top: decomposed.translateY,
