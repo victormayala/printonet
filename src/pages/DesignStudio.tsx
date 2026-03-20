@@ -1141,6 +1141,26 @@ export default function DesignStudio() {
               </>
             )}
           </div>
+
+          {/* Sticky Custom Text at bottom - only when text tab active and no text selected */}
+          {activeTool === "text" && !(selectedObject && selectedObject.type === "text") && (
+            <div className="border-t border-sidebar-border bg-toolbar-bg p-4 space-y-3">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Custom Text</label>
+              <Input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Enter text..." className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground" />
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Font Size: {fontSize}px</label>
+                <Slider value={[fontSize]} onValueChange={([v]) => setFontSize(v)} min={12} max={120} step={1} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Color</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                  <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+                </div>
+              </div>
+              <Button onClick={addText} className="w-full gap-2"><Type className="h-4 w-4" /> Add Text</Button>
+            </div>
+          )}
         </div>
 
         {/* Canvas Area */}
