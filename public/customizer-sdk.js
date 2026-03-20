@@ -283,6 +283,81 @@
     document.dispatchEvent(completeEvt);
   }
 
+  // --- Add to cart (WooCommerce or generic) ---
+  function _addToCart(payload, callback) {
+    // WooCommerce integration
+    if (_wcProductId && typeof jQuery !== 'undefined' && typeof wc_add_to_cart_params !== 'undefined') {
+      var formData = new FormData();
+      formData.append('product_id', _wcProductId);
+      formData.append('quantity', '1');
+
+      // Attach design data as custom cart item data
+      if (payload.sessionId) formData.append('customizer_session_id', payload.sessionId);
+      if (payload.sides && payload.sides.length > 0) {
+        var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
+        if (frontSide && frontSide.designPNG) formData.append('customizer_design_url', frontSide.designPNG);
+      }
+
+      fetch('/?wc-ajax=add_to_cart', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.error) {
+            console.error('[CustomizerStudio] WooCommerce add to cart error:', data.error);
+            callback(false);
+            return;
+          }
+          // Trigger WooCommerce cart update events
+          if (typeof jQuery !== 'undefined') {
+            jQuery(document.body).trigger('added_to_cart', [data.fragments, data.cart_hash]);
+          }
+          callback(true);
+        })
+        .catch(function (err) {
+          console.error('[CustomizerStudio] WooCommerce add to cart failed:', err);
+          callback(false);
+        });
+      return;
+    }
+
+    // WooCommerce fallback: try without jQuery globals
+    if (_wcProductId) {
+      var formData2 = new FormData();
+      formData2.append('product_id', _wcProductId);
+      formData2.append('quantity', '1');
+      if (payload.sessionId) formData2.append('customizer_session_id', payload.sessionId);
+
+      fetch('/?wc-ajax=add_to_cart', {
+        method: 'POST',
+        body: formData2,
+        credentials: 'same-origin',
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data && !data.error) {
+            // Try to update cart fragments in the page
+            if (data.fragments && typeof jQuery !== 'undefined') {
+              jQuery.each(data.fragments, function (key, value) {
+                jQuery(key).replaceWith(value);
+              });
+            }
+            callback(true);
+          } else {
+            console.warn('[CustomizerStudio] WooCommerce response:', data);
+            callback(false);
+          }
+        })
+        .catch(function () { callback(false); });
+      return;
+    }
+
+    // No WooCommerce product ID — just complete
+    callback(true);
+  }
+
   function _closeSummary() {
     if (_summaryOverlay && _summaryOverlay.parentNode) {
       _summaryOverlay.parentNode.removeChild(_summaryOverlay);
