@@ -274,10 +274,15 @@ function cs_render_customize_button_fallback() {
 	cs_render_customize_button();
 }
 
-function cs_render_customize_button() {
+function cs_render_customize_button( $custom_label = null ) {
 	global $product;
 
 	if ( ! $product ) {
+		return;
+	}
+
+	// Prevent duplicate rendering
+	if ( cs_button_was_rendered() ) {
 		return;
 	}
 
@@ -286,10 +291,13 @@ function cs_render_customize_button() {
 		return;
 	}
 
+	// Mark as rendered
+	cs_button_was_rendered( true );
+
 	$cs_product_id   = get_post_meta( $product->get_id(), '_cs_product_id', true );
 	$cs_product_name = get_post_meta( $product->get_id(), '_cs_product_name', true );
 	$wc_product_id   = $product->get_id();
-	$button_label    = get_option( 'cs_button_label', '🎨 Customize This Product' );
+	$button_label    = $custom_label ?: get_option( 'cs_button_label', '🎨 Customize This Product' );
 
 	$data_attrs = 'data-customizer';
 	$data_attrs .= ' data-wc-product-id="' . esc_attr( $wc_product_id ) . '"';
