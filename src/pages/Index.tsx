@@ -42,6 +42,11 @@ export default function Index() {
                 <Code className="h-4 w-4" /> Docs
               </Button>
             </Link>
+            <Link to="/brand-settings">
+              <Button variant="ghost" className="gap-2">
+                <Paintbrush className="h-4 w-4" /> Brand Settings
+              </Button>
+            </Link>
             <Link to="/developers">
               <Button className="gap-2">
                 Get Started <ArrowRight className="h-4 w-4" />
