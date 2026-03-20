@@ -67,7 +67,11 @@
           console.error('[CustomizerStudio] Error:', data.error);
           return;
         }
-        var embedUrl = data.customizerUrl || (_config.baseUrl + '/embed/' + data.sessionId);
+        // Always prefer our own baseUrl over the API response URL,
+        // because the API infers origin from the request (which is the store's domain, not ours)
+        var embedUrl = _config.baseUrl
+          ? (_config.baseUrl + '/embed/' + data.sessionId)
+          : (data.customizerUrl || ('/embed/' + data.sessionId));
 
         // Append brand config as URL params if provided
         if (options.brand) {
