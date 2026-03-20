@@ -1021,9 +1021,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
   // Determine product info
-  const productName = invProduct?.name || staticProduct?.name || "Product";
-  const productIcon = staticProduct?.icon;
-  const productVariants = staticProduct?.variants || [];
+  const productName = invProduct?.name || "Product";
   const bgImageUrl = getCurrentImageUrl();
 
   if (loading) {
@@ -1034,16 +1032,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     );
   }
 
-  if (!staticProduct && !invProduct && !embedMode) {
+  if (!invProduct && !embedMode) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="font-display text-2xl font-bold">Product not found</h2>
-          <Link to="/products" className="mt-4 inline-block">
-            <Button variant="outline">← Back to products</Button>
+          <Link to="/" className="mt-4 inline-block">
+            <Button variant="outline">← Back home</Button>
           </Link>
         </div>
       </div>
+    );
+  }
     );
   }
 
