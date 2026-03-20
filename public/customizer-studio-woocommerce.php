@@ -412,6 +412,9 @@ add_action( 'wp_head', function () {
 		.cs-design-overlay-wrap img.cs-design-overlay {
 			position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; z-index:2;
 		}
+		.cs-view-design-link { display:block; font-size:11px; margin-top:4px; color:#2563eb; text-decoration:none; }
+		.cs-view-design-link:hover { text-decoration:underline; color:#1d4ed8;
+		}
 	</style>';
 } );
 
