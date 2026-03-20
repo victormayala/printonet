@@ -150,7 +150,7 @@ function SignupForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-password">Password</Label>
-        <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+        <PasswordInput id="signup-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
