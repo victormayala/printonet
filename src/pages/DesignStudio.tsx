@@ -401,6 +401,7 @@ export default function DesignStudio() {
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [clipartCategory, setClipartCategory] = useState<string>("Popular");
+  const [fontFamily, setFontFamily] = useState<string>("Inter");
   
   // Load inventory product
   useEffect(() => {
