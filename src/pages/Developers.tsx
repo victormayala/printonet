@@ -298,17 +298,6 @@ const { sessionId, status, designOutput } = await response.json();
           </div>
         )}
 
-        {activeTab === "quickstart" && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold">Embed with JavaScript SDK</h3>
-              <p className="text-muted-foreground">
-                The fastest way to integrate. Add a single script tag and call <code className="text-sm bg-muted px-1.5 py-0.5 rounded">CustomizerStudio.open()</code>.
-              </p>
-            </div>
-            <CodeBlock code={sdkSnippet} language="html" />
-          </div>
-        )}
 
         {activeTab === "api" && (
           <div className="space-y-8">
