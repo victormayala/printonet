@@ -592,22 +592,24 @@ export default function DesignStudio() {
   function ungroupObject(group: Group) {
     const canvas = fabricRef.current;
     if (!canvas || !(group instanceof Group)) return;
+    // Get the group's transform matrix before removing items
+    const groupTransform = group.calcTransformMatrix();
     const items = group.removeAll();
-    const { left = 0, top = 0, scaleX = 1, scaleY = 1, angle = 0 } = group;
     canvas.remove(group);
     items.forEach((item: any) => {
-      // Transform item positions relative to the group's position
-      const originalLeft = item.left || 0;
-      const originalTop = item.top || 0;
-      const rad = (angle * Math.PI) / 180;
-      const rotatedX = originalLeft * Math.cos(rad) - originalTop * Math.sin(rad);
-      const rotatedY = originalLeft * Math.sin(rad) + originalTop * Math.cos(rad);
+      // Use Fabric's utility to compute the final transform for each item
+      const itemTransform = item.calcTransformMatrix();
+      // Decompose to get position, scale, angle
+      const fullTransform = fabric.util.multiplyTransformMatrices(groupTransform, itemTransform);
+      const decomposed = fabric.util.qrDecompose(fullTransform);
       item.set({
-        left: left + rotatedX * scaleX,
-        top: top + rotatedY * scaleY,
-        scaleX: (item.scaleX || 1) * scaleX,
-        scaleY: (item.scaleY || 1) * scaleY,
-        angle: (item.angle || 0) + angle,
+        left: decomposed.translateX,
+        top: decomposed.translateY,
+        scaleX: decomposed.scaleX,
+        scaleY: decomposed.scaleY,
+        angle: decomposed.angle,
+        flipX: false,
+        flipY: false,
       });
       item.setCoords();
       canvas.add(item);
