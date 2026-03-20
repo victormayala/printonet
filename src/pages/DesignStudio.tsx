@@ -1277,7 +1277,7 @@ export default function DesignStudio() {
                     </button>
                   ))}
                 </div>
-                {selectedPropertiesPanel && (
+                {selectedObject && selectedObject.type === "image" && (
                   <>
                     <Separator className="bg-sidebar-border" />
                     {selectedPropertiesPanel}
