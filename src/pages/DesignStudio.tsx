@@ -1310,23 +1310,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             <Redo2 className="h-4 w-4" />
           </Button>
 
-          {/* Variant color switcher (static products only) */}
-          {productVariants.length > 0 && (
-            <>
-              <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
-              <div className="flex gap-1.5 items-center">
-                {productVariants.map((v) => (
-                  <button
-                    key={v.color}
-                    className={`h-6 w-6 rounded-full border-2 transition-all ${selectedVariant?.color === v.color ? "border-primary scale-110" : "border-sidebar-border"}`}
-                    style={{ backgroundColor: v.hex }}
-                    onClick={() => setSelectedVariant(v)}
-                    title={v.colorName}
-                  />
-                ))}
-              </div>
-            </>
-          )}
 
           {/* View switcher — only show available views */}
           {availableViews.length > 1 && (
