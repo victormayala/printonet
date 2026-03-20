@@ -12,8 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
-  Store, Globe, Loader2, Package, ImageIcon
+  Store, Globe, Loader2, Package, ImageIcon, LogOut
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Product = {
   id: string;
