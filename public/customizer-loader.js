@@ -182,10 +182,12 @@
       if (match) {
         openForProduct(match);
       } else if (!productId && !productName) {
-        // No specific product — show picker
         showPicker(products);
       } else {
-        console.warn('[CustomizerLoader] Product not found:', productId || productName);
+        console.warn('[CustomizerLoader] Product not found. Searched for:', productId ? 'id=' + productId : 'name=' + productName);
+        console.warn('[CustomizerLoader] Available products:', products.map(function(p) { return { id: p.id, name: p.name }; }));
+        // Fallback: show picker so the user isn't stuck
+        showPicker(products);
       }
     });
   }
