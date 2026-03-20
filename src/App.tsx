@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/developers" element={<Developers />} />
             <Route path="/brand-settings" element={<ProtectedRoute><BrandSettings /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
