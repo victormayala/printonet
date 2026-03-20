@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
-  Store, Globe, Loader2, Package, ImageIcon, LogOut
+  Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
