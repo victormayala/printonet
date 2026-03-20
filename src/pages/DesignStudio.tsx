@@ -998,6 +998,26 @@ export default function DesignStudio() {
     );
   }
 
+  function deleteLayer(layerObj: any) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    canvas.remove(layerObj);
+    if (selectedObject === layerObj) setSelectedObject(null);
+    saveState();
+  }
+
+  function duplicateLayer(layerObj: any) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    layerObj.clone().then((cloned: any) => {
+      cloned.set({ left: (cloned.left || 0) + 15, top: (cloned.top || 0) + 15 });
+      canvas.add(cloned);
+      canvas.setActiveObject(cloned);
+      canvas.renderAll();
+      saveState();
+    });
+  }
+
 
   function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
     const canvas = fabricRef.current;
