@@ -1142,9 +1142,6 @@ export default function DesignStudio() {
                     <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
                       <Type className="h-4 w-4" /> Add Custom Text
                     </Button>
-                    <Button onClick={addArchText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
-                      <Type className="h-4 w-4" /> Add Arch Text
-                    </Button>
 
                     {/* Text Templates - scrollable */}
                     <div className="space-y-2">
