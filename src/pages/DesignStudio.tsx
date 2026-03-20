@@ -822,8 +822,7 @@ export default function DesignStudio() {
     patternCanvas.width = tileSize;
     patternCanvas.height = tileSize;
 
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, tileSize, tileSize);
+    ctx.clearRect(0, 0, tileSize, tileSize);
     ctx.strokeStyle = fillColor;
     ctx.fillStyle = fillColor;
     ctx.lineWidth = 2;
