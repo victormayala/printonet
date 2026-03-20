@@ -294,6 +294,7 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
 }
 
 export default function Products() {
+  const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null | undefined>(undefined);
