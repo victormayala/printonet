@@ -903,10 +903,11 @@ export default function DesignStudio() {
     reader.onload = (event) => {
       const imgEl = new Image();
       imgEl.onload = () => {
+        const scale = Math.min(300 / imgEl.width, 300 / imgEl.height, 1);
         const img = new FabricImage(imgEl, {
           left: 100, top: 100,
-          scaleX: Math.min(300 / imgEl.width, 1),
-          scaleY: Math.min(300 / imgEl.height, 1),
+          scaleX: scale,
+          scaleY: scale,
         });
         (img as any).customName = file.name.slice(0, 20);
         canvas.add(img);
