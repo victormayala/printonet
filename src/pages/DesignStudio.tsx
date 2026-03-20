@@ -859,40 +859,30 @@ export default function DesignStudio() {
                     <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button variant="outline" onClick={() => addShape("rect")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <Square className="h-5 w-5" /><span className="text-[10px]">Rectangle</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("roundedRect")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <RectangleHorizontal className="h-5 w-5" /><span className="text-[10px]">Rounded</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("circle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <CircleIcon className="h-5 w-5" /><span className="text-[10px]">Circle</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("ellipse")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <CircleIcon className="h-5 w-5 scale-x-125" /><span className="text-[10px]">Ellipse</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("triangle")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <TriangleIcon className="h-5 w-5" /><span className="text-[10px]">Triangle</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("pentagon")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <Pentagon className="h-5 w-5" /><span className="text-[10px]">Pentagon</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("hexagon")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <Hexagon className="h-5 w-5" /><span className="text-[10px]">Hexagon</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("star")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <Star className="h-5 w-5" /><span className="text-[10px]">Star</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("arrow")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <ArrowRight className="h-5 w-5" /><span className="text-[10px]">Arrow</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("line")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <Minus className="h-5 w-5" /><span className="text-[10px]">Line</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => addShape("cross")} className="flex-col gap-1 h-auto py-3 border-sidebar-border hover:bg-sidebar-accent">
-                    <span className="text-lg font-bold">✚</span><span className="text-[10px]">Cross</span>
-                  </Button>
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    { id: "rect", icon: <Square className="h-6 w-6" />, label: "Rectangle" },
+                    { id: "roundedRect", icon: <RectangleHorizontal className="h-6 w-6" />, label: "Rounded" },
+                    { id: "circle", icon: <CircleIcon className="h-6 w-6" />, label: "Circle" },
+                    { id: "ellipse", icon: <CircleIcon className="h-6 w-6 scale-x-125" />, label: "Ellipse" },
+                    { id: "triangle", icon: <TriangleIcon className="h-6 w-6" />, label: "Triangle" },
+                    { id: "pentagon", icon: <Pentagon className="h-6 w-6" />, label: "Pentagon" },
+                    { id: "hexagon", icon: <Hexagon className="h-6 w-6" />, label: "Hexagon" },
+                    { id: "star", icon: <Star className="h-6 w-6" />, label: "Star" },
+                    { id: "arrow", icon: <ArrowRight className="h-6 w-6" />, label: "Arrow" },
+                    { id: "line", icon: <Minus className="h-6 w-6" />, label: "Line" },
+                    { id: "cross", icon: <span className="text-lg font-bold">✚</span>, label: "Cross" },
+                  ] as const).map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => addShape(s.id)}
+                      className="flex flex-col items-center gap-1 p-2 rounded-lg border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors"
+                      title={s.label}
+                    >
+                      {s.icon}
+                      <span className="text-[9px] text-muted-foreground">{s.label}</span>
+                    </button>
+                  ))}
                 </div>
               </>
             )}
