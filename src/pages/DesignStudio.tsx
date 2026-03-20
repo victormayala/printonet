@@ -354,7 +354,11 @@ const TEXT_TEMPLATES: TextTemplate[] = [
 
 type ViewSide = "front" | "back" | "side1" | "side2";
 
-interface InventoryProduct {
+interface ProductVariant {
+  color: string;
+  colorName: string;
+  hex: string;
+}
   id: string;
   name: string;
   description: string | null;
