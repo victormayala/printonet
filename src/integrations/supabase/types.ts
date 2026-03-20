@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      customizer_sessions: {
+        Row: {
+          created_at: string
+          design_output: Json | null
+          external_ref: string | null
+          id: string
+          product_data: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          design_output?: Json | null
+          external_ref?: string | null
+          id?: string
+          product_data: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          design_output?: Json | null
+          external_ref?: string | null
+          id?: string
+          product_data?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_products: {
         Row: {
           base_price: number
