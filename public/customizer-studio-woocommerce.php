@@ -361,7 +361,7 @@ add_filter( 'woocommerce_cart_item_thumbnail', function ( $thumbnail, $cart_item
 		}
 		$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
 		$html .= '</div>';
-		$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design ↗</a>';
+		$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design &nearr;</a>';
 		$html .= '</div>';
 		return $html;
 	}
@@ -388,7 +388,7 @@ add_filter( 'woocommerce_product_get_image', function ( $image, $product, $size,
 			$html .= $image; // original product image
 			$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
 			$html .= '</div>';
-			$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design ↗</a>';
+			$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design &nearr;</a>';
 			$html .= '</div>';
 			return $html;
 		}
@@ -511,7 +511,7 @@ add_action( 'wp_footer', function () {
 						link.target = '_blank';
 						link.rel = 'noopener';
 						link.className = 'cs-view-design-link';
-						link.textContent = 'View Design ↗';
+						link.textContent = 'View Design &nearr;';
 						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;text-align:center;';
 						container.parentNode.insertBefore(link, container.nextSibling);
 					}
@@ -553,7 +553,7 @@ add_action( 'wp_footer', function () {
 						link.target = '_blank';
 						link.rel = 'noopener';
 						link.className = 'cs-view-design-link';
-						link.textContent = 'View Design ↗';
+						link.textContent = 'View Design &nearr;';
 						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;';
 						thumbTd.appendChild(link);
 					}
