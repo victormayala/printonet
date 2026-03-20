@@ -406,6 +406,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportComplete, setExportComplete] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1049,6 +1050,22 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     );
   }
 
+  if (exportComplete && embedMode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--editor-bg))]">
+        <div className="text-center space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-sidebar-foreground">Design Submitted!</h2>
+          <p className="text-sm text-muted-foreground">Your custom design has been saved. You can close this window.</p>
+        </div>
+      </div>
+    );
+  }
+
   function deleteLayer(layerObj: any) {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -1120,17 +1137,22 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
 
-        // Upload to storage
-        const blob = await (await fetch(dataUrl)).blob();
-        const fileName = `${sessionId || "export"}_${view}_${Date.now()}.png`;
+        // Try uploading to storage, fall back to data URL
+        let publicUrl = dataUrl;
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const fileName = `${sessionId || "export"}_${view}_${Date.now()}.png`;
 
-        const { data: uploadData } = await supabase.storage
-          .from("design-exports")
-          .upload(fileName, blob, { contentType: "image/png" });
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("design-exports")
+            .upload(fileName, blob, { contentType: "image/png" });
 
-        const publicUrl = uploadData
-          ? supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl
-          : dataUrl;
+          if (uploadData && !uploadError) {
+            publicUrl = supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl;
+          }
+        } catch (uploadErr) {
+          console.warn("Storage upload failed, using data URL:", uploadErr);
+        }
 
         sides.push({
           view,
@@ -1154,9 +1176,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
       // If embed mode, complete session and post message to parent
       if (embedMode && sessionId) {
-        await supabase.functions.invoke("complete-session", {
-          body: { sessionId, designOutput: result },
-        });
+        try {
+          await supabase.functions.invoke("complete-session", {
+            body: { sessionId, designOutput: result },
+          });
+        } catch (sessionErr) {
+          console.warn("Session completion API call failed:", sessionErr);
+        }
 
         window.parent.postMessage(
           { source: "customizer-studio", type: "design-complete", payload: result },
@@ -1164,9 +1190,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         );
       }
 
+      setExportComplete(true);
       return result;
     } catch (err) {
       console.error("Export error:", err);
+      alert("Export failed. Please try again.");
     } finally {
       setExporting(false);
     }
