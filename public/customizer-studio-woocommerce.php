@@ -383,9 +383,12 @@ add_filter( 'woocommerce_product_get_image', function ( $image, $product, $size,
 	foreach ( $cart->get_cart() as $cart_item ) {
 		if ( (int) $cart_item['product_id'] === $product->get_id() && ! empty( $cart_item['customizer_design_url'] ) ) {
 			$design_url = esc_url( $cart_item['customizer_design_url'] );
-			$html = '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+			$html = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
+			$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
 			$html .= $image; // original product image
 			$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
+			$html .= '</div>';
+			$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design ↗</a>';
 			$html .= '</div>';
 			return $html;
 		}
