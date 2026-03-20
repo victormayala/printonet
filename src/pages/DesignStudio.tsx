@@ -589,6 +589,7 @@ export default function DesignStudio() {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const json = JSON.stringify(canvas.toJSON());
+    viewStatesRef.current[activeView] = json;
     setUndoStack((prev) => [...prev, json]);
     setRedoStack([]);
   }
