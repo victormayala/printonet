@@ -1001,7 +1001,7 @@ export default function DesignStudio() {
                   </>
                 ) : (
                   <>
-                    {/* Text Templates */}
+                    {/* Text Templates - scrollable */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Templates</label>
                       <div className="grid grid-cols-2 gap-2">
@@ -1035,26 +1035,6 @@ export default function DesignStudio() {
                         ))}
                       </div>
                     </div>
-
-                    <Separator className="bg-sidebar-border" />
-
-                    {/* Custom Text */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Custom Text</label>
-                      <Input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Enter text..." className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">Font Size: {fontSize}px</label>
-                      <Slider value={[fontSize]} onValueChange={([v]) => setFontSize(v)} min={12} max={120} step={1} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">Color</label>
-                      <div className="flex items-center gap-2">
-                        <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
-                        <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-                      </div>
-                    </div>
-                    <Button onClick={addText} className="w-full gap-2"><Type className="h-4 w-4" /> Add Text</Button>
                   </>
                 )}
               </>
