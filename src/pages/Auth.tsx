@@ -91,6 +91,7 @@ function LoginForm() {
 function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -99,6 +100,10 @@ function SignupForm() {
     e.preventDefault();
     if (password.length < 6) {
       toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -137,6 +142,10 @@ function SignupForm() {
       <div className="space-y-2">
         <Label htmlFor="signup-email">Email</Label>
         <Input id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="signup-confirm">Confirm Password</Label>
+        <Input id="signup-confirm" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-password">Password</Label>
