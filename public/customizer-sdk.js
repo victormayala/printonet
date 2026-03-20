@@ -17,7 +17,7 @@
  *       brand: {
  *         name: 'My Store',
  *         logoUrl: 'https://example.com/logo.png',
- *         theme: 'dark',           // 'light' or 'dark'
+ *         theme: 'dark',
  *         primaryColor: '#7c3aed',
  *         accentColor: '#e0459b',
  *         fontFamily: 'Inter',
@@ -36,6 +36,8 @@
   var _overlay = null;
   var _iframe = null;
   var _callbacks = {};
+  var _productInfo = null;
+  var _summaryOverlay = null;
 
   function init(options) {
     _config.apiUrl = options.apiUrl || '';
@@ -50,8 +52,8 @@
 
     _callbacks.onComplete = options.onComplete || function () {};
     _callbacks.onCancel = options.onCancel || function () {};
+    _productInfo = options.product;
 
-    // Create session via API
     var url = _config.apiUrl + '/create-session';
     fetch(url, {
       method: 'POST',
@@ -67,13 +69,10 @@
           console.error('[CustomizerStudio] Error:', data.error);
           return;
         }
-        // Always prefer our own baseUrl over the API response URL,
-        // because the API infers origin from the request (which is the store's domain, not ours)
         var embedUrl = _config.baseUrl
           ? (_config.baseUrl + '/embed/' + data.sessionId)
           : (data.customizerUrl || ('/embed/' + data.sessionId));
 
-        // Append brand config as URL params if provided
         if (options.brand) {
           var params = new URLSearchParams();
           if (options.brand.name) params.set('brandName', options.brand.name);
@@ -95,20 +94,17 @@
   }
 
   function _showIframe(url) {
-    // Create overlay
     _overlay = document.createElement('div');
     _overlay.style.cssText =
       'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
 
-    // Close button
     var closeBtn = document.createElement('button');
     closeBtn.textContent = '✕';
     closeBtn.style.cssText =
       'position:absolute;top:16px;right:16px;background:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;z-index:1000000;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
-    closeBtn.onclick = function () { close(); _callbacks.onCancel(); };
+    closeBtn.onclick = function () { _closeIframe(); _callbacks.onCancel(); };
     _overlay.appendChild(closeBtn);
 
-    // Iframe
     _iframe = document.createElement('iframe');
     _iframe.src = url;
     _iframe.style.cssText =
@@ -119,7 +115,6 @@
     document.body.appendChild(_overlay);
     document.body.style.overflow = 'hidden';
 
-    // Listen for messages from the customizer
     window.addEventListener('message', _handleMessage);
   }
 
@@ -128,22 +123,152 @@
     if (!data || data.source !== 'customizer-studio') return;
 
     if (data.type === 'design-complete') {
-      _callbacks.onComplete(data.payload);
-      close();
+      _closeIframe();
+      _showSummary(data.payload);
     } else if (data.type === 'design-cancel') {
       _callbacks.onCancel();
-      close();
+      _closeIframe();
     }
   }
 
-  function close() {
+  function _closeIframe() {
     window.removeEventListener('message', _handleMessage);
     if (_overlay && _overlay.parentNode) {
       _overlay.parentNode.removeChild(_overlay);
     }
     _overlay = null;
     _iframe = null;
+  }
+
+  // --- Design Summary Modal ---
+  function _showSummary(payload) {
+    var sides = (payload && payload.sides) || [];
+    var designSides = sides.filter(function (s) { return s.designPNG && s.designPNG.length > 0; });
+    var productName = (_productInfo && _productInfo.name) || 'Your Product';
+    var variantLabel = (payload && payload.variant && payload.variant.colorName) || '';
+
+    _summaryOverlay = document.createElement('div');
+    _summaryOverlay.style.cssText =
+      'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;animation:csFadeIn .25s ease;';
+
+    // Inject keyframes
+    if (!document.getElementById('cs-summary-styles')) {
+      var style = document.createElement('style');
+      style.id = 'cs-summary-styles';
+      style.textContent = '@keyframes csFadeIn{from{opacity:0}to{opacity:1}}@keyframes csSlideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}';
+      document.head.appendChild(style);
+    }
+
+    var panel = document.createElement('div');
+    panel.style.cssText =
+      'background:#fff;border-radius:20px;max-width:520px;width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.35);animation:csSlideUp .35s ease;';
+
+    // Header
+    var header = document.createElement('div');
+    header.style.cssText = 'padding:28px 28px 0;text-align:center;';
+    header.innerHTML =
+      '<div style="margin:0 auto 16px;width:56px;height:56px;border-radius:50%;background:#ecfdf5;display:flex;align-items:center;justify-content:center;">' +
+        '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>' +
+      '</div>' +
+      '<div style="font-size:20px;font-weight:700;color:#111;margin-bottom:4px;">Design Complete!</div>' +
+      '<div style="font-size:14px;color:#666;">' + _escHtml(productName) + (variantLabel ? ' · ' + _escHtml(variantLabel) : '') + '</div>';
+    panel.appendChild(header);
+
+    // Design previews
+    if (designSides.length > 0) {
+      var grid = document.createElement('div');
+      var cols = designSides.length === 1 ? '1fr' : 'repeat(2, 1fr)';
+      grid.style.cssText = 'display:grid;grid-template-columns:' + cols + ';gap:12px;padding:24px 28px 16px;';
+
+      designSides.forEach(function (side) {
+        var card = document.createElement('div');
+        card.style.cssText = 'border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#fafafa;';
+        var label = document.createElement('div');
+        label.style.cssText = 'padding:8px 12px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;';
+        label.textContent = side.view;
+        card.appendChild(label);
+        var img = document.createElement('img');
+        img.src = side.designPNG;
+        img.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;padding:8px;';
+        img.alt = side.view + ' design';
+        card.appendChild(img);
+        grid.appendChild(card);
+      });
+
+      panel.appendChild(grid);
+    }
+
+    // Session reference
+    if (payload && payload.sessionId) {
+      var refBox = document.createElement('div');
+      refBox.style.cssText = 'margin:0 28px 16px;padding:10px 14px;background:#f8f9fa;border-radius:8px;display:flex;align-items:center;justify-content:space-between;';
+      refBox.innerHTML =
+        '<span style="font-size:12px;color:#888;">Design Reference</span>' +
+        '<span style="font-size:12px;font-family:monospace;color:#444;user-select:all;">' + _escHtml(payload.sessionId.slice(0, 8)) + '</span>';
+      panel.appendChild(refBox);
+    }
+
+    // Actions
+    var actions = document.createElement('div');
+    actions.style.cssText = 'padding:8px 28px 28px;display:flex;gap:10px;';
+
+    var closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.cssText = 'flex:1;padding:12px;border-radius:10px;border:1px solid #ddd;background:#fff;font-size:14px;font-weight:500;cursor:pointer;color:#555;transition:background .15s;';
+    closeBtn.onmouseover = function () { closeBtn.style.background = '#f5f5f5'; };
+    closeBtn.onmouseout = function () { closeBtn.style.background = '#fff'; };
+    closeBtn.onclick = function () { _closeSummary(); };
+    actions.appendChild(closeBtn);
+
+    var addBtn = document.createElement('button');
+    addBtn.textContent = '🛒  Add to Cart';
+    addBtn.style.cssText = 'flex:2;padding:12px;border-radius:10px;border:none;background:#111;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;';
+    addBtn.onmouseover = function () { addBtn.style.background = '#333'; };
+    addBtn.onmouseout = function () { addBtn.style.background = '#111'; };
+    addBtn.onclick = function () {
+      // Dispatch event for the store to handle add-to-cart
+      var evt = new CustomEvent('customizer:addtocart', { detail: payload });
+      document.dispatchEvent(evt);
+
+      // Also call the onComplete callback
+      _callbacks.onComplete(payload);
+
+      _closeSummary();
+    };
+    actions.appendChild(addBtn);
+
+    panel.appendChild(actions);
+    _summaryOverlay.appendChild(panel);
+    document.body.appendChild(_summaryOverlay);
+    document.body.style.overflow = 'hidden';
+
+    // Click backdrop to close
+    _summaryOverlay.addEventListener('click', function (e) {
+      if (e.target === _summaryOverlay) _closeSummary();
+    });
+
+    // Also dispatch the complete event
+    var completeEvt = new CustomEvent('customizer:complete', { detail: payload });
+    document.dispatchEvent(completeEvt);
+  }
+
+  function _closeSummary() {
+    if (_summaryOverlay && _summaryOverlay.parentNode) {
+      _summaryOverlay.parentNode.removeChild(_summaryOverlay);
+    }
+    _summaryOverlay = null;
     document.body.style.overflow = '';
+  }
+
+  function _escHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function close() {
+    _closeIframe();
+    _closeSummary();
   }
 
   root.CustomizerStudio = {
