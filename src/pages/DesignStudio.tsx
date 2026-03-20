@@ -1453,6 +1453,12 @@ export default function DesignStudio() {
                     <button onClick={(e) => { e.stopPropagation(); toggleLock(layer.obj); }} className="hover:text-primary">
                       {layer.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
                     </button>
+                    <button onClick={(e) => { e.stopPropagation(); duplicateLayer(layer.obj); }} className="hover:text-primary" title="Duplicate">
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteLayer(layer.obj); }} className="hover:text-destructive" title="Delete">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                     <button onClick={(e) => { e.stopPropagation(); moveLayer(i, "up"); }} className="hover:text-primary">
                       <ChevronUp className="h-3 w-3" />
                     </button>
