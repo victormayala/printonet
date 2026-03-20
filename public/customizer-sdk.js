@@ -285,13 +285,10 @@
 
   // --- Add to cart (WooCommerce or generic) ---
   function _addToCart(payload, callback) {
-    // WooCommerce integration
-    if (_wcProductId && typeof jQuery !== 'undefined' && typeof wc_add_to_cart_params !== 'undefined') {
+    if (_wcProductId) {
       var formData = new FormData();
       formData.append('product_id', _wcProductId);
       formData.append('quantity', '1');
-
-      // Attach design data as custom cart item data
       if (payload.sessionId) formData.append('customizer_session_id', payload.sessionId);
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
@@ -305,15 +302,19 @@
       })
         .then(function (res) { return res.json(); })
         .then(function (data) {
-          console.log('[CustomizerStudio] WooCommerce response:', JSON.stringify(data));
           if (data.error) {
-            console.error('[CustomizerStudio] WooCommerce add to cart error. Full response:', data);
-            // WooCommerce returns error:true for variable products that need a variation_id
-            // Try falling back to the standard form submission approach
-            _wcFormFallback(_wcProductId, payload, callback);
+            // Variable product — needs variation selection on product page
+            console.log('[CustomizerStudio] Variable product detected, redirecting to product page');
+            var productUrl = data.product_url || '';
+            if (productUrl) {
+              var sep = productUrl.indexOf('?') >= 0 ? '&' : '?';
+              var sessionParam = payload.sessionId ? 'customizer_session=' + encodeURIComponent(payload.sessionId) : '';
+              window.location.href = productUrl + (sessionParam ? sep + sessionParam : '');
+            }
+            callback(true);
             return;
           }
-          // Trigger WooCommerce cart update events
+          // Simple product — added successfully
           if (typeof jQuery !== 'undefined') {
             jQuery(document.body).trigger('added_to_cart', [data.fragments, data.cart_hash]);
           }
@@ -326,72 +327,8 @@
       return;
     }
 
-    // WooCommerce fallback: try without jQuery globals
-    if (_wcProductId) {
-      var formData2 = new FormData();
-      formData2.append('product_id', _wcProductId);
-      formData2.append('quantity', '1');
-      if (payload.sessionId) formData2.append('customizer_session_id', payload.sessionId);
-
-      fetch('/?wc-ajax=add_to_cart', {
-        method: 'POST',
-        body: formData2,
-        credentials: 'same-origin',
-      })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          if (data && !data.error) {
-            // Try to update cart fragments in the page
-            if (data.fragments && typeof jQuery !== 'undefined') {
-              jQuery.each(data.fragments, function (key, value) {
-                jQuery(key).replaceWith(value);
-              });
-            }
-            callback(true);
-          } else {
-            console.warn('[CustomizerStudio] WooCommerce response:', data);
-            callback(false);
-          }
-        })
-        .catch(function () { callback(false); });
-      return;
-    }
-
     // No WooCommerce product ID — just complete
     callback(true);
-  }
-
-  // Fallback: submit via the product page form (handles variable products)
-  function _wcFormFallback(productId, payload, callback) {
-    console.log('[CustomizerStudio] Trying WooCommerce form fallback for product', productId);
-
-    // Try adding to cart via the REST-style endpoint
-    var formData = new FormData();
-    formData.append('add-to-cart', productId);
-    formData.append('quantity', '1');
-    if (payload.sessionId) formData.append('customizer_session_id', payload.sessionId);
-
-    fetch('/?add-to-cart=' + productId, {
-      method: 'POST',
-      body: formData,
-      credentials: 'same-origin',
-      redirect: 'manual',
-    })
-      .then(function (res) {
-        console.log('[CustomizerStudio] Form fallback response status:', res.status);
-        // A redirect (302) or OK (200) both indicate success
-        if (res.status === 200 || res.status === 302 || res.type === 'opaqueredirect') {
-          callback(true);
-        } else {
-          console.warn('[CustomizerStudio] Unexpected status:', res.status);
-          // Still call complete so the modal closes
-          callback(true);
-        }
-      })
-      .catch(function (err) {
-        console.error('[CustomizerStudio] Form fallback failed:', err);
-        callback(true); // close modal anyway
-      });
   }
 
   function _closeSummary() {
