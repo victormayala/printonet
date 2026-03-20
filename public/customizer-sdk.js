@@ -54,6 +54,7 @@
     _callbacks.onComplete = options.onComplete || function () {};
     _callbacks.onCancel = options.onCancel || function () {};
     _productInfo = options.product;
+    _wcProductId = options.wcProductId || null;
 
     var url = _config.apiUrl + '/create-session';
     fetch(url, {
