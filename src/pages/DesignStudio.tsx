@@ -1306,6 +1306,30 @@ export default function DesignStudio() {
                     </button>
                   ))}
                 </div>
+                <Separator className="bg-sidebar-border" />
+                <label className="text-xs font-medium text-muted-foreground">Patterns</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    { id: "stripes", label: "Stripes", preview: "╱╱" },
+                    { id: "dots", label: "Dots", preview: "•••" },
+                    { id: "grid", label: "Grid", preview: "▦" },
+                    { id: "checkerboard", label: "Checker", preview: "▚" },
+                    { id: "zigzag", label: "Zigzag", preview: "⩘" },
+                    { id: "crosshatch", label: "Cross", preview: "╳" },
+                    { id: "horizontal", label: "H-Lines", preview: "☰" },
+                    { id: "vertical", label: "V-Lines", preview: "┃┃" },
+                  ] as const).map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => addPattern(p.id)}
+                      className="flex flex-col items-center gap-1 p-2 rounded-lg border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors"
+                      title={p.label}
+                    >
+                      <span className="text-lg leading-none">{p.preview}</span>
+                      <span className="text-[9px] text-muted-foreground">{p.label}</span>
+                    </button>
+                  ))}
+                </div>
               </>
             )}
 
