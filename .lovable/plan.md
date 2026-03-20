@@ -1,110 +1,60 @@
 
 
-# Customizer Studio — Product Customization Tool
+# Product Connection: Dashboard + Shopify + WordPress
 
 ## Overview
-A Printful-style product customizer where users can design custom apparel and accessories with a rich canvas editor, save their work, and order products.
+Build a product management system that lets store owners connect their products to the customizer via three methods: a manual dashboard, Shopify import, and WordPress/WooCommerce import.
 
-## Pages & Navigation
+## What Gets Built
 
-### 1. Landing Page
-- Hero section showcasing the tool with sample customized products
-- "Start Designing" CTA → opens product selector
-- Navigation: Logo, Browse Products, My Designs (auth-gated), Sign In
+### 1. Product Management Dashboard (`/products`)
+A UI where store owners can manually add, edit, and delete products:
+- Product form: name, category, description, base price, images (front/back/sides), color variants
+- Image upload using the existing `product-images` storage bucket
+- Product list with edit/delete actions
+- Toggle products active/inactive
+- Uses the existing `inventory_products` table (already has all needed columns)
 
-### 2. Product Selector
-- Grid of product categories: T-Shirts, Hoodies, Mugs, Phone Cases, Tote Bags
-- Each product shows available colors/variants
-- Clicking a product opens the Design Studio
+### 2. Shopify Import
+- A "Connect Shopify" flow on the products page
+- Store owner enters their Shopify store URL and a Storefront API access token
+- Edge function `import-shopify-products` fetches products from Shopify's Storefront API and inserts them into `inventory_products`
+- Maps Shopify product images → front/back, variants → color variants JSON
+- One-time import (not live sync) with a "Re-import" button
 
-### 3. Design Studio (Core Feature)
-Full-screen canvas editor with:
+### 3. WordPress/WooCommerce Import
+- A "Connect WooCommerce" flow on the products page
+- Store owner enters their WooCommerce REST API URL + consumer key/secret
+- Edge function `import-woocommerce-products` fetches products from WooCommerce REST API and inserts into `inventory_products`
+- Same one-time import pattern as Shopify
 
-**Canvas Area**
-- Product mockup as background (front/back views for apparel)
-- Draggable/resizable design zone overlay
-- Zoom and pan controls
+### 4. Product Selector in Customizer
+- Update the `/demo` page (or create a proper `/products` browsing page) to load products from `inventory_products` instead of hardcoded sample data
+- When a product is selected, open the Design Studio with that product's images
 
-**Left Toolbar — Design Tools**
-- **Image Upload**: Drag-and-drop or file picker, with crop/resize
-- **Text Tool**: Custom text with font picker (Google Fonts), size, color, alignment, arc/curve
-- **Shapes**: Rectangles, circles, triangles, stars, lines — with fill/stroke color
-- **Clipart Library**: Built-in icon/clipart collection organized by category
-- **Drawing**: Freehand brush (stretch goal)
+### 5. Navigation Updates
+- Add "Products" link to main nav and landing page
+- Link the product dashboard from the developer docs page
 
-**Right Panel — Layers & Properties**
-- Layer list with drag-to-reorder, visibility toggle, lock, delete
-- Selected element properties: position, size, rotation, opacity, blend mode
-- Color picker with saved swatches
+## Technical Details
 
-**Top Bar**
-- Undo/Redo
-- Product color switcher
-- View toggle (Front/Back for apparel)
-- Save Design / Add to Cart buttons
-- **Embed Mode**: Cancel / Done buttons with PNG export + postMessage
+**No new tables needed** — `inventory_products` already has all required columns (name, category, description, base_price, image_front/back/side1/side2, variants, is_active).
 
-### 4. My Designs (Auth-gated)
-- Grid of saved designs with thumbnails
-- Load, duplicate, delete designs
-- Design metadata: product type, last edited date
+**New edge functions:**
+- `supabase/functions/import-shopify-products/index.ts` — accepts Shopify credentials, calls Storefront API, upserts products
+- `supabase/functions/import-woocommerce-products/index.ts` — accepts WooCommerce credentials, calls WC REST API, upserts products
 
-### 5. Cart & Checkout
-- Cart showing customized products with design preview thumbnails
-- Quantity selector, size/variant picker
-- Order summary with pricing
-- Checkout flow using Lovable's built-in payments
+**New pages/components:**
+- `src/pages/Products.tsx` — product management dashboard with add/edit forms, import connectors
+- Update `src/App.tsx` with `/products` route
 
-### 6. Auth Pages
-- Sign up / Sign in (email-based via Supabase)
-- Profile page with order history
+**Credentials handling:** Shopify/WooCommerce API keys are passed per-request from the client to the edge function (store owner enters them in the UI). They are not stored server-side unless we add auth later.
 
-### 7. Embed Route (/embed/:sessionId) ✅
-- Minimal chrome — no nav, no back button
-- Loads product data from customizer_sessions table
-- Exports design as PNG per side on completion
-- Posts result back to parent window via postMessage
+## Files Changed
+- `src/pages/Products.tsx` (new) — product management dashboard
+- `src/App.tsx` — add `/products` route
+- `src/pages/Index.tsx` — add Products nav link
+- `supabase/functions/import-shopify-products/index.ts` (new)
+- `supabase/functions/import-woocommerce-products/index.ts` (new)
+- `supabase/config.toml` — JWT config for new functions
 
-### 8. Developer Integration Page (/developers) ✅
-- Quick-start code snippets (HTML embed, SDK usage)
-- API reference for session endpoints
-- SDK reference with postMessage events
-
-## Backend (Lovable Cloud / Supabase)
-
-**Database Tables**
-- `profiles` — user display name, avatar
-- `inventory_products` — product catalog with mockup images per side ✅
-- `customizer_sessions` — embeddable sessions (product_data, design_output, status) ✅
-- `designs` — saved designs (product_type, canvas_data JSON, thumbnail_url, timestamps)
-- `cart_items` — product, design reference, quantity, variant
-- `orders` — order history linked to user
-
-**Storage**
-- `product-images` — uploaded product mockup images ✅
-- `design-exports` — exported design PNGs ✅
-
-**Edge Functions**
-- `create-session` — creates a customization session from external product data ✅
-- `complete-session` — stores/retrieves completed design output ✅
-
-**Auth**
-- Email/password sign-up and sign-in
-
-## Integration SDK ✅
-- `public/customizer-sdk.js` — lightweight JS file for store owners
-- API: `CustomizerStudio.init()`, `.open()`, `.close()`
-- Opens customizer in iframe overlay
-- Communicates via `window.postMessage` with origin filtering
-
-## Technical Approach
-- Canvas rendering via **Fabric.js** (proven library for interactive canvas with objects, layers, serialization)
-- Design data saved as JSON (Fabric.js canvas state) for perfect load/save
-- Product mockup images with overlay positioning
-- Export designs as PNG for thumbnails and order fulfillment
-
-## Design & UX
-- Clean, modern interface — dark sidebar with light canvas area
-- Smooth drag-and-drop interactions
-- Responsive: full experience on desktop, simplified view on tablet
-- Professional feel similar to Printful/Canva editors
