@@ -336,14 +336,73 @@ add_filter( 'woocommerce_add_cart_item_data', function ( $cart_item_data, $produ
 	return $cart_item_data;
 }, 10, 3 );
 
-// Replace cart item thumbnail with design image
+// Replace cart item thumbnail with composite: product image + design overlay
 add_filter( 'woocommerce_cart_item_thumbnail', function ( $thumbnail, $cart_item, $cart_item_key ) {
 	if ( ! empty( $cart_item['customizer_design_url'] ) ) {
-		$url = esc_url( $cart_item['customizer_design_url'] );
-		return '<img src="' . $url . '" alt="Custom Design" style="max-width:80px;border-radius:4px;" />';
+		$design_url = esc_url( $cart_item['customizer_design_url'] );
+
+		// Get the original product image URL
+		$product_img = '';
+		if ( ! empty( $cart_item['product_id'] ) ) {
+			$img_id = get_post_thumbnail_id( $cart_item['product_id'] );
+			if ( $img_id ) {
+				$img_src = wp_get_attachment_image_src( $img_id, 'woocommerce_thumbnail' );
+				if ( $img_src ) {
+					$product_img = esc_url( $img_src[0] );
+				}
+			}
+		}
+
+		// Build a composite thumbnail showing product + design overlaid
+		$html = '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+		if ( $product_img ) {
+			$html .= '<img src="' . $product_img . '" alt="Product" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
+		}
+		$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
+		$html .= '</div>';
+		return $html;
 	}
 	return $thumbnail;
 }, 10, 3 );
+
+// Also override product image on cart page (some themes use woocommerce_product_get_image)
+add_filter( 'woocommerce_product_get_image', function ( $image, $product, $size, $attr, $placeholder ) {
+	if ( ! is_cart() && ! is_checkout() ) {
+		return $image;
+	}
+
+	// Check if this product is in the cart with a custom design
+	$cart = WC()->cart;
+	if ( ! $cart ) {
+		return $image;
+	}
+
+	foreach ( $cart->get_cart() as $cart_item ) {
+		if ( (int) $cart_item['product_id'] === $product->get_id() && ! empty( $cart_item['customizer_design_url'] ) ) {
+			$design_url = esc_url( $cart_item['customizer_design_url'] );
+			$html = '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+			$html .= $image; // original product image
+			$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
+			$html .= '</div>';
+			return $html;
+		}
+	}
+
+	return $image;
+}, 10, 5 );
+
+// Inject CSS for mini-cart (sidebar/widget) composite thumbnails
+add_action( 'wp_head', function () {
+	if ( ! function_exists( 'is_woocommerce' ) ) {
+		return;
+	}
+	echo '<style>
+		.cs-cart-thumb { display:inline-block; vertical-align:middle; }
+		.widget_shopping_cart .cs-cart-thumb,
+		.woocommerce-mini-cart .cs-cart-thumb { width:60px; height:60px; }
+		.woocommerce-cart-form .cs-cart-thumb { width:80px; height:80px; }
+	</style>';
+} );
 
 // Show "Customized" label in cart item details
 add_filter( 'woocommerce_get_item_data', function ( $item_data, $cart_item ) {
