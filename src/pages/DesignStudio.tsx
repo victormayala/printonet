@@ -399,8 +399,9 @@ const VIEW_LABELS: Record<ViewSide, string> = {
   side2: "Side 2",
 };
 
-export default function DesignStudio({ embedMode = false, sessionId, embedProductData }: DesignStudioProps) {
+export default function DesignStudio({ embedMode = false, sessionId, embedProductData, brandConfig }: DesignStudioProps) {
   const navigate = useNavigate();
+  const brand = brandConfig || DEFAULT_BRAND_CONFIG;
 
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(false);
