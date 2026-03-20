@@ -96,10 +96,8 @@ const { sessionId, status, designOutput } = await response.json();
 }`;
 
   const tabs = [
-    { id: "quickstart" as const, label: "Quick Start" },
     { id: "woocommerce" as const, label: "WooCommerce" },
     { id: "api" as const, label: "API Reference" },
-    { id: "sdk" as const, label: "SDK Reference" },
   ];
 
   const wooInstallSteps = [
