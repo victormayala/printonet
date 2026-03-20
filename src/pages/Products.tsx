@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
-  Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle
+  Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
+  Code, Copy, Check, ExternalLink, Info
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -32,6 +33,99 @@ type Product = {
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
+
+function EmbedCodeDialog({ product }: { product: Product }) {
+  const [copied, setCopied] = useState(false);
+  const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const variantsStr = JSON.stringify(variants, null, 6);
+
+  const snippet = `<script src="${baseUrl}/customizer-sdk.js"><\/script>
+<script>
+  CustomizerStudio.init({
+    apiUrl: '${apiUrl}',
+    baseUrl: '${baseUrl}'
+  });
+
+  CustomizerStudio.open({
+    product: {
+      name: '${product.name.replace(/'/g, "\\'")}',
+      category: '${product.category.replace(/'/g, "\\'")}',${product.image_front ? `\n      image_front: '${product.image_front}',` : ""}${product.image_back ? `\n      image_back: '${product.image_back}',` : ""}
+      variants: ${variantsStr}
+    },
+    // Optional: customize the look of the widget
+    // brand: {
+    //   name: 'My Store',
+    //   logoUrl: 'https://example.com/logo.png',
+    //   theme: 'light',
+    //   primaryColor: '#7c3aed',
+    //   accentColor: '#e0459b',
+    //   fontFamily: 'Inter',
+    //   borderRadius: 12,
+    // },
+    onComplete: function(result) {
+      console.log('Design completed:', result);
+      // result.designImageUrl — the final design image
+      // result.sessionId — reference for the session
+    },
+    onCancel: function() {
+      console.log('User cancelled');
+    }
+  });
+<\/script>`;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(snippet);
+    setCopied(true);
+    toast({ title: "Copied to clipboard" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="secondary" className="h-8 w-8" title="Get embed code">
+          <Code className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Embed Code — {product.name}</DialogTitle>
+          <DialogDescription>
+            Paste this snippet into your store's product page to launch the customizer.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="relative">
+          <Button
+            size="sm"
+            variant="outline"
+            className="absolute top-3 right-3 gap-1.5 z-10"
+            onClick={handleCopy}
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          <pre className="rounded-lg bg-muted p-4 pr-24 text-xs overflow-x-auto whitespace-pre-wrap break-all font-mono leading-relaxed">
+            {snippet}
+          </pre>
+        </div>
+        <div className="flex items-start gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p>Add this code to any page where you want the customizer to appear. You can trigger <code className="text-xs bg-muted px-1 py-0.5 rounded">CustomizerStudio.open()</code> from a button click instead of running it immediately.</p>
+            <Link to="/developers" className="inline-flex items-center gap-1 text-primary hover:underline text-xs font-medium">
+              Full documentation & advanced options <ExternalLink className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 
 function ProductForm({
   product,
@@ -414,6 +508,16 @@ export default function Products() {
               </Card>
             ) : (
               <>
+                {products.length > 0 && (
+                  <div className="flex items-start gap-3 rounded-lg border border-dashed bg-muted/30 p-4 mb-6 text-sm">
+                    <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                    <p className="text-muted-foreground">
+                      Your products are ready! Hover any product and click the{" "}
+                      <Code className="inline h-3.5 w-3.5 -mt-0.5" /> button to get an embed snippet for your store.{" "}
+                      <Link to="/developers" className="text-primary hover:underline font-medium">View full docs →</Link>
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-6">
                   <p className="text-sm text-muted-foreground">{products.length} product{products.length !== 1 ? "s" : ""}</p>
                   <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2">
@@ -445,6 +549,7 @@ export default function Products() {
                             </div>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <EmbedCodeDialog product={p} />
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
