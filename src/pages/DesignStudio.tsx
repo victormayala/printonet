@@ -391,15 +391,16 @@ const VIEW_LABELS: Record<ViewSide, string> = {
   side2: "Side 2",
 };
 
-export default function DesignStudio() {
+export default function DesignStudio({ embedMode = false, sessionId, embedProductData }: DesignStudioProps) {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
 
   const isInventoryProduct = productId?.startsWith("inv-");
-  const staticProduct = !isInventoryProduct ? getProductById(productId || "") : null;
+  const staticProduct = !isInventoryProduct && !embedMode ? getProductById(productId || "") : null;
 
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(isInventoryProduct);
+  const [exporting, setExporting] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
