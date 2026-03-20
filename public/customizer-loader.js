@@ -57,7 +57,7 @@
   }
 
   // --- Open customizer for a specific product ---
-  function openForProduct(product) {
+  function openForProduct(product, wcProductId) {
     if (!window.CustomizerStudio) {
       console.error('[CustomizerLoader] SDK not loaded');
       return;
@@ -71,6 +71,7 @@
         image_back: product.image_back || undefined,
         variants: product.variants || [],
       },
+      wcProductId: wcProductId || null,
       onComplete: function (result) {
         var evt = new CustomEvent('customizer:complete', { detail: result });
         document.dispatchEvent(evt);
