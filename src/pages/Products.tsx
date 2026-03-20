@@ -32,7 +32,98 @@ type Product = {
   created_at: string;
 };
 
-const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
+function EmbedCodeDialog({ product }: { product: Product }) {
+  const [copied, setCopied] = useState(false);
+  const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const variantsStr = JSON.stringify(variants, null, 6);
+
+  const snippet = `<script src="${baseUrl}/customizer-sdk.js"><\/script>
+<script>
+  CustomizerStudio.init({
+    apiUrl: '${apiUrl}',
+    baseUrl: '${baseUrl}'
+  });
+
+  CustomizerStudio.open({
+    product: {
+      name: '${product.name.replace(/'/g, "\\'")}',
+      category: '${product.category.replace(/'/g, "\\'")}',${product.image_front ? `\n      image_front: '${product.image_front}',` : ""}${product.image_back ? `\n      image_back: '${product.image_back}',` : ""}
+      variants: ${variantsStr}
+    },
+    // Optional: customize the look of the widget
+    // brand: {
+    //   name: 'My Store',
+    //   logoUrl: 'https://example.com/logo.png',
+    //   theme: 'light',
+    //   primaryColor: '#7c3aed',
+    //   accentColor: '#e0459b',
+    //   fontFamily: 'Inter',
+    //   borderRadius: 12,
+    // },
+    onComplete: function(result) {
+      console.log('Design completed:', result);
+      // result.designImageUrl — the final design image
+      // result.sessionId — reference for the session
+    },
+    onCancel: function() {
+      console.log('User cancelled');
+    }
+  });
+<\/script>`;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(snippet);
+    setCopied(true);
+    toast({ title: "Copied to clipboard" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="secondary" className="h-8 w-8" title="Get embed code">
+          <Code className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Embed Code — {product.name}</DialogTitle>
+          <DialogDescription>
+            Paste this snippet into your store's product page to launch the customizer.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="relative">
+          <Button
+            size="sm"
+            variant="outline"
+            className="absolute top-3 right-3 gap-1.5 z-10"
+            onClick={handleCopy}
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          <pre className="rounded-lg bg-muted p-4 pr-24 text-xs overflow-x-auto whitespace-pre-wrap break-all font-mono leading-relaxed">
+            {snippet}
+          </pre>
+        </div>
+        <div className="flex items-start gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p>Add this code to any page where you want the customizer to appear. You can trigger <code className="text-xs bg-muted px-1 py-0.5 rounded">CustomizerStudio.open()</code> from a button click instead of running it immediately.</p>
+            <Link to="/developers" className="inline-flex items-center gap-1 text-primary hover:underline text-xs font-medium">
+              Full documentation & advanced options <ExternalLink className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 
 function ProductForm({
   product,
