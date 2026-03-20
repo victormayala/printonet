@@ -469,7 +469,7 @@ export default function DesignStudio() {
       fabricRef.current = null;
       setCanvasReady(false);
     };
-  }, []);
+  }, [loading]);
 
   // Keep the Fabric canvas transparent for inventory products so the product mockup
   // can render reliably as a layer behind it.
