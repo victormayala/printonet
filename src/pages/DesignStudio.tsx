@@ -449,6 +449,32 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       });
   }, [productId, isInventoryProduct]);
 
+  // Set up embed product data
+  useEffect(() => {
+    if (!embedMode || !embedProductData) return;
+    const ep: InventoryProduct = {
+      id: sessionId || "embed",
+      name: embedProductData.name,
+      description: embedProductData.description || null,
+      category: embedProductData.category || "apparel",
+      base_price: 0,
+      image_front: embedProductData.image_front || null,
+      image_back: embedProductData.image_back || null,
+      image_side1: embedProductData.image_side1 || null,
+      image_side2: embedProductData.image_side2 || null,
+    };
+    setInvProduct(ep);
+    const views: ViewSide[] = [];
+    if (ep.image_front) views.push("front");
+    if (ep.image_back) views.push("back");
+    if (ep.image_side1) views.push("side1");
+    if (ep.image_side2) views.push("side2");
+    if (views.length === 0) views.push("front");
+    setAvailableViews(views);
+    setActiveView(views[0]);
+    setLoading(false);
+  }, [embedMode, embedProductData]);
+
   // Set up static product
   useEffect(() => {
     if (staticProduct) {
