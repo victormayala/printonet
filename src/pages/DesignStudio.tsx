@@ -1003,6 +1003,28 @@ export default function DesignStudio() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">
+              Arch Curve: {(selectedObject as any)._archSweep || 0}°
+            </label>
+            <Slider
+              value={[(selectedObject as any)._archSweep || 0]}
+              onValueChange={([v]) => updateArchCurve(v)}
+              min={0} max={350} step={5}
+            />
+          </div>
+          {((selectedObject as any)._archSweep || 0) > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                Arch Radius: {(selectedObject as any)._archRadius || 200}px
+              </label>
+              <Slider
+                value={[(selectedObject as any)._archRadius || 200]}
+                onValueChange={([v]) => updateArchRadius(v)}
+                min={50} max={500} step={10}
+              />
+            </div>
+          )}
         </>
       )}
       <div className="space-y-1">
