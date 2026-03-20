@@ -64,7 +64,8 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+      const msg = error.message && error.message !== "{}" ? error.message : "Something went wrong. Please check your connection and try again.";
+      toast({ title: "Sign in failed", description: msg, variant: "destructive" });
     }
   };
 
