@@ -1050,6 +1050,22 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     );
   }
 
+  if (exportComplete && embedMode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--editor-bg))]">
+        <div className="text-center space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-sidebar-foreground">Design Submitted!</h2>
+          <p className="text-sm text-muted-foreground">Your custom design has been saved. You can close this window.</p>
+        </div>
+      </div>
+    );
+  }
+
   function deleteLayer(layerObj: any) {
     const canvas = fabricRef.current;
     if (!canvas) return;
