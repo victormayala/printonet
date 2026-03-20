@@ -162,8 +162,8 @@
 
     e.preventDefault();
 
-    var productId = el.getAttribute('data-product-id');
-    var productName = el.getAttribute('data-product-name');
+    var productId = (el.getAttribute('data-product-id') || '').trim();
+    var productName = (el.getAttribute('data-product-name') || '').trim();
 
     fetchProducts(function (err, products) {
       if (err || !products) {
