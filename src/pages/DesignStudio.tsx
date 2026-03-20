@@ -1120,12 +1120,19 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       // Save current view state
       viewStatesRef.current[activeView] = JSON.stringify(canvas.toJSON());
 
-      const sides: Array<{ view: string; designPNG: string; canvasJSON: string }> = [];
+      const sides: Array<{ view: string; designPNG: string; productImage: string; canvasJSON: string }> = [];
+
+      const imageMap: Record<string, string | null> = {
+        front: invProduct?.image_front || null,
+        back: invProduct?.image_back || null,
+        side1: invProduct?.image_side1 || null,
+        side2: invProduct?.image_side2 || null,
+      };
 
       for (const view of availableViews) {
         const stateJson = viewStatesRef.current[view];
         if (!stateJson) {
-          sides.push({ view, designPNG: "", canvasJSON: "{}" });
+          sides.push({ view, designPNG: "", productImage: imageMap[view] || "", canvasJSON: "{}" });
           continue;
         }
 
@@ -1157,6 +1164,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         sides.push({
           view,
           designPNG: publicUrl,
+          productImage: imageMap[view] || "",
           canvasJSON: stateJson,
         });
       }
