@@ -134,9 +134,28 @@ const { sessionId, status, designOutput } = await response.json();
 
   const tabs = [
     { id: "quickstart" as const, label: "Quick Start" },
+    { id: "woocommerce" as const, label: "WooCommerce" },
     { id: "api" as const, label: "API Reference" },
     { id: "sdk" as const, label: "SDK Reference" },
   ];
+
+  const wooInstallSteps = [
+    { title: "Download the Plugin", desc: "Click the download button below to get the plugin file." },
+    { title: "Upload to WordPress", desc: "Go to WordPress admin → Plugins → Add New → Upload Plugin, and upload the downloaded file." },
+    { title: "Activate", desc: "Click 'Activate' after the upload completes." },
+    { title: "Configure", desc: "Go to WooCommerce → Customizer Studio. Enter your Base URL, API URL, and Anon Key." },
+    { title: "Enable Products", desc: "Edit any WooCommerce product → find the 'Customizer Studio' meta box → check 'Enable Customizer' and enter the matching Product ID or Name." },
+  ];
+
+  const handleDownloadPlugin = () => {
+    const link = document.createElement('a');
+    link.href = baseUrl + '/customizer-studio-woocommerce.php';
+    link.download = 'customizer-studio-woocommerce.php';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Plugin downloaded!");
+  };
 
   return (
     <div className="min-h-screen bg-background">
