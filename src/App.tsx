@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import Products from "./pages/Products";
 import DesignStudio from "./pages/DesignStudio";
 import Inventory from "./pages/Inventory";
+import EmbedCustomizer from "./pages/EmbedCustomizer";
+import Developers from "./pages/Developers";
 import NotFound from "./pages/NotFound";
 import { useParams } from "react-router-dom";
 
@@ -28,6 +30,8 @@ const App = () => (
           <Route path="/products" element={<Products />} />
           <Route path="/design/:productId" element={<DesignStudioWrapper />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
+          <Route path="/developers" element={<Developers />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

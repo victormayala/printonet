@@ -1068,7 +1068,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     );
   }
 
-  if (!staticProduct && !invProduct) {
+  if (!staticProduct && !invProduct && !embedMode) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
