@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
         image_side2: images[3]?.src || null,
         variants,
         is_active: product.status === "active",
+        user_id: user_id || null,
       };
 
       const { error } = await supabase.from("inventory_products").insert(row);
