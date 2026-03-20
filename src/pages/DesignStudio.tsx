@@ -1328,10 +1328,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       {/* Top Bar */}
       <div className="flex h-14 items-center justify-between border-b border-sidebar-border bg-toolbar-bg px-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-sidebar-foreground hover:bg-sidebar-accent">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
+          {!embedMode && (
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-sidebar-foreground hover:bg-sidebar-accent">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          {!embedMode && <Separator orientation="vertical" className="h-6 bg-sidebar-border" />}
           <Sparkles className="h-5 w-5 text-primary" />
           <span className="font-display font-semibold text-sm">{productName}</span>
         </div>
@@ -1381,12 +1383,25 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           )}
 
           <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
-          <Button size="sm" variant="outline" className="gap-1.5 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
-            <Save className="h-3.5 w-3.5" /> Save
-          </Button>
-          <Button size="sm" className="gap-1.5">
-            <ShoppingCart className="h-3.5 w-3.5" /> Add to Cart
-          </Button>
+          {embedMode ? (
+            <>
+              <Button size="sm" variant="outline" onClick={handleCancel} className="gap-1.5 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
+                Cancel
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={exportAndComplete} disabled={exporting}>
+                {exporting ? "Exporting..." : "✓ Done"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
+                <Save className="h-3.5 w-3.5" /> Save
+              </Button>
+              <Button size="sm" className="gap-1.5">
+                <ShoppingCart className="h-3.5 w-3.5" /> Add to Cart
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
