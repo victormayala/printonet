@@ -44,6 +44,13 @@ function cs_render_settings_page() {
 	?>
 	<div class="wrap">
 		<h1>Customizer Studio Settings</h1>
+
+		<?php if ( isset( $_GET['settings-updated'] ) && $_GET['settings-updated'] === 'true' ) : ?>
+			<div class="notice notice-success is-dismissible" style="border-left-color:#10b981;">
+				<p><strong>✓ Settings saved successfully!</strong> Your Customizer Studio configuration has been updated.</p>
+			</div>
+		<?php endif; ?>
+
 		<form method="post" action="options.php">
 			<?php settings_fields( 'cs_settings' ); ?>
 			<table class="form-table">
@@ -82,11 +89,22 @@ function cs_render_settings_page() {
 							<option value="after_add_to_cart" <?php selected( $button_position, 'after_add_to_cart' ); ?>>After Add to Cart</option>
 							<option value="after_summary" <?php selected( $button_position, 'after_summary' ); ?>>After Product Summary</option>
 						</select>
+						<p class="description">If the button doesn't appear, try a different position or use the shortcode <code>[customizer_button]</code>.</p>
 					</td>
 				</tr>
 			</table>
 			<?php submit_button(); ?>
 		</form>
+
+		<hr />
+		<h2>Troubleshooting</h2>
+		<p>If the Customize button doesn't appear on your product pages:</p>
+		<ol>
+			<li>Make sure you've <strong>enabled</strong> the customizer in the product's edit page (sidebar meta box).</li>
+			<li>Try changing the <strong>Button Position</strong> above — some themes don't support all hooks.</li>
+			<li>Use the shortcode <code>[customizer_button]</code> in your product description or page builder.</li>
+			<li>Check that your Base URL and API URL are correct and accessible.</li>
+		</ol>
 	</div>
 	<?php
 }
