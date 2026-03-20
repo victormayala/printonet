@@ -367,6 +367,23 @@ interface InventoryProduct {
   image_side2: string | null;
 }
 
+interface EmbedProductData {
+  name: string;
+  category?: string;
+  description?: string;
+  image_front?: string;
+  image_back?: string;
+  image_side1?: string;
+  image_side2?: string;
+  variants?: Array<{ color: string; colorName: string; hex: string }>;
+}
+
+interface DesignStudioProps {
+  embedMode?: boolean;
+  sessionId?: string;
+  embedProductData?: EmbedProductData;
+}
+
 const VIEW_LABELS: Record<ViewSide, string> = {
   front: "Front",
   back: "Back",
@@ -374,15 +391,16 @@ const VIEW_LABELS: Record<ViewSide, string> = {
   side2: "Side 2",
 };
 
-export default function DesignStudio() {
+export default function DesignStudio({ embedMode = false, sessionId, embedProductData }: DesignStudioProps) {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
 
   const isInventoryProduct = productId?.startsWith("inv-");
-  const staticProduct = !isInventoryProduct ? getProductById(productId || "") : null;
+  const staticProduct = !isInventoryProduct && !embedMode ? getProductById(productId || "") : null;
 
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(isInventoryProduct);
+  const [exporting, setExporting] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -430,6 +448,32 @@ export default function DesignStudio() {
         setLoading(false);
       });
   }, [productId, isInventoryProduct]);
+
+  // Set up embed product data
+  useEffect(() => {
+    if (!embedMode || !embedProductData) return;
+    const ep: InventoryProduct = {
+      id: sessionId || "embed",
+      name: embedProductData.name,
+      description: embedProductData.description || null,
+      category: embedProductData.category || "apparel",
+      base_price: 0,
+      image_front: embedProductData.image_front || null,
+      image_back: embedProductData.image_back || null,
+      image_side1: embedProductData.image_side1 || null,
+      image_side2: embedProductData.image_side2 || null,
+    };
+    setInvProduct(ep);
+    const views: ViewSide[] = [];
+    if (ep.image_front) views.push("front");
+    if (ep.image_back) views.push("back");
+    if (ep.image_side1) views.push("side1");
+    if (ep.image_side2) views.push("side2");
+    if (views.length === 0) views.push("front");
+    setAvailableViews(views);
+    setActiveView(views[0]);
+    setLoading(false);
+  }, [embedMode, embedProductData]);
 
   // Set up static product
   useEffect(() => {
@@ -1024,7 +1068,7 @@ export default function DesignStudio() {
     );
   }
 
-  if (!staticProduct && !invProduct) {
+  if (!staticProduct && !invProduct && !embedMode) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -1079,6 +1123,96 @@ export default function DesignStudio() {
       URL.revokeObjectURL(url);
     };
     imgEl.src = url;
+  }
+
+  // Export all views as PNGs and post result
+  async function exportAndComplete() {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    setExporting(true);
+
+    try {
+      // Save current view state
+      viewStatesRef.current[activeView] = JSON.stringify(canvas.toJSON());
+
+      const sides: Array<{ view: string; designPNG: string; canvasJSON: string }> = [];
+
+      for (const view of availableViews) {
+        const stateJson = viewStatesRef.current[view];
+        if (!stateJson) {
+          sides.push({ view, designPNG: "", canvasJSON: "{}" });
+          continue;
+        }
+
+        // Load the view state temporarily to export
+        await canvas.loadFromJSON(stateJson);
+        canvas.backgroundColor = "rgba(0,0,0,0)";
+        canvas.backgroundImage = undefined;
+        canvas.renderAll();
+
+        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
+
+        // Upload to storage
+        const blob = await (await fetch(dataUrl)).blob();
+        const fileName = `${sessionId || "export"}_${view}_${Date.now()}.png`;
+
+        const { data: uploadData } = await supabase.storage
+          .from("design-exports")
+          .upload(fileName, blob, { contentType: "image/png" });
+
+        const publicUrl = uploadData
+          ? supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl
+          : dataUrl;
+
+        sides.push({
+          view,
+          designPNG: publicUrl,
+          canvasJSON: stateJson,
+        });
+      }
+
+      // Restore current view
+      const currentState = viewStatesRef.current[activeView];
+      if (currentState) {
+        await canvas.loadFromJSON(currentState);
+        canvas.renderAll();
+      }
+
+      const result = {
+        sessionId,
+        sides,
+        variant: selectedVariant || null,
+      };
+
+      // If embed mode, complete session and post message to parent
+      if (embedMode && sessionId) {
+        await supabase.functions.invoke("complete-session", {
+          body: { sessionId, designOutput: result },
+        });
+
+        window.parent.postMessage(
+          { source: "customizer-studio", type: "design-complete", payload: result },
+          "*"
+        );
+      }
+
+      return result;
+    } catch (err) {
+      console.error("Export error:", err);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function handleCancel() {
+    if (embedMode) {
+      window.parent.postMessage(
+        { source: "customizer-studio", type: "design-cancel" },
+        "*"
+      );
+    } else {
+      navigate(-1);
+    }
   }
 
   const tools = [
@@ -1194,10 +1328,12 @@ export default function DesignStudio() {
       {/* Top Bar */}
       <div className="flex h-14 items-center justify-between border-b border-sidebar-border bg-toolbar-bg px-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-sidebar-foreground hover:bg-sidebar-accent">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
+          {!embedMode && (
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-sidebar-foreground hover:bg-sidebar-accent">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          {!embedMode && <Separator orientation="vertical" className="h-6 bg-sidebar-border" />}
           <Sparkles className="h-5 w-5 text-primary" />
           <span className="font-display font-semibold text-sm">{productName}</span>
         </div>
@@ -1247,12 +1383,25 @@ export default function DesignStudio() {
           )}
 
           <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
-          <Button size="sm" variant="outline" className="gap-1.5 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
-            <Save className="h-3.5 w-3.5" /> Save
-          </Button>
-          <Button size="sm" className="gap-1.5">
-            <ShoppingCart className="h-3.5 w-3.5" /> Add to Cart
-          </Button>
+          {embedMode ? (
+            <>
+              <Button size="sm" variant="outline" onClick={handleCancel} className="gap-1.5 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
+                Cancel
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={exportAndComplete} disabled={exporting}>
+                {exporting ? "Exporting..." : "✓ Done"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
+                <Save className="h-3.5 w-3.5" /> Save
+              </Button>
+              <Button size="sm" className="gap-1.5">
+                <ShoppingCart className="h-3.5 w-3.5" /> Add to Cart
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

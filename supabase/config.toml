@@ -1,1 +1,7 @@
 project_id = "qumrnazgdrijdcihtkah"
+
+[functions.create-session]
+verify_jwt = false
+
+[functions.complete-session]
+verify_jwt = false
