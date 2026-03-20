@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_configs: {
+        Row: {
+          accent_color: string
+          border_radius: number
+          created_at: string
+          font_family: string
+          id: string
+          logo_url: string | null
+          name: string | null
+          primary_color: string
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          border_radius?: number
+          created_at?: string
+          font_family?: string
+          id?: string
+          logo_url?: string | null
+          name?: string | null
+          primary_color?: string
+          theme?: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          border_radius?: number
+          created_at?: string
+          font_family?: string
+          id?: string
+          logo_url?: string | null
+          name?: string | null
+          primary_color?: string
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customizer_sessions: {
         Row: {
           created_at: string

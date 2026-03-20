@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -28,15 +27,19 @@ import {
   Square,
   Undo2,
   Redo2,
-  Save,
   Upload,
   Layers as LayersIcon,
+  Save,
+  X,
+  Loader2,
 } from "lucide-react";
 import {
   DEFAULT_BRAND_CONFIG,
   type BrandConfig,
   brandConfigToCSSVars,
 } from "@/lib/brand-config";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/customizer-studio-logo.png";
 
 const FONT_OPTIONS = [
@@ -60,7 +63,13 @@ const FONT_OPTIONS = [
 export default function BrandSettings() {
   const [config, setConfig] = useState<BrandConfig>({ ...DEFAULT_BRAND_CONFIG });
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedConfigId, setSavedConfigId] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   // Apply CSS vars to preview container
   useEffect(() => {
@@ -73,6 +82,95 @@ export default function BrandSettings() {
 
   function updateConfig(partial: Partial<BrandConfig>) {
     setConfig((prev) => ({ ...prev, ...partial }));
+  }
+
+  // Logo upload handler
+  const handleLogoUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload an image file (PNG, JPG, SVG)", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Logo must be under 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const fileName = `logo_${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage
+        .from("brand-assets")
+        .upload(fileName, file, { contentType: file.type });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from("brand-assets")
+        .getPublicUrl(data.path);
+
+      updateConfig({ logoUrl: urlData.publicUrl });
+      toast({ title: "Logo uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+    }
+  }, [toast]);
+
+  function handleLogoInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleLogoUpload(file);
+    e.target.value = "";
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleLogoUpload(file);
+  }
+
+  function removeLogo() {
+    updateConfig({ logoUrl: "" });
+  }
+
+  // Save to database
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload = {
+        name: config.name || null,
+        logo_url: config.logoUrl || null,
+        theme: config.theme,
+        primary_color: config.primaryColor,
+        accent_color: config.accentColor,
+        font_family: config.fontFamily,
+        border_radius: config.borderRadius,
+      };
+
+      if (savedConfigId) {
+        const { error } = await supabase
+          .from("brand_configs")
+          .update(payload)
+          .eq("id", savedConfigId);
+        if (error) throw error;
+        toast({ title: "Brand settings updated" });
+      } else {
+        const { data, error } = await supabase
+          .from("brand_configs")
+          .insert(payload)
+          .select("id")
+          .single();
+        if (error) throw error;
+        setSavedConfigId(data.id);
+        toast({ title: "Brand settings saved" });
+      }
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   }
 
   function generateSDKCode(): string {
@@ -103,7 +201,7 @@ export default function BrandSettings() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // Mini preview of the customizer chrome
+  // Mini preview computed styles
   const previewBg = config.theme === "dark" ? "hsl(240 10% 12%)" : "hsl(0 0% 95%)";
   const previewToolbar = config.theme === "dark" ? "hsl(240 10% 10%)" : "hsl(0 0% 98%)";
   const previewSidebar = config.theme === "dark" ? "hsl(240 10% 8%)" : "hsl(0 0% 98%)";
@@ -127,6 +225,10 @@ export default function BrandSettings() {
             <Separator orientation="vertical" className="h-6" />
             <h1 className="font-display text-lg font-bold">Brand Settings</h1>
           </div>
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? "Saving..." : savedConfigId ? "Update" : "Save Settings"}
+          </Button>
         </div>
       </nav>
 
@@ -216,7 +318,7 @@ export default function BrandSettings() {
                 </div>
               </div>
 
-              {/* Branding */}
+              {/* Branding — Logo Upload */}
               <div className="rounded-xl border bg-card p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4 text-primary" />
@@ -233,12 +335,57 @@ export default function BrandSettings() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Logo URL</Label>
-                    <Input
-                      value={config.logoUrl || ""}
-                      onChange={(e) => updateConfig({ logoUrl: e.target.value })}
-                      placeholder="https://yourstore.com/logo.png"
-                      className="text-sm"
+                    <Label className="text-xs text-muted-foreground">Logo</Label>
+                    {config.logoUrl ? (
+                      <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
+                        <img
+                          src={config.logoUrl}
+                          alt="Brand logo"
+                          className="h-10 max-w-[120px] object-contain"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground truncate">{config.logoUrl.split("/").pop()}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={removeLogo}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                        onDragLeave={() => setDragOver(false)}
+                        onDrop={handleDrop}
+                        onClick={() => logoInputRef.current?.click()}
+                        className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${
+                          dragOver
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-muted-foreground hover:bg-muted/30"
+                        }`}
+                      >
+                        {uploadingLogo ? (
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground text-center">
+                              <span className="font-medium text-foreground">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">PNG, JPG or SVG · Max 5MB</p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      className="hidden"
+                      onChange={handleLogoInputChange}
                     />
                   </div>
                 </div>
@@ -285,7 +432,7 @@ export default function BrandSettings() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => setConfig({ ...DEFAULT_BRAND_CONFIG })}
+                onClick={() => { setConfig({ ...DEFAULT_BRAND_CONFIG }); setSavedConfigId(null); }}
               >
                 Reset to Defaults
               </Button>
@@ -331,19 +478,13 @@ export default function BrandSettings() {
                       <div className="flex items-center gap-1">
                         <div
                           className="rounded px-2 py-0.5 text-[10px] font-medium"
-                          style={{
-                            background: previewSidebarAccent,
-                            color: previewMuted,
-                          }}
+                          style={{ background: previewSidebarAccent, color: previewMuted }}
                         >
                           <Undo2 className="h-3 w-3 inline" />
                         </div>
                         <div
                           className="rounded px-2 py-0.5 text-[10px] font-medium"
-                          style={{
-                            background: previewSidebarAccent,
-                            color: previewMuted,
-                          }}
+                          style={{ background: previewSidebarAccent, color: previewMuted }}
                         >
                           <Redo2 className="h-3 w-3 inline" />
                         </div>
