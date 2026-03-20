@@ -144,6 +144,10 @@ function SignupForm() {
         <Input id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <div className="space-y-2">
+        <Label htmlFor="signup-confirm">Confirm Password</Label>
+        <Input id="signup-confirm" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="signup-password">Password</Label>
         <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
       </div>
