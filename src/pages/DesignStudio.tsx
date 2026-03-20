@@ -1122,6 +1122,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
       const sides: Array<{ view: string; designPNG: string; canvasJSON: string }> = [];
 
+      const imageMap: Record<string, string | null> = {
+        front: invProduct?.image_front || null,
+        back: invProduct?.image_back || null,
+        side1: invProduct?.image_side1 || null,
+        side2: invProduct?.image_side2 || null,
+      };
+
       for (const view of availableViews) {
         const stateJson = viewStatesRef.current[view];
         if (!stateJson) {
