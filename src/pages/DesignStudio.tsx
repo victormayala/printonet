@@ -403,6 +403,8 @@ export default function DesignStudio() {
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [clipartCategory, setClipartCategory] = useState<string>("Popular");
   const [fontFamily, setFontFamily] = useState<string>("Inter");
+  const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
+  const previousViewRef = useRef<ViewSide>("front");
   
   // Load inventory product
   useEffect(() => {
@@ -511,16 +513,51 @@ export default function DesignStudio() {
     };
   }, [loading]);
 
-  // Keep the Fabric canvas transparent for inventory products so the product mockup
-  // can render reliably as a layer behind it.
+  // Save/restore per-view canvas state when switching views
   useEffect(() => {
     if (!canvasReady || !fabricRef.current) return;
     const canvas = fabricRef.current;
+    const prevView = previousViewRef.current;
+
+    // Save previous view's state
+    if (prevView !== activeView) {
+      viewStatesRef.current[prevView] = JSON.stringify(canvas.toJSON());
+    }
+
     const hasInventoryBackground = Boolean(getCurrentImageUrl());
 
-    canvas.backgroundImage = undefined;
-    canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
-    canvas.renderAll();
+    // Load new view's state
+    const savedState = viewStatesRef.current[activeView];
+    if (savedState && prevView !== activeView) {
+      canvas.loadFromJSON(savedState).then(() => {
+        canvas.backgroundImage = undefined;
+        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+        canvas.renderAll();
+        updateLayers();
+        setSelectedObject(null);
+        // Reset undo/redo for new view
+        setUndoStack([savedState]);
+        setRedoStack([]);
+      });
+    } else {
+      if (prevView !== activeView) {
+        // New view with no saved state — clear canvas
+        canvas.clear();
+        canvas.backgroundImage = undefined;
+        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+        canvas.renderAll();
+        updateLayers();
+        setSelectedObject(null);
+        setUndoStack([JSON.stringify(canvas.toJSON())]);
+        setRedoStack([]);
+      } else {
+        canvas.backgroundImage = undefined;
+        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+        canvas.renderAll();
+      }
+    }
+
+    previousViewRef.current = activeView;
   }, [activeView, invProduct, selectedVariant, canvasReady]);
 
   function handleSelection(e: any) {
@@ -552,6 +589,7 @@ export default function DesignStudio() {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const json = JSON.stringify(canvas.toJSON());
+    viewStatesRef.current[activeView] = json;
     setUndoStack((prev) => [...prev, json]);
     setRedoStack([]);
   }
