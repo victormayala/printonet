@@ -1,32 +1,30 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Palette, Layers, ShoppingCart, ArrowRight } from "lucide-react";
+import { Code, Layers, Zap, ArrowRight, Globe } from "lucide-react";
 import logo from "@/assets/customizer-studio-logo.png";
 
 const features = [
   {
-    icon: Palette,
-    title: "Rich Design Tools",
-    description: "Upload images, add text with custom fonts, shapes, and clipart to create your perfect design.",
-  },
-  {
     icon: Layers,
-    title: "Layer Management",
-    description: "Full control with drag-to-reorder layers, opacity, locking, and visibility toggles.",
+    title: "Rich Design Tools",
+    description: "Text with custom fonts, shapes, clipart, image upload — all with layers, undo/redo, and precision controls.",
   },
   {
-    icon: ShoppingCart,
-    title: "Order & Checkout",
-    description: "Save your designs, add to cart, and order custom products delivered to your door.",
+    icon: Globe,
+    title: "Platform Agnostic",
+    description: "Embed via iframe or JavaScript SDK. Works with Shopify, WooCommerce, custom stores, and any platform.",
+  },
+  {
+    icon: Zap,
+    title: "Instant Results",
+    description: "Get back high-res PNG exports and canvas data via postMessage — ready for fulfillment.",
   },
 ];
 
-const showcaseProducts = [
-  { emoji: "👕", label: "T-Shirts", delay: "0s" },
-  { emoji: "🧥", label: "Hoodies", delay: "0.5s" },
-  { emoji: "☕", label: "Mugs", delay: "1s" },
-  { emoji: "📱", label: "Cases", delay: "1.5s" },
-  { emoji: "👜", label: "Totes", delay: "2s" },
+const steps = [
+  { step: "1", title: "Create a Session", desc: "POST your product data (name, images, variants) to our API." },
+  { step: "2", title: "Customer Designs", desc: "The customizer opens in an iframe. Your customer adds text, images, shapes." },
+  { step: "3", title: "Get Results Back", desc: "Receive high-res PNGs and design data back via callback to your store." },
 ];
 
 export default function Index() {
@@ -39,12 +37,14 @@ export default function Index() {
             <img src={logo} alt="Customizer Studio" className="h-8" />
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/products">
-              <Button variant="ghost">Browse Products</Button>
+            <Link to="/developers">
+              <Button variant="ghost" className="gap-2">
+                <Code className="h-4 w-4" /> Docs
+              </Button>
             </Link>
-            <Link to="/products">
+            <Link to="/developers">
               <Button className="gap-2">
-                Start Designing <ArrowRight className="h-4 w-4" />
+                Get Started <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -56,37 +56,44 @@ export default function Index() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
         <div className="container relative flex flex-col items-center text-center">
           <div className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-1.5 text-sm text-muted-foreground mb-6">
-            Design. Customize. Order.
+            Embeddable Product Customizer
           </div>
           <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-[1.1]">
-            Create stunning custom{" "}
-            <span className="text-gradient">products</span>{" "}
-            in minutes
+            Add product{" "}
+            <span className="text-gradient">customization</span>{" "}
+            to any store
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-            Design custom apparel and accessories with our powerful editor. Upload images, add text,
-            shapes, and more — then order your creations with one click.
+            Drop our JavaScript SDK into your e-commerce platform. Customers design custom products in a rich canvas editor —
+            you get back print-ready PNGs and design data.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <Link to="/products">
+            <Link to="/developers">
               <Button size="lg" className="gap-2 text-base px-8 h-12">
-                Start Designing <ArrowRight className="h-5 w-5" />
+                View Integration Docs <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
           </div>
+        </div>
+      </section>
 
-          {/* Floating product showcase */}
-          <div className="mt-20 flex items-center justify-center gap-6 md:gap-10">
-            {showcaseProducts.map((p) => (
-              <div
-                key={p.label}
-                className="flex flex-col items-center gap-2 animate-float"
-                style={{ animationDelay: p.delay }}
-              >
-                <div className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-card border shadow-lg text-3xl md:text-4xl">
-                  {p.emoji}
+      {/* How it works */}
+      <section className="py-24 border-t bg-muted/30">
+        <div className="container">
+          <div className="text-center mb-16">
+            <h2 className="font-display text-3xl md:text-4xl font-bold">How it works</h2>
+            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+              Three API calls. That's all it takes.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {steps.map((item) => (
+              <div key={item.step} className="group rounded-xl border bg-card p-8 transition-all hover:shadow-lg hover:border-primary/30">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  {item.step}
                 </div>
-                <span className="text-xs text-muted-foreground font-medium">{p.label}</span>
+                <h3 className="font-display text-lg font-semibold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -94,13 +101,10 @@ export default function Index() {
       </section>
 
       {/* Features */}
-      <section className="py-24 border-t bg-muted/30">
+      <section className="py-24 border-t">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="font-display text-3xl md:text-4xl font-bold">Everything you need to create</h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              Professional-grade tools in a simple, intuitive interface.
-            </p>
+            <h2 className="font-display text-3xl md:text-4xl font-bold">Built for developers & store owners</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {features.map((f) => (
@@ -116,16 +120,40 @@ export default function Index() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24">
+      {/* Code snippet preview */}
+      <section className="py-24 border-t bg-muted/30">
         <div className="container flex flex-col items-center text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold max-w-2xl">
-            Ready to bring your ideas to life?
+          <h2 className="font-display text-3xl md:text-4xl font-bold max-w-2xl mb-8">
+            Integrate in minutes
           </h2>
-          <p className="mt-4 text-muted-foreground">No design skills needed. Start customizing in seconds.</p>
-          <Link to="/products" className="mt-8">
-            <Button size="lg" className="gap-2 text-base px-8 h-12">
-              Browse Products <ArrowRight className="h-5 w-5" />
+          <div className="max-w-2xl w-full rounded-xl border bg-card overflow-hidden text-left">
+            <div className="px-4 py-2 border-b bg-muted flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="h-3 w-3 rounded-full bg-destructive/60" />
+                <div className="h-3 w-3 rounded-full bg-yellow-400/60" />
+                <div className="h-3 w-3 rounded-full bg-green-400/60" />
+              </div>
+              <span className="text-xs text-muted-foreground font-mono ml-2">your-store.html</span>
+            </div>
+            <pre className="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-foreground">
+{`<script src="${window.location.origin}/customizer-sdk.js"></script>
+<script>
+  CustomizerStudio.open({
+    product: {
+      name: 'Classic T-Shirt',
+      image_front: '/tshirt-front.png',
+    },
+    onComplete: (result) => {
+      // Add to cart with design PNGs
+      addToCart(result.sides);
+    }
+  });
+</script>`}
+            </pre>
+          </div>
+          <Link to="/developers" className="mt-8">
+            <Button size="lg" variant="outline" className="gap-2">
+              <Code className="h-4 w-4" /> Full Documentation
             </Button>
           </Link>
         </div>
