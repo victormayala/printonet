@@ -359,6 +359,8 @@ interface ProductVariant {
   colorName: string;
   hex: string;
 }
+
+interface InventoryProduct {
   id: string;
   name: string;
   description: string | null;
@@ -395,14 +397,10 @@ const VIEW_LABELS: Record<ViewSide, string> = {
 };
 
 export default function DesignStudio({ embedMode = false, sessionId, embedProductData }: DesignStudioProps) {
-  const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
 
-  const isInventoryProduct = productId?.startsWith("inv-");
-  const staticProduct = !isInventoryProduct && !embedMode ? getProductById(productId || "") : null;
-
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
-  const [loading, setLoading] = useState(isInventoryProduct);
+  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
