@@ -102,6 +102,10 @@ function SignupForm() {
       toast({ title: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
+    if (password !== confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
