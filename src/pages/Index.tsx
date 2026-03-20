@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Code, Layers, Zap, ArrowRight, Globe, Paintbrush } from "lucide-react";
+import { Code, Layers, Zap, ArrowRight, Globe, Paintbrush, Package } from "lucide-react";
 import logo from "@/assets/customizer-studio-logo.png";
 
 const features = [
