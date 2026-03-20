@@ -354,11 +354,14 @@ add_filter( 'woocommerce_cart_item_thumbnail', function ( $thumbnail, $cart_item
 		}
 
 		// Build a composite thumbnail showing product + design overlaid
-		$html = '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+		$html = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
+		$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
 		if ( $product_img ) {
 			$html .= '<img src="' . $product_img . '" alt="Product" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
 		}
 		$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
+		$html .= '</div>';
+		$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design ↗</a>';
 		$html .= '</div>';
 		return $html;
 	}
@@ -380,9 +383,12 @@ add_filter( 'woocommerce_product_get_image', function ( $image, $product, $size,
 	foreach ( $cart->get_cart() as $cart_item ) {
 		if ( (int) $cart_item['product_id'] === $product->get_id() && ! empty( $cart_item['customizer_design_url'] ) ) {
 			$design_url = esc_url( $cart_item['customizer_design_url'] );
-			$html = '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+			$html = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
+			$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
 			$html .= $image; // original product image
 			$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
+			$html .= '</div>';
+			$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design ↗</a>';
 			$html .= '</div>';
 			return $html;
 		}
@@ -405,6 +411,9 @@ add_action( 'wp_head', function () {
 		.cs-design-overlay-wrap { position:relative; display:inline-block; }
 		.cs-design-overlay-wrap img.cs-design-overlay {
 			position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; z-index:2;
+		}
+		.cs-view-design-link { display:block; font-size:11px; margin-top:4px; color:#2563eb; text-decoration:none; }
+		.cs-view-design-link:hover { text-decoration:underline; color:#1d4ed8;
 		}
 	</style>';
 } );
@@ -495,6 +504,18 @@ add_action( 'wp_footer', function () {
 					overlay.className = 'cs-design-overlay';
 					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
 					container.appendChild(overlay);
+
+					// Add "View Design" link below the thumbnail
+					if(!container.parentNode.querySelector('.cs-view-design-link')){
+						var link = document.createElement('a');
+						link.href = match.design_url;
+						link.target = '_blank';
+						link.rel = 'noopener';
+						link.className = 'cs-view-design-link';
+						link.textContent = 'View Design ↗';
+						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;text-align:center;';
+						container.parentNode.insertBefore(link, container.nextSibling);
+					}
 				});
 
 				// Also handle classic cart table (fallback if PHP filter didn't work)
@@ -525,6 +546,18 @@ add_action( 'wp_footer', function () {
 					overlay.className = 'cs-design-overlay';
 					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
 					imgWrap.appendChild(overlay);
+
+					// Add "View Design" link below thumbnail in classic cart
+					if(!thumbTd.querySelector('.cs-view-design-link')){
+						var link = document.createElement('a');
+						link.href = match.design_url;
+						link.target = '_blank';
+						link.rel = 'noopener';
+						link.className = 'cs-view-design-link';
+						link.textContent = 'View Design ↗';
+						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;';
+						thumbTd.appendChild(link);
+					}
 				});
 			}
 
