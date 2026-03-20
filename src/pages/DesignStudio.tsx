@@ -879,24 +879,20 @@ export default function DesignStudio() {
       default: return;
     }
 
-    const patternImg = new Image();
-    patternImg.onload = () => {
-      const fabricPattern = new Pattern({
-        source: patternImg,
-        repeat: "repeat",
-      });
-      const rect = new Rect({
-        left: 180, top: 220, width: size, height: size,
-        fill: fabricPattern,
-        stroke: fillColor,
-        strokeWidth: 1,
-      });
-      (rect as any).customName = patternType.charAt(0).toUpperCase() + patternType.slice(1) + " Pattern";
-      canvas.add(rect);
-      canvas.setActiveObject(rect);
-      saveState();
-    };
-    patternImg.src = patternCanvas.toDataURL();
+    const fabricPattern = new Pattern({
+      source: patternCanvas,
+      repeat: "repeat",
+    });
+    const rect = new Rect({
+      left: 180, top: 220, width: size, height: size,
+      fill: fabricPattern,
+      stroke: fillColor,
+      strokeWidth: 1,
+    });
+    (rect as any).customName = patternType.charAt(0).toUpperCase() + patternType.slice(1) + " Pattern";
+    canvas.add(rect);
+    canvas.setActiveObject(rect);
+    saveState();
   }
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
