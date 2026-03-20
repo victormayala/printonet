@@ -28,46 +28,9 @@ function CodeBlock({ code, language = "html" }: { code: string; language?: strin
 }
 
 export default function Developers() {
-  const [activeTab, setActiveTab] = useState<"quickstart" | "api" | "sdk" | "woocommerce">("quickstart");
+  const [activeTab, setActiveTab] = useState<"woocommerce" | "api">("woocommerce");
   const baseUrl = window.location.origin;
 
-  const sdkSnippet = `<!-- Add the Customizer SDK -->
-<script src="${baseUrl}/customizer-sdk.js"><\/script>
-
-<script>
-  // Initialize with your API URL
-  CustomizerStudio.init({
-    apiUrl: '${SUPABASE_URL}/functions/v1',
-    baseUrl: '${baseUrl}'
-  });
-
-  // Open the customizer when user clicks "Customize"
-  document.getElementById('customize-btn').addEventListener('click', function() {
-    CustomizerStudio.open({
-      product: {
-        name: 'Classic T-Shirt',
-        category: 'T-Shirts',
-        image_front: 'https://your-store.com/tshirt-front.png',
-        image_back: 'https://your-store.com/tshirt-back.png',
-        variants: [
-          { color: 'white', colorName: 'White', hex: '#FFFFFF' },
-          { color: 'black', colorName: 'Black', hex: '#1a1a1a' }
-        ]
-      },
-      externalRef: 'cart-item-123',
-      onComplete: function(result) {
-        console.log('Design completed!', result);
-        // result.sides[] contains designPNG URLs and canvasJSON for each view
-        // Add the customized product to your cart here
-      },
-      onCancel: function() {
-        console.log('User cancelled customization');
-      }
-    });
-  });
-<\/script>
-
-<button id="customize-btn">Customize This Product</button>`;
 
   const apiCreateSession = `// Create a customization session
 const response = await fetch('${SUPABASE_URL}/functions/v1/create-session', {
@@ -133,10 +96,8 @@ const { sessionId, status, designOutput } = await response.json();
 }`;
 
   const tabs = [
-    { id: "quickstart" as const, label: "Quick Start" },
     { id: "woocommerce" as const, label: "WooCommerce" },
     { id: "api" as const, label: "API Reference" },
-    { id: "sdk" as const, label: "SDK Reference" },
   ];
 
   const wooInstallSteps = [
@@ -337,17 +298,6 @@ const { sessionId, status, designOutput } = await response.json();
           </div>
         )}
 
-        {activeTab === "quickstart" && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold">Embed with JavaScript SDK</h3>
-              <p className="text-muted-foreground">
-                The fastest way to integrate. Add a single script tag and call <code className="text-sm bg-muted px-1.5 py-0.5 rounded">CustomizerStudio.open()</code>.
-              </p>
-            </div>
-            <CodeBlock code={sdkSnippet} language="html" />
-          </div>
-        )}
 
         {activeTab === "api" && (
           <div className="space-y-8">
@@ -375,86 +325,6 @@ const { sessionId, status, designOutput } = await response.json();
           </div>
         )}
 
-        {activeTab === "sdk" && (
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">CustomizerStudio.init(options)</h3>
-              <p className="text-muted-foreground">Initialize the SDK with your configuration.</p>
-              <div className="rounded-lg border border-border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="text-left px-4 py-2 font-medium">Option</th>
-                      <th className="text-left px-4 py-2 font-medium">Type</th>
-                      <th className="text-left px-4 py-2 font-medium">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    <tr><td className="px-4 py-2 font-mono text-xs">apiUrl</td><td className="px-4 py-2">string</td><td className="px-4 py-2 text-muted-foreground">Base URL of your backend functions</td></tr>
-                    <tr><td className="px-4 py-2 font-mono text-xs">baseUrl</td><td className="px-4 py-2">string</td><td className="px-4 py-2 text-muted-foreground">Base URL of the customizer app</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">CustomizerStudio.open(options)</h3>
-              <p className="text-muted-foreground">Open the customizer for a product.</p>
-              <div className="rounded-lg border border-border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="text-left px-4 py-2 font-medium">Option</th>
-                      <th className="text-left px-4 py-2 font-medium">Type</th>
-                      <th className="text-left px-4 py-2 font-medium">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    <tr><td className="px-4 py-2 font-mono text-xs">product</td><td className="px-4 py-2">object</td><td className="px-4 py-2 text-muted-foreground">Product data (see schema above)</td></tr>
-                    <tr><td className="px-4 py-2 font-mono text-xs">externalRef</td><td className="px-4 py-2">string?</td><td className="px-4 py-2 text-muted-foreground">Your internal reference ID</td></tr>
-                    <tr><td className="px-4 py-2 font-mono text-xs">onComplete</td><td className="px-4 py-2">function</td><td className="px-4 py-2 text-muted-foreground">Called with design result when user finishes</td></tr>
-                    <tr><td className="px-4 py-2 font-mono text-xs">onCancel</td><td className="px-4 py-2">function</td><td className="px-4 py-2 text-muted-foreground">Called when user cancels</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">CustomizerStudio.close()</h3>
-              <p className="text-muted-foreground">Programmatically close the customizer overlay.</p>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">postMessage Events</h3>
-              <p className="text-muted-foreground">
-                If you prefer manual iframe integration, the customizer posts these events to <code className="bg-muted px-1.5 py-0.5 rounded text-xs">window.parent</code>:
-              </p>
-              <div className="rounded-lg border border-border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="text-left px-4 py-2 font-medium">Event Type</th>
-                      <th className="text-left px-4 py-2 font-medium">Payload</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    <tr>
-                      <td className="px-4 py-2 font-mono text-xs">design-complete</td>
-                      <td className="px-4 py-2 text-muted-foreground">Design result object with sides, PNGs, JSON</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2 font-mono text-xs">design-cancel</td>
-                      <td className="px-4 py-2 text-muted-foreground">Empty — user cancelled</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                All messages include <code className="bg-muted px-1 py-0.5 rounded">source: "customizer-studio"</code> for filtering.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
