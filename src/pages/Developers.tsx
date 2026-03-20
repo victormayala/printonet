@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://your-project.supabase.co";
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 
 function CodeBlock({ code, language = "html" }: { code: string; language?: string }) {
   const copyToClipboard = () => {
@@ -229,33 +230,48 @@ const { sessionId, status, designOutput } = await response.json();
               </div>
             </div>
 
-            {/* Configuration reference */}
+            {/* Configuration + Copy All */}
             <div>
-              <h3 className="text-xl font-semibold mb-4">Configuration</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">Configuration</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    const creds = `Base URL: ${baseUrl}\nAPI URL: ${SUPABASE_URL}/functions/v1\nAnon Key: ${ANON_KEY}`;
+                    navigator.clipboard.writeText(creds);
+                    toast.success("All credentials copied to clipboard!");
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy All Credentials
+                </Button>
+              </div>
               <div className="rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-muted">
                     <tr>
                       <th className="text-left px-4 py-2 font-medium">Setting</th>
                       <th className="text-left px-4 py-2 font-medium">Description</th>
-                      <th className="text-left px-4 py-2 font-medium">Example</th>
+                      <th className="text-left px-4 py-2 font-medium">Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     <tr>
                       <td className="px-4 py-2 font-mono text-xs">Base URL</td>
                       <td className="px-4 py-2 text-muted-foreground">Your Customizer Studio URL</td>
-                      <td className="px-4 py-2 font-mono text-xs">{baseUrl}</td>
+                      <td className="px-4 py-2 font-mono text-xs cursor-pointer hover:text-primary" onClick={() => { navigator.clipboard.writeText(baseUrl); toast.success("Base URL copied!"); }}>{baseUrl}</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-2 font-mono text-xs">API URL</td>
                       <td className="px-4 py-2 text-muted-foreground">Backend API endpoint</td>
-                      <td className="px-4 py-2 font-mono text-xs">{SUPABASE_URL}/functions/v1</td>
+                      <td className="px-4 py-2 font-mono text-xs cursor-pointer hover:text-primary" onClick={() => { navigator.clipboard.writeText(`${SUPABASE_URL}/functions/v1`); toast.success("API URL copied!"); }}>{SUPABASE_URL}/functions/v1</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-2 font-mono text-xs">Anon Key</td>
                       <td className="px-4 py-2 text-muted-foreground">Public key for product fetching</td>
-                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">eyJhbG...</td>
+                      <td className="px-4 py-2 font-mono text-xs cursor-pointer hover:text-primary truncate max-w-[200px]" onClick={() => { navigator.clipboard.writeText(ANON_KEY); toast.success("Anon Key copied!"); }} title={ANON_KEY}>{ANON_KEY.slice(0, 20)}...{ANON_KEY.slice(-8)}</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-2 font-mono text-xs">Button Label</td>
@@ -270,6 +286,7 @@ const { sessionId, status, designOutput } = await response.json();
                   </tbody>
                 </table>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">Click any value to copy it individually.</p>
             </div>
 
             {/* Download CTA */}
