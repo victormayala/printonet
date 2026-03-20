@@ -1226,12 +1226,6 @@ export default function DesignStudio() {
                   <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
                   <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
                 </div>
-                {selectedObject && selectedObject.type === "image" && (
-                  <>
-                    <Separator className="bg-sidebar-border" />
-                    {selectedPropertiesPanel}
-                  </>
-                )}
               </>
             )}
 
