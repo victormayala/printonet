@@ -1180,8 +1180,6 @@ export default function DesignStudio() {
                       </div>
                     </div>
                   </>
-                )}
-              </>
             )}
 
             {activeTool === "shapes" && (
