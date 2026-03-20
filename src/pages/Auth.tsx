@@ -76,7 +76,7 @@ function LoginForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="login-password">Password</Label>
-        <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <PasswordInput id="login-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
