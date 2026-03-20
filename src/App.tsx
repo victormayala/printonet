@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import DesignStudio from "./pages/DesignStudio";
 import EmbedCustomizer from "./pages/EmbedCustomizer";
 import Developers from "./pages/Developers";
+import Demo from "./pages/Demo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,6 +20,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/demo" element={<Demo />} />
           <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
           <Route path="/developers" element={<Developers />} />
           <Route path="*" element={<NotFound />} />
