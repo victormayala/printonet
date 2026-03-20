@@ -32,6 +32,8 @@ type Product = {
   created_at: string;
 };
 
+const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
+
 function EmbedCodeDialog({ product }: { product: Product }) {
   const [copied, setCopied] = useState(false);
   const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
