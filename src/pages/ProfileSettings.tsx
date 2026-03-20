@@ -89,8 +89,7 @@ export default function ProfileSettings() {
 
   return (
     <div className="bg-background">
-      <div className="p-6 lg:p-8 max-w-2xl">
-      <div className="container py-10 max-w-lg">
+      <div className="max-w-lg">
         <Card>
           <CardHeader>
             <CardTitle>Your Profile</CardTitle>

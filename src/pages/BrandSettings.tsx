@@ -570,7 +570,6 @@ export default function BrandSettings() {
                   {generateSDKCode()}
                 </pre>
               </div>
-            </div>
           </div>
         </div>
       </div>
