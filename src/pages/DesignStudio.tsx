@@ -403,6 +403,8 @@ export default function DesignStudio() {
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [clipartCategory, setClipartCategory] = useState<string>("Popular");
   const [fontFamily, setFontFamily] = useState<string>("Inter");
+  const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
+  const previousViewRef = useRef<ViewSide>("front");
   
   // Load inventory product
   useEffect(() => {
