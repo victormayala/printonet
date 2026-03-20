@@ -391,17 +391,163 @@ add_filter( 'woocommerce_product_get_image', function ( $image, $product, $size,
 	return $image;
 }, 10, 5 );
 
-// Inject CSS for mini-cart (sidebar/widget) composite thumbnails
+// Inject CSS for composite thumbnails (classic + block cart/checkout)
 add_action( 'wp_head', function () {
 	if ( ! function_exists( 'is_woocommerce' ) ) {
 		return;
 	}
 	echo '<style>
-		.cs-cart-thumb { display:inline-block; vertical-align:middle; }
+		.cs-cart-thumb { display:inline-block; vertical-align:middle; position:relative; }
 		.widget_shopping_cart .cs-cart-thumb,
 		.woocommerce-mini-cart .cs-cart-thumb { width:60px; height:60px; }
 		.woocommerce-cart-form .cs-cart-thumb { width:80px; height:80px; }
+		/* Block cart/checkout overlay */
+		.cs-design-overlay-wrap { position:relative; display:inline-block; }
+		.cs-design-overlay-wrap img.cs-design-overlay {
+			position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; z-index:2;
+		}
 	</style>';
+} );
+
+/* ================================================================
+   5b. BLOCK CART/CHECKOUT SUPPORT — JS-based design overlay
+   ================================================================ */
+
+// Expose design URLs to the frontend via a global JS object for block-based cart/checkout
+add_action( 'wp_footer', function () {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return;
+	}
+
+	$design_map = [];
+	foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
+		if ( ! empty( $cart_item['customizer_design_url'] ) ) {
+			// Map by product_id AND variation_id so we can match in JS
+			$key = (int) $cart_item['product_id'];
+			if ( ! empty( $cart_item['variation_id'] ) ) {
+				$key = (int) $cart_item['variation_id'];
+			}
+			$design_map[ $cart_item_key ] = [
+				'product_id'   => (int) $cart_item['product_id'],
+				'variation_id' => (int) ( $cart_item['variation_id'] ?? 0 ),
+				'design_url'   => esc_url( $cart_item['customizer_design_url'] ),
+				'name'         => $cart_item['data'] ? $cart_item['data']->get_name() : '',
+			];
+		}
+	}
+
+	if ( empty( $design_map ) ) {
+		return;
+	}
+
+	$json = wp_json_encode( $design_map );
+	echo "<script id='cs-design-data'>
+		window.csDesignMap = {$json};
+
+		(function(){
+			function applyDesignOverlays(){
+				if(!window.csDesignMap) return;
+				var designs = Object.values(window.csDesignMap);
+				if(!designs.length) return;
+
+				// Target block cart & checkout thumbnail images
+				var thumbContainers = document.querySelectorAll(
+					'.wc-block-cart-items .wc-block-cart-items__row .wc-block-components-product-image,' +
+					'.wc-block-checkout .wc-block-components-order-summary-item .wc-block-components-product-image,' +
+					'.wc-block-components-order-summary .wc-block-components-product-image'
+				);
+
+				thumbContainers.forEach(function(container){
+					// Skip if overlay already applied
+					if(container.querySelector('.cs-design-overlay')) return;
+
+					// Try to match this container to a design by finding the product name nearby
+					var row = container.closest('.wc-block-cart-items__row, .wc-block-components-order-summary-item, tr');
+					if(!row) return;
+
+					var nameEl = row.querySelector(
+						'.wc-block-components-product-name,' +
+						'.wc-block-components-order-summary-item__description .wc-block-components-product-name,' +
+						'a[href]'
+					);
+					var productName = nameEl ? nameEl.textContent.trim() : '';
+
+					// Match by product name
+					var match = null;
+					for(var i=0;i<designs.length;i++){
+						if(designs[i].name && productName && productName.indexOf(designs[i].name)!==-1){
+							match = designs[i];
+							break;
+						}
+						if(designs[i].name && productName && designs[i].name.indexOf(productName)!==-1){
+							match = designs[i];
+							break;
+						}
+					}
+
+					if(!match) return;
+
+					// Make container relative for overlay positioning
+					container.style.position = 'relative';
+					var overlay = document.createElement('img');
+					overlay.src = match.design_url;
+					overlay.alt = 'Custom Design';
+					overlay.className = 'cs-design-overlay';
+					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
+					container.appendChild(overlay);
+				});
+
+				// Also handle classic cart table (fallback if PHP filter didn't work)
+				var classicRows = document.querySelectorAll('.woocommerce-cart-form .cart_item, .woocommerce-checkout .cart_item');
+				classicRows.forEach(function(row){
+					var thumbTd = row.querySelector('.product-thumbnail');
+					if(!thumbTd || thumbTd.querySelector('.cs-design-overlay')) return;
+
+					var nameLink = row.querySelector('.product-name a');
+					var productName = nameLink ? nameLink.textContent.trim() : '';
+
+					var match = null;
+					for(var i=0;i<designs.length;i++){
+						if(designs[i].name && productName && (productName.indexOf(designs[i].name)!==-1 || designs[i].name.indexOf(productName)!==-1)){
+							match = designs[i];
+							break;
+						}
+					}
+
+					if(!match) return;
+
+					var imgWrap = thumbTd.querySelector('a') || thumbTd;
+					imgWrap.style.position = 'relative';
+					imgWrap.style.display = 'inline-block';
+					var overlay = document.createElement('img');
+					overlay.src = match.design_url;
+					overlay.alt = 'Custom Design';
+					overlay.className = 'cs-design-overlay';
+					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
+					imgWrap.appendChild(overlay);
+				});
+			}
+
+			// Run on load and observe DOM changes (React-based blocks re-render)
+			if(document.readyState==='loading'){
+				document.addEventListener('DOMContentLoaded', applyDesignOverlays);
+			} else {
+				applyDesignOverlays();
+			}
+
+			// MutationObserver for block cart/checkout which renders via React
+			var observer = new MutationObserver(function(mutations){
+				applyDesignOverlays();
+			});
+			observer.observe(document.body, { childList:true, subtree:true });
+
+			// Also re-apply on WooCommerce AJAX events (classic cart updates)
+			document.addEventListener('updated_wc_div', applyDesignOverlays);
+			if(typeof jQuery !== 'undefined'){
+				jQuery(document.body).on('updated_cart_totals updated_checkout wc_fragments_refreshed', applyDesignOverlays);
+			}
+		})();
+	</script>";
 } );
 
 // Show "Customized" label in cart item details
