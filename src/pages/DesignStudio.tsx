@@ -1546,10 +1546,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                 className="absolute inset-0 h-full w-full object-contain"
                 draggable={false}
               />
-            ) : productIcon ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10rem]">
-                {productIcon}
-              </div>
             ) : null}
             <canvas ref={canvasRef} className="absolute inset-0 z-10" />
           </div>
