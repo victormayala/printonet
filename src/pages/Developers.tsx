@@ -31,43 +31,6 @@ export default function Developers() {
   const [activeTab, setActiveTab] = useState<"woocommerce" | "api">("woocommerce");
   const baseUrl = window.location.origin;
 
-  const sdkSnippet = `<!-- Add the Customizer SDK -->
-<script src="${baseUrl}/customizer-sdk.js"><\/script>
-
-<script>
-  // Initialize with your API URL
-  CustomizerStudio.init({
-    apiUrl: '${SUPABASE_URL}/functions/v1',
-    baseUrl: '${baseUrl}'
-  });
-
-  // Open the customizer when user clicks "Customize"
-  document.getElementById('customize-btn').addEventListener('click', function() {
-    CustomizerStudio.open({
-      product: {
-        name: 'Classic T-Shirt',
-        category: 'T-Shirts',
-        image_front: 'https://your-store.com/tshirt-front.png',
-        image_back: 'https://your-store.com/tshirt-back.png',
-        variants: [
-          { color: 'white', colorName: 'White', hex: '#FFFFFF' },
-          { color: 'black', colorName: 'Black', hex: '#1a1a1a' }
-        ]
-      },
-      externalRef: 'cart-item-123',
-      onComplete: function(result) {
-        console.log('Design completed!', result);
-        // result.sides[] contains designPNG URLs and canvasJSON for each view
-        // Add the customized product to your cart here
-      },
-      onCancel: function() {
-        console.log('User cancelled customization');
-      }
-    });
-  });
-<\/script>
-
-<button id="customize-btn">Customize This Product</button>`;
 
   const apiCreateSession = `// Create a customization session
 const response = await fetch('${SUPABASE_URL}/functions/v1/create-session', {
