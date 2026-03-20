@@ -29,6 +29,8 @@ const steps = [
 ];
 
 export default function Index() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
