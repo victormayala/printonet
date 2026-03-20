@@ -146,7 +146,7 @@ function SignupForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-confirm">Confirm Password</Label>
-        <Input id="signup-confirm" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
+        <PasswordInput id="signup-confirm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-password">Password</Label>
