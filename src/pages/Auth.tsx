@@ -44,6 +44,7 @@ export default function Auth() {
           </CardContent>
         </Tabs>
       </Card>
+      </div>
     </div>
   );
 }
