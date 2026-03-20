@@ -9,6 +9,7 @@ import EmbedCustomizer from "./pages/EmbedCustomizer";
 import Developers from "./pages/Developers";
 import Demo from "./pages/Demo";
 import BrandSettings from "./pages/BrandSettings";
+import Products from "./pages/Products";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
