@@ -554,7 +554,6 @@ export default function Products() {
                             </div>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <EmbedCodeDialog product={p} />
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
