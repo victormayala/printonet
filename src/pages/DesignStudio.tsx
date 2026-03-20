@@ -995,64 +995,66 @@ export default function DesignStudio() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {activeTool === "text" && (
               <>
-                {/* Text Templates */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Templates</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {TEXT_TEMPLATES.map((tmpl, i) => (
-                      <button
-                        key={i}
-                        onClick={() => addTextTemplate(tmpl)}
-                        className="group relative border border-sidebar-border rounded-lg p-3 hover:border-primary/50 hover:bg-sidebar-accent transition-all text-left overflow-hidden"
-                      >
-                        <div className="space-y-0.5">
-                          {tmpl.lines.map((line, li) => (
-                            <p
-                              key={li}
-                              className="truncate leading-tight"
-                              style={{
-                                fontFamily: line.fontFamily,
-                                fontSize: `${Math.min(line.fontSize / 4, 14)}px`,
-                                fontWeight: line.fontWeight || "normal",
-                                fontStyle: line.fontStyle || "normal",
-                                textTransform: line.textTransform as any || "none",
-                                letterSpacing: line.letterSpacing || "normal",
-                                color: "currentColor",
-                              }}
-                            >
-                              {line.text}
-                            </p>
-                          ))}
-                        </div>
-                        <span className="absolute bottom-1 right-1.5 text-[8px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">{tmpl.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator className="bg-sidebar-border" />
-
-                {/* Custom Text */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Custom Text</label>
-                  <Input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Enter text..." className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Font Size: {fontSize}px</label>
-                  <Slider value={[fontSize]} onValueChange={([v]) => setFontSize(v)} min={12} max={120} step={1} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Color</label>
-                  <div className="flex items-center gap-2">
-                    <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
-                    <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-                  </div>
-                </div>
-                <Button onClick={addText} className="w-full gap-2"><Type className="h-4 w-4" /> Add Text</Button>
-                {selectedPropertiesPanel && (
+                {selectedObject && selectedObject.type === "text" ? (
                   <>
-                    <Separator className="bg-sidebar-border" />
                     {selectedPropertiesPanel}
+                  </>
+                ) : (
+                  <>
+                    {/* Text Templates */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Templates</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {TEXT_TEMPLATES.map((tmpl, i) => (
+                          <button
+                            key={i}
+                            onClick={() => addTextTemplate(tmpl)}
+                            className="group relative border border-sidebar-border rounded-lg p-3 hover:border-primary/50 hover:bg-sidebar-accent transition-all text-left overflow-hidden"
+                          >
+                            <div className="space-y-0.5">
+                              {tmpl.lines.map((line, li) => (
+                                <p
+                                  key={li}
+                                  className="truncate leading-tight"
+                                  style={{
+                                    fontFamily: line.fontFamily,
+                                    fontSize: `${Math.min(line.fontSize / 4, 14)}px`,
+                                    fontWeight: line.fontWeight || "normal",
+                                    fontStyle: line.fontStyle || "normal",
+                                    textTransform: line.textTransform as any || "none",
+                                    letterSpacing: line.letterSpacing || "normal",
+                                    color: "currentColor",
+                                  }}
+                                >
+                                  {line.text}
+                                </p>
+                              ))}
+                            </div>
+                            <span className="absolute bottom-1 right-1.5 text-[8px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">{tmpl.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Separator className="bg-sidebar-border" />
+
+                    {/* Custom Text */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Custom Text</label>
+                      <Input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Enter text..." className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Font Size: {fontSize}px</label>
+                      <Slider value={[fontSize]} onValueChange={([v]) => setFontSize(v)} min={12} max={120} step={1} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Color</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                        <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+                      </div>
+                    </div>
+                    <Button onClick={addText} className="w-full gap-2"><Type className="h-4 w-4" /> Add Text</Button>
                   </>
                 )}
               </>
