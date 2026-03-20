@@ -383,10 +383,13 @@ interface EmbedProductData {
   variants?: Array<{ color: string; colorName: string; hex: string }>;
 }
 
+import { type BrandConfig, DEFAULT_BRAND_CONFIG } from "@/lib/brand-config";
+
 interface DesignStudioProps {
   embedMode?: boolean;
   sessionId?: string;
   embedProductData?: EmbedProductData;
+  brandConfig?: BrandConfig;
 }
 
 const VIEW_LABELS: Record<ViewSide, string> = {
@@ -396,8 +399,9 @@ const VIEW_LABELS: Record<ViewSide, string> = {
   side2: "Side 2",
 };
 
-export default function DesignStudio({ embedMode = false, sessionId, embedProductData }: DesignStudioProps) {
+export default function DesignStudio({ embedMode = false, sessionId, embedProductData, brandConfig }: DesignStudioProps) {
   const navigate = useNavigate();
+  const brand = brandConfig || DEFAULT_BRAND_CONFIG;
 
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1298,8 +1302,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             </Button>
           )}
           {!embedMode && <Separator orientation="vertical" className="h-6 bg-sidebar-border" />}
-          <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-display font-semibold text-sm">{productName}</span>
+          {brand.logoUrl ? (
+            <img src={brand.logoUrl} alt={brand.name || "Logo"} className="h-6 max-w-[120px] object-contain" />
+          ) : (
+            <Sparkles className="h-5 w-5 text-primary" />
+          )}
+          <span className="font-display font-semibold text-sm">{brand.name || productName}</span>
         </div>
 
         <div className="flex items-center gap-2">

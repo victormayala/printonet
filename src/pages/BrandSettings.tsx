@@ -1,0 +1,453 @@
+import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Sun,
+  Moon,
+  Paintbrush,
+  Type as TypeIcon,
+  Palette,
+  Image as ImageIcon,
+  Sparkles,
+  Square,
+  Undo2,
+  Redo2,
+  Save,
+  Upload,
+  Layers as LayersIcon,
+} from "lucide-react";
+import {
+  DEFAULT_BRAND_CONFIG,
+  type BrandConfig,
+  brandConfigToCSSVars,
+} from "@/lib/brand-config";
+import logo from "@/assets/customizer-studio-logo.png";
+
+const FONT_OPTIONS = [
+  "Inter",
+  "Space Grotesk",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Montserrat",
+  "Poppins",
+  "Nunito",
+  "Raleway",
+  "Source Sans 3",
+  "DM Sans",
+  "IBM Plex Sans",
+  "Work Sans",
+  "Outfit",
+  "Plus Jakarta Sans",
+];
+
+export default function BrandSettings() {
+  const [config, setConfig] = useState<BrandConfig>({ ...DEFAULT_BRAND_CONFIG });
+  const [copied, setCopied] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Apply CSS vars to preview container
+  useEffect(() => {
+    if (!previewRef.current) return;
+    const vars = brandConfigToCSSVars(config);
+    Object.entries(vars).forEach(([key, value]) => {
+      previewRef.current!.style.setProperty(key, value);
+    });
+  }, [config]);
+
+  function updateConfig(partial: Partial<BrandConfig>) {
+    setConfig((prev) => ({ ...prev, ...partial }));
+  }
+
+  function generateSDKCode(): string {
+    const brandObj: Record<string, any> = {};
+    if (config.name) brandObj.name = config.name;
+    if (config.logoUrl) brandObj.logoUrl = config.logoUrl;
+    brandObj.theme = config.theme;
+    brandObj.primaryColor = config.primaryColor;
+    brandObj.accentColor = config.accentColor;
+    brandObj.fontFamily = config.fontFamily;
+    brandObj.borderRadius = config.borderRadius;
+
+    return `CustomizerStudio.open({
+  product: {
+    name: 'Your Product',
+    image_front: '/product-front.png',
+  },
+  brand: ${JSON.stringify(brandObj, null, 4)},
+  onComplete: (result) => {
+    console.log('Design complete:', result);
+  }
+});`;
+  }
+
+  function handleCopyCode() {
+    navigator.clipboard.writeText(generateSDKCode());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  // Mini preview of the customizer chrome
+  const previewBg = config.theme === "dark" ? "hsl(240 10% 12%)" : "hsl(0 0% 95%)";
+  const previewToolbar = config.theme === "dark" ? "hsl(240 10% 10%)" : "hsl(0 0% 98%)";
+  const previewSidebar = config.theme === "dark" ? "hsl(240 10% 8%)" : "hsl(0 0% 98%)";
+  const previewText = config.theme === "dark" ? "hsl(240 5% 85%)" : "hsl(240 10% 10%)";
+  const previewMuted = config.theme === "dark" ? "hsl(240 4% 55%)" : "hsl(240 4% 46%)";
+  const previewBorder = config.theme === "dark" ? "hsl(240 8% 18%)" : "hsl(0 0% 88%)";
+  const previewSidebarAccent = config.theme === "dark" ? "hsl(240 8% 14%)" : "hsl(0 0% 94%)";
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Nav */}
+      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link to="/">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <img src={logo} alt="Customizer Studio" className="h-7" />
+            <Separator orientation="vertical" className="h-6" />
+            <h1 className="font-display text-lg font-bold">Brand Settings</h1>
+          </div>
+        </div>
+      </nav>
+
+      <div className="container py-10">
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-8">
+            <h2 className="font-display text-2xl font-bold">White-Label Customizer</h2>
+            <p className="mt-2 text-muted-foreground">
+              Configure colors, logo, and fonts to match your brand. Preview changes live below.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-[360px_1fr] gap-8">
+            {/* Settings Panel */}
+            <div className="space-y-6">
+              {/* Theme Toggle */}
+              <div className="rounded-xl border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-sm">Theme</h3>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => updateConfig({ theme: "dark" })}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-all ${
+                      config.theme === "dark"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-muted-foreground"
+                    }`}
+                  >
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </button>
+                  <button
+                    onClick={() => updateConfig({ theme: "light" })}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-all ${
+                      config.theme === "light"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-muted-foreground"
+                    }`}
+                  >
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </button>
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div className="rounded-xl border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Paintbrush className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-sm">Colors</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Primary Color</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.primaryColor}
+                        onChange={(e) => updateConfig({ primaryColor: e.target.value })}
+                        className="h-9 w-9 rounded-lg cursor-pointer border-0"
+                      />
+                      <Input
+                        value={config.primaryColor}
+                        onChange={(e) => updateConfig({ primaryColor: e.target.value })}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Accent Color</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.accentColor}
+                        onChange={(e) => updateConfig({ accentColor: e.target.value })}
+                        className="h-9 w-9 rounded-lg cursor-pointer border-0"
+                      />
+                      <Input
+                        value={config.accentColor}
+                        onChange={(e) => updateConfig({ accentColor: e.target.value })}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Branding */}
+              <div className="rounded-xl border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-sm">Branding</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Brand Name</Label>
+                    <Input
+                      value={config.name || ""}
+                      onChange={(e) => updateConfig({ name: e.target.value })}
+                      placeholder="Your Store Name"
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Logo URL</Label>
+                    <Input
+                      value={config.logoUrl || ""}
+                      onChange={(e) => updateConfig({ logoUrl: e.target.value })}
+                      placeholder="https://yourstore.com/logo.png"
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Typography & Shape */}
+              <div className="rounded-xl border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <TypeIcon className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-sm">Typography & Shape</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Font Family</Label>
+                    <Select value={config.fontFamily} onValueChange={(v) => updateConfig({ fontFamily: v })}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FONT_OPTIONS.map((f) => (
+                          <SelectItem key={f} value={f} style={{ fontFamily: f }}>
+                            {f}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      Border Radius: {config.borderRadius}px
+                    </Label>
+                    <Slider
+                      value={[config.borderRadius]}
+                      onValueChange={([v]) => updateConfig({ borderRadius: v })}
+                      min={0}
+                      max={24}
+                      step={2}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Reset */}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setConfig({ ...DEFAULT_BRAND_CONFIG })}
+              >
+                Reset to Defaults
+              </Button>
+            </div>
+
+            {/* Preview + Code */}
+            <div className="space-y-6">
+              {/* Live Preview */}
+              <div className="rounded-xl border bg-card overflow-hidden">
+                <div className="px-4 py-2.5 border-b flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold">Live Preview</span>
+                </div>
+                <div ref={previewRef} className="p-4">
+                  {/* Mini customizer mockup */}
+                  <div
+                    className="rounded-lg overflow-hidden border shadow-lg"
+                    style={{
+                      borderColor: previewBorder,
+                      borderRadius: `${config.borderRadius}px`,
+                    }}
+                  >
+                    {/* Toolbar */}
+                    <div
+                      className="flex items-center justify-between px-3 py-2 border-b"
+                      style={{
+                        background: previewToolbar,
+                        color: previewText,
+                        borderColor: previewBorder,
+                        fontFamily: config.fontFamily,
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        {config.logoUrl ? (
+                          <img src={config.logoUrl} alt="Logo" className="h-5 max-w-[80px] object-contain" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" style={{ color: config.primaryColor }} />
+                        )}
+                        <span className="text-xs font-semibold">
+                          {config.name || "Product Name"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div
+                          className="rounded px-2 py-0.5 text-[10px] font-medium"
+                          style={{
+                            background: previewSidebarAccent,
+                            color: previewMuted,
+                          }}
+                        >
+                          <Undo2 className="h-3 w-3 inline" />
+                        </div>
+                        <div
+                          className="rounded px-2 py-0.5 text-[10px] font-medium"
+                          style={{
+                            background: previewSidebarAccent,
+                            color: previewMuted,
+                          }}
+                        >
+                          <Redo2 className="h-3 w-3 inline" />
+                        </div>
+                        <div
+                          className="rounded px-2.5 py-0.5 text-[10px] font-medium text-white"
+                          style={{ background: config.primaryColor }}
+                        >
+                          ✓ Done
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="flex" style={{ height: 240 }}>
+                      {/* Sidebar */}
+                      <div
+                        className="w-20 border-r flex flex-col items-center pt-3 gap-3"
+                        style={{
+                          background: previewSidebar,
+                          borderColor: previewBorder,
+                          color: previewText,
+                        }}
+                      >
+                        {[
+                          { icon: TypeIcon, label: "Text" },
+                          { icon: Square, label: "Shapes" },
+                          { icon: Upload, label: "Upload" },
+                        ].map(({ icon: Icon, label }) => (
+                          <div
+                            key={label}
+                            className="flex flex-col items-center gap-0.5 text-[9px]"
+                            style={{ color: label === "Text" ? config.primaryColor : previewMuted }}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {label}
+                          </div>
+                        ))}
+                      </div>
+                      {/* Canvas */}
+                      <div className="flex-1" style={{ background: previewBg }}>
+                        <div className="h-full flex items-center justify-center">
+                          <div
+                            className="w-28 h-32 rounded border-2 border-dashed flex items-center justify-center text-xs"
+                            style={{
+                              borderColor: config.primaryColor + "60",
+                              color: previewMuted,
+                              borderRadius: `${Math.min(config.borderRadius, 16)}px`,
+                            }}
+                          >
+                            Canvas
+                          </div>
+                        </div>
+                      </div>
+                      {/* Layers panel */}
+                      <div
+                        className="w-16 border-l flex flex-col items-center pt-3 gap-1"
+                        style={{
+                          background: previewSidebar,
+                          borderColor: previewBorder,
+                          color: previewText,
+                        }}
+                      >
+                        <div className="flex items-center gap-1 text-[9px] mb-1" style={{ color: config.primaryColor }}>
+                          <LayersIcon className="h-3 w-3" />
+                          Layers
+                        </div>
+                        <div
+                          className="w-12 h-4 rounded text-[7px] flex items-center px-1"
+                          style={{ background: previewSidebarAccent, color: previewMuted }}
+                        >
+                          Text
+                        </div>
+                        <div
+                          className="w-12 h-4 rounded text-[7px] flex items-center px-1"
+                          style={{ background: previewSidebarAccent, color: previewMuted }}
+                        >
+                          Shape
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SDK Code Output */}
+              <div className="rounded-xl border bg-card overflow-hidden">
+                <div className="px-4 py-2.5 border-b flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Copy className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">SDK Code</span>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleCopyCode} className="gap-1.5 h-7 text-xs">
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <pre className="p-4 text-xs font-mono leading-relaxed overflow-x-auto text-foreground">
+                  {generateSDKCode()}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

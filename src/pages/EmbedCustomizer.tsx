@@ -1,7 +1,8 @@
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DesignStudio from "./DesignStudio";
+import { type BrandConfig, DEFAULT_BRAND_CONFIG, BrandConfigContext, applyBrandCSS } from "@/lib/brand-config";
 
 interface SessionProductData {
   name: string;
@@ -16,9 +17,36 @@ interface SessionProductData {
 
 export default function EmbedCustomizer() {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const [searchParams] = useSearchParams();
   const [productData, setProductData] = useState<SessionProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Parse brand config from URL params
+  const brandConfig = useMemo<BrandConfig>(() => {
+    const theme = searchParams.get("brandTheme");
+    const primary = searchParams.get("brandPrimary");
+    const accent = searchParams.get("brandAccent");
+    const font = searchParams.get("brandFont");
+    const radius = searchParams.get("brandRadius");
+    const name = searchParams.get("brandName");
+    const logoUrl = searchParams.get("brandLogo");
+
+    return {
+      name: name || DEFAULT_BRAND_CONFIG.name,
+      logoUrl: logoUrl || DEFAULT_BRAND_CONFIG.logoUrl,
+      theme: (theme === "light" || theme === "dark") ? theme : DEFAULT_BRAND_CONFIG.theme,
+      primaryColor: primary || DEFAULT_BRAND_CONFIG.primaryColor,
+      accentColor: accent || DEFAULT_BRAND_CONFIG.accentColor,
+      fontFamily: font || DEFAULT_BRAND_CONFIG.fontFamily,
+      borderRadius: radius ? parseInt(radius, 10) : DEFAULT_BRAND_CONFIG.borderRadius,
+    };
+  }, [searchParams]);
+
+  // Apply brand CSS vars to document root when in embed mode
+  useEffect(() => {
+    applyBrandCSS(document.documentElement, brandConfig);
+  }, [brandConfig]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -60,10 +88,13 @@ export default function EmbedCustomizer() {
   }
 
   return (
-    <DesignStudio
-      embedMode
-      sessionId={sessionId}
-      embedProductData={productData}
-    />
+    <BrandConfigContext.Provider value={brandConfig}>
+      <DesignStudio
+        embedMode
+        sessionId={sessionId}
+        embedProductData={productData}
+        brandConfig={brandConfig}
+      />
+    </BrandConfigContext.Provider>
   );
 }

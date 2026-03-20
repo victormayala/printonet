@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Code, Layers, Zap, ArrowRight, Globe } from "lucide-react";
+import { Code, Layers, Zap, ArrowRight, Globe, Paintbrush } from "lucide-react";
 import logo from "@/assets/customizer-studio-logo.png";
 
 const features = [
@@ -40,6 +40,11 @@ export default function Index() {
             <Link to="/developers">
               <Button variant="ghost" className="gap-2">
                 <Code className="h-4 w-4" /> Docs
+              </Button>
+            </Link>
+            <Link to="/brand-settings">
+              <Button variant="ghost" className="gap-2">
+                <Paintbrush className="h-4 w-4" /> Brand Settings
               </Button>
             </Link>
             <Link to="/developers">
