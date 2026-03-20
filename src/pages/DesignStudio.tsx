@@ -1044,8 +1044,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       </div>
     );
   }
-    );
-  }
 
   function deleteLayer(layerObj: any) {
     const canvas = fabricRef.current;
