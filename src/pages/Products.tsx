@@ -13,8 +13,10 @@ import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
-  Code, Copy, Check, ExternalLink, Info
+  Code, Copy, Check, ExternalLink, Info, LayoutGrid, List,
+  ArrowUpDown, SlidersHorizontal
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Product = {
@@ -437,6 +439,29 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null | undefined>(undefined);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name-asc" | "name-desc" | "price-asc" | "price-desc">("newest");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  const filteredAndSortedProducts = (() => {
+    let result = [...products];
+    if (filterCategory !== "all") {
+      result = result.filter((p) => p.category === filterCategory);
+    }
+    if (filterStatus !== "all") {
+      result = result.filter((p) => (filterStatus === "active" ? p.is_active : !p.is_active));
+    }
+    switch (sortBy) {
+      case "oldest": result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); break;
+      case "name-asc": result.sort((a, b) => a.name.localeCompare(b.name)); break;
+      case "name-desc": result.sort((a, b) => b.name.localeCompare(a.name)); break;
+      case "price-asc": result.sort((a, b) => a.base_price - b.base_price); break;
+      case "price-desc": result.sort((a, b) => b.base_price - a.base_price); break;
+      default: result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    return result;
+  })();
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -523,11 +548,73 @@ export default function Products() {
                     <UniversalSnippetDialog />
                   </div>
                 )}
-                <div className="flex items-center justify-between mb-6">
-                  <p className="text-sm text-muted-foreground">{products.length} product{products.length !== 1 ? "s" : ""}</p>
-                  <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2">
-                    <Plus className="h-4 w-4" /> Add Product
-                  </Button>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                  <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Category filter */}
+                    <Select value={filterCategory} onValueChange={setFilterCategory}>
+                      <SelectTrigger className="w-[140px] h-9 text-xs">
+                        <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Status filter */}
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-[120px] h-9 text-xs">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Sort */}
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                      <SelectTrigger className="w-[140px] h-9 text-xs">
+                        <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        <SelectValue placeholder="Sort" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="newest">Newest First</SelectItem>
+                        <SelectItem value="oldest">Oldest First</SelectItem>
+                        <SelectItem value="name-asc">Name A→Z</SelectItem>
+                        <SelectItem value="name-desc">Name Z→A</SelectItem>
+                        <SelectItem value="price-asc">Price Low→High</SelectItem>
+                        <SelectItem value="price-desc">Price High→Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* View toggle */}
+                    <div className="flex items-center rounded-md border">
+                      <Button
+                        variant={viewMode === "grid" ? "secondary" : "ghost"}
+                        size="icon"
+                        className="h-9 w-9 rounded-r-none"
+                        onClick={() => setViewMode("grid")}
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={viewMode === "list" ? "secondary" : "ghost"}
+                        size="icon"
+                        className="h-9 w-9 rounded-l-none"
+                        onClick={() => setViewMode("list")}
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2 h-9">
+                      <Plus className="h-4 w-4" /> Add Product
+                    </Button>
+                  </div>
                 </div>
 
                 {loading ? (
@@ -541,9 +628,15 @@ export default function Products() {
                       <Plus className="h-4 w-4" /> Add Your First Product
                     </Button>
                   </Card>
-                ) : (
+                ) : filteredAndSortedProducts.length === 0 ? (
+                  <Card className="flex flex-col items-center py-12 text-center">
+                    <SlidersHorizontal className="h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="font-medium mb-1">No matching products</p>
+                    <p className="text-sm text-muted-foreground">Try adjusting your filters.</p>
+                  </Card>
+                ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {products.map((p) => (
+                    {filteredAndSortedProducts.map((p) => (
                       <Card key={p.id} className="overflow-hidden group">
                         <div className="aspect-square bg-muted relative">
                           {p.image_front ? (
@@ -552,6 +645,9 @@ export default function Products() {
                             <div className="w-full h-full flex items-center justify-center">
                               <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
                             </div>
+                          )}
+                          {!p.is_active && (
+                            <span className="absolute top-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
@@ -570,6 +666,47 @@ export default function Products() {
                           </div>
                         </CardContent>
                       </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
+                      <span className="w-10" />
+                      <span>Product</span>
+                      <span className="w-24 text-right">Price</span>
+                      <span className="w-20 text-center">Status</span>
+                      <span className="w-20 text-right">Actions</span>
+                    </div>
+                    {filteredAndSortedProducts.map((p) => (
+                      <div key={p.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center px-4 py-3 border-b last:border-b-0 hover:bg-muted/30 transition-colors group">
+                        <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0">
+                          {p.image_front ? (
+                            <img src={p.image_front} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{p.name}</p>
+                          <p className="text-xs text-muted-foreground">{p.category}</p>
+                        </div>
+                        <span className="w-24 text-right text-sm font-medium tabular-nums">${p.base_price.toFixed(2)}</span>
+                        <span className="w-20 text-center">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${p.is_active ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                            {p.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </span>
+                        <div className="w-20 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteProduct(p.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
