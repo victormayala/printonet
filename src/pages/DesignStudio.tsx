@@ -31,6 +31,37 @@ import {
 } from "lucide-react";
 import ReactDOMServer from "react-dom/server";
 import React from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const GOOGLE_FONTS = [
+  "Inter", "Space Grotesk", "Roboto", "Open Sans", "Lato", "Montserrat",
+  "Poppins", "Oswald", "Raleway", "Playfair Display", "Merriweather",
+  "Bebas Neue", "Lobster", "Pacifico", "Dancing Script", "Permanent Marker",
+  "Bangers", "Righteous", "Abril Fatface", "Alfa Slab One", "Anton",
+  "Archivo Black", "Bungee", "Caveat", "Comfortaa", "Concert One",
+  "Fredoka One", "Gloria Hallelujah", "Indie Flower", "Josefin Sans",
+  "Kalam", "Lilita One", "Luckiest Guy", "Nunito", "Passion One",
+  "Patrick Hand", "Press Start 2P", "Rubik", "Sacramento", "Satisfy",
+  "Shadows Into Light", "Source Sans 3", "Titan One", "Ubuntu",
+  "Vollkorn", "Yanone Kaffeesatz", "Zilla Slab",
+];
+
+const loadedFonts = new Set<string>(["Inter", "Space Grotesk"]);
+
+function loadGoogleFont(fontFamily: string) {
+  if (loadedFonts.has(fontFamily)) return;
+  loadedFonts.add(fontFamily);
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/ /g, "+")}&display=swap`;
+  document.head.appendChild(link);
+}
 
 const CLIPART_CATEGORIES: Record<string, { name: string; icon: React.ComponentType<any> }[]> = {
   "Popular": [
@@ -370,6 +401,7 @@ export default function DesignStudio() {
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [clipartCategory, setClipartCategory] = useState<string>("Popular");
+  const [fontFamily, setFontFamily] = useState<string>("Inter");
   
   // Load inventory product
   useEffect(() => {
@@ -547,8 +579,9 @@ export default function DesignStudio() {
   function addText() {
     const canvas = fabricRef.current;
     if (!canvas) return;
+    loadGoogleFont(fontFamily);
     const text = new FabricText(textInput, {
-      left: 150, top: 250, fontSize, fill: fillColor, fontFamily: "Inter",
+      left: 150, top: 250, fontSize, fill: fillColor, fontFamily,
     });
     (text as any).customName = `Text: "${textInput.slice(0, 12)}"`;
     canvas.add(text);
@@ -887,6 +920,29 @@ export default function DesignStudio() {
               onValueChange={([v]) => updateSelectedFontSize(v)}
               min={12} max={120} step={1}
             />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Font Family</label>
+            <Select
+              value={selectedObject.fontFamily || "Inter"}
+              onValueChange={(val) => {
+                loadGoogleFont(val);
+                selectedObject.set("fontFamily", val);
+                fabricRef.current?.renderAll();
+                saveState();
+              }}
+            >
+              <SelectTrigger className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {GOOGLE_FONTS.map((f) => (
+                  <SelectItem key={f} value={f} style={{ fontFamily: f }}>
+                    {f}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </>
       )}
