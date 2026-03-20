@@ -28,7 +28,7 @@ function CodeBlock({ code, language = "html" }: { code: string; language?: strin
 }
 
 export default function Developers() {
-  const [activeTab, setActiveTab] = useState<"quickstart" | "api" | "sdk">("quickstart");
+  const [activeTab, setActiveTab] = useState<"quickstart" | "api" | "sdk" | "woocommerce">("quickstart");
   const baseUrl = window.location.origin;
 
   const sdkSnippet = `<!-- Add the Customizer SDK -->
