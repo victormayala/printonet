@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Mail } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 
