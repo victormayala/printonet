@@ -1,7 +1,6 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group, Path, Pattern } from "fabric";
-import { getProductById, type Product, type ProductVariant } from "@/data/products";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -355,6 +354,12 @@ const TEXT_TEMPLATES: TextTemplate[] = [
 
 type ViewSide = "front" | "back" | "side1" | "side2";
 
+interface ProductVariant {
+  color: string;
+  colorName: string;
+  hex: string;
+}
+
 interface InventoryProduct {
   id: string;
   name: string;
@@ -392,14 +397,10 @@ const VIEW_LABELS: Record<ViewSide, string> = {
 };
 
 export default function DesignStudio({ embedMode = false, sessionId, embedProductData }: DesignStudioProps) {
-  const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
 
-  const isInventoryProduct = productId?.startsWith("inv-");
-  const staticProduct = !isInventoryProduct && !embedMode ? getProductById(productId || "") : null;
-
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
-  const [loading, setLoading] = useState(isInventoryProduct);
+  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -424,31 +425,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const previousViewRef = useRef<ViewSide>("front");
   
-  // Load inventory product
-  useEffect(() => {
-    if (!isInventoryProduct || !productId) return;
-    const dbId = productId.replace("inv-", "");
-    supabase
-      .from("inventory_products")
-      .select("*")
-      .eq("id", dbId)
-      .single()
-      .then(({ data, error }) => {
-        if (data) {
-          setInvProduct(data as InventoryProduct);
-          const views: ViewSide[] = [];
-          if (data.image_front) views.push("front");
-          if (data.image_back) views.push("back");
-          if (data.image_side1) views.push("side1");
-          if (data.image_side2) views.push("side2");
-          if (views.length === 0) views.push("front");
-          setAvailableViews(views);
-          setActiveView(views[0]);
-        }
-        setLoading(false);
-      });
-  }, [productId, isInventoryProduct]);
-
   // Set up embed product data
   useEffect(() => {
     if (!embedMode || !embedProductData) return;
@@ -474,16 +450,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     setActiveView(views[0]);
     setLoading(false);
   }, [embedMode, embedProductData]);
-
-  // Set up static product
-  useEffect(() => {
-    if (staticProduct) {
-      setSelectedVariant(staticProduct.variants[0]);
-      const views: ViewSide[] = ["front"];
-      if (staticProduct.hasFrontBack) views.push("back");
-      setAvailableViews(views);
-    }
-  }, [staticProduct]);
 
   // Get current background image URL
   function getCurrentImageUrl(): string | null {
@@ -1055,9 +1021,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
   // Determine product info
-  const productName = invProduct?.name || staticProduct?.name || "Product";
-  const productIcon = staticProduct?.icon;
-  const productVariants = staticProduct?.variants || [];
+  const productName = invProduct?.name || "Product";
   const bgImageUrl = getCurrentImageUrl();
 
   if (loading) {
@@ -1068,13 +1032,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     );
   }
 
-  if (!staticProduct && !invProduct && !embedMode) {
+  if (!invProduct && !embedMode) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="font-display text-2xl font-bold">Product not found</h2>
-          <Link to="/products" className="mt-4 inline-block">
-            <Button variant="outline">← Back to products</Button>
+          <Link to="/" className="mt-4 inline-block">
+            <Button variant="outline">← Back home</Button>
           </Link>
         </div>
       </div>
@@ -1346,23 +1310,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             <Redo2 className="h-4 w-4" />
           </Button>
 
-          {/* Variant color switcher (static products only) */}
-          {productVariants.length > 0 && (
-            <>
-              <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
-              <div className="flex gap-1.5 items-center">
-                {productVariants.map((v) => (
-                  <button
-                    key={v.color}
-                    className={`h-6 w-6 rounded-full border-2 transition-all ${selectedVariant?.color === v.color ? "border-primary scale-110" : "border-sidebar-border"}`}
-                    style={{ backgroundColor: v.hex }}
-                    onClick={() => setSelectedVariant(v)}
-                    title={v.colorName}
-                  />
-                ))}
-              </div>
-            </>
-          )}
 
           {/* View switcher — only show available views */}
           {availableViews.length > 1 && (
@@ -1599,10 +1546,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                 className="absolute inset-0 h-full w-full object-contain"
                 draggable={false}
               />
-            ) : productIcon ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10rem]">
-                {productIcon}
-              </div>
             ) : null}
             <canvas ref={canvasRef} className="absolute inset-0 z-10" />
           </div>
