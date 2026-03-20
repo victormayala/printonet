@@ -26,6 +26,7 @@ const App = () => (
           <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
           <Route path="/developers" element={<Developers />} />
           <Route path="/brand-settings" element={<BrandSettings />} />
+          <Route path="/products" element={<Products />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
