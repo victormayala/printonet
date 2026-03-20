@@ -354,11 +354,14 @@ add_filter( 'woocommerce_cart_item_thumbnail', function ( $thumbnail, $cart_item
 		}
 
 		// Build a composite thumbnail showing product + design overlaid
-		$html = '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+		$html = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
+		$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
 		if ( $product_img ) {
 			$html .= '<img src="' . $product_img . '" alt="Product" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
 		}
 		$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
+		$html .= '</div>';
+		$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design ↗</a>';
 		$html .= '</div>';
 		return $html;
 	}
