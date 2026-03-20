@@ -8,6 +8,7 @@ import DesignStudio from "./pages/DesignStudio";
 import EmbedCustomizer from "./pages/EmbedCustomizer";
 import Developers from "./pages/Developers";
 import Demo from "./pages/Demo";
+import BrandSettings from "./pages/BrandSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/demo" element={<Demo />} />
           <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
           <Route path="/developers" element={<Developers />} />
+          <Route path="/brand-settings" element={<BrandSettings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -14,6 +14,15 @@
  *         image_back: 'https://example.com/tshirt-back.png',
  *         variants: [{ color: 'white', colorName: 'White', hex: '#FFFFFF' }]
  *       },
+ *       brand: {
+ *         name: 'My Store',
+ *         logoUrl: 'https://example.com/logo.png',
+ *         theme: 'dark',           // 'light' or 'dark'
+ *         primaryColor: '#7c3aed',
+ *         accentColor: '#e0459b',
+ *         fontFamily: 'Inter',
+ *         borderRadius: 12,
+ *       },
  *       externalRef: 'cart-item-123',
  *       onComplete: function(result) { console.log('Design completed:', result); },
  *       onCancel: function() { console.log('User cancelled'); }
@@ -58,7 +67,23 @@
           console.error('[CustomizerStudio] Error:', data.error);
           return;
         }
-        _showIframe(data.customizerUrl || (_config.baseUrl + '/embed/' + data.sessionId));
+        var embedUrl = data.customizerUrl || (_config.baseUrl + '/embed/' + data.sessionId);
+
+        // Append brand config as URL params if provided
+        if (options.brand) {
+          var params = new URLSearchParams();
+          if (options.brand.name) params.set('brandName', options.brand.name);
+          if (options.brand.logoUrl) params.set('brandLogo', options.brand.logoUrl);
+          if (options.brand.theme) params.set('brandTheme', options.brand.theme);
+          if (options.brand.primaryColor) params.set('brandPrimary', options.brand.primaryColor);
+          if (options.brand.accentColor) params.set('brandAccent', options.brand.accentColor);
+          if (options.brand.fontFamily) params.set('brandFont', options.brand.fontFamily);
+          if (options.brand.borderRadius !== undefined) params.set('brandRadius', String(options.brand.borderRadius));
+          var qs = params.toString();
+          if (qs) embedUrl += (embedUrl.indexOf('?') >= 0 ? '&' : '?') + qs;
+        }
+
+        _showIframe(embedUrl);
       })
       .catch(function (err) {
         console.error('[CustomizerStudio] Network error:', err);
