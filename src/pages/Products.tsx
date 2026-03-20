@@ -285,32 +285,52 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg"><Globe className="h-5 w-5" /> Import from WooCommerce</CardTitle>
-        <CardDescription>Enter your WordPress site URL and WooCommerce REST API credentials.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>WordPress Site URL</Label>
-          <Input value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} placeholder="https://your-store.com" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <Card className="border-dashed">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">How to get your WooCommerce credentials</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Log in to your <strong className="text-foreground">WordPress Admin</strong> dashboard</li>
+            <li>Go to <strong className="text-foreground">WooCommerce → Settings → Advanced → REST API</strong></li>
+            <li>Click <strong className="text-foreground">Add key</strong> and fill in a description (e.g. "Customizer Studio")</li>
+            <li>Set <strong className="text-foreground">Permissions</strong> to <code className="text-xs bg-muted px-1.5 py-0.5 rounded">Read</code></li>
+            <li>Click <strong className="text-foreground">Generate API key</strong></li>
+            <li>Copy the <strong className="text-foreground">Consumer Key</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">ck_</code>) and <strong className="text-foreground">Consumer Secret</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">cs_</code>)</li>
+          </ol>
+          <p>Your <strong className="text-foreground">Site URL</strong> is your WordPress domain, e.g. <code className="text-xs bg-muted px-1.5 py-0.5 rounded">https://your-store.com</code></p>
+          <p className="text-xs text-muted-foreground/70">Note: Your site must have SSL (HTTPS) enabled for the REST API to work.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Globe className="h-5 w-5" /> Import from WooCommerce</CardTitle>
+          <CardDescription>Enter your WordPress site URL and WooCommerce REST API credentials.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Consumer Key</Label>
-            <Input value={consumerKey} onChange={(e) => setConsumerKey(e.target.value)} placeholder="ck_..." />
+            <Label>WordPress Site URL</Label>
+            <Input value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} placeholder="https://your-store.com" />
           </div>
-          <div className="space-y-2">
-            <Label>Consumer Secret</Label>
-            <Input value={consumerSecret} onChange={(e) => setConsumerSecret(e.target.value)} type="password" placeholder="cs_..." />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Consumer Key</Label>
+              <Input value={consumerKey} onChange={(e) => setConsumerKey(e.target.value)} placeholder="ck_..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Consumer Secret</Label>
+              <Input value={consumerSecret} onChange={(e) => setConsumerSecret(e.target.value)} type="password" placeholder="cs_..." />
+            </div>
           </div>
-        </div>
-        <Button onClick={handleImport} disabled={loading} className="gap-2">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
-          Import Products
-        </Button>
-      </CardContent>
-    </Card>
+          <Button onClick={handleImport} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+            Import Products
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
