@@ -357,7 +357,7 @@ export default function DesignStudio() {
   const fabricRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTool, setActiveTool] = useState<string>("select");
+  const [activeTool, setActiveTool] = useState<string>("text");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [activeView, setActiveView] = useState<ViewSide>("front");
   const [availableViews, setAvailableViews] = useState<ViewSide[]>(["front"]);
@@ -844,12 +844,67 @@ export default function DesignStudio() {
   }
 
   const tools = [
-    { id: "select", icon: ImageIcon, label: "Select" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
     { id: "clipart", icon: Sticker, label: "Clipart" },
     { id: "upload", icon: Upload, label: "Upload" },
   ];
+
+  function updateSelectedText(newText: string) {
+    if (!selectedObject || selectedObject.type !== "text") return;
+    selectedObject.set("text", newText);
+    (selectedObject as any).customName = `Text: "${newText.slice(0, 12)}"`;
+    fabricRef.current?.renderAll();
+    updateLayers();
+    saveState();
+  }
+
+  function updateSelectedFontSize(size: number) {
+    if (!selectedObject || selectedObject.type !== "text") return;
+    selectedObject.set("fontSize", size);
+    fabricRef.current?.renderAll();
+    saveState();
+  }
+
+  const selectedPropertiesPanel = selectedObject ? (
+    <div className="space-y-3 border border-sidebar-border rounded-lg p-3 bg-sidebar-accent/30">
+      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Selected Object</h4>
+      {selectedObject.type === "text" && (
+        <>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Text</label>
+            <Input
+              value={selectedObject.text || ""}
+              onChange={(e) => updateSelectedText(e.target.value)}
+              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Font Size: {selectedObject.fontSize}px</label>
+            <Slider
+              value={[selectedObject.fontSize || 32]}
+              onValueChange={([v]) => updateSelectedFontSize(v)}
+              min={12} max={120} step={1}
+            />
+          </div>
+        </>
+      )}
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">Opacity: {objectProps.opacity}%</label>
+        <Slider value={[objectProps.opacity]} onValueChange={([v]) => updateSelectedProp("opacity", v)} min={0} max={100} />
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">Color</label>
+        <div className="flex items-center gap-2">
+          <input type="color" value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+          <Input value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+        </div>
+      </div>
+      <Button variant="destructive" size="sm" onClick={deleteSelected} className="w-full gap-2">
+        <Trash2 className="h-3.5 w-3.5" /> Delete
+      </Button>
+    </div>
+  ) : null;
 
   return (
     <div className="flex h-screen flex-col bg-editor-bg text-sidebar-foreground overflow-hidden">
@@ -994,6 +1049,12 @@ export default function DesignStudio() {
                   </div>
                 </div>
                 <Button onClick={addText} className="w-full gap-2"><Type className="h-4 w-4" /> Add Text</Button>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
               </>
             )}
 
@@ -1031,44 +1092,29 @@ export default function DesignStudio() {
                     </button>
                   ))}
                 </div>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
               </>
-            )}
-
-            {activeTool === "select" && selectedObject && (
-              <>
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Properties</h4>
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Opacity: {objectProps.opacity}%</label>
-                    <Slider value={[objectProps.opacity]} onValueChange={([v]) => updateSelectedProp("opacity", v)} min={0} max={100} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Fill</label>
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
-                      <Input value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-                    </div>
-                  </div>
-                  <Button variant="destructive" size="sm" onClick={deleteSelected} className="w-full gap-2">
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
-                  </Button>
-                </div>
-              </>
-            )}
-
-            {activeTool === "select" && !selectedObject && (
-              <div className="text-center py-8 text-muted-foreground">
-                <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Click an object on the canvas to edit its properties</p>
-              </div>
             )}
 
             {activeTool === "upload" && (
-              <div className="text-center py-8">
-                <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
-                <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
-              </div>
+              <>
+                <div className="text-center py-8">
+                  <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
+                  <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
+                </div>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
+              </>
             )}
 
             {activeTool === "clipart" && (
@@ -1104,6 +1150,12 @@ export default function DesignStudio() {
                     </button>
                   ))}
                 </div>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
               </>
             )}
           </div>
