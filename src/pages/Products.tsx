@@ -340,6 +340,11 @@ export default function Products() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
+            <Link to="/profile">
+              <Button variant="ghost" size="icon" title="Profile settings">
+                <UserCircle className="h-4 w-4" />
+              </Button>
+            </Link>
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
             </Button>
