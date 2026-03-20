@@ -335,6 +335,12 @@ export default function Products() {
             <Package className="h-5 w-5" />
             <h1 className="text-lg font-bold">Products</h1>
           </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
+            <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
