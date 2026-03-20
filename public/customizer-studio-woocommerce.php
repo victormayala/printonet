@@ -166,6 +166,8 @@ add_action( 'save_post_product', function ( $post_id ) {
    ================================================================ */
 
 add_action( 'wp_enqueue_scripts', function () {
+	// Load scripts on all frontend pages where WooCommerce is active
+	// This ensures the SDK is available even if is_product() is not yet resolved
 	if ( ! function_exists( 'is_woocommerce' ) ) {
 		return;
 	}
@@ -211,7 +213,7 @@ add_filter( 'script_loader_tag', function ( $tag, $handle ) {
    4. INJECT CUSTOMIZE BUTTON ON PRODUCT PAGES
    ================================================================ */
 
-// Determine hook based on settings
+// Register button on ALL common WooCommerce product page hooks for maximum compatibility
 add_action( 'wp', function () {
 	if ( ! is_product() ) {
 		return;
@@ -230,7 +232,47 @@ add_action( 'wp', function () {
 			add_action( 'woocommerce_before_add_to_cart_button', 'cs_render_customize_button' );
 			break;
 	}
+
+	// Always register a fallback on woocommerce_single_product_summary at priority 35
+	// (after price, before add-to-cart form) in case the primary hook doesn't fire
+	add_action( 'woocommerce_single_product_summary', 'cs_render_customize_button_fallback', 35 );
 } );
+
+// Shortcode support: [customizer_button] — for manual placement in product descriptions or page builders
+add_shortcode( 'customizer_button', function ( $atts ) {
+	global $product;
+	if ( ! $product ) {
+		return '';
+	}
+
+	$atts = shortcode_atts( [ 'label' => '' ], $atts );
+
+	$enabled = get_post_meta( $product->get_id(), '_cs_enabled', true );
+	if ( $enabled !== '1' ) {
+		return '';
+	}
+
+	ob_start();
+	cs_render_customize_button( $atts['label'] ?: null );
+	return ob_get_clean();
+} );
+
+// Track whether the button has already been rendered for this product to avoid duplicates
+function cs_button_was_rendered( $set = false ) {
+	static $rendered = false;
+	if ( $set ) {
+		$rendered = true;
+	}
+	return $rendered;
+}
+
+// Fallback render — only fires if the primary hook didn't render the button
+function cs_render_customize_button_fallback() {
+	if ( cs_button_was_rendered() ) {
+		return; // Already rendered by primary hook
+	}
+	cs_render_customize_button();
+}
 
 function cs_render_customize_button() {
 	global $product;
