@@ -552,10 +552,14 @@ export default function DesignStudio() {
   function addTextTemplate(template: TextTemplate) {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    let yOffset = 200;
+    const textObjects: FabricText[] = [];
+    let yOffset = 0;
     template.lines.forEach((line) => {
-      const text = new FabricText(line.text, {
-        left: 100,
+      let displayText = line.text;
+      if (line.textTransform === "uppercase") displayText = line.text.toUpperCase();
+      else if (line.textTransform === "lowercase") displayText = line.text.toLowerCase();
+      const text = new FabricText(displayText, {
+        left: 0,
         top: yOffset,
         fontSize: line.fontSize,
         fill: fillColor,
@@ -564,16 +568,46 @@ export default function DesignStudio() {
         fontStyle: (line.fontStyle || "normal") as any,
         charSpacing: line.letterSpacing ? parseInt(line.letterSpacing) * 10 : 0,
       });
-      if (line.textTransform === "uppercase") {
-        text.set("text", line.text.toUpperCase());
-      } else if (line.textTransform === "lowercase") {
-        text.set("text", line.text.toLowerCase());
-      }
-      (text as any).customName = `Text: "${line.text.slice(0, 12)}"`;
-      canvas.add(text);
+      (text as any).customName = `Text: "${displayText.slice(0, 12)}"`;
+      textObjects.push(text);
       yOffset += line.fontSize + 8;
     });
+    const group = new Group(textObjects, {
+      left: 100,
+      top: 200,
+    });
+    (group as any).customName = `Template: ${template.name}`;
+    canvas.add(group);
+    canvas.setActiveObject(group);
     canvas.renderAll();
+    saveState();
+  }
+
+  function ungroupObject(group: Group) {
+    const canvas = fabricRef.current;
+    if (!canvas || !(group instanceof Group)) return;
+    const items = group.removeAll();
+    const { left = 0, top = 0, scaleX = 1, scaleY = 1, angle = 0 } = group;
+    canvas.remove(group);
+    items.forEach((item: any) => {
+      // Transform item positions relative to the group's position
+      const originalLeft = item.left || 0;
+      const originalTop = item.top || 0;
+      const rad = (angle * Math.PI) / 180;
+      const rotatedX = originalLeft * Math.cos(rad) - originalTop * Math.sin(rad);
+      const rotatedY = originalLeft * Math.sin(rad) + originalTop * Math.cos(rad);
+      item.set({
+        left: left + rotatedX * scaleX,
+        top: top + rotatedY * scaleY,
+        scaleX: (item.scaleX || 1) * scaleX,
+        scaleY: (item.scaleY || 1) * scaleY,
+        angle: (item.angle || 0) + angle,
+      });
+      item.setCoords();
+      canvas.add(item);
+    });
+    canvas.renderAll();
+    updateLayers();
     saveState();
   }
 
