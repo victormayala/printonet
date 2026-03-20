@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logo from "@/assets/customizer-studio-short-logo.svg";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,9 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md flex flex-col items-center">
+        <img src={logo} alt="Customizer Studio" className="h-16 mb-6" />
+      <Card className="w-full">
         <Tabs defaultValue="login">
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl">Welcome</CardTitle>
@@ -41,6 +44,7 @@ export default function Auth() {
           </CardContent>
         </Tabs>
       </Card>
+      </div>
     </div>
   );
 }
