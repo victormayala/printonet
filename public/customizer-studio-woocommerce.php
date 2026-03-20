@@ -501,6 +501,18 @@ add_action( 'wp_footer', function () {
 					overlay.className = 'cs-design-overlay';
 					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
 					container.appendChild(overlay);
+
+					// Add "View Design" link below the thumbnail
+					if(!container.parentNode.querySelector('.cs-view-design-link')){
+						var link = document.createElement('a');
+						link.href = match.design_url;
+						link.target = '_blank';
+						link.rel = 'noopener';
+						link.className = 'cs-view-design-link';
+						link.textContent = 'View Design ↗';
+						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;text-align:center;';
+						container.parentNode.insertBefore(link, container.nextSibling);
+					}
 				});
 
 				// Also handle classic cart table (fallback if PHP filter didn't work)
