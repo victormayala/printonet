@@ -3,7 +3,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/customizer-studio-short-logo.svg";
+import logo from "@/assets/customizer-studio-short-logo-2.svg";
 
 import {
   Sidebar,
