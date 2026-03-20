@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Code, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Code, Copy, Download, ShoppingCart, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
