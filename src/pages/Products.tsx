@@ -211,26 +211,44 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg"><ShoppingBag className="h-5 w-5" /> Import from Shopify</CardTitle>
-        <CardDescription>Enter your Shopify store URL and a Storefront API access token.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Store URL</Label>
-          <Input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://your-store.myshopify.com" />
-        </div>
-        <div className="space-y-2">
-          <Label>Storefront Access Token</Label>
-          <Input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="shpat_..." />
-        </div>
-        <Button onClick={handleImport} disabled={loading} className="gap-2">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
-          Import Products
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card className="border-dashed">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">How to get your Shopify credentials</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Log in to your <strong className="text-foreground">Shopify Admin</strong> at <code className="text-xs bg-muted px-1.5 py-0.5 rounded">your-store.myshopify.com/admin</code></li>
+            <li>Go to <strong className="text-foreground">Settings → Apps and sales channels → Develop apps</strong></li>
+            <li>Click <strong className="text-foreground">Create an app</strong> and give it a name (e.g. "Customizer Studio")</li>
+            <li>Under <strong className="text-foreground">Configuration → Storefront API</strong>, select the scopes: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">unauthenticated_read_product_listings</code></li>
+            <li>Click <strong className="text-foreground">Install app</strong>, then copy the <strong className="text-foreground">Storefront API access token</strong></li>
+          </ol>
+          <p>Your <strong className="text-foreground">Store URL</strong> is your Shopify domain, e.g. <code className="text-xs bg-muted px-1.5 py-0.5 rounded">https://your-store.myshopify.com</code></p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><ShoppingBag className="h-5 w-5" /> Import from Shopify</CardTitle>
+          <CardDescription>Enter your Shopify store URL and a Storefront API access token.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Store URL</Label>
+            <Input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://your-store.myshopify.com" />
+          </div>
+          <div className="space-y-2">
+            <Label>Storefront Access Token</Label>
+            <Input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="shpat_..." />
+          </div>
+          <Button onClick={handleImport} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
+            Import Products
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
