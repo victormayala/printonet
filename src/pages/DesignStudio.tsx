@@ -260,8 +260,8 @@ const TEXT_TEMPLATES: TextTemplate[] = [
   {
     name: "Block Quote",
     lines: [
-      { text: ""BE THE", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 36, fontWeight: "800", textTransform: "uppercase" },
-      { text: "CHANGE"", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 52, fontWeight: "800", textTransform: "uppercase" },
+      { text: "BE THE", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 36, fontWeight: "800", textTransform: "uppercase" },
+      { text: "CHANGE", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 52, fontWeight: "800", textTransform: "uppercase" },
       { text: "— Gandhi", fontFamily: "Georgia, serif", fontSize: 18, fontStyle: "italic" },
     ],
   },
