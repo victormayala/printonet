@@ -383,10 +383,13 @@ interface EmbedProductData {
   variants?: Array<{ color: string; colorName: string; hex: string }>;
 }
 
+import { type BrandConfig, DEFAULT_BRAND_CONFIG } from "@/lib/brand-config";
+
 interface DesignStudioProps {
   embedMode?: boolean;
   sessionId?: string;
   embedProductData?: EmbedProductData;
+  brandConfig?: BrandConfig;
 }
 
 const VIEW_LABELS: Record<ViewSide, string> = {
