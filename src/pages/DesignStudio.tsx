@@ -1164,6 +1164,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         sides.push({
           view,
           designPNG: publicUrl,
+          productImage: imageMap[view] || "",
           canvasJSON: stateJson,
         });
       }
