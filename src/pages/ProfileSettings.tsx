@@ -88,17 +88,8 @@ export default function ProfileSettings() {
     : (user?.email?.slice(0, 2).toUpperCase() ?? "??");
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
-        <div className="container flex h-14 items-center gap-4">
-          <Link to="/products">
-            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
-          </Link>
-          <h1 className="text-lg font-bold">Profile Settings</h1>
-        </div>
-      </header>
-
-      <div className="container py-10 max-w-lg">
+    <div className="bg-background">
+      <div className="max-w-lg">
         <Card>
           <CardHeader>
             <CardTitle>Your Profile</CardTitle>

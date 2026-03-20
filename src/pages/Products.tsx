@@ -488,31 +488,8 @@ export default function Products() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
-        <div className="container flex h-14 items-center gap-4">
-          <Link to="/">
-            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            <h1 className="text-lg font-bold">Products</h1>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
-            <Link to="/profile">
-              <Button variant="ghost" size="icon" title="Profile settings">
-                <UserCircle className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="container py-8 max-w-5xl">
+    <div className="bg-background">
+      <div className="p-6 lg:p-8 max-w-5xl">
         <Tabs defaultValue="products">
           <TabsList className="mb-6">
             <TabsTrigger value="products" className="gap-2"><Store className="h-4 w-4" /> My Products</TabsTrigger>

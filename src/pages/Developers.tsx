@@ -119,23 +119,8 @@ const { sessionId, status, designOutput } = await response.json();
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container py-4 flex items-center gap-4">
-          <Link to="/">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Code className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold">Developer Integration</h1>
-          </div>
-        </div>
-      </header>
-
-      <div className="container py-8 space-y-8">
+    <div className="bg-background">
+      <div className="p-6 lg:p-8 space-y-8">
         {/* Intro */}
         <div className="space-y-3">
           <h2 className="text-3xl font-bold tracking-tight">Embed the Customizer in Your Store</h2>
