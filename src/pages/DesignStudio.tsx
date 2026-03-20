@@ -592,24 +592,36 @@ export default function DesignStudio() {
   function ungroupObject(group: Group) {
     const canvas = fabricRef.current;
     if (!canvas || !(group instanceof Group)) return;
-    // Get the group's transform matrix before removing items
-    const groupTransform = group.calcTransformMatrix();
+    const groupCenter = group.getCenterPoint();
+    const groupAngle = group.angle || 0;
+    const groupScaleX = group.scaleX || 1;
+    const groupScaleY = group.scaleY || 1;
+
+    // Gather item data while still in group
+    const itemData = (group as any)._objects.map((item: any) => ({
+      left: item.left || 0,
+      top: item.top || 0,
+      scaleX: item.scaleX || 1,
+      scaleY: item.scaleY || 1,
+      angle: item.angle || 0,
+    }));
+
     const items = group.removeAll();
     canvas.remove(group);
-    items.forEach((item: any) => {
-      // Use Fabric's utility to compute the final transform for each item
-      const itemTransform = item.calcTransformMatrix();
-      // Decompose to get position, scale, angle
-      const fullTransform = util.multiplyTransformMatrices(groupTransform, itemTransform);
-      const decomposed = util.qrDecompose(fullTransform);
+
+    items.forEach((item: any, i: number) => {
+      const data = itemData[i];
+      const rad = (groupAngle * Math.PI) / 180;
+      const scaledX = data.left * groupScaleX;
+      const scaledY = data.top * groupScaleY;
+      const rotatedX = scaledX * Math.cos(rad) - scaledY * Math.sin(rad);
+      const rotatedY = scaledX * Math.sin(rad) + scaledY * Math.cos(rad);
       item.set({
-        left: decomposed.translateX,
-        top: decomposed.translateY,
-        scaleX: decomposed.scaleX,
-        scaleY: decomposed.scaleY,
-        angle: decomposed.angle,
-        flipX: false,
-        flipY: false,
+        left: groupCenter.x + rotatedX,
+        top: groupCenter.y + rotatedY,
+        scaleX: data.scaleX * groupScaleX,
+        scaleY: data.scaleY * groupScaleY,
+        angle: data.angle + groupAngle,
       });
       item.setCoords();
       canvas.add(item);
