@@ -453,49 +453,86 @@ add_action( 'wp_footer', function () {
 		window.csDesignMap = {$json};
 
 		(function(){
+			function getDesignMatchByName(designs, productName){
+				if(!productName) return null;
+				for(var i=0;i<designs.length;i++){
+					if(designs[i].name && productName.indexOf(designs[i].name)!==-1){
+						return designs[i];
+					}
+					if(designs[i].name && designs[i].name.indexOf(productName)!==-1){
+						return designs[i];
+					}
+				}
+				return null;
+			}
+
+			function getDesignsInBlockOrder(){
+				var fallback = Object.values(window.csDesignMap || {});
+				try {
+					if(!window.wp || !window.wp.data || !window.wc || !window.wc.wcBlocksData || !window.wc.wcBlocksData.cartStore) {
+						return fallback;
+					}
+
+					var cartStore = window.wc.wcBlocksData.cartStore;
+					var cartData = window.wp.data.select(cartStore).getCartData();
+					if(!cartData || !Array.isArray(cartData.items)) {
+						return fallback;
+					}
+
+					var byName = fallback.slice();
+					return cartData.items.map(function(item){
+						var itemName = item && item.name ? item.name : '';
+						var matchIndex = byName.findIndex(function(design){
+							return design.name && itemName && (itemName.indexOf(design.name)!==-1 || design.name.indexOf(itemName)!==-1);
+						});
+						if(matchIndex === -1) return null;
+						return byName.splice(matchIndex, 1)[0];
+					}).filter(Boolean);
+				} catch (e) {
+					return fallback;
+				}
+			}
+
+			function appendViewDesignLink(target, designUrl, center){
+				if(!target || !designUrl) return;
+				var scope = target.parentNode || target;
+				if(scope.querySelector('.cs-view-design-link')) return;
+
+				var link = document.createElement('a');
+				link.href = designUrl;
+				link.target = '_blank';
+				link.rel = 'noopener';
+				link.className = 'cs-view-design-link';
+				link.innerHTML = 'View Design &nearr;';
+				link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;' + (center ? 'text-align:center;' : '');
+				scope.insertBefore(link, target.nextSibling);
+			}
+
 			function applyDesignOverlays(){
 				if(!window.csDesignMap) return;
-				var designs = Object.values(window.csDesignMap);
-				if(!designs.length) return;
+				var fallbackDesigns = Object.values(window.csDesignMap);
+				if(!fallbackDesigns.length) return;
 
-				// Target block cart & checkout thumbnail images
+				var orderedDesigns = getDesignsInBlockOrder();
 				var thumbContainers = document.querySelectorAll(
-					'.wc-block-cart-items .wc-block-cart-items__row .wc-block-components-product-image,' +
-					'.wc-block-checkout .wc-block-components-order-summary-item .wc-block-components-product-image,' +
+					'.wc-block-cart-items .wc-block-components-product-image,' +
+					'.wc-block-checkout .wc-block-components-product-image,' +
 					'.wc-block-components-order-summary .wc-block-components-product-image'
 				);
 
-				thumbContainers.forEach(function(container){
-					// Skip if overlay already applied
+				thumbContainers.forEach(function(container, index){
 					if(container.querySelector('.cs-design-overlay')) return;
 
-					// Try to match this container to a design by finding the product name nearby
-					var row = container.closest('.wc-block-cart-items__row, .wc-block-components-order-summary-item, tr');
-					if(!row) return;
-
-					var nameEl = row.querySelector(
+					var row = container.closest('.wc-block-cart-items__row, .wc-block-components-order-summary-item, tr, li');
+					var nameEl = row ? row.querySelector(
 						'.wc-block-components-product-name,' +
 						'.wc-block-components-order-summary-item__description .wc-block-components-product-name,' +
 						'a[href]'
-					);
+					) : null;
 					var productName = nameEl ? nameEl.textContent.trim() : '';
-
-					// Match by product name
-					var match = null;
-					for(var i=0;i<designs.length;i++){
-						if(designs[i].name && productName && productName.indexOf(designs[i].name)!==-1){
-							match = designs[i];
-							break;
-						}
-						if(designs[i].name && productName && designs[i].name.indexOf(productName)!==-1){
-							match = designs[i];
-							break;
-						}
-					}
-
+					var match = orderedDesigns[index] || getDesignMatchByName(fallbackDesigns, productName);
 					if(!match) return;
 
-					// Make container relative for overlay positioning
 					container.style.position = 'relative';
 					var overlay = document.createElement('img');
 					overlay.src = match.design_url;
@@ -503,21 +540,9 @@ add_action( 'wp_footer', function () {
 					overlay.className = 'cs-design-overlay';
 					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
 					container.appendChild(overlay);
-
-					// Add View Design link below the thumbnail
-					if(!container.parentNode.querySelector('.cs-view-design-link')){
-						var link = document.createElement('a');
-						link.href = match.design_url;
-						link.target = '_blank';
-						link.rel = 'noopener';
-						link.className = 'cs-view-design-link';
-						link.innerHTML = 'View Design &nearr;';
-						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;text-align:center;';
-						container.parentNode.insertBefore(link, container.nextSibling);
-					}
+					appendViewDesignLink(container, match.design_url, true);
 				});
 
-				// Also handle classic cart table (fallback if PHP filter didn't work)
 				var classicRows = document.querySelectorAll('.woocommerce-cart-form .cart_item, .woocommerce-checkout .cart_item');
 				classicRows.forEach(function(row){
 					var thumbTd = row.querySelector('.product-thumbnail');
@@ -525,15 +550,7 @@ add_action( 'wp_footer', function () {
 
 					var nameLink = row.querySelector('.product-name a');
 					var productName = nameLink ? nameLink.textContent.trim() : '';
-
-					var match = null;
-					for(var i=0;i<designs.length;i++){
-						if(designs[i].name && productName && (productName.indexOf(designs[i].name)!==-1 || designs[i].name.indexOf(productName)!==-1)){
-							match = designs[i];
-							break;
-						}
-					}
-
+					var match = getDesignMatchByName(fallbackDesigns, productName);
 					if(!match) return;
 
 					var imgWrap = thumbTd.querySelector('a') || thumbTd;
@@ -545,35 +562,21 @@ add_action( 'wp_footer', function () {
 					overlay.className = 'cs-design-overlay';
 					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
 					imgWrap.appendChild(overlay);
-
-					// Add View Design link below thumbnail in classic cart
-					if(!thumbTd.querySelector('.cs-view-design-link')){
-						var link = document.createElement('a');
-						link.href = match.design_url;
-						link.target = '_blank';
-						link.rel = 'noopener';
-						link.className = 'cs-view-design-link';
-						link.innerHTML = 'View Design &nearr;';
-						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;';
-						thumbTd.appendChild(link);
-					}
+					appendViewDesignLink(imgWrap, match.design_url, false);
 				});
 			}
 
-			// Run on load and observe DOM changes (React-based blocks re-render)
 			if(document.readyState==='loading'){
 				document.addEventListener('DOMContentLoaded', applyDesignOverlays);
 			} else {
 				applyDesignOverlays();
 			}
 
-			// MutationObserver for block cart/checkout which renders via React
-			var observer = new MutationObserver(function(mutations){
+			var observer = new MutationObserver(function(){
 				applyDesignOverlays();
 			});
 			observer.observe(document.body, { childList:true, subtree:true });
 
-			// Also re-apply on WooCommerce AJAX events (classic cart updates)
 			document.addEventListener('updated_wc_div', applyDesignOverlays);
 			if(typeof jQuery !== 'undefined'){
 				jQuery(document.body).on('updated_cart_totals updated_checkout wc_fragments_refreshed', applyDesignOverlays);
