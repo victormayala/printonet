@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import Index from "./pages/Index";
 import DesignStudio from "./pages/DesignStudio";
 import EmbedCustomizer from "./pages/EmbedCustomizer";
@@ -19,6 +20,14 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function DashboardRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <DashboardLayout>{children}</DashboardLayout>
+    </ProtectedRoute>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -32,10 +41,10 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/demo" element={<Demo />} />
             <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
-            <Route path="/developers" element={<ProtectedRoute><Developers /></ProtectedRoute>} />
-            <Route path="/brand-settings" element={<ProtectedRoute><BrandSettings /></ProtectedRoute>} />
-            <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+            <Route path="/products" element={<DashboardRoute><Products /></DashboardRoute>} />
+            <Route path="/brand-settings" element={<DashboardRoute><BrandSettings /></DashboardRoute>} />
+            <Route path="/developers" element={<DashboardRoute><Developers /></DashboardRoute>} />
+            <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
