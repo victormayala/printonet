@@ -809,6 +809,96 @@ export default function DesignStudio() {
     saveState();
   }
 
+  function addPattern(patternType: string) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    const size = 120;
+    const patternCanvas = document.createElement("canvas");
+    const ctx = patternCanvas.getContext("2d");
+    if (!ctx) return;
+
+    const tileSize = 20;
+    patternCanvas.width = tileSize;
+    patternCanvas.height = tileSize;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, tileSize, tileSize);
+    ctx.strokeStyle = fillColor;
+    ctx.fillStyle = fillColor;
+    ctx.lineWidth = 2;
+
+    switch (patternType) {
+      case "stripes":
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(tileSize, tileSize);
+        ctx.moveTo(-tileSize / 2, tileSize / 2); ctx.lineTo(tileSize / 2, tileSize * 1.5);
+        ctx.moveTo(tileSize / 2, -tileSize / 2); ctx.lineTo(tileSize * 1.5, tileSize / 2);
+        ctx.stroke();
+        break;
+      case "dots":
+        ctx.beginPath();
+        ctx.arc(tileSize / 2, tileSize / 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case "grid":
+        ctx.beginPath();
+        ctx.moveTo(tileSize, 0); ctx.lineTo(tileSize, tileSize);
+        ctx.moveTo(0, tileSize); ctx.lineTo(tileSize, tileSize);
+        ctx.stroke();
+        break;
+      case "checkerboard":
+        ctx.fillRect(0, 0, tileSize / 2, tileSize / 2);
+        ctx.fillRect(tileSize / 2, tileSize / 2, tileSize / 2, tileSize / 2);
+        break;
+      case "zigzag":
+        ctx.beginPath();
+        ctx.moveTo(0, tileSize / 2);
+        ctx.lineTo(tileSize / 4, 0);
+        ctx.lineTo(tileSize / 2, tileSize / 2);
+        ctx.lineTo(tileSize * 3 / 4, 0);
+        ctx.lineTo(tileSize, tileSize / 2);
+        ctx.stroke();
+        break;
+      case "crosshatch":
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(tileSize, tileSize);
+        ctx.moveTo(tileSize, 0); ctx.lineTo(0, tileSize);
+        ctx.stroke();
+        break;
+      case "horizontal":
+        ctx.beginPath();
+        ctx.moveTo(0, tileSize / 2); ctx.lineTo(tileSize, tileSize / 2);
+        ctx.stroke();
+        break;
+      case "vertical":
+        ctx.beginPath();
+        ctx.moveTo(tileSize / 2, 0); ctx.lineTo(tileSize / 2, tileSize);
+        ctx.stroke();
+        break;
+      default: return;
+    }
+
+    const patternImg = new Image();
+    patternImg.onload = () => {
+      const fabricPattern = new (window as any).fabric.Pattern({
+        source: patternImg,
+        repeat: "repeat",
+      });
+      const rect = new Rect({
+        left: 180, top: 220, width: size, height: size,
+        fill: fabricPattern,
+        stroke: fillColor,
+        strokeWidth: 1,
+      });
+      (rect as any).customName = patternType.charAt(0).toUpperCase() + patternType.slice(1) + " Pattern";
+      canvas.add(rect);
+      canvas.setActiveObject(rect);
+      saveState();
+    };
+    patternImg.src = patternCanvas.toDataURL();
+  }
+
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const canvas = fabricRef.current;
     const file = e.target.files?.[0];
