@@ -1002,6 +1002,10 @@ export default function DesignStudio() {
                   </>
                 ) : (
                   <>
+                    <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent">
+                      <Type className="h-4 w-4" /> Add Custom Text
+                    </Button>
+
                     {/* Text Templates - scrollable */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Templates</label>
