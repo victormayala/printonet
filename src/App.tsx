@@ -14,6 +14,7 @@ import BrandSettings from "./pages/BrandSettings";
 import Products from "./pages/Products";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import ProfileSettings from "./pages/ProfileSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
