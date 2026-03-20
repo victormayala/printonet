@@ -367,6 +367,23 @@ interface InventoryProduct {
   image_side2: string | null;
 }
 
+interface EmbedProductData {
+  name: string;
+  category?: string;
+  description?: string;
+  image_front?: string;
+  image_back?: string;
+  image_side1?: string;
+  image_side2?: string;
+  variants?: Array<{ color: string; colorName: string; hex: string }>;
+}
+
+interface DesignStudioProps {
+  embedMode?: boolean;
+  sessionId?: string;
+  embedProductData?: EmbedProductData;
+}
+
 const VIEW_LABELS: Record<ViewSide, string> = {
   front: "Front",
   back: "Back",
