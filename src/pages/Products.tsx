@@ -439,6 +439,29 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null | undefined>(undefined);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name-asc" | "name-desc" | "price-asc" | "price-desc">("newest");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  const filteredAndSortedProducts = (() => {
+    let result = [...products];
+    if (filterCategory !== "all") {
+      result = result.filter((p) => p.category === filterCategory);
+    }
+    if (filterStatus !== "all") {
+      result = result.filter((p) => (filterStatus === "active" ? p.is_active : !p.is_active));
+    }
+    switch (sortBy) {
+      case "oldest": result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); break;
+      case "name-asc": result.sort((a, b) => a.name.localeCompare(b.name)); break;
+      case "name-desc": result.sort((a, b) => b.name.localeCompare(a.name)); break;
+      case "price-asc": result.sort((a, b) => a.base_price - b.base_price); break;
+      case "price-desc": result.sort((a, b) => b.base_price - a.base_price); break;
+      default: result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    return result;
+  })();
 
   const fetchProducts = async () => {
     setLoading(true);
