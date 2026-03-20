@@ -3,9 +3,9 @@
  * Embed the product customizer in any e-commerce store.
  *
  * Usage:
- *   <script src="https://YOUR_DOMAIN/customizer-sdk.js"></script>
+ *   <script src="https://customizerstudio.com/customizer-sdk.js"></script>
  *   <script>
- *     CustomizerStudio.init({ apiUrl: 'https://YOUR_SUPABASE_URL/functions/v1' });
+ *     CustomizerStudio.init({ apiUrl: 'https://qumrnazgdrijdcihtkah.supabase.co/functions/v1' });
  *     CustomizerStudio.open({
  *       product: {
  *         name: 'Classic T-Shirt',
