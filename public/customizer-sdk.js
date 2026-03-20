@@ -187,11 +187,26 @@
         label.style.cssText = 'padding:8px 12px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;';
         label.textContent = side.view;
         card.appendChild(label);
-        var img = document.createElement('img');
-        img.src = side.designPNG;
-        img.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;padding:8px;';
-        img.alt = side.view + ' design';
-        card.appendChild(img);
+
+        // Composite container: product image + design overlay
+        var compositeWrap = document.createElement('div');
+        compositeWrap.style.cssText = 'position:relative;width:100%;aspect-ratio:1;background:#f5f5f5;';
+
+        if (side.productImage) {
+          var productImg = document.createElement('img');
+          productImg.src = side.productImage;
+          productImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
+          productImg.alt = side.view + ' product';
+          compositeWrap.appendChild(productImg);
+        }
+
+        var designImg = document.createElement('img');
+        designImg.src = side.designPNG;
+        designImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
+        designImg.alt = side.view + ' design';
+        compositeWrap.appendChild(designImg);
+
+        card.appendChild(compositeWrap);
         grid.appendChild(card);
       });
 
