@@ -1150,6 +1150,12 @@ export default function DesignStudio() {
                     </button>
                   ))}
                 </div>
+                {selectedPropertiesPanel && (
+                  <>
+                    <Separator className="bg-sidebar-border" />
+                    {selectedPropertiesPanel}
+                  </>
+                )}
               </>
             )}
           </div>
