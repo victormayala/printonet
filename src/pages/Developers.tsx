@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Code, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Code, Copy, Download, ShoppingCart, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -28,7 +28,7 @@ function CodeBlock({ code, language = "html" }: { code: string; language?: strin
 }
 
 export default function Developers() {
-  const [activeTab, setActiveTab] = useState<"quickstart" | "api" | "sdk">("quickstart");
+  const [activeTab, setActiveTab] = useState<"quickstart" | "api" | "sdk" | "woocommerce">("quickstart");
   const baseUrl = window.location.origin;
 
   const sdkSnippet = `<!-- Add the Customizer SDK -->
@@ -134,9 +134,28 @@ const { sessionId, status, designOutput } = await response.json();
 
   const tabs = [
     { id: "quickstart" as const, label: "Quick Start" },
+    { id: "woocommerce" as const, label: "WooCommerce" },
     { id: "api" as const, label: "API Reference" },
     { id: "sdk" as const, label: "SDK Reference" },
   ];
+
+  const wooInstallSteps = [
+    { title: "Download the Plugin", desc: "Click the download button below to get the plugin file." },
+    { title: "Upload to WordPress", desc: "Go to WordPress admin → Plugins → Add New → Upload Plugin, and upload the downloaded file." },
+    { title: "Activate", desc: "Click 'Activate' after the upload completes." },
+    { title: "Configure", desc: "Go to WooCommerce → Customizer Studio. Enter your Base URL, API URL, and Anon Key." },
+    { title: "Enable Products", desc: "Edit any WooCommerce product → find the 'Customizer Studio' meta box → check 'Enable Customizer' and enter the matching Product ID or Name." },
+  ];
+
+  const handleDownloadPlugin = () => {
+    const link = document.createElement('a');
+    link.href = baseUrl + '/customizer-studio-woocommerce.php';
+    link.download = 'customizer-studio-woocommerce.php';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Plugin downloaded!");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -200,6 +219,124 @@ const { sessionId, status, designOutput } = await response.json();
         </div>
 
         {/* Tab Content */}
+        {activeTab === "woocommerce" && (
+          <div className="space-y-8">
+            {/* Hero card */}
+            <div className="rounded-xl border border-border bg-card p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <ShoppingCart className="h-8 w-8 text-primary" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <h3 className="text-2xl font-bold">WooCommerce Plugin</h3>
+                <p className="text-muted-foreground">
+                  One plugin does everything — auto-injects scripts, adds "Customize" buttons to product pages, 
+                  saves designs to cart & orders, and fully supports both simple and variable products. 
+                  No code editing required.
+                </p>
+              </div>
+              <Button size="lg" onClick={handleDownloadPlugin} className="gap-2 shrink-0">
+                <Download className="h-4 w-4" />
+                Download Plugin
+              </Button>
+            </div>
+
+            {/* Features grid */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">What's Included</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  { title: "Auto Script Injection", desc: "SDK & Loader scripts are automatically added to your store — no manual <script> tags needed." },
+                  { title: "Settings Page", desc: "Configure your API credentials directly in WooCommerce → Customizer Studio." },
+                  { title: "Product Mapping", desc: "Link WooCommerce products to Customizer Studio products via a meta box in the product editor." },
+                  { title: "Customize Button", desc: "Automatically injects a 'Customize' button on enabled product pages. Configurable position." },
+                  { title: "Simple Product Support", desc: "One-click add-to-cart with design image and session ID saved as cart metadata." },
+                  { title: "Variable Product Support", desc: "Auto-maps the selected color variant to the correct WooCommerce variation and adds to cart via AJAX." },
+                  { title: "Cart Image Replacement", desc: "Replaces default product thumbnails in the cart with the customer's custom design preview." },
+                  { title: "Order & Email Integration", desc: "Design preview and session ID appear in admin order details and customer confirmation emails." },
+                ].map((feature) => (
+                  <div key={feature.title} className="flex gap-3 rounded-lg border border-border bg-card p-4">
+                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-sm">{feature.title}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{feature.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Installation steps */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Installation</h3>
+              <div className="space-y-3">
+                {wooInstallSteps.map((step, i) => (
+                  <div key={i} className="flex gap-4 items-start">
+                    <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">{step.title}</div>
+                      <div className="text-sm text-muted-foreground">{step.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Configuration reference */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Configuration</h3>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-medium">Setting</th>
+                      <th className="text-left px-4 py-2 font-medium">Description</th>
+                      <th className="text-left px-4 py-2 font-medium">Example</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    <tr>
+                      <td className="px-4 py-2 font-mono text-xs">Base URL</td>
+                      <td className="px-4 py-2 text-muted-foreground">Your Customizer Studio URL</td>
+                      <td className="px-4 py-2 font-mono text-xs">{baseUrl}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 font-mono text-xs">API URL</td>
+                      <td className="px-4 py-2 text-muted-foreground">Backend API endpoint</td>
+                      <td className="px-4 py-2 font-mono text-xs">{SUPABASE_URL}/functions/v1</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 font-mono text-xs">Anon Key</td>
+                      <td className="px-4 py-2 text-muted-foreground">Public key for product fetching</td>
+                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">eyJhbG...</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 font-mono text-xs">Button Label</td>
+                      <td className="px-4 py-2 text-muted-foreground">Customize button text</td>
+                      <td className="px-4 py-2 font-mono text-xs">🎨 Customize This Product</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 font-mono text-xs">Button Position</td>
+                      <td className="px-4 py-2 text-muted-foreground">Where the button appears</td>
+                      <td className="px-4 py-2 font-mono text-xs">Before / After Add to Cart</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Download CTA */}
+            <div className="rounded-xl border border-border bg-muted/30 p-6 text-center space-y-3">
+              <p className="text-muted-foreground">Ready to add product customization to your WooCommerce store?</p>
+              <Button size="lg" onClick={handleDownloadPlugin} className="gap-2">
+                <Download className="h-4 w-4" />
+                Download Plugin
+              </Button>
+            </div>
+          </div>
+        )}
+
         {activeTab === "quickstart" && (
           <div className="space-y-6">
             <div className="space-y-2">
