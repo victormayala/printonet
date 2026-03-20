@@ -1538,16 +1538,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col bg-editor-bg overflow-hidden p-4">
-          <div ref={containerRef} className="relative flex-1 rounded-lg border border-sidebar-border shadow-2xl overflow-hidden bg-background">
-            {bgImageUrl ? (
+          <div className="relative flex-1 rounded-lg border border-sidebar-border shadow-2xl overflow-hidden bg-background">
+            {bgImageUrl && (
               <img
                 src={bgImageUrl}
                 alt={`${productName} ${VIEW_LABELS[activeView]} view`}
                 className="absolute inset-0 h-full w-full object-contain"
                 draggable={false}
               />
-            ) : null}
-            <canvas ref={canvasRef} className="absolute inset-0 z-10" />
+            )}
+            <div ref={containerRef} className="absolute inset-0 z-10">
+              <canvas ref={canvasRef} />
+            </div>
           </div>
           <div className="mt-2 text-center text-xs text-muted-foreground">
             {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
