@@ -32,7 +32,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/demo" element={<Demo />} />
             <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
-            <Route path="/developers" element={<Developers />} />
+            <Route path="/developers" element={<ProtectedRoute><Developers /></ProtectedRoute>} />
             <Route path="/brand-settings" element={<ProtectedRoute><BrandSettings /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
