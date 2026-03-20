@@ -1146,9 +1146,6 @@ export default function DesignStudio() {
               </>
             )}
           </div>
-
-        </div>
-          )}
         </div>
 
         {/* Canvas Area */}
