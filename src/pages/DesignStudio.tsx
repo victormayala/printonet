@@ -1120,17 +1120,22 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
 
-        // Upload to storage
-        const blob = await (await fetch(dataUrl)).blob();
-        const fileName = `${sessionId || "export"}_${view}_${Date.now()}.png`;
+        // Try uploading to storage, fall back to data URL
+        let publicUrl = dataUrl;
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const fileName = `${sessionId || "export"}_${view}_${Date.now()}.png`;
 
-        const { data: uploadData } = await supabase.storage
-          .from("design-exports")
-          .upload(fileName, blob, { contentType: "image/png" });
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("design-exports")
+            .upload(fileName, blob, { contentType: "image/png" });
 
-        const publicUrl = uploadData
-          ? supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl
-          : dataUrl;
+          if (uploadData && !uploadError) {
+            publicUrl = supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl;
+          }
+        } catch (uploadErr) {
+          console.warn("Storage upload failed, using data URL:", uploadErr);
+        }
 
         sides.push({
           view,
@@ -1154,9 +1159,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
       // If embed mode, complete session and post message to parent
       if (embedMode && sessionId) {
-        await supabase.functions.invoke("complete-session", {
-          body: { sessionId, designOutput: result },
-        });
+        try {
+          await supabase.functions.invoke("complete-session", {
+            body: { sessionId, designOutput: result },
+          });
+        } catch (sessionErr) {
+          console.warn("Session completion API call failed:", sessionErr);
+        }
 
         window.parent.postMessage(
           { source: "customizer-studio", type: "design-complete", payload: result },
@@ -1164,9 +1173,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         );
       }
 
+      setExportComplete(true);
       return result;
     } catch (err) {
       console.error("Export error:", err);
+      alert("Export failed. Please try again.");
     } finally {
       setExporting(false);
     }
