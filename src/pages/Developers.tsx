@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://your-project.supabase.co";
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 
 function CodeBlock({ code, language = "html" }: { code: string; language?: string }) {
   const copyToClipboard = () => {
