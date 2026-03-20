@@ -447,6 +447,12 @@ export default function DesignStudio() {
     canvas.on("object:modified", () => { saveState(); updateLayers(); });
     canvas.on("object:added", () => updateLayers());
     canvas.on("object:removed", () => updateLayers());
+    canvas.on("mouse:dblclick", (e: any) => {
+      const target = e.target;
+      if (target && target instanceof Group) {
+        ungroupObject(target);
+      }
+    });
 
     saveState();
     setCanvasReady(true);
