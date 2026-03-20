@@ -1002,7 +1002,7 @@ export default function DesignStudio() {
                   </>
                 ) : (
                   <>
-                    <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent">
+                    <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
                       <Type className="h-4 w-4" /> Add Custom Text
                     </Button>
 
