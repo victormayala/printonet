@@ -55,11 +55,19 @@ export default function Index() {
                 <Paintbrush className="h-4 w-4" /> Brand Settings
               </Button>
             </Link>
-            <Link to="/developers">
-              <Button className="gap-2">
-                Get Started <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            {user ? (
+              <Link to="/products">
+                <Button className="gap-2">
+                  Dashboard <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button className="gap-2">
+                  <LogIn className="h-4 w-4" /> Sign In
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </nav>
