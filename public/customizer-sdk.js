@@ -305,9 +305,12 @@
       })
         .then(function (res) { return res.json(); })
         .then(function (data) {
+          console.log('[CustomizerStudio] WooCommerce response:', JSON.stringify(data));
           if (data.error) {
-            console.error('[CustomizerStudio] WooCommerce add to cart error:', data.error);
-            callback(false);
+            console.error('[CustomizerStudio] WooCommerce add to cart error. Full response:', data);
+            // WooCommerce returns error:true for variable products that need a variation_id
+            // Try falling back to the standard form submission approach
+            _wcFormFallback(_wcProductId, payload, callback);
             return;
           }
           // Trigger WooCommerce cart update events
