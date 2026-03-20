@@ -579,8 +579,9 @@ export default function DesignStudio() {
   function addText() {
     const canvas = fabricRef.current;
     if (!canvas) return;
+    loadGoogleFont(fontFamily);
     const text = new FabricText(textInput, {
-      left: 150, top: 250, fontSize, fill: fillColor, fontFamily: "Inter",
+      left: 150, top: 250, fontSize, fill: fillColor, fontFamily,
     });
     (text as any).customName = `Text: "${textInput.slice(0, 12)}"`;
     canvas.add(text);
