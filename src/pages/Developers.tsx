@@ -142,7 +142,7 @@ const { sessionId, status, designOutput } = await response.json();
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
+        <div className="container py-4 flex items-center gap-4">
           <Link to="/">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
@@ -155,7 +155,7 @@ const { sessionId, status, designOutput } = await response.json();
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="container py-8 space-y-8">
         {/* Intro */}
         <div className="space-y-3">
           <h2 className="text-3xl font-bold tracking-tight">Embed the Customizer in Your Store</h2>
