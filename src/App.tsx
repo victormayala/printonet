@@ -14,6 +14,7 @@ import BrandSettings from "./pages/BrandSettings";
 import Products from "./pages/Products";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import ProfileSettings from "./pages/ProfileSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/developers" element={<Developers />} />
             <Route path="/brand-settings" element={<ProtectedRoute><BrandSettings /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

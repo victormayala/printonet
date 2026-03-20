@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
-  Store, Globe, Loader2, Package, ImageIcon, LogOut
+  Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -340,6 +340,11 @@ export default function Products() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
+            <Link to="/profile">
+              <Button variant="ghost" size="icon" title="Profile settings">
+                <UserCircle className="h-4 w-4" />
+              </Button>
+            </Link>
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
             </Button>
