@@ -40,21 +40,6 @@ export default function Index() {
             <img src={logo} alt="Customizer Studio" className="h-8" />
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/developers">
-              <Button variant="ghost" className="gap-2">
-                <Code className="h-4 w-4" /> Docs
-              </Button>
-            </Link>
-            <Link to="/products">
-              <Button variant="ghost" className="gap-2">
-                <Package className="h-4 w-4" /> Products
-              </Button>
-            </Link>
-            <Link to="/brand-settings">
-              <Button variant="ghost" className="gap-2">
-                <Paintbrush className="h-4 w-4" /> Brand Settings
-              </Button>
-            </Link>
             {user ? (
               <Link to="/products">
                 <Button className="gap-2">
