@@ -1132,7 +1132,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       for (const view of availableViews) {
         const stateJson = viewStatesRef.current[view];
         if (!stateJson) {
-          sides.push({ view, designPNG: "", canvasJSON: "{}" });
+          sides.push({ view, designPNG: "", productImage: imageMap[view] || "", canvasJSON: "{}" });
           continue;
         }
 
