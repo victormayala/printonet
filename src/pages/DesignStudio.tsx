@@ -11,6 +11,7 @@ import {
   Sparkles, ArrowLeft, Type, Square, CircleIcon, TriangleIcon,
   Upload, Undo2, Redo2, Trash2, Eye, EyeOff, Lock, Unlock,
   ChevronUp, ChevronDown, Layers as LayersIcon, Palette, Save,
+  Copy,
   ShoppingCart, ImageIcon, Sticker,
   Heart, Star, Flame, Zap, Music, Sun, Moon, Cloud,
   Coffee, Camera, Anchor, Award, Bell, Bookmark, Crown,
@@ -997,6 +998,26 @@ export default function DesignStudio() {
     );
   }
 
+  function deleteLayer(layerObj: any) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    canvas.remove(layerObj);
+    if (selectedObject === layerObj) setSelectedObject(null);
+    saveState();
+  }
+
+  function duplicateLayer(layerObj: any) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    layerObj.clone().then((cloned: any) => {
+      cloned.set({ left: (cloned.left || 0) + 15, top: (cloned.top || 0) + 15 });
+      canvas.add(cloned);
+      canvas.setActiveObject(cloned);
+      canvas.renderAll();
+      saveState();
+    });
+  }
+
 
   function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
     const canvas = fabricRef.current;
@@ -1431,6 +1452,12 @@ export default function DesignStudio() {
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); toggleLock(layer.obj); }} className="hover:text-primary">
                       {layer.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); duplicateLayer(layer.obj); }} className="hover:text-primary" title="Duplicate">
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteLayer(layer.obj); }} className="hover:text-destructive" title="Delete">
+                      <Trash2 className="h-3 w-3" />
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); moveLayer(i, "up"); }} className="hover:text-primary">
                       <ChevronUp className="h-3 w-3" />
