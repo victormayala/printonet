@@ -74,6 +74,7 @@ function ProductForm({
       return;
     }
     setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
     const payload = {
       name: name.trim(),
       category,
@@ -82,6 +83,7 @@ function ProductForm({
       image_front: imageFront || null,
       image_back: imageBack || null,
       is_active: isActive,
+      ...(product ? {} : { user_id: user?.id }),
     };
 
     let error;
