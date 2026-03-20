@@ -357,7 +357,7 @@ export default function DesignStudio() {
   const fabricRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTool, setActiveTool] = useState<string>("select");
+  const [activeTool, setActiveTool] = useState<string>("text");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [activeView, setActiveView] = useState<ViewSide>("front");
   const [availableViews, setAvailableViews] = useState<ViewSide[]>(["front"]);
