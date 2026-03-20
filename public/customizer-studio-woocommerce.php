@@ -553,7 +553,7 @@ add_action( 'wp_footer', function () {
 						link.target = '_blank';
 						link.rel = 'noopener';
 						link.className = 'cs-view-design-link';
-						link.textContent = 'View Design &nearr;';
+						link.innerHTML = 'View Design &nearr;';
 						link.style.cssText = 'display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;';
 						thumbTd.appendChild(link);
 					}
