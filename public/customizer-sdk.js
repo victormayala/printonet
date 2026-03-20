@@ -37,6 +37,7 @@
   var _iframe = null;
   var _callbacks = {};
   var _productInfo = null;
+  var _wcProductId = null;
   var _summaryOverlay = null;
 
   function init(options) {
