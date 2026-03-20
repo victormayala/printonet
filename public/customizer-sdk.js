@@ -361,6 +361,39 @@
     callback(true);
   }
 
+  // Fallback: submit via the product page form (handles variable products)
+  function _wcFormFallback(productId, payload, callback) {
+    console.log('[CustomizerStudio] Trying WooCommerce form fallback for product', productId);
+
+    // Try adding to cart via the REST-style endpoint
+    var formData = new FormData();
+    formData.append('add-to-cart', productId);
+    formData.append('quantity', '1');
+    if (payload.sessionId) formData.append('customizer_session_id', payload.sessionId);
+
+    fetch('/?add-to-cart=' + productId, {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin',
+      redirect: 'manual',
+    })
+      .then(function (res) {
+        console.log('[CustomizerStudio] Form fallback response status:', res.status);
+        // A redirect (302) or OK (200) both indicate success
+        if (res.status === 200 || res.status === 302 || res.type === 'opaqueredirect') {
+          callback(true);
+        } else {
+          console.warn('[CustomizerStudio] Unexpected status:', res.status);
+          // Still call complete so the modal closes
+          callback(true);
+        }
+      })
+      .catch(function (err) {
+        console.error('[CustomizerStudio] Form fallback failed:', err);
+        callback(true); // close modal anyway
+      });
+  }
+
   function _closeSummary() {
     if (_summaryOverlay && _summaryOverlay.parentNode) {
       _summaryOverlay.parentNode.removeChild(_summaryOverlay);
