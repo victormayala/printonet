@@ -592,22 +592,36 @@ export default function DesignStudio() {
   function ungroupObject(group: Group) {
     const canvas = fabricRef.current;
     if (!canvas || !(group instanceof Group)) return;
+    const groupCenter = group.getCenterPoint();
+    const groupAngle = group.angle || 0;
+    const groupScaleX = group.scaleX || 1;
+    const groupScaleY = group.scaleY || 1;
+
+    // Gather item data while still in group
+    const itemData = (group as any)._objects.map((item: any) => ({
+      left: item.left || 0,
+      top: item.top || 0,
+      scaleX: item.scaleX || 1,
+      scaleY: item.scaleY || 1,
+      angle: item.angle || 0,
+    }));
+
     const items = group.removeAll();
-    const { left = 0, top = 0, scaleX = 1, scaleY = 1, angle = 0 } = group;
     canvas.remove(group);
-    items.forEach((item: any) => {
-      // Transform item positions relative to the group's position
-      const originalLeft = item.left || 0;
-      const originalTop = item.top || 0;
-      const rad = (angle * Math.PI) / 180;
-      const rotatedX = originalLeft * Math.cos(rad) - originalTop * Math.sin(rad);
-      const rotatedY = originalLeft * Math.sin(rad) + originalTop * Math.cos(rad);
+
+    items.forEach((item: any, i: number) => {
+      const data = itemData[i];
+      const rad = (groupAngle * Math.PI) / 180;
+      const scaledX = data.left * groupScaleX;
+      const scaledY = data.top * groupScaleY;
+      const rotatedX = scaledX * Math.cos(rad) - scaledY * Math.sin(rad);
+      const rotatedY = scaledX * Math.sin(rad) + scaledY * Math.cos(rad);
       item.set({
-        left: left + rotatedX * scaleX,
-        top: top + rotatedY * scaleY,
-        scaleX: (item.scaleX || 1) * scaleX,
-        scaleY: (item.scaleY || 1) * scaleY,
-        angle: (item.angle || 0) + angle,
+        left: groupCenter.x + rotatedX,
+        top: groupCenter.y + rotatedY,
+        scaleX: data.scaleX * groupScaleX,
+        scaleY: data.scaleY * groupScaleY,
+        angle: data.angle + groupAngle,
       });
       item.setCoords();
       canvas.add(item);
