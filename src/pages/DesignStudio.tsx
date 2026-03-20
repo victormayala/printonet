@@ -425,31 +425,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const previousViewRef = useRef<ViewSide>("front");
   
-  // Load inventory product
-  useEffect(() => {
-    if (!isInventoryProduct || !productId) return;
-    const dbId = productId.replace("inv-", "");
-    supabase
-      .from("inventory_products")
-      .select("*")
-      .eq("id", dbId)
-      .single()
-      .then(({ data, error }) => {
-        if (data) {
-          setInvProduct(data as InventoryProduct);
-          const views: ViewSide[] = [];
-          if (data.image_front) views.push("front");
-          if (data.image_back) views.push("back");
-          if (data.image_side1) views.push("side1");
-          if (data.image_side2) views.push("side2");
-          if (views.length === 0) views.push("front");
-          setAvailableViews(views);
-          setActiveView(views[0]);
-        }
-        setLoading(false);
-      });
-  }, [productId, isInventoryProduct]);
-
   // Set up embed product data
   useEffect(() => {
     if (!embedMode || !embedProductData) return;
@@ -475,16 +450,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     setActiveView(views[0]);
     setLoading(false);
   }, [embedMode, embedProductData]);
-
-  // Set up static product
-  useEffect(() => {
-    if (staticProduct) {
-      setSelectedVariant(staticProduct.variants[0]);
-      const views: ViewSide[] = ["front"];
-      if (staticProduct.hasFrontBack) views.push("back");
-      setAvailableViews(views);
-    }
-  }, [staticProduct]);
 
   // Get current background image URL
   function getCurrentImageUrl(): string | null {
