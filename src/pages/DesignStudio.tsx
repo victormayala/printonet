@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group } from "fabric";
+import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group, Path } from "fabric";
 import { getProductById, type Product, type ProductVariant } from "@/data/products";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -589,6 +589,65 @@ export default function DesignStudio() {
     saveState();
   }
 
+  function createArchPath(radius: number, sweep: number = 180): Path {
+    const startAngle = (180 - sweep) / 2;
+    const endAngle = startAngle + sweep;
+    const startRad = (startAngle * Math.PI) / 180;
+    const endRad = (endAngle * Math.PI) / 180;
+    const x1 = radius + radius * Math.cos(Math.PI - startRad);
+    const y1 = radius - radius * Math.sin(Math.PI - startRad);
+    const x2 = radius + radius * Math.cos(Math.PI - endRad);
+    const y2 = radius - radius * Math.sin(Math.PI - endRad);
+    const largeArc = sweep > 180 ? 1 : 0;
+    const pathStr = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
+    return new Path(pathStr, { visible: false, fill: undefined, stroke: undefined });
+  }
+
+  function addArchText() {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    loadGoogleFont(fontFamily);
+    const radius = 200;
+    const archPath = createArchPath(radius, 180);
+    const text = new FabricText(textInput, {
+      left: 150, top: 200, fontSize, fill: fillColor, fontFamily,
+      path: archPath,
+    });
+    (text as any).customName = `Arch: "${textInput.slice(0, 12)}"`;
+    (text as any)._archRadius = radius;
+    (text as any)._archSweep = 180;
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    saveState();
+  }
+
+  function updateArchCurve(sweep: number) {
+    if (!selectedObject || selectedObject.type !== "text") return;
+    const radius = (selectedObject as any)._archRadius || 200;
+    if (sweep <= 0) {
+      selectedObject.set("path", undefined);
+      (selectedObject as any)._archSweep = 0;
+    } else {
+      const archPath = createArchPath(radius, sweep);
+      selectedObject.set("path", archPath);
+      (selectedObject as any)._archSweep = sweep;
+    }
+    (selectedObject as any)._archRadius = radius;
+    fabricRef.current?.renderAll();
+    saveState();
+  }
+
+  function updateArchRadius(radius: number) {
+    if (!selectedObject || selectedObject.type !== "text") return;
+    const sweep = (selectedObject as any)._archSweep || 180;
+    if (sweep <= 0) return;
+    const archPath = createArchPath(radius, sweep);
+    selectedObject.set("path", archPath);
+    (selectedObject as any)._archRadius = radius;
+    fabricRef.current?.renderAll();
+    saveState();
+  }
+
   function addTextTemplate(template: TextTemplate) {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -944,6 +1003,28 @@ export default function DesignStudio() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">
+              Arch Curve: {(selectedObject as any)._archSweep || 0}°
+            </label>
+            <Slider
+              value={[(selectedObject as any)._archSweep || 0]}
+              onValueChange={([v]) => updateArchCurve(v)}
+              min={0} max={350} step={5}
+            />
+          </div>
+          {((selectedObject as any)._archSweep || 0) > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                Arch Radius: {(selectedObject as any)._archRadius || 200}px
+              </label>
+              <Slider
+                value={[(selectedObject as any)._archRadius || 200]}
+                onValueChange={([v]) => updateArchRadius(v)}
+                min={50} max={500} step={10}
+              />
+            </div>
+          )}
         </>
       )}
       <div className="space-y-1">
@@ -1060,6 +1141,9 @@ export default function DesignStudio() {
                   <>
                     <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
                       <Type className="h-4 w-4" /> Add Custom Text
+                    </Button>
+                    <Button onClick={addArchText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
+                      <Type className="h-4 w-4" /> Add Arch Text
                     </Button>
 
                     {/* Text Templates - scrollable */}
