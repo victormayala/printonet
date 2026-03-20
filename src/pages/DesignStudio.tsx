@@ -1353,7 +1353,11 @@ export default function DesignStudio() {
               <>
                 <div className="text-center py-8">
                   <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mb-4">Upload an image to place on your design</p>
+                  <p className="text-sm text-muted-foreground mb-2">Upload an image to place on your design</p>
+                  <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                    Submit files in PNG or JPEG format.<br />
+                    12″ × 16″ / 30.48 × 40.64 cm / 1500 × 3000 px / at least 150 DPI
+                  </p>
                   <Button onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Choose File</Button>
                 </div>
               </>
