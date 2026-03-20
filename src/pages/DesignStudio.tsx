@@ -11,6 +11,7 @@ import {
   Sparkles, ArrowLeft, Type, Square, CircleIcon, TriangleIcon,
   Upload, Undo2, Redo2, Trash2, Eye, EyeOff, Lock, Unlock,
   ChevronUp, ChevronDown, Layers as LayersIcon, Palette, Save,
+  Copy,
   ShoppingCart, ImageIcon, Sticker,
   Heart, Star, Flame, Zap, Music, Sun, Moon, Cloud,
   Coffee, Camera, Anchor, Award, Bell, Bookmark, Crown,
