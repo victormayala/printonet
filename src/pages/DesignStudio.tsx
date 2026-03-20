@@ -226,6 +226,99 @@ const TEXT_TEMPLATES: TextTemplate[] = [
       { text: "ONLY", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 48, fontWeight: "800", letterSpacing: "8px", textTransform: "uppercase" },
     ],
   },
+  {
+    name: "Arch Type",
+    lines: [
+      { text: "THE", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 16, fontWeight: "400", letterSpacing: "8px", textTransform: "uppercase" },
+      { text: "ADVENTURE", fontFamily: "Arial Black, sans-serif", fontSize: 44, fontWeight: "900", textTransform: "uppercase", letterSpacing: "2px" },
+      { text: "AWAITS", fontFamily: "Arial Black, sans-serif", fontSize: 44, fontWeight: "900", textTransform: "uppercase", letterSpacing: "2px" },
+    ],
+  },
+  {
+    name: "Stacked Serif",
+    lines: [
+      { text: "Dream", fontFamily: "Georgia, serif", fontSize: 52, fontWeight: "700" },
+      { text: "WITHOUT", fontFamily: "Georgia, serif", fontSize: 20, letterSpacing: "10px", textTransform: "uppercase" },
+      { text: "LIMITS", fontFamily: "Georgia, serif", fontSize: 20, letterSpacing: "10px", textTransform: "uppercase" },
+    ],
+  },
+  {
+    name: "Varsity",
+    lines: [
+      { text: "TEAM", fontFamily: "Impact, sans-serif", fontSize: 22, textTransform: "uppercase", letterSpacing: "12px" },
+      { text: "PLAYERS", fontFamily: "Impact, sans-serif", fontSize: 56, textTransform: "uppercase" },
+      { text: "— EST. 2024 —", fontFamily: "Georgia, serif", fontSize: 16, fontStyle: "italic", letterSpacing: "3px" },
+    ],
+  },
+  {
+    name: "Handwritten",
+    lines: [
+      { text: "enjoy the", fontFamily: "Georgia, serif", fontSize: 24, fontStyle: "italic" },
+      { text: "little things", fontFamily: "Georgia, serif", fontSize: 42, fontStyle: "italic" },
+    ],
+  },
+  {
+    name: "Block Quote",
+    lines: [
+      { text: "BE THE", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 36, fontWeight: "800", textTransform: "uppercase" },
+      { text: "CHANGE", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 52, fontWeight: "800", textTransform: "uppercase" },
+      { text: "— Gandhi", fontFamily: "Georgia, serif", fontSize: 18, fontStyle: "italic" },
+    ],
+  },
+  {
+    name: "Neon Vibe",
+    lines: [
+      { text: "GOOD", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 60, fontWeight: "100" },
+      { text: "TIMES", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 60, fontWeight: "100" },
+    ],
+  },
+  {
+    name: "Label Stamp",
+    lines: [
+      { text: "[ HANDCRAFTED ]", fontFamily: "Courier New, monospace", fontSize: 14, textTransform: "uppercase", letterSpacing: "4px" },
+      { text: "WITH LOVE", fontFamily: "Courier New, monospace", fontSize: 38, fontWeight: "700", textTransform: "uppercase" },
+      { text: "& PASSION", fontFamily: "Courier New, monospace", fontSize: 38, fontWeight: "700", textTransform: "uppercase" },
+      { text: "— SMALL BATCH —", fontFamily: "Courier New, monospace", fontSize: 14, textTransform: "uppercase", letterSpacing: "4px" },
+    ],
+  },
+  {
+    name: "Wave Text",
+    lines: [
+      { text: "ride", fontFamily: "Georgia, serif", fontSize: 28, fontStyle: "italic" },
+      { text: "THE WAVE", fontFamily: "Arial Black, sans-serif", fontSize: 52, fontWeight: "900", textTransform: "uppercase" },
+    ],
+  },
+  {
+    name: "Mono Stack",
+    lines: [
+      { text: "CODE.", fontFamily: "Courier New, monospace", fontSize: 36, fontWeight: "700" },
+      { text: "CREATE.", fontFamily: "Courier New, monospace", fontSize: 36, fontWeight: "700" },
+      { text: "REPEAT.", fontFamily: "Courier New, monospace", fontSize: 36, fontWeight: "700" },
+    ],
+  },
+  {
+    name: "Editorial",
+    lines: [
+      { text: "Vol. 01", fontFamily: "Georgia, serif", fontSize: 16, fontStyle: "italic", letterSpacing: "3px" },
+      { text: "THE DAILY", fontFamily: "Georgia, serif", fontSize: 48, fontWeight: "700", textTransform: "uppercase", letterSpacing: "2px" },
+      { text: "HUSTLE", fontFamily: "Georgia, serif", fontSize: 48, fontWeight: "700", textTransform: "uppercase", letterSpacing: "2px" },
+    ],
+  },
+  {
+    name: "Sporty Bold",
+    lines: [
+      { text: "JUST", fontFamily: "Impact, sans-serif", fontSize: 28, textTransform: "uppercase", letterSpacing: "6px" },
+      { text: "GO FOR IT", fontFamily: "Impact, sans-serif", fontSize: 52, textTransform: "uppercase" },
+    ],
+  },
+  {
+    name: "Coffee Shop",
+    lines: [
+      { text: "freshly", fontFamily: "Georgia, serif", fontSize: 22, fontStyle: "italic" },
+      { text: "BREWED", fontFamily: "Arial Black, sans-serif", fontSize: 48, fontWeight: "900", textTransform: "uppercase", letterSpacing: "4px" },
+      { text: "est. MMXXIV", fontFamily: "Georgia, serif", fontSize: 16, fontStyle: "italic", letterSpacing: "3px" },
+    ],
+  },
 ];
 
 type ViewSide = "front" | "back" | "side1" | "side2";
