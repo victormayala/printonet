@@ -881,7 +881,7 @@ export default function DesignStudio() {
 
     const patternImg = new Image();
     patternImg.onload = () => {
-      const fabricPattern = new (window as any).fabric.Pattern({
+      const fabricPattern = new Pattern({
         source: patternImg,
         repeat: "repeat",
       });
