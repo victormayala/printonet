@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.complete-session]
 verify_jwt = false
+
+[functions.import-shopify-products]
+verify_jwt = false
+
+[functions.import-woocommerce-products]
+verify_jwt = false
