@@ -921,6 +921,29 @@ export default function DesignStudio() {
               min={12} max={120} step={1}
             />
           </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Font Family</label>
+            <Select
+              value={selectedObject.fontFamily || "Inter"}
+              onValueChange={(val) => {
+                loadGoogleFont(val);
+                selectedObject.set("fontFamily", val);
+                fabricRef.current?.renderAll();
+                saveState();
+              }}
+            >
+              <SelectTrigger className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {GOOGLE_FONTS.map((f) => (
+                  <SelectItem key={f} value={f} style={{ fontFamily: f }}>
+                    {f}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </>
       )}
       <div className="space-y-1">
