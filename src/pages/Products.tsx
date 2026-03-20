@@ -512,13 +512,15 @@ export default function Products() {
             ) : (
               <>
                 {products.length > 0 && (
-                  <div className="flex items-start gap-3 rounded-lg border border-dashed bg-muted/30 p-4 mb-6 text-sm">
-                    <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                    <p className="text-muted-foreground">
-                      Your products are ready! Hover any product and click the{" "}
-                      <Code className="inline h-3.5 w-3.5 -mt-0.5" /> button to get an embed snippet for your store.{" "}
-                      <Link to="/developers" className="text-primary hover:underline font-medium">View full docs →</Link>
-                    </p>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed bg-muted/30 p-4 mb-6">
+                    <div className="flex items-start gap-3 text-sm">
+                      <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                      <p className="text-muted-foreground">
+                        Your products are ready! Add one script to your store and every product gets a customizer button.{" "}
+                        <Link to="/developers" className="text-primary hover:underline font-medium">Full docs →</Link>
+                      </p>
+                    </div>
+                    <UniversalSnippetDialog />
                   </div>
                 )}
                 <div className="flex items-center justify-between mb-6">
