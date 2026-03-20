@@ -504,7 +504,7 @@ add_action( 'wp_footer', function () {
 					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
 					container.appendChild(overlay);
 
-					// Add "View Design" link below the thumbnail
+					// Add View Design link below the thumbnail
 					if(!container.parentNode.querySelector('.cs-view-design-link')){
 						var link = document.createElement('a');
 						link.href = match.design_url;
@@ -546,7 +546,7 @@ add_action( 'wp_footer', function () {
 					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
 					imgWrap.appendChild(overlay);
 
-					// Add "View Design" link below thumbnail in classic cart
+					// Add View Design link below thumbnail in classic cart
 					if(!thumbTd.querySelector('.cs-view-design-link')){
 						var link = document.createElement('a');
 						link.href = match.design_url;
