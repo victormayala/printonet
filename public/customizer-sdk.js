@@ -243,14 +243,28 @@
     addBtn.onmouseover = function () { addBtn.style.background = '#333'; };
     addBtn.onmouseout = function () { addBtn.style.background = '#111'; };
     addBtn.onclick = function () {
-      // Dispatch event for the store to handle add-to-cart
-      var evt = new CustomEvent('customizer:addtocart', { detail: payload });
-      document.dispatchEvent(evt);
+      addBtn.disabled = true;
+      addBtn.textContent = 'Adding...';
+      addBtn.style.opacity = '0.7';
 
-      // Also call the onComplete callback
-      _callbacks.onComplete(payload);
+      _addToCart(payload, function (success) {
+        // Dispatch events regardless
+        var evt = new CustomEvent('customizer:addtocart', { detail: payload });
+        document.dispatchEvent(evt);
+        _callbacks.onComplete(payload);
 
-      _closeSummary();
+        if (success) {
+          addBtn.textContent = '✓ Added!';
+          addBtn.style.background = '#16a34a';
+          addBtn.style.opacity = '1';
+          setTimeout(function () { _closeSummary(); }, 1200);
+        } else {
+          addBtn.textContent = '🛒  Add to Cart';
+          addBtn.style.opacity = '1';
+          addBtn.disabled = false;
+          _closeSummary();
+        }
+      });
     };
     actions.appendChild(addBtn);
 
