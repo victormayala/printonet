@@ -12,8 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
-  Store, Globe, Loader2, Package, ImageIcon
+  Store, Globe, Loader2, Package, ImageIcon, LogOut
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Product = {
   id: string;
@@ -73,6 +74,7 @@ function ProductForm({
       return;
     }
     setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
     const payload = {
       name: name.trim(),
       category,
@@ -81,6 +83,7 @@ function ProductForm({
       image_front: imageFront || null,
       image_back: imageBack || null,
       is_active: isActive,
+      ...(product ? {} : { user_id: user?.id }),
     };
 
     let error;
@@ -182,6 +185,7 @@ function ProductForm({
 }
 
 function ShopifyImport({ onDone }: { onDone: () => void }) {
+  const { user } = useAuth();
   const [storeUrl, setStoreUrl] = useState("");
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -194,7 +198,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("import-shopify-products", {
-        body: { store_url: storeUrl.trim().replace(/\/$/, ""), access_token: token.trim() },
+        body: { store_url: storeUrl.trim().replace(/\/$/, ""), access_token: token.trim(), user_id: user?.id },
       });
       if (error) throw error;
       toast({ title: `Imported ${data.imported_count} products from Shopify` });
@@ -231,6 +235,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
 }
 
 function WooCommerceImport({ onDone }: { onDone: () => void }) {
+  const { user } = useAuth();
   const [siteUrl, setSiteUrl] = useState("");
   const [consumerKey, setConsumerKey] = useState("");
   const [consumerSecret, setConsumerSecret] = useState("");
@@ -248,6 +253,7 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
           site_url: siteUrl.trim().replace(/\/$/, ""),
           consumer_key: consumerKey.trim(),
           consumer_secret: consumerSecret.trim(),
+          user_id: user?.id,
         },
       });
       if (error) throw error;
@@ -291,6 +297,7 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
 }
 
 export default function Products() {
+  const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null | undefined>(undefined);
@@ -330,6 +337,12 @@ export default function Products() {
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             <h1 className="text-lg font-bold">Products</h1>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
+            <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>

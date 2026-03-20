@@ -97,6 +97,7 @@ export type Database = {
           is_active: boolean
           name: string
           updated_at: string
+          user_id: string | null
           variants: Json | null
         }
         Insert: {
@@ -112,6 +113,7 @@ export type Database = {
           is_active?: boolean
           name: string
           updated_at?: string
+          user_id?: string | null
           variants?: Json | null
         }
         Update: {
@@ -127,7 +129,32 @@ export type Database = {
           is_active?: boolean
           name?: string
           updated_at?: string
+          user_id?: string | null
           variants?: Json | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          store_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          store_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          store_name?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

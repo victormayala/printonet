@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { site_url, consumer_key, consumer_secret } = await req.json();
+    const { site_url, consumer_key, consumer_secret, user_id } = await req.json();
     if (!site_url || !consumer_key || !consumer_secret) {
       return new Response(JSON.stringify({ error: "site_url, consumer_key, and consumer_secret are required" }), {
         status: 400,
@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
         image_side2: images[3]?.src || null,
         variants,
         is_active: product.status === "publish",
+        user_id: user_id || null,
       };
 
       const { error } = await supabase.from("inventory_products").insert(row);
