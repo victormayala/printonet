@@ -12,6 +12,595 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Sanitize design preview value from the customizer.
+ * Supports https URLs and data:image/*;base64,... (common for exported PNG previews).
+ * WordPress esc_url_raw() rejects data: URIs, so the URL was often dropped while session_id still saved.
+ *
+ * @param mixed $raw Raw POST/GET value.
+ * @return string
+ */
+function cs_sanitize_design_source( $raw ) {
+	if ( ! is_string( $raw ) || $raw === '' ) {
+		return '';
+	}
+	$raw = wp_unslash( $raw );
+	$raw = trim( $raw );
+
+	// Standard remote or same-origin HTTP(S) URL.
+	if ( preg_match( '#^https?://#i', $raw ) ) {
+		return esc_url_raw( $raw );
+	}
+
+	// Data URI for inline PNG/JPEG/GIF/WebP (base64 only).
+	if ( preg_match( '#^data:image/(png|jpeg|jpg|gif|webp);base64,#i', $raw ) ) {
+		$parts = explode( ',', $raw, 2 );
+		if ( count( $parts ) !== 2 ) {
+			return '';
+		}
+		$header = $parts[0];
+		$b64    = $parts[1];
+		// ~6MB base64 cap to avoid session bloat / DoS.
+		if ( strlen( $b64 ) > 8000000 ) {
+			return '';
+		}
+		if ( ! preg_match( '/^[A-Za-z0-9+\/=*\r\n]+$/', $b64 ) ) {
+			return '';
+		}
+		$b64 = preg_replace( '/\s+/', '', $b64 );
+		return $header . ',' . $b64;
+	}
+
+	return '';
+}
+
+/**
+ * Escape a design URL or data URI for use in an HTML attribute (e.g. img src).
+ *
+ * @param string $src Stored design value.
+ * @return string
+ */
+function cs_esc_design_attr( $src ) {
+	if ( ! is_string( $src ) || $src === '' ) {
+		return '';
+	}
+	if ( preg_match( '#^data:image/(png|jpeg|jpg|gif|webp);base64,#i', $src ) ) {
+		return esc_attr( $src );
+	}
+	return esc_url( $src );
+}
+
+/**
+ * Escape design value for use in href (View design link).
+ *
+ * @param string $src Stored design value.
+ * @return string
+ */
+function cs_esc_design_href( $src ) {
+	if ( ! is_string( $src ) || $src === '' ) {
+		return '';
+	}
+	if ( preg_match( '#^data:image/#i', $src ) ) {
+		return esc_attr( $src );
+	}
+	return esc_url( $src );
+}
+
+/**
+ * Normalize and sanitize an array of side designs: [ { view, url }, ... ].
+ *
+ * @param mixed $arr Raw array from JSON or POST.
+ * @return array<int, array{view:string,url:string}>
+ */
+function cs_sanitize_customizer_sides_array( $arr ) {
+	$out = [];
+	if ( ! is_array( $arr ) ) {
+		return $out;
+	}
+	foreach ( $arr as $row ) {
+		if ( ! is_array( $row ) ) {
+			continue;
+		}
+		$view = 'front';
+		if ( isset( $row['view'] ) && is_string( $row['view'] ) && $row['view'] !== '' ) {
+			$view = sanitize_key( strtolower( trim( $row['view'] ) ) );
+		}
+		if ( $view === '' ) {
+			$view = 'front';
+		}
+		$url = '';
+		if ( isset( $row['url'] ) ) {
+			$url = cs_sanitize_design_source( $row['url'] );
+		} elseif ( isset( $row['designPNG'] ) ) {
+			$url = cs_sanitize_design_source( $row['designPNG'] );
+		}
+		if ( $url === '' ) {
+			continue;
+		}
+		$out[] = [
+			'view' => $view,
+			'url'  => $url,
+		];
+	}
+	return $out;
+}
+
+/**
+ * Parse customizer_sides from JSON string or array (REST/POST).
+ *
+ * @param mixed $raw Raw value.
+ * @return array<int, array{view:string,url:string}>
+ */
+function cs_parse_customizer_sides_from_request( $raw ) {
+	if ( is_array( $raw ) ) {
+		return cs_sanitize_customizer_sides_array( $raw );
+	}
+	if ( ! is_string( $raw ) || trim( $raw ) === '' ) {
+		return [];
+	}
+	$raw = wp_unslash( $raw );
+	$decoded = json_decode( $raw, true );
+	if ( ! is_array( $decoded ) ) {
+		return [];
+	}
+	return cs_sanitize_customizer_sides_array( $decoded );
+}
+
+/**
+ * Prefer "front", else first side URL (for legacy customizer_design_url field).
+ *
+ * @param array $sides Sanitized sides.
+ * @return string
+ */
+function cs_primary_design_url_from_sides( array $sides ) {
+	foreach ( $sides as $s ) {
+		if ( ! empty( $s['url'] ) && isset( $s['view'] ) && $s['view'] === 'front' ) {
+			return $s['url'];
+		}
+	}
+	return $sides[0]['url'] ?? '';
+}
+
+/**
+ * Legacy single-design URL only (no multi-side JSON). Used to build a synthetic front side.
+ *
+ * @param array $cart_item Cart line.
+ * @return string
+ */
+function cs_resolve_legacy_design_url( $cart_item ) {
+	if ( ! is_array( $cart_item ) ) {
+		return '';
+	}
+	if ( ! empty( $cart_item['customizer_design_url'] ) ) {
+		return $cart_item['customizer_design_url'];
+	}
+	if ( ! empty( $cart_item['_cs_design_transient_key'] ) ) {
+		$stored = get_transient( $cart_item['_cs_design_transient_key'] );
+		if ( is_string( $stored ) && $stored !== '' ) {
+			return $stored;
+		}
+	}
+	if ( ! empty( $cart_item['product_id'] ) ) {
+		$product_id = $cart_item['product_id'];
+		if ( ! empty( $cart_item['variation_id'] ) ) {
+			$product_id = $cart_item['variation_id'];
+		}
+		$design_url = get_post_meta( $product_id, '_cs_cart_design_url', true );
+		if ( $design_url ) {
+			return $design_url;
+		}
+	}
+	return '';
+}
+
+/**
+ * All design sides for a cart line (hydrates transients).
+ *
+ * @param array $cart_item Cart line.
+ * @return array<int, array{view:string,url:string}>
+ */
+function cs_get_cart_item_sides( $cart_item ) {
+	$sides = [];
+	if ( ! empty( $cart_item['_cs_sides_transient_key'] ) ) {
+		$blob = get_transient( $cart_item['_cs_sides_transient_key'] );
+		if ( is_string( $blob ) && $blob !== '' ) {
+			$decoded = json_decode( $blob, true );
+			if ( is_array( $decoded ) ) {
+				$sides = cs_sanitize_customizer_sides_array( $decoded );
+			}
+		}
+	}
+	if ( empty( $sides ) && ! empty( $cart_item['customizer_sides'] ) ) {
+		if ( is_string( $cart_item['customizer_sides'] ) ) {
+			$decoded = json_decode( $cart_item['customizer_sides'], true );
+			if ( is_array( $decoded ) ) {
+				$sides = cs_sanitize_customizer_sides_array( $decoded );
+			}
+		} elseif ( is_array( $cart_item['customizer_sides'] ) ) {
+			$sides = cs_sanitize_customizer_sides_array( $cart_item['customizer_sides'] );
+		}
+	}
+	if ( empty( $sides ) ) {
+		$legacy = cs_resolve_legacy_design_url( $cart_item );
+		if ( $legacy !== '' ) {
+			$sides = [
+				[
+					'view' => 'front',
+					'url'  => $legacy,
+				],
+			];
+		}
+	}
+	return $sides;
+}
+
+/**
+ * Build URL to a full-page preview that shows product image behind the design (new tab).
+ * Raw design URLs only show the artwork; this page stacks both layers.
+ *
+ * @param string $product_thumb_url Escaped product thumbnail URL, or empty.
+ * @param string $design_url        Raw design URL or data URI.
+ * @return string Safe href for <a>.
+ */
+function cs_build_stacked_preview_page_url( $product_thumb_url, $design_url, $sides = null ) {
+	$design_url = is_string( $design_url ) ? $design_url : '';
+	$has_sides  = is_array( $sides ) && ! empty( $sides );
+	if ( $design_url === '' && ! $has_sides ) {
+		return '';
+	}
+	$thumb = is_string( $product_thumb_url ) ? trim( $product_thumb_url ) : '';
+	if ( $thumb === '' ) {
+		return $design_url !== '' ? cs_esc_design_href( $design_url ) : '';
+	}
+
+	$token = wp_generate_password( 32, false, false );
+	$payload = [
+		'product_thumb_url' => $thumb,
+		'design_url'        => $design_url,
+	];
+	if ( $has_sides ) {
+		$payload['sides'] = array_values( $sides );
+	}
+	// Large data URIs: transient may fail on some hosts; fall back to design-only link.
+	if ( false === set_transient( 'cs_dspv_' . $token, $payload, HOUR_IN_SECONDS ) ) {
+		return $design_url !== '' ? cs_esc_design_href( $design_url ) : '';
+	}
+
+	return esc_url( add_query_arg( 'cs_dspreview', $token, home_url( '/' ) ) );
+}
+
+/**
+ * Stacked preview URL for a cart line item.
+ *
+ * @param array $cart_item WooCommerce cart item.
+ * @return string
+ */
+function cs_get_stacked_preview_url_for_cart_item( $cart_item ) {
+	$design = cs_get_cart_item_design_url( $cart_item );
+	$sides  = cs_get_cart_item_sides( $cart_item );
+	if ( $design === '' && empty( $sides ) ) {
+		return '';
+	}
+	$thumb = cs_get_cart_item_product_thumb_url( $cart_item );
+	if ( count( $sides ) > 1 ) {
+		return cs_build_stacked_preview_page_url( $thumb, $design, $sides );
+	}
+	return cs_build_stacked_preview_page_url( $thumb, $design );
+}
+
+/**
+ * Stacked preview URL for an order line item (admin / emails).
+ *
+ * @param WC_Order_Item_Product $item Order item.
+ * @return string
+ */
+function cs_get_stacked_preview_url_for_order_item( $item ) {
+	$design = $item->get_meta( '_customizer_design_url' );
+	if ( ! is_string( $design ) ) {
+		$design = '';
+	}
+	$sides_json = $item->get_meta( '_customizer_sides_json' );
+	$sides      = [];
+	if ( is_string( $sides_json ) && $sides_json !== '' ) {
+		$decoded = json_decode( $sides_json, true );
+		if ( is_array( $decoded ) ) {
+			$sides = cs_sanitize_customizer_sides_array( $decoded );
+		}
+	}
+	if ( $design === '' && empty( $sides ) ) {
+		return '';
+	}
+	$thumb = '';
+	$product = $item->get_product();
+	if ( $product && is_a( $product, 'WC_Product' ) ) {
+		$img_id = $product->get_image_id();
+		if ( $img_id ) {
+			$src = wp_get_attachment_image_src( $img_id, 'large' );
+			if ( $src ) {
+				$thumb = esc_url( $src[0] );
+			}
+		}
+		if ( ! $thumb && $product->is_type( 'variation' ) ) {
+			$parent = wc_get_product( $product->get_parent_id() );
+			if ( $parent && $parent->get_image_id() ) {
+				$src = wp_get_attachment_image_src( $parent->get_image_id(), 'large' );
+				if ( $src ) {
+					$thumb = esc_url( $src[0] );
+				}
+			}
+		}
+	}
+	if ( count( $sides ) > 1 ) {
+		return cs_build_stacked_preview_page_url( $thumb, $design !== '' ? $design : ( $sides[0]['url'] ?? '' ), $sides );
+	}
+	return cs_build_stacked_preview_page_url( $thumb, $design !== '' ? $design : ( $sides[0]['url'] ?? '' ) );
+}
+
+/**
+ * Output full-page product + design preview (query arg cs_dspreview).
+ */
+function cs_output_design_preview_page() {
+	if ( empty( $_GET['cs_dspreview'] ) || is_admin() ) {
+		return;
+	}
+
+	$token = sanitize_text_field( wp_unslash( $_GET['cs_dspreview'] ) );
+	if ( strlen( $token ) < 20 ) {
+		wp_die( esc_html__( 'Invalid preview link.', 'customizer-studio-for-woocommerce' ), '', [ 'response' => 404 ] );
+	}
+
+	$data = get_transient( 'cs_dspv_' . $token );
+	if ( ! is_array( $data ) ) {
+		wp_die( esc_html__( 'This preview link has expired. Open it again from your cart.', 'customizer-studio-for-woocommerce' ), '', [ 'response' => 410 ] );
+	}
+
+	$product_src = isset( $data['product_thumb_url'] ) ? $data['product_thumb_url'] : '';
+	$design_src  = isset( $data['design_url'] ) ? $data['design_url'] : '';
+	$sides       = isset( $data['sides'] ) && is_array( $data['sides'] ) ? $data['sides'] : [];
+
+	if ( $design_src === '' && empty( $sides ) ) {
+		wp_die( esc_html__( 'This preview link has expired. Open it again from your cart.', 'customizer-studio-for-woocommerce' ), '', [ 'response' => 410 ] );
+	}
+
+	nocache_headers();
+	header( 'Content-Type: text/html; charset=' . get_option( 'blog_charset' ) );
+
+	$product_attr = is_string( $product_src ) && $product_src !== '' ? cs_esc_design_attr( $product_src ) : '';
+
+	$title = esc_html__( 'Design preview', 'customizer-studio-for-woocommerce' );
+	$site  = esc_html( get_bloginfo( 'name' ) );
+
+	echo '<!DOCTYPE html><html lang="' . esc_attr( get_bloginfo( 'language' ) ) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
+	echo '<title>' . $title . ' — ' . $site . '</title>';
+	echo '<style>
+		*{box-sizing:border-box;}
+		body{margin:0;min-height:100vh;background:#0f0f10;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+		.cs-dsp-wrap{position:relative;width:min(92vw,520px);aspect-ratio:1;max-height:85vh;background:#1a1a1c;border-radius:16px;overflow:hidden;border:1px solid #2d2d32;box-shadow:0 20px 50px rgba(0,0,0,.45);}
+		.cs-dsp-wrap img.cs-dsp-product{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;}
+		.cs-dsp-wrap img.cs-dsp-design{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;}
+		.cs-dsp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:min(96vw,920px);margin-top:8px;}
+		.cs-dsp-panel{position:relative;aspect-ratio:1;background:#1a1a1c;border-radius:12px;overflow:hidden;border:1px solid #2d2d32;}
+		.cs-dsp-panel .cs-dsp-label{position:absolute;top:8px;left:8px;z-index:4;background:rgba(0,0,0,.55);padding:4px 8px;border-radius:6px;font-size:12px;text-transform:capitalize;}
+		p.cs-dsp-note{margin-top:20px;font-size:14px;color:#9ca3af;text-align:center;max-width:36rem;line-height:1.5;}
+	</style></head><body>';
+
+	if ( count( $sides ) > 1 ) {
+		echo '<h1 style="font-size:1.1rem;margin:0 0 12px;font-weight:600;">' . esc_html__( 'All sides', 'customizer-studio-for-woocommerce' ) . '</h1>';
+		echo '<div class="cs-dsp-grid">';
+		foreach ( $sides as $side ) {
+			if ( ! is_array( $side ) ) {
+				continue;
+			}
+			$v = isset( $side['view'] ) ? sanitize_text_field( (string) $side['view'] ) : 'side';
+			$u = isset( $side['url'] ) ? $side['url'] : '';
+			if ( ! is_string( $u ) || $u === '' ) {
+				continue;
+			}
+			$dattr = cs_esc_design_attr( $u );
+			echo '<div class="cs-dsp-panel" role="img" aria-label="' . esc_attr( $v ) . '">';
+			echo '<span class="cs-dsp-label">' . esc_html( $v ) . '</span>';
+			if ( $product_attr !== '' ) {
+				echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
+			}
+			echo '<img class="cs-dsp-design" src="' . $dattr . '" alt="">';
+			echo '</div>';
+		}
+		echo '</div>';
+		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your art per side (front). Save or print from your browser.', 'customizer-studio-for-woocommerce' ) . '</p>';
+	} else {
+		$design_attr = cs_esc_design_attr( $design_src !== '' ? $design_src : ( is_array( $sides[0] ?? null ) && ! empty( $sides[0]['url'] ) ? $sides[0]['url'] : '' ) );
+		echo '<div class="cs-dsp-wrap" role="img" aria-label="' . esc_attr__( 'Product with custom design overlay', 'customizer-studio-for-woocommerce' ) . '">';
+		if ( $product_attr !== '' ) {
+			echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
+		}
+		echo '<img class="cs-dsp-design" src="' . $design_attr . '" alt="">';
+		echo '</div>';
+		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your custom design (front). Use your browser to save or print.', 'customizer-studio-for-woocommerce' ) . '</p>';
+	}
+	echo '</body></html>';
+	exit;
+}
+
+add_action( 'template_redirect', 'cs_output_design_preview_page', 0 );
+
+/**
+ * Mini-cart fragment payload (same shape as WC_AJAX::get_refreshed_fragments).
+ *
+ * @return array{fragments: array, cart_hash: string}
+ */
+function cs_get_cart_fragments_data() {
+	ob_start();
+	woocommerce_mini_cart();
+	$mini_cart = ob_get_clean();
+
+	return [
+		'fragments' => apply_filters(
+			'woocommerce_add_to_cart_fragments',
+			[
+				'div.widget_shopping_cart_content' => '<div class="widget_shopping_cart_content">' . $mini_cart . '</div>',
+			]
+		),
+		'cart_hash' => WC()->cart->get_cart_hash(),
+	];
+}
+
+/**
+ * Core add-to-cart for variable products (Customizer). Used by admin-ajax and REST.
+ *
+ * @param array $input Raw request fields (product_id, variation_id, quantity, customizer_*).
+ * @return true|WP_Error
+ */
+function cs_process_add_to_cart( array $input ) {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return new WP_Error( 'wc', __( 'Cart is not available.', 'customizer-studio-for-woocommerce' ) );
+	}
+
+	$product_id   = absint( $input['product_id'] ?? 0 );
+	$variation_id = absint( $input['variation_id'] ?? 0 );
+	$quantity     = absint( $input['quantity'] ?? 1 );
+
+	if ( ! $product_id ) {
+		return new WP_Error( 'invalid', __( 'No product ID provided.', 'customizer-studio-for-woocommerce' ) );
+	}
+
+	$cart_item_data = [];
+
+	if ( ! empty( $input['customizer_session_id'] ) ) {
+		$cart_item_data['customizer_session_id'] = sanitize_text_field( wp_unslash( $input['customizer_session_id'] ) );
+	}
+	if ( ! empty( $input['customizer_design_url'] ) ) {
+		$cart_item_data['customizer_design_url'] = cs_sanitize_design_source( $input['customizer_design_url'] );
+	}
+	if ( ! empty( $input['customizer_sides'] ) ) {
+		$parsed = cs_parse_customizer_sides_from_request( $input['customizer_sides'] );
+		if ( ! empty( $parsed ) ) {
+			$cart_item_data['customizer_sides']     = wp_json_encode( $parsed );
+			$cart_item_data['customizer_design_url'] = cs_primary_design_url_from_sides( $parsed );
+		}
+	} elseif ( ! empty( $cart_item_data['customizer_design_url'] ) ) {
+		$cart_item_data['customizer_sides'] = wp_json_encode(
+			[
+				[
+					'view' => 'front',
+					'url'  => $cart_item_data['customizer_design_url'],
+				],
+			]
+		);
+	}
+
+	$variation = [];
+	if ( $variation_id ) {
+		$variation_obj = wc_get_product( $variation_id );
+		if ( $variation_obj ) {
+			$variation = $variation_obj->get_variation_attributes();
+		}
+	}
+
+	$added = WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variation, $cart_item_data );
+
+	if ( ! $added ) {
+		$notices = function_exists( 'wc_get_notices' ) ? wc_get_notices( 'error' ) : [];
+		$msg     = __( 'Could not add to cart.', 'customizer-studio-for-woocommerce' );
+		if ( ! empty( $notices ) && is_array( $notices ) ) {
+			$msg = wp_strip_all_tags( $notices[0]['notice'] ?? $msg );
+		}
+		return new WP_Error( 'add_failed', $msg );
+	}
+
+	return true;
+}
+
+/**
+ * REST: add customized variable product to cart (often bypasses WAF rules that block admin-ajax.php).
+ */
+function cs_rest_add_to_cart( WP_REST_Request $request ) {
+	if ( ! wp_verify_nonce( $request->get_header( 'X-WP-Nonce' ), 'wp_rest' ) ) {
+		return new WP_Error(
+			'rest_forbidden',
+			__( 'Invalid or expired nonce. Refresh the page.', 'customizer-studio-for-woocommerce' ),
+			[ 'status' => 403 ]
+		);
+	}
+
+	$params = $request->get_json_params();
+	if ( ! is_array( $params ) || empty( $params ) ) {
+		$params = $request->get_body_params();
+	}
+	if ( ! is_array( $params ) ) {
+		$params = [];
+	}
+
+	$result = cs_process_add_to_cart( $params );
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+
+	$data = cs_get_cart_fragments_data();
+	return new WP_REST_Response( $data, 200 );
+}
+
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'customizer-studio/v1',
+			'/add-to-cart',
+			[
+				'methods'             => 'POST',
+				'callback'            => 'cs_rest_add_to_cart',
+				'permission_callback' => '__return_true',
+			]
+		);
+	}
+);
+
+/**
+ * If design data is very large (typical for data:image PNG), storing it in the session can
+ * exceed PHP post_max_size / session limits and the add-to-cart request fails silently.
+ * Offload to a short-lived transient and keep only the key in cart data.
+ *
+ * @param array $cart_item_data Cart item data.
+ * @return array
+ */
+function cs_offload_large_design_to_transient( $cart_item_data ) {
+	if ( empty( $cart_item_data['customizer_design_url'] ) || ! is_string( $cart_item_data['customizer_design_url'] ) ) {
+		return $cart_item_data;
+	}
+	$raw = $cart_item_data['customizer_design_url'];
+	// ~96KB — stay under typical post_max_size issues when combined with other fields.
+	$max_inline = (int) apply_filters( 'cs_max_inline_design_bytes', 98304 );
+	if ( strlen( $raw ) <= $max_inline ) {
+		return $cart_item_data;
+	}
+	$key = 'csd_' . wp_generate_password( 22, false, false );
+	set_transient( $key, $raw, 7 * DAY_IN_SECONDS );
+	$cart_item_data['customizer_design_url']       = '';
+	$cart_item_data['_cs_design_transient_key'] = $key;
+	return $cart_item_data;
+}
+
+/**
+ * Offload very large multi-side JSON (many data: URIs) to a transient.
+ *
+ * @param array $cart_item_data Cart item data.
+ * @return array
+ */
+function cs_offload_large_sides_to_transient( $cart_item_data ) {
+	if ( empty( $cart_item_data['customizer_sides'] ) || ! is_string( $cart_item_data['customizer_sides'] ) ) {
+		return $cart_item_data;
+	}
+	$raw = $cart_item_data['customizer_sides'];
+	$max = (int) apply_filters( 'cs_max_inline_sides_bytes', 196608 );
+	if ( strlen( $raw ) <= $max ) {
+		return $cart_item_data;
+	}
+	$key = 'cssd_' . wp_generate_password( 22, false, false );
+	set_transient( $key, $raw, 7 * DAY_IN_SECONDS );
+	$cart_item_data['customizer_sides']          = '';
+	$cart_item_data['_cs_sides_transient_key'] = $key;
+	return $cart_item_data;
+}
+
 /* ================================================================
    1. SETTINGS PAGE
    ================================================================ */
@@ -325,47 +914,189 @@ add_filter( 'woocommerce_add_cart_item_data', function ( $cart_item_data, $produ
 		$cart_item_data['customizer_session_id'] = sanitize_text_field( wp_unslash( $_POST['customizer_session_id'] ) );
 	}
 	if ( ! empty( $_POST['customizer_design_url'] ) ) {
-		$cart_item_data['customizer_design_url'] = esc_url_raw( wp_unslash( $_POST['customizer_design_url'] ) );
+		$cart_item_data['customizer_design_url'] = cs_sanitize_design_source( $_POST['customizer_design_url'] );
+	}
+	if ( ! empty( $_POST['customizer_sides'] ) ) {
+		$parsed = cs_parse_customizer_sides_from_request( wp_unslash( $_POST['customizer_sides'] ) );
+		if ( ! empty( $parsed ) ) {
+			$cart_item_data['customizer_sides'] = wp_json_encode( $parsed );
+		}
 	}
 
 	// Also check GET params (for variable product redirect flow)
 	if ( empty( $cart_item_data['customizer_session_id'] ) && ! empty( $_GET['customizer_session'] ) ) {
 		$cart_item_data['customizer_session_id'] = sanitize_text_field( wp_unslash( $_GET['customizer_session'] ) );
 	}
+	if ( empty( $cart_item_data['customizer_design_url'] ) && ! empty( $_GET['customizer_design_url'] ) ) {
+		$cart_item_data['customizer_design_url'] = cs_sanitize_design_source( $_GET['customizer_design_url'] );
+	}
+	if ( empty( $cart_item_data['customizer_sides'] ) && ! empty( $_GET['customizer_sides'] ) ) {
+		$parsed = cs_parse_customizer_sides_from_request( wp_unslash( $_GET['customizer_sides'] ) );
+		if ( ! empty( $parsed ) ) {
+			$cart_item_data['customizer_sides'] = wp_json_encode( $parsed );
+		}
+	}
 
 	return $cart_item_data;
 }, 10, 3 );
 
-// Replace cart item thumbnail with composite: product image + design overlay
-add_filter( 'woocommerce_cart_item_thumbnail', function ( $thumbnail, $cart_item, $cart_item_key ) {
-	if ( ! empty( $cart_item['customizer_design_url'] ) ) {
-		$design_url = esc_url( $cart_item['customizer_design_url'] );
+// Ensure customizer_sides JSON exists when only a single URL was posted; sync primary URL from multi-side data.
+add_filter(
+	'woocommerce_add_cart_item_data',
+	function ( $cart_item_data, $product_id, $variation_id ) {
+		if ( ! empty( $cart_item_data['customizer_sides'] ) ) {
+			$parsed = cs_parse_customizer_sides_from_request( $cart_item_data['customizer_sides'] );
+			if ( ! empty( $parsed ) ) {
+				$cart_item_data['customizer_sides']     = wp_json_encode( $parsed );
+				$cart_item_data['customizer_design_url'] = cs_primary_design_url_from_sides( $parsed );
+			}
+		} elseif ( ! empty( $cart_item_data['customizer_design_url'] ) ) {
+			$cart_item_data['customizer_sides'] = wp_json_encode(
+				[
+					[
+						'view' => 'front',
+						'url'  => $cart_item_data['customizer_design_url'],
+					],
+				]
+			);
+		}
+		return $cart_item_data;
+	},
+	15,
+	3
+);
 
-		// Get the original product image URL
-		$product_img = '';
-		if ( ! empty( $cart_item['product_id'] ) ) {
-			$img_id = get_post_thumbnail_id( $cart_item['product_id'] );
-			if ( $img_id ) {
-				$img_src = wp_get_attachment_image_src( $img_id, 'woocommerce_thumbnail' );
-				if ( $img_src ) {
-					$product_img = esc_url( $img_src[0] );
+// Offload huge design payloads so POST/session limits do not drop the whole add-to-cart request.
+add_filter( 'woocommerce_add_cart_item_data', 'cs_offload_large_design_to_transient', 25, 3 );
+add_filter( 'woocommerce_add_cart_item_data', 'cs_offload_large_sides_to_transient', 26, 3 );
+
+/**
+ * Primary design URL for overlays / legacy hooks (prefers "front" side).
+ *
+ * @param array $cart_item Cart line.
+ * @return string
+ */
+function cs_get_cart_item_design_url( $cart_item ) {
+	$sides = cs_get_cart_item_sides( $cart_item );
+	if ( empty( $sides ) ) {
+		return '';
+	}
+	foreach ( $sides as $s ) {
+		if ( ! empty( $s['url'] ) && isset( $s['view'] ) && $s['view'] === 'front' ) {
+			return $s['url'];
+		}
+	}
+	return $sides[0]['url'] ?? '';
+}
+
+/**
+ * Whether the line has any customizer artwork (any side).
+ *
+ * @param array $cart_item Cart line.
+ * @return bool
+ */
+function cs_cart_item_has_customizer_design( $cart_item ) {
+	return ! empty( cs_get_cart_item_sides( $cart_item ) );
+}
+
+/**
+ * Product thumbnail URL for cart line (variation-aware), for composite previews.
+ *
+ * @param array $cart_item WooCommerce cart item.
+ * @return string Escaped URL or empty.
+ */
+function cs_get_cart_item_product_thumb_url( $cart_item ) {
+	$product_obj = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+	if ( ! $product_obj ) {
+		return '';
+	}
+	$img_id = $product_obj->get_image_id();
+	if ( ! $img_id && ! empty( $cart_item['variation_id'] ) ) {
+		$variation_obj = wc_get_product( $cart_item['variation_id'] );
+		if ( $variation_obj ) {
+			$img_id = $variation_obj->get_image_id();
+			if ( ! $img_id ) {
+				$parent_id = $variation_obj->get_parent_id();
+				if ( $parent_id ) {
+					$img_id = get_post_thumbnail_id( $parent_id );
 				}
 			}
 		}
-
-		// Build a composite thumbnail showing product + design overlaid
-		$html = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
-		$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
-		if ( $product_img ) {
-			$html .= '<img src="' . $product_img . '" alt="Product" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
-		}
-		$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
-		$html .= '</div>';
-		$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design &nearr;</a>';
-		$html .= '</div>';
-		return $html;
+	} elseif ( ! $img_id && ! empty( $cart_item['product_id'] ) ) {
+		$img_id = get_post_thumbnail_id( $cart_item['product_id'] );
 	}
-	return $thumbnail;
+	if ( ! $img_id ) {
+		return '';
+	}
+	$img_src = wp_get_attachment_image_src( $img_id, 'woocommerce_thumbnail' );
+	return $img_src ? esc_url( $img_src[0] ) : '';
+}
+
+/**
+ * Cart/checkout thumbnail: product base + design (primary), optional row of extra sides.
+ *
+ * @param array  $cart_item        Cart line.
+ * @param string $inner_image_html If set, used as product base in main cell (WC product_get_image).
+ * @return string
+ */
+function cs_render_cart_thumb_composite_html( $cart_item, $inner_image_html = '' ) {
+	if ( ! cs_cart_item_has_customizer_design( $cart_item ) ) {
+		return '';
+	}
+	$sides         = cs_get_cart_item_sides( $cart_item );
+	$primary       = cs_get_cart_item_design_url( $cart_item );
+	$design_src    = cs_esc_design_attr( $primary );
+	$preview_href  = cs_get_stacked_preview_url_for_cart_item( $cart_item );
+	$product_img   = cs_get_cart_item_product_thumb_url( $cart_item );
+	$multi         = count( $sides ) > 1;
+
+	$html  = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
+	$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+	if ( $inner_image_html !== '' ) {
+		$html .= '<div class="cs-product-base-wrap" style="position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;">' . $inner_image_html . '</div>';
+	} elseif ( $product_img ) {
+		$html .= '<img src="' . $product_img . '" alt="" class="cs-product-base-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
+	}
+	$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+	$html .= '</div>';
+
+	if ( $multi ) {
+		$html .= '<div class="cs-side-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px;max-width:240px;">';
+		foreach ( $sides as $side ) {
+			if ( isset( $side['view'] ) && strtolower( (string) $side['view'] ) === 'front' ) {
+				continue;
+			}
+			$v = isset( $side['view'] ) ? (string) $side['view'] : '';
+			$u = isset( $side['url'] ) ? cs_esc_design_attr( $side['url'] ) : '';
+			if ( $u === '' ) {
+				continue;
+			}
+			$html .= '<div style="text-align:center;flex:0 0 auto;">';
+			$html .= '<div class="cs-cart-thumb cs-side-mini" style="position:relative;width:44px;height:44px;border-radius:4px;overflow:hidden;background:#eee;margin:0 auto;">';
+			if ( $product_img ) {
+				$html .= '<img src="' . $product_img . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
+			}
+			$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+			$html .= '</div>';
+			if ( $v !== '' ) {
+				$html .= '<span style="font-size:9px;color:#6b7280;text-transform:capitalize;display:block;margin-top:2px;">' . esc_html( $v ) . '</span>';
+			}
+			$html .= '</div>';
+		}
+		$html .= '</div>';
+	}
+
+	$html .= '<a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design &nearr;</a>';
+	$html .= '</div>';
+	return $html;
+}
+
+// Replace cart item thumbnail with composite: product image + design overlay
+add_filter( 'woocommerce_cart_item_thumbnail', function ( $thumbnail, $cart_item, $cart_item_key ) {
+	if ( ! cs_cart_item_has_customizer_design( $cart_item ) ) {
+		return $thumbnail;
+	}
+	return cs_render_cart_thumb_composite_html( $cart_item, '' );
 }, 10, 3 );
 
 // Also override product image on cart page (some themes use woocommerce_product_get_image)
@@ -380,22 +1111,49 @@ add_filter( 'woocommerce_product_get_image', function ( $image, $product, $size,
 		return $image;
 	}
 
+	$product_id = $product->get_id();
+	$is_variation = $product->is_type( 'variation' );
+	$variation_id = $is_variation ? $product_id : 0;
+	$parent_id = $is_variation ? $product->get_parent_id() : $product_id;
+
 	foreach ( $cart->get_cart() as $cart_item ) {
-		if ( (int) $cart_item['product_id'] === $product->get_id() && ! empty( $cart_item['customizer_design_url'] ) ) {
-			$design_url = esc_url( $cart_item['customizer_design_url'] );
-			$html = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
-			$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
-			$html .= $image; // original product image
-			$html .= '<img src="' . $design_url . '" alt="Custom Design" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;" />';
-			$html .= '</div>';
-			$html .= '<a href="' . $design_url . '" target="_blank" rel="noopener" class="cs-view-design-link" style="display:block;font-size:11px;margin-top:4px;color:#2563eb;text-decoration:none;">View Design &nearr;</a>';
-			$html .= '</div>';
-			return $html;
+		if ( ! cs_cart_item_has_customizer_design( $cart_item ) ) {
+			continue;
+		}
+
+		$cart_product_id = (int) $cart_item['product_id'];
+		$cart_variation_id = ! empty( $cart_item['variation_id'] ) ? (int) $cart_item['variation_id'] : 0;
+
+		// Match by variation_id if both are variations, otherwise match by product_id
+		$matches = false;
+		if ( $is_variation && $cart_variation_id ) {
+			$matches = ( $variation_id === $cart_variation_id );
+		} else {
+			$matches = ( $parent_id === $cart_product_id && ( ! $is_variation || $cart_variation_id === 0 ) );
+		}
+
+		if ( $matches ) {
+			return cs_render_cart_thumb_composite_html( $cart_item, $image );
 		}
 	}
 
 	return $image;
 }, 10, 5 );
+
+// Add data attributes to cart item names for JavaScript matching
+add_filter( 'woocommerce_cart_item_name', function ( $name, $cart_item, $cart_item_key ) {
+	if ( cs_cart_item_has_customizer_design( $cart_item ) ) {
+		$product_id = ! empty( $cart_item['product_id'] ) ? (int) $cart_item['product_id'] : 0;
+		$variation_id = ! empty( $cart_item['variation_id'] ) ? (int) $cart_item['variation_id'] : 0;
+		// Wrap in a span with data attributes for JS matching
+		if ( strpos( $name, '<a' ) !== false ) {
+			$name = str_replace( '<a ', '<a data-cs-product-id="' . $product_id . '" data-cs-variation-id="' . $variation_id . '" ', $name );
+		} else {
+			$name = '<span data-cs-product-id="' . $product_id . '" data-cs-variation-id="' . $variation_id . '">' . $name . '</span>';
+		}
+	}
+	return $name;
+}, 10, 3 );
 
 // Inject CSS for composite thumbnails (classic + block cart/checkout)
 add_action( 'wp_head', function () {
@@ -410,10 +1168,22 @@ add_action( 'wp_head', function () {
 		/* Block cart/checkout overlay */
 		.cs-design-overlay-wrap { position:relative; display:inline-block; }
 		.cs-design-overlay-wrap img.cs-design-overlay {
-			position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; z-index:2;
+			position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; z-index:3;
+		}
+		/* Product image sits under design in JS-enhanced thumbnails */
+		.cs-cart-thumb .cs-product-base-wrap img {
+			max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;
 		}
 		.cs-view-design-link { display:block; font-size:11px; margin-top:4px; color:#2563eb; text-decoration:none; }
 		.cs-view-design-link:hover { text-decoration:underline; color:#1d4ed8; }
+		/* Block Cart: inline preview (mirrors mini-cart item meta) */
+		.cs-block-cart-design-preview {
+			margin-top:10px;padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#fafafa;max-width:220px;
+		}
+		.cs-block-cart-design-preview .cs-block-cart-design-label { font-size:12px;color:#374151;margin:0 0 6px;font-weight:600; }
+		.cs-block-cart-design-preview img { max-width:120px;max-height:120px;display:block;border-radius:4px; }
+		.cs-block-cart-composite { position:relative; border-radius:6px; overflow:hidden; background:#f3f4f6; }
+		.cs-block-cart-composite img { display:block; }
 	</style>';
 } );
 
@@ -429,28 +1199,61 @@ add_action( 'wp_footer', function () {
 
 	$design_map = [];
 	foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
-		if ( ! empty( $cart_item['customizer_design_url'] ) ) {
-			// Map by product_id AND variation_id so we can match in JS
-			$key = (int) $cart_item['product_id'];
-			if ( ! empty( $cart_item['variation_id'] ) ) {
-				$key = (int) $cart_item['variation_id'];
-			}
-			$design_map[ $cart_item_key ] = [
-				'product_id'   => (int) $cart_item['product_id'],
-				'variation_id' => (int) ( $cart_item['variation_id'] ?? 0 ),
-				'design_url'   => esc_url( $cart_item['customizer_design_url'] ),
-				'name'         => $cart_item['data'] ? $cart_item['data']->get_name() : '',
-			];
+		if ( ! cs_cart_item_has_customizer_design( $cart_item ) ) {
+			continue;
 		}
+		$design_url = cs_get_cart_item_design_url( $cart_item );
+		$sides      = cs_get_cart_item_sides( $cart_item );
+		$design_map[ $cart_item_key ] = [
+			'product_id'          => (int) $cart_item['product_id'],
+			'variation_id'        => (int) ( $cart_item['variation_id'] ?? 0 ),
+			// Raw value — wp_json_encode handles escaping. esc_url() strips data: URIs used by many customizers.
+			'design_url'          => $design_url,
+			'sides'               => $sides,
+			'name'                => $cart_item['data'] ? $cart_item['data']->get_name() : '',
+			'product_thumb_url'   => cs_get_cart_item_product_thumb_url( $cart_item ),
+			'stacked_preview_url' => cs_get_stacked_preview_url_for_cart_item( $cart_item ),
+		];
 	}
 
 	if ( empty( $design_map ) ) {
 		return;
 	}
 
-	$json = wp_json_encode( $design_map );
+	// Same order as PHP cart — aligns with Cart block row order (index match).
+	$cart_line_order = [];
+	foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
+		$du = cs_get_cart_item_design_url( $cart_item );
+		if ( ! cs_cart_item_has_customizer_design( $cart_item ) ) {
+			$cart_line_order[] = [
+				'cart_item_key'       => $cart_item_key,
+				'design_url'          => '',
+				'sides'               => [],
+				'product_id'          => (int) $cart_item['product_id'],
+				'variation_id'        => (int) ( $cart_item['variation_id'] ?? 0 ),
+				'name'                => $cart_item['data'] ? $cart_item['data']->get_name() : '',
+				'product_thumb_url'   => '',
+				'stacked_preview_url' => '',
+			];
+			continue;
+		}
+		$cart_line_order[] = [
+			'cart_item_key'         => $cart_item_key,
+			'design_url'            => $du ? $du : '',
+			'sides'                 => cs_get_cart_item_sides( $cart_item ),
+			'product_id'            => (int) $cart_item['product_id'],
+			'variation_id'        => (int) ( $cart_item['variation_id'] ?? 0 ),
+			'name'                  => $cart_item['data'] ? $cart_item['data']->get_name() : '',
+			'product_thumb_url'     => cs_get_cart_item_product_thumb_url( $cart_item ),
+			'stacked_preview_url'   => $du ? cs_get_stacked_preview_url_for_cart_item( $cart_item ) : '',
+		];
+	}
+
+	$json      = wp_json_encode( $design_map );
+	$jsonLines = wp_json_encode( $cart_line_order );
 	echo "<script id='cs-design-data'>
 		window.csDesignMap = {$json};
+		window.csDesignCartLines = {$jsonLines};
 
 		(function(){
 			function getDesignMatchByName(designs, productName){
@@ -493,13 +1296,13 @@ add_action( 'wp_footer', function () {
 				}
 			}
 
-			function appendViewDesignLink(target, designUrl, center){
+			function appendViewDesignLink(target, designUrl, center, previewUrl){
 				if(!target || !designUrl) return;
 				var scope = target.parentNode || target;
 				if(scope.querySelector('.cs-view-design-link')) return;
 
 				var link = document.createElement('a');
-				link.href = designUrl;
+				link.href = (previewUrl && String(previewUrl).length) ? previewUrl : designUrl;
 				link.target = '_blank';
 				link.rel = 'noopener';
 				link.className = 'cs-view-design-link';
@@ -508,115 +1311,291 @@ add_action( 'wp_footer', function () {
 				scope.insertBefore(link, target.nextSibling);
 			}
 
+			function getProductIdFromElement(row){
+				// First try our custom data attributes (most reliable)
+				var productIdEl = row.querySelector('[data-cs-product-id]');
+				if(productIdEl) {
+					var pid = productIdEl.getAttribute('data-cs-product-id');
+					var vid = productIdEl.getAttribute('data-cs-variation-id');
+					return {
+						productId: pid ? parseInt(pid, 10) : null,
+						variationId: vid ? parseInt(vid, 10) : null
+					};
+				}
+				
+				// Try to extract product ID from standard data attributes
+				var productId = row.getAttribute('data-product-id') || row.getAttribute('data-product_id');
+				var variationId = row.getAttribute('data-variation-id') || row.getAttribute('data-variation_id');
+				if(productId || variationId) {
+					return {
+						productId: productId ? parseInt(productId, 10) : null,
+						variationId: variationId ? parseInt(variationId, 10) : null
+					};
+				}
+				
+				// Try to extract from link href (e.g., /product/name/?variation_id=123)
+				var link = row.querySelector('a[href*=\'variation_id\'], a[href*=\'product\']');
+				if(link && link.href){
+					var match = link.href.match(/variation_id[=:](\d+)/i);
+					if(match) {
+						return {
+							productId: null,
+							variationId: parseInt(match[1], 10)
+						};
+					}
+					match = link.href.match(/\/product\/[^\/]+\/(\d+)/);
+					if(match) {
+						return {
+							productId: parseInt(match[1], 10),
+							variationId: null
+						};
+					}
+				}
+				
+				return { productId: null, variationId: null };
+			}
+
+			function findDesignMatch(designs, productId, variationId, productName){
+				if(productId || variationId){
+					// Try to match by ID first (most reliable)
+					for(var i = 0; i < designs.length; i++){
+						var d = designs[i];
+						// Match variation first if both have variation IDs
+						if(variationId && d.variation_id && d.variation_id === variationId){
+							return d;
+						}
+						// Match product ID if variation IDs match (both 0 or both null)
+						if(productId && d.product_id && d.product_id === productId){
+							var dHasVariation = d.variation_id && d.variation_id !== 0;
+							var hasVariation = variationId && variationId !== 0;
+							if(!dHasVariation && !hasVariation){
+								return d;
+							}
+						}
+					}
+				}
+				// Fall back to name matching
+				return getDesignMatchByName(designs, productName);
+			}
+
+			function injectBlockCartLinePreviews(){
+				var lines = window.csDesignCartLines;
+				if(!lines || !lines.length) return;
+				var rows = document.querySelectorAll('.wc-block-cart-items__row');
+				if(!rows.length) return;
+				rows.forEach(function(row, index){
+					if(row.querySelector('.cs-block-cart-design-preview')) return;
+					var line = lines[index];
+					if(!line || (!line.design_url && !(line.sides && line.sides.length))) return;
+					var productCol = row.querySelector('.wc-block-cart-item__product, .wc-block-components-product-metadata, td.wc-block-cart-item__product');
+					if(!productCol) productCol = row.querySelector('.wc-block-cart-item__wrap') || row;
+					var wrap = document.createElement('div');
+					wrap.className = 'cs-block-cart-design-preview';
+					var lbl = document.createElement('p');
+					lbl.className = 'cs-block-cart-design-label';
+					lbl.textContent = 'Design: ✓ Custom design applied';
+					var link = document.createElement('a');
+					link.href = (line.stacked_preview_url && String(line.stacked_preview_url).length) ? line.stacked_preview_url : (line.design_url || '');
+					link.target = '_blank';
+					link.rel = 'noopener';
+					link.className = 'cs-view-design-link';
+					link.style.marginTop = '6px';
+					link.textContent = 'View full size →';
+					wrap.appendChild(lbl);
+					function addStack(targetUrl, w, h){
+						var stack = document.createElement('div');
+						stack.className = 'cs-block-cart-composite';
+						stack.style.cssText = 'position:relative;width:'+w+'px;height:'+h+'px;margin-top:4px;';
+						if(line.product_thumb_url){
+							var pimg = document.createElement('img');
+							pimg.alt = '';
+							pimg.setAttribute('src', line.product_thumb_url);
+							pimg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;';
+							stack.appendChild(pimg);
+						}
+						var dimg = document.createElement('img');
+						dimg.alt = '';
+						dimg.setAttribute('src', targetUrl);
+						dimg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;';
+						stack.appendChild(dimg);
+						return stack;
+					}
+					if(line.sides && line.sides.length > 1){
+						var grid = document.createElement('div');
+						grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;';
+						line.sides.forEach(function(side){
+							var cell = document.createElement('div');
+							cell.style.textAlign = 'center';
+							var u = side.url || '';
+							if(!u) return;
+							cell.appendChild(addStack(u, 88, 88));
+							var vn = document.createElement('span');
+							vn.style.cssText = 'font-size:10px;color:#6b7280;text-transform:capitalize;display:block;margin-top:4px;';
+							vn.textContent = side.view || '';
+							cell.appendChild(vn);
+							grid.appendChild(cell);
+						});
+						wrap.appendChild(grid);
+					} else if(line.product_thumb_url){
+						wrap.appendChild(addStack(line.design_url, 120, 120));
+					} else {
+						var img = document.createElement('img');
+						img.alt = '';
+						img.setAttribute('src', line.design_url);
+						img.style.maxWidth = '120px';
+						img.style.maxHeight = '120px';
+						img.style.display = 'block';
+						img.style.borderRadius = '4px';
+						wrap.appendChild(img);
+					}
+					wrap.appendChild(link);
+					productCol.appendChild(wrap);
+				});
+			}
+
+			function stackProductImageBehindDesign(container){
+				if(!container) return;
+				var baseImg = container.querySelector('img:not(.cs-design-overlay)');
+				if(!baseImg) return;
+				var link = baseImg.closest('a');
+				container.style.position = 'relative';
+				if(link){
+					link.style.cssText += ';position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;';
+					baseImg.style.cssText += ';max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;';
+				} else {
+					baseImg.style.cssText += ';position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:contain;';
+				}
+			}
+
+			function ensureProductBaseImage(container, match){
+				if(!match || !match.product_thumb_url) return;
+				if(container.querySelector('img.cs-product-base-js')) return;
+				if(container.querySelector('img:not(.cs-design-overlay)')) return;
+				var base = document.createElement('img');
+				base.className = 'cs-product-base-js';
+				base.alt = '';
+				base.setAttribute('src', match.product_thumb_url);
+				base.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;';
+				container.insertBefore(base, container.firstChild);
+			}
+
+			function blockRowIndex(row){
+				var all = document.querySelectorAll('.wc-block-cart-items__row');
+				for(var i = 0; i < all.length; i++){
+					if(all[i] === row) return i;
+				}
+				return -1;
+			}
+
 			function applyDesignOverlays(){
-				if(!window.csDesignMap) { console.log('[CS] No csDesignMap found'); return; }
+				if(!window.csDesignMap) return;
 				var fallbackDesigns = Object.values(window.csDesignMap);
-				if(!fallbackDesigns.length) { console.log('[CS] csDesignMap is empty'); return; }
-				console.log('[CS] Designs to apply:', fallbackDesigns.length, fallbackDesigns);
+				if(!fallbackDesigns.length) return;
+
+				injectBlockCartLinePreviews();
 
 				var orderedDesigns = getDesignsInBlockOrder();
-
-				/* --- WooCommerce Blocks selectors (broad) --- */
-				var blockSelectors = [
-					'.wc-block-cart-items .wc-block-components-product-image',
-					'.wc-block-checkout .wc-block-components-product-image',
-					'.wc-block-components-order-summary .wc-block-components-product-image',
-					'.wp-block-woocommerce-cart .wc-block-components-product-image',
-					'.wp-block-woocommerce-checkout .wc-block-components-product-image',
-					'.wc-block-cart .wc-block-components-product-image',
-					'.wc-block-components-product-image'
-				];
-				var thumbContainers = document.querySelectorAll(blockSelectors.join(','));
-				console.log('[CS] Block thumb containers found:', thumbContainers.length);
+				// Cart / checkout blocks — multiple possible wrappers across WC + theme versions.
+				var thumbContainers = document.querySelectorAll(
+					'.wc-block-cart-items .wc-block-components-product-image,' +
+					'.wc-block-cart-items .wc-block-cart-item__image,' +
+					'.wc-block-cart .wc-block-components-product-image,' +
+					'.wc-block-checkout .wc-block-components-product-image,' +
+					'.wc-block-components-order-summary .wc-block-components-product-image'
+				);
 
 				thumbContainers.forEach(function(container, index){
 					if(container.querySelector('.cs-design-overlay')) return;
 
-					var row = container.closest('.wc-block-cart-items__row, .wc-block-components-order-summary-item, tr, li, [class*=cart-item], [class*=order-summary]');
-					var nameEl = row ? row.querySelector(
+					var row = container.closest('.wc-block-cart-items__row, .wc-block-components-order-summary-item, tr, li');
+					if(!row) return;
+
+					var match = null;
+					if(window.csDesignCartLines && window.csDesignCartLines.length && row.classList.contains('wc-block-cart-items__row')){
+						var ri = blockRowIndex(row);
+						var lineRow = ri >= 0 ? window.csDesignCartLines[ri] : null;
+						if(lineRow && (lineRow.design_url || (lineRow.sides && lineRow.sides.length))){
+							match = {
+								design_url: lineRow.design_url,
+								sides: lineRow.sides || [],
+								product_id: lineRow.product_id,
+								variation_id: lineRow.variation_id,
+								name: lineRow.name,
+								stacked_preview_url: lineRow.stacked_preview_url || ''
+							};
+						}
+					}
+					
+					var ids = getProductIdFromElement(row);
+					var productId = ids.productId;
+					var variationId = ids.variationId;
+					
+					var nameEl = row.querySelector(
 						'.wc-block-components-product-name,' +
-						'[class*=product-name],' +
+						'.wc-block-components-order-summary-item__description .wc-block-components-product-name,' +
 						'a[href]'
-					) : null;
+					);
 					var productName = nameEl ? nameEl.textContent.trim() : '';
-					console.log('[CS] Block row', index, 'product:', productName);
-					var match = orderedDesigns[index] || getDesignMatchByName(fallbackDesigns, productName);
-					if(!match) { console.log('[CS] No design match for:', productName); return; }
+					
+					if(!match){
+						match = orderedDesigns[index] || findDesignMatch(fallbackDesigns, productId, variationId, productName);
+					}
+					if(!match) return;
+
+					ensureProductBaseImage(container, match);
+					stackProductImageBehindDesign(container);
 
 					container.style.position = 'relative';
-					container.style.overflow = 'visible';
 					var overlay = document.createElement('img');
 					overlay.src = match.design_url;
-					overlay.alt = 'Custom Design';
+					overlay.alt = '';
 					overlay.className = 'cs-design-overlay';
-					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:10;';
+					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
 					container.appendChild(overlay);
-					appendViewDesignLink(container, match.design_url, true);
-					console.log('[CS] Overlay applied to block container', index);
+					appendViewDesignLink(container, match.design_url, true, match.stacked_preview_url);
 				});
 
-				/* --- Classic WooCommerce selectors (broad) --- */
-				var classicSelectors = [
-					'.woocommerce-cart-form .cart_item',
-					'.woocommerce-checkout .cart_item',
-					'table.cart .cart_item',
-					'.shop_table .cart_item'
-				];
-				var classicRows = document.querySelectorAll(classicSelectors.join(','));
-				console.log('[CS] Classic cart rows found:', classicRows.length);
-
+				var classicRows = document.querySelectorAll(
+					'.woocommerce-cart-form .cart_item,' +
+					'table.shop_table.cart .cart_item,' +
+					'.woocommerce-cart table.shop_table .cart_item,' +
+					'.woocommerce-checkout .cart_item'
+				);
 				classicRows.forEach(function(row){
-					var thumbTd = row.querySelector('.product-thumbnail, td:first-child');
+					var thumbTd = row.querySelector('.product-thumbnail');
 					if(!thumbTd || thumbTd.querySelector('.cs-design-overlay')) return;
 
-					var nameLink = row.querySelector('.product-name a, td.product-name a, [class*=product-name] a');
+					var ids = getProductIdFromElement(row);
+					var productId = ids.productId;
+					var variationId = ids.variationId;
+					
+					// Fallback: try to get variation ID from hidden input
+					if(!variationId) {
+						var variationInput = row.querySelector('input[name*=\'variation_id\'], input[value*=\'variation\']');
+						if(variationInput) {
+							var val = parseInt(variationInput.value, 10);
+							if(!isNaN(val)) variationId = val;
+						}
+					}
+					
+					var nameLink = row.querySelector('.product-name a');
 					var productName = nameLink ? nameLink.textContent.trim() : '';
-					console.log('[CS] Classic row product:', productName);
-					var match = getDesignMatchByName(fallbackDesigns, productName);
+					var match = findDesignMatch(fallbackDesigns, productId, variationId, productName);
 					if(!match) return;
 
 					var imgWrap = thumbTd.querySelector('a') || thumbTd;
 					imgWrap.style.position = 'relative';
 					imgWrap.style.display = 'inline-block';
-					imgWrap.style.overflow = 'visible';
+					ensureProductBaseImage(imgWrap, match);
+					stackProductImageBehindDesign(imgWrap);
 					var overlay = document.createElement('img');
 					overlay.src = match.design_url;
-					overlay.alt = 'Custom Design';
+					overlay.alt = '';
 					overlay.className = 'cs-design-overlay';
-					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:10;';
+					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
 					imgWrap.appendChild(overlay);
-					appendViewDesignLink(imgWrap, match.design_url, false);
+					appendViewDesignLink(imgWrap, match.design_url, false, match.stacked_preview_url);
 				});
-
-				/* --- Fallback: find ANY product image on cart/checkout pages --- */
-				if(thumbContainers.length === 0 && classicRows.length === 0) {
-					console.log('[CS] No standard containers found. Trying fallback selectors...');
-					var fallbackImgs = document.querySelectorAll(
-						'[class*=cart] img[src*=wp-content],' +
-						'[class*=checkout] img[src*=wp-content],' +
-						'.cart-item img,' +
-						'[class*=product] img[class*=thumbnail],' +
-						'[class*=product] img[class*=image]'
-					);
-					console.log('[CS] Fallback images found:', fallbackImgs.length);
-					fallbackImgs.forEach(function(img, index){
-						if(img.closest('.cs-design-overlay-wrap') || img.classList.contains('cs-design-overlay')) return;
-						var match = fallbackDesigns[index] || fallbackDesigns[0];
-						if(!match) return;
-
-						var parent = img.parentElement;
-						parent.style.position = 'relative';
-						parent.style.overflow = 'visible';
-						var overlay = document.createElement('img');
-						overlay.src = match.design_url;
-						overlay.alt = 'Custom Design';
-						overlay.className = 'cs-design-overlay';
-						overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:10;';
-						parent.appendChild(overlay);
-						appendViewDesignLink(parent, match.design_url, true);
-						console.log('[CS] Fallback overlay applied to image', index);
-					});
-				}
 			}
 
 			if(document.readyState==='loading'){
@@ -624,14 +1603,6 @@ add_action( 'wp_footer', function () {
 			} else {
 				applyDesignOverlays();
 			}
-
-			/* Retry with interval for late-rendering block carts */
-			var csRetryCount = 0;
-			var csRetryInterval = setInterval(function(){
-				applyDesignOverlays();
-				csRetryCount++;
-				if(csRetryCount > 20) clearInterval(csRetryInterval);
-			}, 500);
 
 			var observer = new MutationObserver(function(){
 				applyDesignOverlays();
@@ -646,12 +1617,54 @@ add_action( 'wp_footer', function () {
 	</script>";
 } );
 
-// Show "Customized" label in cart item details
+// Show "Customized" label in cart item details (+ inline preview when we have image data)
 add_filter( 'woocommerce_get_item_data', function ( $item_data, $cart_item ) {
-	if ( ! empty( $cart_item['customizer_session_id'] ) ) {
+	$design_url = cs_get_cart_item_design_url( $cart_item );
+	$sides      = cs_get_cart_item_sides( $cart_item );
+	if ( ! empty( $design_url ) || ! empty( $sides ) || ! empty( $cart_item['customizer_session_id'] ) ) {
+		$value = '✓ Custom design applied';
+		if ( ! empty( $design_url ) || ! empty( $sides ) ) {
+			$preview_href = cs_get_stacked_preview_url_for_cart_item( $cart_item );
+			$pthumb       = cs_get_cart_item_product_thumb_url( $cart_item );
+			if ( count( $sides ) > 1 ) {
+				$value .= '<br/><div class="cs-item-data-sides" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">';
+				foreach ( $sides as $side ) {
+					$u = isset( $side['url'] ) ? cs_esc_design_attr( $side['url'] ) : '';
+					$v = isset( $side['view'] ) ? esc_html( (string) $side['view'] ) : '';
+					if ( $u === '' ) {
+						continue;
+					}
+					$value .= '<div style="text-align:center;">';
+					$value .= '<span style="position:relative;display:inline-block;width:100px;height:100px;border-radius:6px;overflow:hidden;border:1px solid #e5e7eb;background:#f3f4f6;">';
+					if ( $pthumb ) {
+						$value .= '<img src="' . $pthumb . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
+					}
+					$value .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+					$value .= '</span>';
+					if ( $v !== '' ) {
+						$value .= '<span style="font-size:11px;color:#6b7280;text-transform:capitalize;display:block;margin-top:4px;">' . $v . '</span>';
+					}
+					$value .= '</div>';
+				}
+				$value .= '</div>';
+			} elseif ( ! empty( $design_url ) ) {
+				$src = cs_esc_design_attr( $design_url );
+				if ( $pthumb ) {
+					$value .= '<br/><span class="cs-item-data-composite" style="position:relative;display:inline-block;width:120px;height:120px;margin-top:8px;border-radius:6px;overflow:hidden;border:1px solid #e5e7eb;background:#f3f4f6;">';
+					$value .= '<img src="' . $pthumb . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
+					$value .= '<img src="' . $src . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+					$value .= '</span>';
+				} else {
+					$value .= '<br/><img src="' . $src . '" alt="" style="max-width:120px;max-height:120px;margin-top:8px;border-radius:6px;border:1px solid #e5e7eb;display:block;" />';
+				}
+			}
+			$value .= ' <a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener" style="margin-left:0;margin-top:6px;display:inline-block;color:#2563eb;">View full size →</a>';
+		} elseif ( ! empty( $cart_item['customizer_session_id'] ) ) {
+			$value .= '<br/><small style="color:#666;">Preview unavailable (no image URL in cart). Re-add the product after updating the plugin, or ensure your customizer posts <code>customizer_design_url</code> / <code>customizer_sides</code> as an HTTPS link or PNG data URL.</small>';
+		}
 		$item_data[] = [
 			'key'   => 'Design',
-			'value' => '✓ Custom design applied',
+			'value' => $value,
 		];
 	}
 	return $item_data;
@@ -665,6 +1678,28 @@ add_filter( 'woocommerce_get_cart_item_from_session', function ( $cart_item, $va
 	if ( isset( $values['customizer_design_url'] ) ) {
 		$cart_item['customizer_design_url'] = $values['customizer_design_url'];
 	}
+	if ( isset( $values['customizer_sides'] ) ) {
+		$cart_item['customizer_sides'] = $values['customizer_sides'];
+	}
+	if ( isset( $values['_cs_design_transient_key'] ) ) {
+		$cart_item['_cs_design_transient_key'] = $values['_cs_design_transient_key'];
+		// Hydrate from transient if inline URL was offloaded.
+		if ( empty( $cart_item['customizer_design_url'] ) && $cart_item['_cs_design_transient_key'] ) {
+			$stored = get_transient( $cart_item['_cs_design_transient_key'] );
+			if ( is_string( $stored ) && $stored !== '' ) {
+				$cart_item['customizer_design_url'] = $stored;
+			}
+		}
+	}
+	if ( isset( $values['_cs_sides_transient_key'] ) ) {
+		$cart_item['_cs_sides_transient_key'] = $values['_cs_sides_transient_key'];
+		if ( empty( $cart_item['customizer_sides'] ) && $cart_item['_cs_sides_transient_key'] ) {
+			$stored = get_transient( $cart_item['_cs_sides_transient_key'] );
+			if ( is_string( $stored ) && $stored !== '' ) {
+				$cart_item['customizer_sides'] = $stored;
+			}
+		}
+	}
 	return $cart_item;
 }, 10, 2 );
 
@@ -672,29 +1707,86 @@ add_filter( 'woocommerce_get_cart_item_from_session', function ( $cart_item, $va
    6. ORDER INTEGRATION — Save design data to order line items
    ================================================================ */
 
+add_filter(
+	'woocommerce_hidden_order_itemmeta',
+	function ( $keys ) {
+		$keys[] = '_customizer_sides_json';
+		return $keys;
+	}
+);
+
 add_action( 'woocommerce_checkout_create_order_line_item', function ( $item, $cart_item_key, $values, $order ) {
 	if ( ! empty( $values['customizer_session_id'] ) ) {
 		$item->add_meta_data( '_customizer_session_id', $values['customizer_session_id'], true );
 	}
-	if ( ! empty( $values['customizer_design_url'] ) ) {
-		$item->add_meta_data( '_customizer_design_url', $values['customizer_design_url'], true );
+	// Resolve design URL (includes transient-stored previews).
+	$design_url = '';
+	if ( function_exists( 'cs_get_cart_item_design_url' ) ) {
+		$cart = WC()->cart ? WC()->cart->get_cart() : [];
+		if ( isset( $cart[ $cart_item_key ] ) ) {
+			$design_url = cs_get_cart_item_design_url( $cart[ $cart_item_key ] );
+		}
+	}
+	if ( $design_url === '' && ! empty( $values['customizer_design_url'] ) ) {
+		$design_url = $values['customizer_design_url'];
+	}
+	if ( $design_url !== '' ) {
+		$item->add_meta_data( '_customizer_design_url', $design_url, true );
+	}
+	$sides = [];
+	if ( function_exists( 'cs_get_cart_item_sides' ) ) {
+		$cart = WC()->cart ? WC()->cart->get_cart() : [];
+		if ( isset( $cart[ $cart_item_key ] ) ) {
+			$sides = cs_get_cart_item_sides( $cart[ $cart_item_key ] );
+		}
+	}
+	if ( ! empty( $sides ) ) {
+		$item->add_meta_data( '_customizer_sides_json', wp_json_encode( $sides ), true );
 	}
 }, 10, 4 );
 
 // Display design preview in admin order view
 add_action( 'woocommerce_after_order_itemmeta', function ( $item_id, $item, $product ) {
-	$session_id = $item->get_meta( '_customizer_session_id' );
-	$design_url = $item->get_meta( '_customizer_design_url' );
+	$session_id  = $item->get_meta( '_customizer_session_id' );
+	$design_url  = $item->get_meta( '_customizer_design_url' );
+	$sides_json  = $item->get_meta( '_customizer_sides_json' );
+	$sides       = [];
+	if ( is_string( $sides_json ) && $sides_json !== '' ) {
+		$decoded = json_decode( $sides_json, true );
+		if ( is_array( $decoded ) ) {
+			$sides = cs_sanitize_customizer_sides_array( $decoded );
+		}
+	}
 
-	if ( $session_id || $design_url ) {
+	if ( $session_id || $design_url || ! empty( $sides ) ) {
 		echo '<div class="cs-order-meta" style="margin-top:8px;padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px;">';
 		echo '<strong>🎨 Customizer Studio</strong><br/>';
 		if ( $session_id ) {
 			echo 'Session: <code>' . esc_html( $session_id ) . '</code><br/>';
 		}
-		if ( $design_url ) {
-			echo '<a href="' . esc_url( $design_url ) . '" target="_blank">';
-			echo '<img src="' . esc_url( $design_url ) . '" alt="Custom Design" style="max-width:120px;margin-top:4px;border-radius:4px;border:1px solid #ddd;" />';
+		if ( count( $sides ) > 1 ) {
+			$preview_href = cs_get_stacked_preview_url_for_order_item( $item );
+			echo '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">';
+			foreach ( $sides as $side ) {
+				$u = isset( $side['url'] ) ? $side['url'] : '';
+				$v = isset( $side['view'] ) ? (string) $side['view'] : '';
+				if ( $u === '' ) {
+					continue;
+				}
+				echo '<div style="text-align:center;">';
+				echo '<a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener">';
+				echo '<img src="' . cs_esc_design_attr( $u ) . '" alt="" style="max-width:88px;margin-top:4px;border-radius:4px;border:1px solid #ddd;display:block;" />';
+				echo '</a>';
+				if ( $v !== '' ) {
+					echo '<span style="font-size:10px;color:#666;text-transform:capitalize;">' . esc_html( $v ) . '</span>';
+				}
+				echo '</div>';
+			}
+			echo '</div>';
+		} elseif ( $design_url ) {
+			$preview_href = cs_get_stacked_preview_url_for_order_item( $item );
+			echo '<a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener">';
+			echo '<img src="' . cs_esc_design_attr( $design_url ) . '" alt="Custom Design" style="max-width:120px;margin-top:4px;border-radius:4px;border:1px solid #ddd;" />';
 			echo '</a>';
 		}
 		echo '</div>';
@@ -725,6 +1817,12 @@ add_action( 'woocommerce_after_single_product', function () {
 
 		// Listen for the customizer complete event to auto-add variable product to cart
 		document.addEventListener('customizer:addtocart', function(e) {
+			// Footer script uses AJAX (cs_add_to_cart). Do NOT also POST the form — duplicate requests
+			// and huge hidden fields (data:image) can exceed PHP limits and leave the cart empty.
+			if (typeof csVariantConfig !== 'undefined') {
+				return;
+			}
+
 			var detail = e.detail || {};
 			var variant = detail.variant || {};
 			var colorName = (variant.colorName || '').toLowerCase().trim();
@@ -770,19 +1868,32 @@ add_action( 'woocommerce_after_single_product', function () {
 					existing.value = sessionId;
 				}
 
-				// Also add design URL
+				// Multi-side JSON + primary design URL (backward compatible)
 				var sides = detail.sides || [];
-				var front = sides.find(function(s) { return s.view === 'front'; }) || sides[0];
-				if (front && front.designPNG) {
+				var sidePayload = sides.map(function(s) {
+					return { view: (s.view || 'front'), url: (s.designPNG || s.url || '') };
+				}).filter(function(x) { return x.url; });
+				var sidesInput = form.querySelector('input[name="customizer_sides"]');
+				if (sidePayload.length) {
+					if (!sidesInput) {
+						sidesInput = document.createElement('input');
+						sidesInput.type = 'hidden';
+						sidesInput.name = 'customizer_sides';
+						form.appendChild(sidesInput);
+					}
+					sidesInput.value = JSON.stringify(sidePayload);
+				}
+				var front = sidePayload.find(function(s) { return s.view === 'front'; }) || sidePayload[0];
+				if (front && front.url) {
 					var designInput = form.querySelector('input[name="customizer_design_url"]');
 					if (!designInput) {
 						designInput = document.createElement('input');
 						designInput.type = 'hidden';
 						designInput.name = 'customizer_design_url';
-						designInput.value = front.designPNG;
+						designInput.value = front.url;
 						form.appendChild(designInput);
 					} else {
-						designInput.value = front.designPNG;
+						designInput.value = front.url;
 					}
 				}
 			}
@@ -824,41 +1935,22 @@ add_action( 'wp_ajax_cs_add_to_cart', 'cs_ajax_add_to_cart' );
 add_action( 'wp_ajax_nopriv_cs_add_to_cart', 'cs_ajax_add_to_cart' );
 
 function cs_ajax_add_to_cart() {
-	$product_id   = absint( $_POST['product_id'] ?? 0 );
-	$variation_id = absint( $_POST['variation_id'] ?? 0 );
-	$quantity     = absint( $_POST['quantity'] ?? 1 );
-
-	if ( ! $product_id ) {
-		wp_send_json_error( [ 'message' => 'No product ID provided' ] );
+	if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['security'] ?? '' ) ), 'cs_add_to_cart' ) ) {
+		wp_send_json_error(
+			[
+				'message' => __( 'Session expired or security check failed. Refresh the page and try again.', 'customizer-studio-for-woocommerce' ),
+			]
+		);
 		return;
 	}
 
-	$cart_item_data = [];
-
-	if ( ! empty( $_POST['customizer_session_id'] ) ) {
-		$cart_item_data['customizer_session_id'] = sanitize_text_field( wp_unslash( $_POST['customizer_session_id'] ) );
-	}
-	if ( ! empty( $_POST['customizer_design_url'] ) ) {
-		$cart_item_data['customizer_design_url'] = esc_url_raw( wp_unslash( $_POST['customizer_design_url'] ) );
+	$result = cs_process_add_to_cart( wp_unslash( $_POST ) );
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+		return;
 	}
 
-	$variation = [];
-	if ( $variation_id ) {
-		$variation_obj = wc_get_product( $variation_id );
-		if ( $variation_obj ) {
-			$variation = $variation_obj->get_variation_attributes();
-		}
-	}
-
-	$added = WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variation, $cart_item_data );
-
-	if ( $added ) {
-		WC_AJAX::get_refreshed_fragments();
-	} else {
-		wp_send_json_error( [ 'message' => 'Could not add to cart' ] );
-	}
-
-	wp_die();
+	wp_send_json( cs_get_cart_fragments_data() );
 }
 
 // Expose the AJAX URL and product variant data to the frontend
@@ -881,20 +1973,31 @@ add_action( 'wp_footer', function () {
 	$variant_map = [];
 
 	foreach ( $variations as $v ) {
-		// Build a map: color_name => variation_id
+		// Map every variation attribute slug => variation_id (not only color — avoids empty cart when attribute isn't "color").
 		foreach ( $v['attributes'] as $attr_name => $attr_value ) {
-			if ( stripos( $attr_name, 'color' ) !== false || stripos( $attr_name, 'colour' ) !== false ) {
-				$variant_map[ strtolower( $attr_value ) ] = $v['variation_id'];
+			if ( $attr_value === '' || $attr_value === null ) {
+				continue;
 			}
+			$key = strtolower( rawurldecode( (string) $attr_value ) );
+			$variant_map[ $key ] = (int) $v['variation_id'];
 		}
+	}
+
+	$fallback_variation_id = 0;
+	if ( count( $variations ) === 1 ) {
+		$fallback_variation_id = (int) $variations[0]['variation_id'];
 	}
 
 	?>
 	<script>
 	var csVariantConfig = {
 		ajaxUrl: '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
+		ajaxNonce: '<?php echo esc_js( wp_create_nonce( 'cs_add_to_cart' ) ); ?>',
+		restNonce: '<?php echo esc_js( wp_create_nonce( 'wp_rest' ) ); ?>',
+		restAddToCartUrl: '<?php echo esc_url( rest_url( 'customizer-studio/v1/add-to-cart' ) ); ?>',
 		productId: <?php echo (int) $product->get_id(); ?>,
-		variantMap: <?php echo wp_json_encode( $variant_map ); ?>
+		variantMap: <?php echo wp_json_encode( $variant_map ); ?>,
+		fallbackVariationId: <?php echo (int) $fallback_variation_id; ?>
 	};
 	</script>
 	<?php
@@ -932,44 +2035,116 @@ add_action( 'wp_footer', function () {
 			var detail = e.detail || {};
 			var variant = detail.variant || {};
 			var colorName = (variant.colorName || '').toLowerCase().trim();
-			var variationId = csVariantConfig.variantMap[colorName] || 0;
+
+			var variationId = parseInt(detail.variationId || detail.variation_id || (variant && variant.variationId) || (variant && variant.variation_id), 10) || 0;
+			if (!variationId && colorName) {
+				variationId = csVariantConfig.variantMap[colorName] || 0;
+			}
+			if (!variationId && variant) {
+				for (var vk in variant) {
+					if (variationId) break;
+					var vv = variant[vk];
+					if (typeof vv === 'string' && vv !== '') {
+						var k = vv.toLowerCase().trim();
+						if (k && csVariantConfig.variantMap[k]) {
+							variationId = csVariantConfig.variantMap[k];
+						}
+					}
+				}
+			}
+			if (!variationId && csVariantConfig.fallbackVariationId) {
+				variationId = csVariantConfig.fallbackVariationId;
+			}
 
 			if (!variationId) {
-				console.warn('[CS Plugin] Could not find variation for color:', colorName);
-				console.warn('[CS Plugin] Available variants:', csVariantConfig.variantMap);
+				console.error('[CS Plugin] Could not resolve variation. Send variationId in the event, or a variant.* value matching the product attribute slug. detail:', detail, 'map:', csVariantConfig.variantMap);
 				return;
 			}
 
 			var sides = detail.sides || [];
-			var front = sides.find(function(s) { return s.view === 'front'; }) || sides[0];
-			var designUrl = (front && front.designPNG) || '';
+			var sidePayload = sides.map(function(s) {
+				return { view: (s.view || 'front'), url: (s.designPNG || s.url || '') };
+			}).filter(function(x) { return x.url; });
+			var front = sidePayload.find(function(s) { return s.view === 'front'; }) || sidePayload[0];
+			var designUrl = front ? front.url : '';
 
 			var formData = new FormData();
 			formData.append('action', 'cs_add_to_cart');
+			formData.append('security', csVariantConfig.ajaxNonce);
 			formData.append('product_id', csVariantConfig.productId);
 			formData.append('variation_id', variationId);
 			formData.append('quantity', '1');
 			if (detail.sessionId) formData.append('customizer_session_id', detail.sessionId);
+			if (sidePayload.length) {
+				formData.append('customizer_sides', JSON.stringify(sidePayload));
+			}
 			if (designUrl) formData.append('customizer_design_url', designUrl);
 
-			fetch(csVariantConfig.ajaxUrl, {
-				method: 'POST',
-				body: formData,
-				credentials: 'same-origin',
-			})
-			.then(function(res) { return res.json(); })
-			.then(function(data) {
-				if (data.error) {
+			function formDataToObject(fd) {
+				var o = {};
+				fd.forEach(function(v, k) { o[k] = v; });
+				return o;
+			}
+
+			function handleCartResponse(res) {
+				var ct = res.headers.get('content-type') || '';
+				if (!res.ok) {
+					return res.text().then(function(text) {
+						var plain = (text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+						throw new Error('HTTP ' + res.status + (plain ? ': ' + plain : ''));
+					});
+				}
+				if (ct.indexOf('application/json') === -1) {
+					return res.text().then(function(text) {
+						throw new Error('Expected JSON but received HTML (firewall/WAF may be blocking the request). ' + (text || '').slice(0, 120));
+					});
+				}
+				return res.json();
+			}
+
+			function applyFragments(data) {
+				if (data && data.code && data.message) {
+					console.error('[CS Plugin] Add to cart failed:', data.message);
+					return;
+				}
+				if (data.success === false || data.error) {
 					console.error('[CS Plugin] Add to cart failed:', data);
 					return;
 				}
-				// Refresh cart fragments
-				if (typeof jQuery !== 'undefined') {
-					jQuery(document.body).trigger('added_to_cart', [data.fragments, data.cart_hash]);
+				var fragments = data.fragments || (data.data && data.data.fragments);
+				var cartHash = data.cart_hash || (data.data && data.data.cart_hash);
+				if (typeof jQuery !== 'undefined' && fragments) {
+					jQuery(document.body).trigger('added_to_cart', [fragments, cartHash]);
 				}
-			})
-			.catch(function(err) {
-				console.error('[CS Plugin] AJAX error:', err);
+			}
+
+			var restUrl = csVariantConfig.restAddToCartUrl;
+			var restNonce = csVariantConfig.restNonce;
+			var ajaxUrl = csVariantConfig.ajaxUrl;
+
+			var restAttempt = (restUrl && restNonce)
+				? fetch(restUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': restNonce,
+						'X-Requested-With': 'XMLHttpRequest'
+					},
+					credentials: 'same-origin',
+					body: JSON.stringify(formDataToObject(formData))
+				}).then(handleCartResponse).then(applyFragments)
+				: Promise.reject(new Error('no REST'));
+
+			restAttempt.catch(function(err) {
+				console.warn('[CS Plugin] REST add-to-cart failed, falling back to admin-ajax.php:', err && err.message ? err.message : err);
+				return fetch(ajaxUrl, {
+					method: 'POST',
+					body: formData,
+					credentials: 'same-origin',
+					headers: { 'X-Requested-With': 'XMLHttpRequest' }
+				}).then(handleCartResponse).then(applyFragments);
+			}).catch(function(err) {
+				console.error('[CS Plugin] Add to cart error:', err && err.message ? err.message : err);
 			});
 		});
 	})();
@@ -983,14 +2158,56 @@ add_action( 'wp_footer', function () {
 
 add_action( 'woocommerce_order_item_meta_end', function ( $item_id, $item, $order, $plain_text ) {
 	$design_url = $item->get_meta( '_customizer_design_url' );
-	if ( ! $design_url ) {
+	$sides_json = $item->get_meta( '_customizer_sides_json' );
+	$sides      = [];
+	if ( is_string( $sides_json ) && $sides_json !== '' ) {
+		$decoded = json_decode( $sides_json, true );
+		if ( is_array( $decoded ) ) {
+			$sides = cs_sanitize_customizer_sides_array( $decoded );
+		}
+	}
+	if ( ! $design_url && empty( $sides ) ) {
 		return;
 	}
 
+	$preview_href = cs_get_stacked_preview_url_for_order_item( $item );
+
 	if ( $plain_text ) {
-		echo "\nCustom Design: " . esc_url( $design_url ) . "\n";
+		if ( count( $sides ) > 1 ) {
+			echo "\nCustom Design: multiple sides (see HTML email)\n";
+		} elseif ( $design_url ) {
+			if ( preg_match( '#^data:image/#i', $design_url ) ) {
+				echo "\nCustom Design: (see HTML email for image)\n";
+			} else {
+				echo "\nCustom Design: " . esc_url( $design_url ) . "\n";
+			}
+		}
+		if ( $preview_href && strpos( $preview_href, 'http' ) === 0 ) {
+			echo 'Full preview (product + design): ' . esc_url( $preview_href ) . "\n";
+		}
 	} else {
 		echo '<br/><small style="color:#666;">Custom Design:</small><br/>';
-		echo '<img src="' . esc_url( $design_url ) . '" alt="Custom Design" style="max-width:100px;border-radius:4px;margin-top:4px;" />';
+		if ( count( $sides ) > 1 ) {
+			echo '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">';
+			foreach ( $sides as $side ) {
+				$u = isset( $side['url'] ) ? $side['url'] : '';
+				$v = isset( $side['view'] ) ? (string) $side['view'] : '';
+				if ( $u === '' ) {
+					continue;
+				}
+				echo '<span style="display:inline-block;text-align:center;">';
+				echo '<img src="' . cs_esc_design_attr( $u ) . '" alt="" style="max-width:72px;border-radius:4px;margin-top:4px;display:block;border:1px solid #ddd;" />';
+				if ( $v !== '' ) {
+					echo '<span style="font-size:10px;color:#666;text-transform:capitalize;">' . esc_html( $v ) . '</span>';
+				}
+				echo '</span>';
+			}
+			echo '</div>';
+		} elseif ( $design_url ) {
+			echo '<img src="' . cs_esc_design_attr( $design_url ) . '" alt="Custom Design" style="max-width:100px;border-radius:4px;margin-top:4px;" />';
+		}
+		if ( $preview_href ) {
+			echo '<br/><a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener" style="font-size:12px;">View product + design (full preview)</a>';
+		}
 	}
 }, 10, 4 );
