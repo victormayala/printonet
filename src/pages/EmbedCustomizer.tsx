@@ -123,12 +123,12 @@ export default function EmbedCustomizer() {
   }
 
   return (
-    <BrandConfigContext.Provider value={brandConfig}>
+    <BrandConfigContext.Provider value={effectiveBrand}>
       <DesignStudio
         embedMode
         sessionId={sessionId}
         embedProductData={productData}
-        brandConfig={brandConfig}
+        brandConfig={effectiveBrand}
       />
     </BrandConfigContext.Provider>
   );
