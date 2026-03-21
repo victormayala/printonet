@@ -429,6 +429,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [fontFamily, setFontFamily] = useState<string>("Inter");
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const previousViewRef = useRef<ViewSide>("front");
+  const isLoadingViewRef = useRef(false);
+
+  // Save current canvas state to the active view's slot
+  function saveViewState() {
+    if (isLoadingViewRef.current) return;
+    if (!fabricRef.current) return;
+    const canvas = fabricRef.current;
+    viewStatesRef.current[previousViewRef.current] = JSON.stringify(canvas.toJSON());
+  }
   
   // Set up embed product data
   useEffect(() => {
