@@ -620,6 +620,7 @@ add_action( 'admin_init', function () {
 	register_setting( 'cs_settings', 'cs_base_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
 	register_setting( 'cs_settings', 'cs_api_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
 	register_setting( 'cs_settings', 'cs_anon_key', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+	register_setting( 'cs_settings', 'cs_user_id', [ 'sanitize_callback' => 'sanitize_text_field' ] );
 	register_setting( 'cs_settings', 'cs_button_label', [ 'sanitize_callback' => 'sanitize_text_field' ] );
 	register_setting( 'cs_settings', 'cs_button_position', [ 'sanitize_callback' => 'sanitize_text_field' ] );
 } );
@@ -628,6 +629,7 @@ function cs_render_settings_page() {
 	$base_url        = get_option( 'cs_base_url', '' );
 	$api_url         = get_option( 'cs_api_url', '' );
 	$anon_key        = get_option( 'cs_anon_key', '' );
+	$user_id         = get_option( 'cs_user_id', '' );
 	$button_label    = get_option( 'cs_button_label', '🎨 Customize This Product' );
 	$button_position = get_option( 'cs_button_position', 'before_add_to_cart' );
 	?>
@@ -662,6 +664,13 @@ function cs_render_settings_page() {
 					<td>
 						<input type="text" name="cs_anon_key" value="<?php echo esc_attr( $anon_key ); ?>" class="regular-text" />
 						<p class="description">Public API key for product fetching.</p>
+					</td>
+				</tr>
+				<tr>
+					<th>User ID</th>
+					<td>
+						<input type="text" name="cs_user_id" value="<?php echo esc_attr( $user_id ); ?>" class="regular-text" placeholder="Your Customizer Studio user ID (UUID)" />
+						<p class="description">Your account ID from Customizer Studio. Required for branding to appear in the customizer. Find it on your Profile Settings page.</p>
 					</td>
 				</tr>
 				<tr>
@@ -780,6 +789,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		'apiUrl'  => $api_url,
 		'baseUrl' => $base_url,
 		'anonKey' => $anon_key,
+		'userId'  => get_option( 'cs_user_id', '' ),
 	] );
 } );
 
@@ -792,8 +802,9 @@ add_filter( 'script_loader_tag', function ( $tag, $handle ) {
 	$api_url  = esc_attr( get_option( 'cs_api_url', '' ) );
 	$base_url = esc_attr( untrailingslashit( get_option( 'cs_base_url', '' ) ) );
 	$anon_key = esc_attr( get_option( 'cs_anon_key', '' ) );
+	$user_id  = esc_attr( get_option( 'cs_user_id', '' ) );
 
-	$tag = str_replace( ' src=', " data-api-url=\"{$api_url}\" data-base-url=\"{$base_url}\" data-anon-key=\"{$anon_key}\" src=", $tag );
+	$tag = str_replace( ' src=', " data-api-url=\"{$api_url}\" data-base-url=\"{$base_url}\" data-anon-key=\"{$anon_key}\" data-user-id=\"{$user_id}\" src=", $tag );
 
 	return $tag;
 }, 10, 2 );

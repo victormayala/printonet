@@ -30,6 +30,7 @@
   var BASE_URL = scriptTag && scriptTag.getAttribute('data-base-url') || '';
   var SUPABASE_URL = API_URL.replace('/functions/v1', '');
   var ANON_KEY = scriptTag && scriptTag.getAttribute('data-anon-key') || '';
+  var USER_ID = scriptTag && scriptTag.getAttribute('data-user-id') || '';
 
   var _products = null; // cached after first fetch
   var _pickerOverlay = null;
@@ -73,7 +74,7 @@
         image_side2: product.image_side2 || undefined,
         variants: product.variants || [],
       },
-      userId: product.user_id || null,
+      userId: product.user_id || USER_ID || null,
       wcProductId: wcProductId || null,
       onComplete: function (result) {
         var evt = new CustomEvent('customizer:complete', { detail: result });
