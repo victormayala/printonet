@@ -482,8 +482,8 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
     setIntegration(data);
     if (data) {
       setSiteUrl(data.store_url);
-      setConsumerKey(data.credentials?.consumer_key || "");
-      setConsumerSecret(data.credentials?.consumer_secret || "");
+      setConsumerKey((data.credentials as any)?.consumer_key || "");
+      setConsumerSecret((data.credentials as any)?.consumer_secret || "");
     }
     setLoadingIntegration(false);
   };
