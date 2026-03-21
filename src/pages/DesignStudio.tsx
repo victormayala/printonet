@@ -543,29 +543,29 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const canvas = fabricRef.current;
     const prevView = previousViewRef.current;
 
-    // Save previous view's state
-    if (prevView !== activeView) {
-      viewStatesRef.current[prevView] = JSON.stringify(canvas.toJSON());
-    }
-
     const hasInventoryBackground = Boolean(getCurrentImageUrl());
 
-    // Load new view's state
-    const savedState = viewStatesRef.current[activeView];
-    if (savedState && prevView !== activeView) {
-      canvas.loadFromJSON(savedState).then(() => {
-        canvas.backgroundImage = undefined;
-        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
-        canvas.renderAll();
-        updateLayers();
-        setSelectedObject(null);
-        // Reset undo/redo for new view
-        setUndoStack([savedState]);
-        setRedoStack([]);
-      });
-    } else {
-      if (prevView !== activeView) {
-        // New view with no saved state — clear canvas
+    if (prevView !== activeView) {
+      // Save previous view one more time (belt-and-suspenders)
+      viewStatesRef.current[prevView] = JSON.stringify(canvas.toJSON());
+
+      // Load new view's state
+      const savedState = viewStatesRef.current[activeView];
+      isLoadingViewRef.current = true;
+
+      if (savedState) {
+        canvas.loadFromJSON(savedState).then(() => {
+          canvas.backgroundImage = undefined;
+          canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+          canvas.renderAll();
+          updateLayers();
+          setSelectedObject(null);
+          setUndoStack([savedState]);
+          setRedoStack([]);
+          isLoadingViewRef.current = false;
+          previousViewRef.current = activeView;
+        });
+      } else {
         canvas.clear();
         canvas.backgroundImage = undefined;
         canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
@@ -574,14 +574,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         setSelectedObject(null);
         setUndoStack([JSON.stringify(canvas.toJSON())]);
         setRedoStack([]);
-      } else {
-        canvas.backgroundImage = undefined;
-        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
-        canvas.renderAll();
+        isLoadingViewRef.current = false;
+        previousViewRef.current = activeView;
       }
+    } else {
+      canvas.backgroundImage = undefined;
+      canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+      canvas.renderAll();
     }
-
-    previousViewRef.current = activeView;
   }, [activeView, invProduct, selectedVariant, canvasReady]);
 
   function handleSelection(e: any) {
