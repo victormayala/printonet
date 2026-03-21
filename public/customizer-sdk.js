@@ -63,6 +63,7 @@
       body: JSON.stringify({
         product: options.product,
         external_ref: options.externalRef || null,
+        user_id: options.userId || null,
       }),
     })
       .then(function (res) { return res.json(); })

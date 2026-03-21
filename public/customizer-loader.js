@@ -73,6 +73,7 @@
         image_side2: product.image_side2 || undefined,
         variants: product.variants || [],
       },
+      userId: product.user_id || null,
       wcProductId: wcProductId || null,
       onComplete: function (result) {
         var evt = new CustomEvent('customizer:complete', { detail: result });

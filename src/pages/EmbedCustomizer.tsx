@@ -48,6 +48,9 @@ export default function EmbedCustomizer() {
     applyBrandCSS(document.documentElement, brandConfig);
   }, [brandConfig]);
 
+  // Fetch brand config from DB when session has a user_id
+  const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
+
   useEffect(() => {
     if (!sessionId) return;
 
@@ -56,13 +59,37 @@ export default function EmbedCustomizer() {
       .select("*")
       .eq("id", sessionId)
       .single()
-      .then(({ data, error: err }) => {
+      .then(async ({ data, error: err }) => {
         if (err || !data) {
           setError("Session not found or expired.");
         } else if (data.status === "completed") {
           setError("This session has already been completed.");
         } else {
           setProductData(data.product_data as unknown as SessionProductData);
+
+          // Fetch brand config if session has a user_id and no URL brand params
+          const userId = (data as any).user_id;
+          if (userId && !searchParams.get("brandPrimary") && !searchParams.get("brandTheme")) {
+            const { data: brandData } = await supabase
+              .from("brand_configs")
+              .select("*")
+              .eq("user_id", userId)
+              .order("updated_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (brandData) {
+              setDbBrandConfig({
+                name: brandData.name || DEFAULT_BRAND_CONFIG.name,
+                logoUrl: brandData.logo_url || DEFAULT_BRAND_CONFIG.logoUrl,
+                theme: (brandData.theme === "light" || brandData.theme === "dark") ? brandData.theme : DEFAULT_BRAND_CONFIG.theme,
+                primaryColor: brandData.primary_color || DEFAULT_BRAND_CONFIG.primaryColor,
+                accentColor: brandData.accent_color || DEFAULT_BRAND_CONFIG.accentColor,
+                fontFamily: brandData.font_family || DEFAULT_BRAND_CONFIG.fontFamily,
+                borderRadius: brandData.border_radius ?? DEFAULT_BRAND_CONFIG.borderRadius,
+              });
+            }
+          }
         }
         setLoading(false);
       });

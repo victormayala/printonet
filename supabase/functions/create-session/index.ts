@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { product, external_ref } = await req.json();
+    const { product, external_ref, user_id } = await req.json();
 
     if (!product || !product.name) {
       return new Response(
@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
       .insert({
         product_data: product,
         external_ref: external_ref || null,
+        user_id: user_id || null,
         status: "active",
       })
       .select("id")
