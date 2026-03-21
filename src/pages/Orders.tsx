@@ -42,6 +42,15 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function copyPrintLink(sessionId: string) {
+    const url = `${window.location.origin}/print/${sessionId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(sessionId);
+    toast({ title: "Print link copied!" });
+    setTimeout(() => setCopiedId(null), 2000);
+  }
 
   useEffect(() => {
     if (user) fetchSessions();
