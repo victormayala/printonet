@@ -21,9 +21,10 @@ export default function EmbedCustomizer() {
   const [productData, setProductData] = useState<SessionProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
 
   // Parse brand config from URL params
-  const brandConfig = useMemo<BrandConfig>(() => {
+  const urlBrandConfig = useMemo<BrandConfig | null>(() => {
     const theme = searchParams.get("brandTheme");
     const primary = searchParams.get("brandPrimary");
     const accent = searchParams.get("brandAccent");
@@ -31,6 +32,10 @@ export default function EmbedCustomizer() {
     const radius = searchParams.get("brandRadius");
     const name = searchParams.get("brandName");
     const logoUrl = searchParams.get("brandLogo");
+
+    if (!theme && !primary && !accent && !font && !radius && !name && !logoUrl) {
+      return null;
+    }
 
     return {
       name: name || DEFAULT_BRAND_CONFIG.name,
@@ -43,10 +48,15 @@ export default function EmbedCustomizer() {
     };
   }, [searchParams]);
 
+  // Effective brand: URL params > DB config > defaults
+  const effectiveBrand = urlBrandConfig || dbBrandConfig || DEFAULT_BRAND_CONFIG;
+
   // Apply brand CSS vars to document root when in embed mode
   useEffect(() => {
-    applyBrandCSS(document.documentElement, brandConfig);
-  }, [brandConfig]);
+    applyBrandCSS(document.documentElement, effectiveBrand);
+  }, [effectiveBrand]);
+
+  // Fetch session and brand config from DB
 
   useEffect(() => {
     if (!sessionId) return;
@@ -56,13 +66,37 @@ export default function EmbedCustomizer() {
       .select("*")
       .eq("id", sessionId)
       .single()
-      .then(({ data, error: err }) => {
+      .then(async ({ data, error: err }) => {
         if (err || !data) {
           setError("Session not found or expired.");
         } else if (data.status === "completed") {
           setError("This session has already been completed.");
         } else {
           setProductData(data.product_data as unknown as SessionProductData);
+
+          // Fetch brand config if session has a user_id and no URL brand params
+          const userId = (data as any).user_id;
+          if (userId && !searchParams.get("brandPrimary") && !searchParams.get("brandTheme")) {
+            const { data: brandData } = await supabase
+              .from("brand_configs")
+              .select("*")
+              .eq("user_id", userId)
+              .order("updated_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (brandData) {
+              setDbBrandConfig({
+                name: brandData.name || DEFAULT_BRAND_CONFIG.name,
+                logoUrl: brandData.logo_url || DEFAULT_BRAND_CONFIG.logoUrl,
+                theme: (brandData.theme === "light" || brandData.theme === "dark") ? brandData.theme : DEFAULT_BRAND_CONFIG.theme,
+                primaryColor: brandData.primary_color || DEFAULT_BRAND_CONFIG.primaryColor,
+                accentColor: brandData.accent_color || DEFAULT_BRAND_CONFIG.accentColor,
+                fontFamily: brandData.font_family || DEFAULT_BRAND_CONFIG.fontFamily,
+                borderRadius: brandData.border_radius ?? DEFAULT_BRAND_CONFIG.borderRadius,
+              });
+            }
+          }
         }
         setLoading(false);
       });
@@ -88,12 +122,12 @@ export default function EmbedCustomizer() {
   }
 
   return (
-    <BrandConfigContext.Provider value={brandConfig}>
+    <BrandConfigContext.Provider value={effectiveBrand}>
       <DesignStudio
         embedMode
         sessionId={sessionId}
         embedProductData={productData}
-        brandConfig={brandConfig}
+        brandConfig={effectiveBrand}
       />
     </BrandConfigContext.Provider>
   );
