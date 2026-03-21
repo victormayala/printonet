@@ -1,4 +1,4 @@
-import { Package, Paintbrush, Code, User, LogOut, Home } from "lucide-react";
+import { Package, Paintbrush, Code, User, LogOut, Home, ShoppingBag, LayoutTemplate } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,8 @@ import {
 
 const navItems = [
   { title: "Products", url: "/products", icon: Package },
+  { title: "Orders", url: "/orders", icon: ShoppingBag },
+  { title: "Templates", url: "/templates", icon: LayoutTemplate },
   { title: "Brand Settings", url: "/brand-settings", icon: Paintbrush },
   { title: "Developers", url: "/developers", icon: Code },
   { title: "Profile", url: "/profile", icon: User },

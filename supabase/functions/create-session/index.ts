@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { product, external_ref, user_id } = await req.json();
+    const { product, external_ref, user_id, customer_email, customer_name, order_notes } = await req.json();
 
     if (!product || !product.name) {
       return new Response(
@@ -32,6 +32,9 @@ Deno.serve(async (req) => {
         product_data: product,
         external_ref: external_ref || null,
         user_id: user_id || null,
+        customer_email: customer_email || null,
+        customer_name: customer_name || null,
+        order_notes: order_notes || null,
         status: "active",
       })
       .select("id")

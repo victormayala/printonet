@@ -13,6 +13,8 @@ import Developers from "./pages/Developers";
 import Demo from "./pages/Demo";
 import BrandSettings from "./pages/BrandSettings";
 import Products from "./pages/Products";
+import Orders from "./pages/Orders";
+import Templates from "./pages/Templates";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ProfileSettings from "./pages/ProfileSettings";
@@ -42,6 +44,8 @@ const App = () => (
             <Route path="/demo" element={<Demo />} />
             <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
             <Route path="/products" element={<DashboardRoute><Products /></DashboardRoute>} />
+            <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
+            <Route path="/templates" element={<DashboardRoute><Templates /></DashboardRoute>} />
             <Route path="/brand-settings" element={<DashboardRoute><BrandSettings /></DashboardRoute>} />
             <Route path="/developers" element={<DashboardRoute><Developers /></DashboardRoute>} />
             <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
