@@ -176,6 +176,9 @@ export default function BrandSettings() {
   async function handleSave() {
     setSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       const payload = {
         name: config.name || null,
         logo_url: config.logoUrl || null,
@@ -184,6 +187,7 @@ export default function BrandSettings() {
         accent_color: config.accentColor,
         font_family: config.fontFamily,
         border_radius: config.borderRadius,
+        user_id: user.id,
       };
 
       if (savedConfigId) {
