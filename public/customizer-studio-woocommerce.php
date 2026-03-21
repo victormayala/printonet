@@ -667,6 +667,13 @@ function cs_render_settings_page() {
 					</td>
 				</tr>
 				<tr>
+					<th>User ID</th>
+					<td>
+						<input type="text" name="cs_user_id" value="<?php echo esc_attr( $user_id ); ?>" class="regular-text" placeholder="Your Customizer Studio user ID (UUID)" />
+						<p class="description">Your account ID from Customizer Studio. Required for branding to appear in the customizer. Find it on your Profile Settings page.</p>
+					</td>
+				</tr>
+				<tr>
 					<th>Button Label</th>
 					<td>
 						<input type="text" name="cs_button_label" value="<?php echo esc_attr( $button_label ); ?>" class="regular-text" />
