@@ -182,14 +182,28 @@ export default function Orders() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedSession(session)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyPrintLink(session.id)}
+                      >
+                        {copiedId === session.id ? (
+                          <Check className="h-4 w-4 mr-1 text-green-500" />
+                        ) : (
+                          <Printer className="h-4 w-4 mr-1" />
+                        )}
+                        Print Link
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedSession(session)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
