@@ -21,6 +21,7 @@ export default function EmbedCustomizer() {
   const [productData, setProductData] = useState<SessionProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
 
   // Parse brand config from URL params
   const urlBrandConfig = useMemo<BrandConfig | null>(() => {
@@ -32,7 +33,6 @@ export default function EmbedCustomizer() {
     const name = searchParams.get("brandName");
     const logoUrl = searchParams.get("brandLogo");
 
-    // Only use URL params if at least one brand param was actually provided
     if (!theme && !primary && !accent && !font && !radius && !name && !logoUrl) {
       return null;
     }
@@ -56,8 +56,7 @@ export default function EmbedCustomizer() {
     applyBrandCSS(document.documentElement, effectiveBrand);
   }, [effectiveBrand]);
 
-  // Fetch brand config from DB when session has a user_id
-  const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
+  // Fetch session and brand config from DB
 
   useEffect(() => {
     if (!sessionId) return;
