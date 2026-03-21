@@ -438,16 +438,21 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   // Apply brand CSS vars when brand config changes
   useEffect(() => {
-    if (brand !== DEFAULT_BRAND_CONFIG) {
+    const isCustomBrand = brand.primaryColor !== DEFAULT_BRAND_CONFIG.primaryColor ||
+      brand.accentColor !== DEFAULT_BRAND_CONFIG.accentColor ||
+      brand.theme !== DEFAULT_BRAND_CONFIG.theme ||
+      brand.fontFamily !== DEFAULT_BRAND_CONFIG.fontFamily ||
+      brand.borderRadius !== DEFAULT_BRAND_CONFIG.borderRadius;
+
+    if (isCustomBrand) {
       applyBrandCSS(document.documentElement, brand);
     }
     return () => {
-      // Reset CSS vars when leaving (only if we applied them)
-      if (!embedMode && brand !== DEFAULT_BRAND_CONFIG) {
+      if (isCustomBrand) {
         applyBrandCSS(document.documentElement, DEFAULT_BRAND_CONFIG);
       }
     };
-  }, [brand, embedMode]);
+  }, [brand]);
 
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(false);
