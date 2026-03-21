@@ -59,9 +59,12 @@ export type Database = {
       customizer_sessions: {
         Row: {
           created_at: string
+          customer_email: string | null
+          customer_name: string | null
           design_output: Json | null
           external_ref: string | null
           id: string
+          order_notes: string | null
           product_data: Json
           status: string
           updated_at: string
@@ -69,9 +72,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
           design_output?: Json | null
           external_ref?: string | null
           id?: string
+          order_notes?: string | null
           product_data: Json
           status?: string
           updated_at?: string
@@ -79,13 +85,55 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
           design_output?: Json | null
           external_ref?: string | null
           id?: string
+          order_notes?: string | null
           product_data?: Json
           status?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      design_templates: {
+        Row: {
+          canvas_data: Json
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          name: string
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          canvas_data?: Json
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          canvas_data?: Json
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
