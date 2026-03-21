@@ -26,6 +26,7 @@ export type Database = {
           primary_color: string
           theme: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           accent_color?: string
@@ -38,6 +39,7 @@ export type Database = {
           primary_color?: string
           theme?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           accent_color?: string
@@ -50,6 +52,7 @@ export type Database = {
           primary_color?: string
           theme?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
