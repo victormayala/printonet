@@ -495,9 +495,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", () => setSelectedObject(null));
-    canvas.on("object:modified", () => { saveState(); updateLayers(); });
-    canvas.on("object:added", () => updateLayers());
-    canvas.on("object:removed", () => updateLayers());
+    canvas.on("object:modified", () => { saveViewState(); saveState(); updateLayers(); });
+    canvas.on("object:added", () => { saveViewState(); updateLayers(); });
+    canvas.on("object:removed", () => { saveViewState(); updateLayers(); });
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
