@@ -190,6 +190,8 @@ function ProductForm({
       base_price: parseFloat(basePrice) || 0,
       image_front: imageFront || null,
       image_back: imageBack || null,
+      image_side1: imageLeft || null,
+      image_side2: imageRight || null,
       is_active: isActive,
       ...(product ? {} : { user_id: user?.id }),
     };
