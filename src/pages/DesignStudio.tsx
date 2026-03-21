@@ -429,6 +429,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [fontFamily, setFontFamily] = useState<string>("Inter");
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const previousViewRef = useRef<ViewSide>("front");
+  const isLoadingViewRef = useRef(false);
+
+  // Save current canvas state to the active view's slot
+  function saveViewState() {
+    if (isLoadingViewRef.current) return;
+    if (!fabricRef.current) return;
+    const canvas = fabricRef.current;
+    viewStatesRef.current[previousViewRef.current] = JSON.stringify(canvas.toJSON());
+  }
   
   // Set up embed product data
   useEffect(() => {
@@ -495,9 +504,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", () => setSelectedObject(null));
-    canvas.on("object:modified", () => { saveState(); updateLayers(); });
-    canvas.on("object:added", () => updateLayers());
-    canvas.on("object:removed", () => updateLayers());
+    canvas.on("object:modified", () => { saveViewState(); saveState(); updateLayers(); });
+    canvas.on("object:added", () => { saveViewState(); updateLayers(); });
+    canvas.on("object:removed", () => { saveViewState(); updateLayers(); });
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
@@ -534,29 +543,29 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const canvas = fabricRef.current;
     const prevView = previousViewRef.current;
 
-    // Save previous view's state
-    if (prevView !== activeView) {
-      viewStatesRef.current[prevView] = JSON.stringify(canvas.toJSON());
-    }
-
     const hasInventoryBackground = Boolean(getCurrentImageUrl());
 
-    // Load new view's state
-    const savedState = viewStatesRef.current[activeView];
-    if (savedState && prevView !== activeView) {
-      canvas.loadFromJSON(savedState).then(() => {
-        canvas.backgroundImage = undefined;
-        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
-        canvas.renderAll();
-        updateLayers();
-        setSelectedObject(null);
-        // Reset undo/redo for new view
-        setUndoStack([savedState]);
-        setRedoStack([]);
-      });
-    } else {
-      if (prevView !== activeView) {
-        // New view with no saved state — clear canvas
+    if (prevView !== activeView) {
+      // Save previous view one more time (belt-and-suspenders)
+      viewStatesRef.current[prevView] = JSON.stringify(canvas.toJSON());
+
+      // Load new view's state
+      const savedState = viewStatesRef.current[activeView];
+      isLoadingViewRef.current = true;
+
+      if (savedState) {
+        canvas.loadFromJSON(savedState).then(() => {
+          canvas.backgroundImage = undefined;
+          canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+          canvas.renderAll();
+          updateLayers();
+          setSelectedObject(null);
+          setUndoStack([savedState]);
+          setRedoStack([]);
+          isLoadingViewRef.current = false;
+          previousViewRef.current = activeView;
+        });
+      } else {
         canvas.clear();
         canvas.backgroundImage = undefined;
         canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
@@ -565,14 +574,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         setSelectedObject(null);
         setUndoStack([JSON.stringify(canvas.toJSON())]);
         setRedoStack([]);
-      } else {
-        canvas.backgroundImage = undefined;
-        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
-        canvas.renderAll();
+        isLoadingViewRef.current = false;
+        previousViewRef.current = activeView;
       }
+    } else {
+      canvas.backgroundImage = undefined;
+      canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+      canvas.renderAll();
     }
-
-    previousViewRef.current = activeView;
   }, [activeView, invProduct, selectedVariant, canvasReady]);
 
   function handleSelection(e: any) {
