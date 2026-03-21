@@ -18,6 +18,7 @@ import Templates from "./pages/Templates";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ProfileSettings from "./pages/ProfileSettings";
+import PrintView from "./pages/PrintView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
