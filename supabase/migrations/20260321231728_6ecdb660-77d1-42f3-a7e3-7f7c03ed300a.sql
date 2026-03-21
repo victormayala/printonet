@@ -1,0 +1,1 @@
+ALTER TABLE public.customizer_sessions ADD COLUMN user_id uuid;
