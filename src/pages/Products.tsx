@@ -147,9 +147,18 @@ function ProductForm({
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
   const [imageFront, setImageFront] = useState(product?.image_front || "");
   const [imageBack, setImageBack] = useState(product?.image_back || "");
+  const [imageLeft, setImageLeft] = useState(product?.image_side1 || "");
+  const [imageRight, setImageRight] = useState(product?.image_side2 || "");
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+
+  const IMAGE_SIDES = [
+    { key: "front", label: "Front", value: imageFront, setter: setImageFront },
+    { key: "back", label: "Back", value: imageBack, setter: setImageBack },
+    { key: "left", label: "Left", value: imageLeft, setter: setImageLeft },
+    { key: "right", label: "Right", value: imageRight, setter: setImageRight },
+  ];
 
   const uploadImage = async (file: File, side: string) => {
     setUploading(side);
@@ -162,8 +171,8 @@ function ProductForm({
       return;
     }
     const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
-    const setter = side === "front" ? setImageFront : setImageBack;
-    setter(urlData.publicUrl);
+    const sideConfig = IMAGE_SIDES.find(s => s.key === side);
+    if (sideConfig) sideConfig.setter(urlData.publicUrl);
     setUploading(null);
   };
 
@@ -181,6 +190,8 @@ function ProductForm({
       base_price: parseFloat(basePrice) || 0,
       image_front: imageFront || null,
       image_back: imageBack || null,
+      image_side1: imageLeft || null,
+      image_side2: imageRight || null,
       is_active: isActive,
       ...(product ? {} : { user_id: user?.id }),
     };
@@ -228,45 +239,42 @@ function ProductForm({
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {(["front", "back"] as const).map((side) => {
-          const value = side === "front" ? imageFront : imageBack;
-          return (
-            <div key={side} className="space-y-2">
-              <Label className="capitalize">{side} Image</Label>
-              {value ? (
-                <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
-                  <img src={value} alt={side} className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => (side === "front" ? setImageFront("") : setImageBack(""))}
-                    className="absolute top-2 right-2 rounded-full bg-background/80 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
-                  {uploading === side ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  ) : (
-                    <>
-                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Upload {side}</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadImage(f, side);
-                    }}
-                  />
-                </label>
-              )}
-            </div>
-          );
-        })}
+        {IMAGE_SIDES.map(({ key, label, value, setter }) => (
+          <div key={key} className="space-y-2">
+            <Label>{label} Image</Label>
+            {value ? (
+              <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
+                <img src={value} alt={label} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => setter("")}
+                  className="absolute top-2 right-2 rounded-full bg-background/80 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
+                {uploading === key ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Upload {label.toLowerCase()}</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadImage(f, key);
+                  }}
+                />
+              </label>
+            )}
+          </div>
+        ))}
       </div>
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
