@@ -789,6 +789,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		'apiUrl'  => $api_url,
 		'baseUrl' => $base_url,
 		'anonKey' => $anon_key,
+		'userId'  => get_option( 'cs_user_id', '' ),
 	] );
 } );
 
