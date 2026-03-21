@@ -802,8 +802,9 @@ add_filter( 'script_loader_tag', function ( $tag, $handle ) {
 	$api_url  = esc_attr( get_option( 'cs_api_url', '' ) );
 	$base_url = esc_attr( untrailingslashit( get_option( 'cs_base_url', '' ) ) );
 	$anon_key = esc_attr( get_option( 'cs_anon_key', '' ) );
+	$user_id  = esc_attr( get_option( 'cs_user_id', '' ) );
 
-	$tag = str_replace( ' src=', " data-api-url=\"{$api_url}\" data-base-url=\"{$base_url}\" data-anon-key=\"{$anon_key}\" src=", $tag );
+	$tag = str_replace( ' src=', " data-api-url=\"{$api_url}\" data-base-url=\"{$base_url}\" data-anon-key=\"{$anon_key}\" data-user-id=\"{$user_id}\" src=", $tag );
 
 	return $tag;
 }, 10, 2 );
