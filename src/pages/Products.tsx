@@ -305,7 +305,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     setIntegration(data);
     if (data) {
       setStoreUrl(data.store_url);
-      setToken(data.credentials?.access_token || "");
+      setToken((data.credentials as any)?.access_token || "");
     }
     setLoadingIntegration(false);
   };
