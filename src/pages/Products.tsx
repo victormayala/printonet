@@ -147,9 +147,18 @@ function ProductForm({
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
   const [imageFront, setImageFront] = useState(product?.image_front || "");
   const [imageBack, setImageBack] = useState(product?.image_back || "");
+  const [imageLeft, setImageLeft] = useState(product?.image_side1 || "");
+  const [imageRight, setImageRight] = useState(product?.image_side2 || "");
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+
+  const IMAGE_SIDES = [
+    { key: "front", label: "Front", value: imageFront, setter: setImageFront },
+    { key: "back", label: "Back", value: imageBack, setter: setImageBack },
+    { key: "left", label: "Left", value: imageLeft, setter: setImageLeft },
+    { key: "right", label: "Right", value: imageRight, setter: setImageRight },
+  ];
 
   const uploadImage = async (file: File, side: string) => {
     setUploading(side);
@@ -162,8 +171,8 @@ function ProductForm({
       return;
     }
     const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
-    const setter = side === "front" ? setImageFront : setImageBack;
-    setter(urlData.publicUrl);
+    const sideConfig = IMAGE_SIDES.find(s => s.key === side);
+    if (sideConfig) sideConfig.setter(urlData.publicUrl);
     setUploading(null);
   };
 
