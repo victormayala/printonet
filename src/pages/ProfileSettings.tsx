@@ -128,6 +128,27 @@ export default function ProfileSettings() {
               <p className="text-xs text-muted-foreground">Click to change avatar</p>
             </div>
 
+            {/* User ID (for integrations) */}
+            <div className="space-y-2">
+              <Label>User ID</Label>
+              <div className="flex gap-2">
+                <Input value={user?.id ?? ""} disabled className="bg-muted font-mono text-xs" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(user?.id ?? "");
+                    toast({ title: "Copied!", description: "User ID copied to clipboard" });
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Use this in your WooCommerce plugin settings for branding to appear.</p>
+            </div>
+
             {/* Email (read-only) */}
             <div className="space-y-2">
               <Label>Email</Label>
