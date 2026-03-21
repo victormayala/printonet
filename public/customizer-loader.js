@@ -69,6 +69,8 @@
         category: product.category,
         image_front: product.image_front || undefined,
         image_back: product.image_back || undefined,
+        image_side1: product.image_side1 || undefined,
+        image_side2: product.image_side2 || undefined,
         variants: product.variants || [],
       },
       wcProductId: wcProductId || null,
