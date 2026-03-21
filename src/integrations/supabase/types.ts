@@ -158,6 +158,39 @@ export type Database = {
         }
         Relationships: []
       }
+      store_integrations: {
+        Row: {
+          created_at: string
+          credentials: Json
+          id: string
+          last_synced_at: string | null
+          platform: string
+          store_url: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credentials?: Json
+          id?: string
+          last_synced_at?: string | null
+          platform: string
+          store_url: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credentials?: Json
+          id?: string
+          last_synced_at?: string | null
+          platform?: string
+          store_url?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
