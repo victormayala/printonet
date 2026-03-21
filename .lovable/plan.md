@@ -1,34 +1,58 @@
 
 
-## Plan: Add "Get Embed Code" per Product
+## Plan: Design Templates Library + Order Management
 
-### Problem
-After importing products, store owners have no guided next step to embed the customizer in their store. The developer docs exist but require manual work to construct the SDK snippet for each product.
+### Feature 1: Design Templates / Clipart Library
 
-### What We'll Build
+**What it does**: Store owners can create and manage reusable design templates (pre-made layouts with text, graphics, positioning) that end-customers see in the customizer as starting points. Also includes a curated clipart/graphics library beyond the existing Lucide icons.
 
-**1. "Get Embed Code" button on each product card in `/products`**
-- Add a button (e.g., code icon) on each product row/card
-- Opens a dialog/modal with a ready-to-use SDK snippet pre-filled with that product's data
+**New database table**: `design_templates`
+- `id`, `user_id`, `name`, `description`, `category` (e.g. "Sports", "Business", "Birthday"), `thumbnail_url`, `canvas_data` (JSON — serialized Fabric.js state), `is_public` (boolean — platform-wide vs user-private), `created_at`, `updated_at`
 
-**2. Pre-filled embed snippet dialog**
-- Generates a complete `CustomizerStudio.init()` + `CustomizerStudio.open()` code block using the product's actual data (name, category, images, variants)
-- Includes a copy-to-clipboard button
-- Shows a brief "How to use" note: paste into your store's product page HTML
-- Links to the full `/developers` docs for advanced options (brand theming, callbacks)
+**New storage bucket**: `template-thumbnails` (public)
 
-**3. Minor UX: "Next Steps" banner on Products page**
-- After products are imported, show a subtle info banner: "Your products are ready! Click the embed code button on any product to add the customizer to your store."
-- Links to `/developers` for full documentation
+**UI changes**:
+1. **Dashboard: Templates page (`/templates`)** — CRUD interface for store owners to manage their templates. "Create from current design" flow that captures the current canvas state from Design Studio
+2. **Design Studio: Templates panel** — New sidebar tab (alongside Clipart, Text Templates) showing browsable template cards grouped by category. Clicking one loads the full canvas state. Shows both the owner's custom templates and platform defaults
+3. **Sidebar nav** — Add "Templates" link between Products and Brand Settings
 
-### Technical Details
+**Flow**:
+- Store owner designs something in Design Studio → clicks "Save as Template" → names it, picks category → canvas JSON + thumbnail PNG saved
+- End-customer opens customizer → sees "Templates" tab → picks one → canvas loads with that design as a starting point, fully editable
 
-**Files modified:**
-- `src/pages/Products.tsx` — Add embed code button per product, embed code dialog component, and info banner
+---
 
-**Embed snippet generation logic:**
-- Read product fields (name, category, image_front, image_back, variants) and interpolate into the SDK template string
-- Use the app's `VITE_SUPABASE_URL` and `window.location.origin` for apiUrl/baseUrl (same as Developers page)
+### Feature 2: Order Management
 
-No new tables, edge functions, or backend changes needed.
+**What it does**: A dashboard for store owners to view completed customizer sessions, see design previews, download print-ready files, and track status.
+
+**Database changes**:
+- Add columns to `customizer_sessions`: `customer_email` (text, nullable), `customer_name` (text, nullable), `order_notes` (text, nullable)
+- Add RLS policy so authenticated users can view sessions linked to their `user_id`
+
+**UI changes**:
+1. **Dashboard: Orders page (`/orders`)** — Table/list view of completed sessions with:
+   - Product name (from `product_data`)
+   - Design thumbnail previews (from `design_output` image URLs)
+   - Status badge (active / completed)
+   - Date created
+   - External reference (WooCommerce order ID)
+   - "View Design" action → modal showing all side previews with download buttons
+   - Filters: status, date range, search by product/reference
+2. **Sidebar nav** — Add "Orders" link with a shopping bag icon
+
+**Files to create/modify**:
+- `src/pages/Templates.tsx` — New page
+- `src/pages/Orders.tsx` — New page  
+- `src/pages/DesignStudio.tsx` — Add "Save as Template" button + Templates panel tab
+- `src/components/DashboardSidebar.tsx` — Add nav items
+- `src/App.tsx` — Add routes
+- `supabase/migrations/` — New migration for `design_templates` table + session columns
+- `supabase/functions/create-session/index.ts` — Accept optional customer info
+
+**Implementation order**:
+1. Database migration (templates table, session columns, RLS)
+2. Orders page (simpler — reads existing data)
+3. Templates page (CRUD)
+4. Design Studio integration (save-as-template + templates browser panel)
 
