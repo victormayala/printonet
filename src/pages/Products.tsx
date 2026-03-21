@@ -14,7 +14,7 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List,
-  ArrowUpDown, SlidersHorizontal
+  ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
@@ -288,19 +288,58 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
   const [storeUrl, setStoreUrl] = useState("");
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [integration, setIntegration] = useState<any>(null);
+  const [loadingIntegration, setLoadingIntegration] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
 
-  const handleImport = async () => {
+  const fetchIntegration = async () => {
+    if (!user) return;
+    setLoadingIntegration(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("platform", "shopify")
+      .maybeSingle();
+    setIntegration(data);
+    if (data) {
+      setStoreUrl(data.store_url);
+      setToken((data.credentials as any)?.access_token || "");
+    }
+    setLoadingIntegration(false);
+  };
+
+  useEffect(() => { fetchIntegration(); }, [user]);
+
+  const handleConnect = async () => {
     if (!storeUrl.trim() || !token.trim()) {
       toast({ title: "Enter both store URL and access token", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
+      // Save credentials
+      const integrationPayload = {
+        user_id: user?.id,
+        platform: "shopify" as const,
+        store_url: storeUrl.trim().replace(/\/$/, ""),
+        credentials: { access_token: token.trim() },
+      };
+
+      if (integration) {
+        await supabase.from("store_integrations").update(integrationPayload).eq("id", integration.id);
+      } else {
+        await supabase.from("store_integrations").insert(integrationPayload);
+      }
+
+      // Import products
       const { data, error } = await supabase.functions.invoke("import-shopify-products", {
         body: { store_url: storeUrl.trim().replace(/\/$/, ""), access_token: token.trim(), user_id: user?.id },
       });
       if (error) throw error;
-      toast({ title: `Imported ${data.imported_count} products from Shopify` });
+      toast({ title: `Connected! Imported ${data.imported_count} products from Shopify` });
+      await fetchIntegration();
       onDone();
     } catch (err: any) {
       toast({ title: "Shopify import failed", description: err.message, variant: "destructive" });
@@ -308,6 +347,75 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
       setLoading(false);
     }
   };
+
+  const handleSync = async () => {
+    if (!integration) return;
+    setSyncing(true);
+    try {
+      const creds = integration.credentials;
+      const { data, error } = await supabase.functions.invoke("import-shopify-products", {
+        body: {
+          store_url: integration.store_url,
+          access_token: creds.access_token,
+          user_id: user?.id,
+          is_sync: true,
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Synced! ${data.imported_count} new, ${data.updated_count} updated out of ${data.total} products` });
+      await fetchIntegration();
+      onDone();
+    } catch (err: any) {
+      toast({ title: "Sync failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!integration) return;
+    setDisconnecting(true);
+    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    setIntegration(null);
+    setStoreUrl("");
+    setToken("");
+    setDisconnecting(false);
+    toast({ title: "Shopify disconnected" });
+  };
+
+  if (loadingIntegration) {
+    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (integration) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ShoppingBag className="h-5 w-5" /> Shopify Connected
+            </CardTitle>
+            <CardDescription>
+              Connected to <strong>{integration.store_url}</strong>
+              {integration.last_synced_at && (
+                <> · Last synced {new Date(integration.last_synced_at).toLocaleDateString()} at {new Date(integration.last_synced_at).toLocaleTimeString()}</>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3">
+            <Button onClick={handleSync} disabled={syncing} className="gap-2">
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync Products
+            </Button>
+            <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="gap-2 text-destructive hover:text-destructive">
+              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
+              Disconnect
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -329,8 +437,8 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg"><ShoppingBag className="h-5 w-5" /> Import from Shopify</CardTitle>
-          <CardDescription>Enter your Shopify store URL and a Storefront API access token.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-lg"><ShoppingBag className="h-5 w-5" /> Connect Shopify</CardTitle>
+          <CardDescription>Enter your Shopify store URL and a Storefront API access token. Credentials will be saved for future syncs.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -341,9 +449,9 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
             <Label>Storefront Access Token</Label>
             <Input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="shpat_..." />
           </div>
-          <Button onClick={handleImport} disabled={loading} className="gap-2">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
-            Import Products
+          <Button onClick={handleConnect} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+            Connect & Import
           </Button>
         </CardContent>
       </Card>
@@ -357,14 +465,51 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
   const [consumerKey, setConsumerKey] = useState("");
   const [consumerSecret, setConsumerSecret] = useState("");
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [integration, setIntegration] = useState<any>(null);
+  const [loadingIntegration, setLoadingIntegration] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
 
-  const handleImport = async () => {
+  const fetchIntegration = async () => {
+    if (!user) return;
+    setLoadingIntegration(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("platform", "woocommerce")
+      .maybeSingle();
+    setIntegration(data);
+    if (data) {
+      setSiteUrl(data.store_url);
+      setConsumerKey((data.credentials as any)?.consumer_key || "");
+      setConsumerSecret((data.credentials as any)?.consumer_secret || "");
+    }
+    setLoadingIntegration(false);
+  };
+
+  useEffect(() => { fetchIntegration(); }, [user]);
+
+  const handleConnect = async () => {
     if (!siteUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()) {
       toast({ title: "All fields are required", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
+      const integrationPayload = {
+        user_id: user?.id,
+        platform: "woocommerce" as const,
+        store_url: siteUrl.trim().replace(/\/$/, ""),
+        credentials: { consumer_key: consumerKey.trim(), consumer_secret: consumerSecret.trim() },
+      };
+
+      if (integration) {
+        await supabase.from("store_integrations").update(integrationPayload).eq("id", integration.id);
+      } else {
+        await supabase.from("store_integrations").insert(integrationPayload);
+      }
+
       const { data, error } = await supabase.functions.invoke("import-woocommerce-products", {
         body: {
           site_url: siteUrl.trim().replace(/\/$/, ""),
@@ -374,7 +519,8 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
         },
       });
       if (error) throw error;
-      toast({ title: `Imported ${data.imported_count} products from WooCommerce` });
+      toast({ title: `Connected! Imported ${data.imported_count} products from WooCommerce` });
+      await fetchIntegration();
       onDone();
     } catch (err: any) {
       toast({ title: "WooCommerce import failed", description: err.message, variant: "destructive" });
@@ -382,6 +528,77 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
       setLoading(false);
     }
   };
+
+  const handleSync = async () => {
+    if (!integration) return;
+    setSyncing(true);
+    try {
+      const creds = integration.credentials;
+      const { data, error } = await supabase.functions.invoke("import-woocommerce-products", {
+        body: {
+          site_url: integration.store_url,
+          consumer_key: creds.consumer_key,
+          consumer_secret: creds.consumer_secret,
+          user_id: user?.id,
+          is_sync: true,
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Synced! ${data.imported_count} new, ${data.updated_count} updated out of ${data.total} products` });
+      await fetchIntegration();
+      onDone();
+    } catch (err: any) {
+      toast({ title: "Sync failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!integration) return;
+    setDisconnecting(true);
+    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    setIntegration(null);
+    setSiteUrl("");
+    setConsumerKey("");
+    setConsumerSecret("");
+    setDisconnecting(false);
+    toast({ title: "WooCommerce disconnected" });
+  };
+
+  if (loadingIntegration) {
+    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (integration) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Globe className="h-5 w-5" /> WooCommerce Connected
+            </CardTitle>
+            <CardDescription>
+              Connected to <strong>{integration.store_url}</strong>
+              {integration.last_synced_at && (
+                <> · Last synced {new Date(integration.last_synced_at).toLocaleDateString()} at {new Date(integration.last_synced_at).toLocaleTimeString()}</>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3">
+            <Button onClick={handleSync} disabled={syncing} className="gap-2">
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync Products
+            </Button>
+            <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="gap-2 text-destructive hover:text-destructive">
+              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
+              Disconnect
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -405,8 +622,8 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg"><Globe className="h-5 w-5" /> Import from WooCommerce</CardTitle>
-          <CardDescription>Enter your WordPress site URL and WooCommerce REST API credentials.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-lg"><Globe className="h-5 w-5" /> Connect WooCommerce</CardTitle>
+          <CardDescription>Enter your WordPress site URL and WooCommerce REST API credentials. Credentials will be saved for future syncs.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -423,9 +640,9 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
               <Input value={consumerSecret} onChange={(e) => setConsumerSecret(e.target.value)} type="password" placeholder="cs_..." />
             </div>
           </div>
-          <Button onClick={handleImport} disabled={loading} className="gap-2">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
-            Import Products
+          <Button onClick={handleConnect} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+            Connect & Import
           </Button>
         </CardContent>
       </Card>

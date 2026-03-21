@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { store_url, access_token, user_id } = await req.json();
+    const { store_url, access_token, user_id, is_sync } = await req.json();
     if (!store_url || !access_token) {
       return new Response(JSON.stringify({ error: "store_url and access_token are required" }), {
         status: 400,
@@ -19,7 +19,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch products from Shopify Storefront API (REST Admin API)
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Fetch products from Shopify Admin API
     const shopifyUrl = `${store_url}/admin/api/2024-01/products.json?limit=250`;
     const shopifyRes = await fetch(shopifyUrl, {
       headers: { "X-Shopify-Access-Token": access_token },
@@ -35,12 +40,24 @@ Deno.serve(async (req) => {
 
     const { products } = await shopifyRes.json();
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // If syncing, remove products that no longer exist in Shopify
+    if (is_sync && user_id) {
+      const { data: existing } = await supabase
+        .from("inventory_products")
+        .select("id, name")
+        .eq("user_id", user_id);
+
+      if (existing) {
+        const shopifyNames = new Set(products.map((p: any) => p.title));
+        const toDelete = existing.filter((e: any) => !shopifyNames.has(e.name));
+        for (const item of toDelete) {
+          await supabase.from("inventory_products").delete().eq("id", item.id);
+        }
+      }
+    }
 
     let importedCount = 0;
+    let updatedCount = 0;
 
     for (const product of products) {
       const images = product.images || [];
@@ -64,11 +81,39 @@ Deno.serve(async (req) => {
         user_id: user_id || null,
       };
 
+      // Check if product already exists (by name + user_id)
+      if (user_id) {
+        const { data: existingProduct } = await supabase
+          .from("inventory_products")
+          .select("id")
+          .eq("user_id", user_id)
+          .eq("name", product.title)
+          .maybeSingle();
+
+        if (existingProduct) {
+          const { error } = await supabase
+            .from("inventory_products")
+            .update(row)
+            .eq("id", existingProduct.id);
+          if (!error) updatedCount++;
+          continue;
+        }
+      }
+
       const { error } = await supabase.from("inventory_products").insert(row);
       if (!error) importedCount++;
     }
 
-    return new Response(JSON.stringify({ imported_count: importedCount, total: products.length }), {
+    // Update last_synced_at
+    if (user_id) {
+      await supabase
+        .from("store_integrations")
+        .update({ last_synced_at: new Date().toISOString() })
+        .eq("user_id", user_id)
+        .eq("platform", "shopify");
+    }
+
+    return new Response(JSON.stringify({ imported_count: importedCount, updated_count: updatedCount, total: products.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
