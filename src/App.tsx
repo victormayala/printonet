@@ -18,6 +18,7 @@ import Templates from "./pages/Templates";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ProfileSettings from "./pages/ProfileSettings";
+import PrintView from "./pages/PrintView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/demo" element={<Demo />} />
             <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
+            <Route path="/print/:sessionId" element={<PrintView />} />
             <Route path="/products" element={<DashboardRoute><Products /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
             <Route path="/templates" element={<DashboardRoute><Templates /></DashboardRoute>} />

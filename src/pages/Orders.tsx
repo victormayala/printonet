@@ -18,7 +18,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Search, Download, Eye, Package, Calendar,
-  Loader2, ExternalLink, Filter,
+  Loader2, ExternalLink, Filter, Link2, Copy, Check, Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -42,6 +42,15 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function copyPrintLink(sessionId: string) {
+    const url = `${window.location.origin}/print/${sessionId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(sessionId);
+    toast({ title: "Print link copied!" });
+    setTimeout(() => setCopiedId(null), 2000);
+  }
 
   useEffect(() => {
     if (user) fetchSessions();
@@ -173,14 +182,28 @@ export default function Orders() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedSession(session)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyPrintLink(session.id)}
+                      >
+                        {copiedId === session.id ? (
+                          <Check className="h-4 w-4 mr-1 text-green-500" />
+                        ) : (
+                          <Printer className="h-4 w-4 mr-1" />
+                        )}
+                        Print Link
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedSession(session)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
