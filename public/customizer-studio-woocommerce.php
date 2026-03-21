@@ -509,61 +509,114 @@ add_action( 'wp_footer', function () {
 			}
 
 			function applyDesignOverlays(){
-				if(!window.csDesignMap) return;
+				if(!window.csDesignMap) { console.log('[CS] No csDesignMap found'); return; }
 				var fallbackDesigns = Object.values(window.csDesignMap);
-				if(!fallbackDesigns.length) return;
+				if(!fallbackDesigns.length) { console.log('[CS] csDesignMap is empty'); return; }
+				console.log('[CS] Designs to apply:', fallbackDesigns.length, fallbackDesigns);
 
 				var orderedDesigns = getDesignsInBlockOrder();
-				var thumbContainers = document.querySelectorAll(
-					'.wc-block-cart-items .wc-block-components-product-image,' +
-					'.wc-block-checkout .wc-block-components-product-image,' +
-					'.wc-block-components-order-summary .wc-block-components-product-image'
-				);
+
+				/* --- WooCommerce Blocks selectors (broad) --- */
+				var blockSelectors = [
+					'.wc-block-cart-items .wc-block-components-product-image',
+					'.wc-block-checkout .wc-block-components-product-image',
+					'.wc-block-components-order-summary .wc-block-components-product-image',
+					'.wp-block-woocommerce-cart .wc-block-components-product-image',
+					'.wp-block-woocommerce-checkout .wc-block-components-product-image',
+					'.wc-block-cart .wc-block-components-product-image',
+					'.wc-block-components-product-image'
+				];
+				var thumbContainers = document.querySelectorAll(blockSelectors.join(','));
+				console.log('[CS] Block thumb containers found:', thumbContainers.length);
 
 				thumbContainers.forEach(function(container, index){
 					if(container.querySelector('.cs-design-overlay')) return;
 
-					var row = container.closest('.wc-block-cart-items__row, .wc-block-components-order-summary-item, tr, li');
+					var row = container.closest('.wc-block-cart-items__row, .wc-block-components-order-summary-item, tr, li, [class*=cart-item], [class*=order-summary]');
 					var nameEl = row ? row.querySelector(
 						'.wc-block-components-product-name,' +
-						'.wc-block-components-order-summary-item__description .wc-block-components-product-name,' +
+						'[class*=product-name],' +
 						'a[href]'
 					) : null;
 					var productName = nameEl ? nameEl.textContent.trim() : '';
+					console.log('[CS] Block row', index, 'product:', productName);
 					var match = orderedDesigns[index] || getDesignMatchByName(fallbackDesigns, productName);
-					if(!match) return;
+					if(!match) { console.log('[CS] No design match for:', productName); return; }
 
 					container.style.position = 'relative';
+					container.style.overflow = 'visible';
 					var overlay = document.createElement('img');
 					overlay.src = match.design_url;
 					overlay.alt = 'Custom Design';
 					overlay.className = 'cs-design-overlay';
-					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
+					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:10;';
 					container.appendChild(overlay);
 					appendViewDesignLink(container, match.design_url, true);
+					console.log('[CS] Overlay applied to block container', index);
 				});
 
-				var classicRows = document.querySelectorAll('.woocommerce-cart-form .cart_item, .woocommerce-checkout .cart_item');
+				/* --- Classic WooCommerce selectors (broad) --- */
+				var classicSelectors = [
+					'.woocommerce-cart-form .cart_item',
+					'.woocommerce-checkout .cart_item',
+					'table.cart .cart_item',
+					'.shop_table .cart_item'
+				];
+				var classicRows = document.querySelectorAll(classicSelectors.join(','));
+				console.log('[CS] Classic cart rows found:', classicRows.length);
+
 				classicRows.forEach(function(row){
-					var thumbTd = row.querySelector('.product-thumbnail');
+					var thumbTd = row.querySelector('.product-thumbnail, td:first-child');
 					if(!thumbTd || thumbTd.querySelector('.cs-design-overlay')) return;
 
-					var nameLink = row.querySelector('.product-name a');
+					var nameLink = row.querySelector('.product-name a, td.product-name a, [class*=product-name] a');
 					var productName = nameLink ? nameLink.textContent.trim() : '';
+					console.log('[CS] Classic row product:', productName);
 					var match = getDesignMatchByName(fallbackDesigns, productName);
 					if(!match) return;
 
 					var imgWrap = thumbTd.querySelector('a') || thumbTd;
 					imgWrap.style.position = 'relative';
 					imgWrap.style.display = 'inline-block';
+					imgWrap.style.overflow = 'visible';
 					var overlay = document.createElement('img');
 					overlay.src = match.design_url;
 					overlay.alt = 'Custom Design';
 					overlay.className = 'cs-design-overlay';
-					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;';
+					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:10;';
 					imgWrap.appendChild(overlay);
 					appendViewDesignLink(imgWrap, match.design_url, false);
 				});
+
+				/* --- Fallback: find ANY product image on cart/checkout pages --- */
+				if(thumbContainers.length === 0 && classicRows.length === 0) {
+					console.log('[CS] No standard containers found. Trying fallback selectors...');
+					var fallbackImgs = document.querySelectorAll(
+						'[class*=cart] img[src*=wp-content],' +
+						'[class*=checkout] img[src*=wp-content],' +
+						'.cart-item img,' +
+						'[class*=product] img[class*=thumbnail],' +
+						'[class*=product] img[class*=image]'
+					);
+					console.log('[CS] Fallback images found:', fallbackImgs.length);
+					fallbackImgs.forEach(function(img, index){
+						if(img.closest('.cs-design-overlay-wrap') || img.classList.contains('cs-design-overlay')) return;
+						var match = fallbackDesigns[index] || fallbackDesigns[0];
+						if(!match) return;
+
+						var parent = img.parentElement;
+						parent.style.position = 'relative';
+						parent.style.overflow = 'visible';
+						var overlay = document.createElement('img');
+						overlay.src = match.design_url;
+						overlay.alt = 'Custom Design';
+						overlay.className = 'cs-design-overlay';
+						overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:10;';
+						parent.appendChild(overlay);
+						appendViewDesignLink(parent, match.design_url, true);
+						console.log('[CS] Fallback overlay applied to image', index);
+					});
+				}
 			}
 
 			if(document.readyState==='loading'){
@@ -571,6 +624,14 @@ add_action( 'wp_footer', function () {
 			} else {
 				applyDesignOverlays();
 			}
+
+			/* Retry with interval for late-rendering block carts */
+			var csRetryCount = 0;
+			var csRetryInterval = setInterval(function(){
+				applyDesignOverlays();
+				csRetryCount++;
+				if(csRetryCount > 20) clearInterval(csRetryInterval);
+			}, 500);
 
 			var observer = new MutationObserver(function(){
 				applyDesignOverlays();
