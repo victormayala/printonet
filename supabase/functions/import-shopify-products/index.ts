@@ -40,24 +40,15 @@ Deno.serve(async (req) => {
 
     const { products } = await shopifyRes.json();
 
-    // If syncing, remove products that no longer exist in Shopify
+    // On sync, delete ALL existing products for this user first, then re-import
     if (is_sync && user_id) {
-      const { data: existing } = await supabase
+      await supabase
         .from("inventory_products")
-        .select("id, name")
+        .delete()
         .eq("user_id", user_id);
-
-      if (existing) {
-        const shopifyNames = new Set(products.map((p: any) => p.title));
-        const toDelete = existing.filter((e: any) => !shopifyNames.has(e.name));
-        for (const item of toDelete) {
-          await supabase.from("inventory_products").delete().eq("id", item.id);
-        }
-      }
     }
 
     let importedCount = 0;
-    let updatedCount = 0;
 
     for (const product of products) {
       const images = product.images || [];
@@ -81,25 +72,6 @@ Deno.serve(async (req) => {
         user_id: user_id || null,
       };
 
-      // Check if product already exists (by name + user_id)
-      if (user_id) {
-        const { data: existingProduct } = await supabase
-          .from("inventory_products")
-          .select("id")
-          .eq("user_id", user_id)
-          .eq("name", product.title)
-          .maybeSingle();
-
-        if (existingProduct) {
-          const { error } = await supabase
-            .from("inventory_products")
-            .update(row)
-            .eq("id", existingProduct.id);
-          if (!error) updatedCount++;
-          continue;
-        }
-      }
-
       const { error } = await supabase.from("inventory_products").insert(row);
       if (!error) importedCount++;
     }
@@ -113,7 +85,7 @@ Deno.serve(async (req) => {
         .eq("platform", "shopify");
     }
 
-    return new Response(JSON.stringify({ imported_count: importedCount, updated_count: updatedCount, total: products.length }), {
+    return new Response(JSON.stringify({ imported_count: importedCount, total: products.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
