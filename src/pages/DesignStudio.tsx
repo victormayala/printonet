@@ -404,9 +404,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
   const brand = brandConfig || dbBrandConfig || DEFAULT_BRAND_CONFIG;
 
-  // Load brand config from database when not in embed mode
+  // Load brand config from database when no brandConfig prop provided
   useEffect(() => {
-    if (embedMode || brandConfig) return;
+    if (brandConfig) return;
     async function loadBrandConfig() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -434,7 +434,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       }
     }
     loadBrandConfig();
-  }, [embedMode, brandConfig]);
+  }, [brandConfig]);
 
   // Apply brand CSS vars when brand config changes
   useEffect(() => {
