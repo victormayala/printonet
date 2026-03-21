@@ -383,7 +383,7 @@ interface EmbedProductData {
   variants?: Array<{ color: string; colorName: string; hex: string }>;
 }
 
-import { type BrandConfig, DEFAULT_BRAND_CONFIG } from "@/lib/brand-config";
+import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
 
 interface DesignStudioProps {
   embedMode?: boolean;
@@ -401,7 +401,53 @@ const VIEW_LABELS: Record<ViewSide, string> = {
 
 export default function DesignStudio({ embedMode = false, sessionId, embedProductData, brandConfig }: DesignStudioProps) {
   const navigate = useNavigate();
-  const brand = brandConfig || DEFAULT_BRAND_CONFIG;
+  const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
+  const brand = brandConfig || dbBrandConfig || DEFAULT_BRAND_CONFIG;
+
+  // Load brand config from database when not in embed mode
+  useEffect(() => {
+    if (embedMode || brandConfig) return;
+    async function loadBrandConfig() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from("brand_configs")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (data) {
+          setDbBrandConfig({
+            name: data.name || "",
+            logoUrl: data.logo_url || "",
+            theme: (data.theme === "light" ? "light" : "dark") as "light" | "dark",
+            primaryColor: data.primary_color,
+            accentColor: data.accent_color,
+            fontFamily: data.font_family,
+            borderRadius: data.border_radius,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load brand config:", err);
+      }
+    }
+    loadBrandConfig();
+  }, [embedMode, brandConfig]);
+
+  // Apply brand CSS vars when brand config changes
+  useEffect(() => {
+    if (brand !== DEFAULT_BRAND_CONFIG) {
+      applyBrandCSS(document.documentElement, brand);
+    }
+    return () => {
+      // Reset CSS vars when leaving (only if we applied them)
+      if (!embedMode && brand !== DEFAULT_BRAND_CONFIG) {
+        applyBrandCSS(document.documentElement, DEFAULT_BRAND_CONFIG);
+      }
+    };
+  }, [brand, embedMode]);
 
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(false);
