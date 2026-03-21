@@ -67,9 +67,46 @@ export default function BrandSettings() {
   const [savedConfigId, setSavedConfigId] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Load existing brand config from database on mount
+  useEffect(() => {
+    async function loadExisting() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoadingConfig(false); return; }
+
+        const { data, error } = await supabase
+          .from("brand_configs")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data && !error) {
+          setSavedConfigId(data.id);
+          setConfig({
+            name: data.name || "",
+            logoUrl: data.logo_url || "",
+            theme: (data.theme === "light" ? "light" : "dark"),
+            primaryColor: data.primary_color,
+            accentColor: data.accent_color,
+            fontFamily: data.font_family,
+            borderRadius: data.border_radius,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load brand config:", err);
+      } finally {
+        setLoadingConfig(false);
+      }
+    }
+    loadExisting();
+  }, []);
 
   // Apply CSS vars to preview container
   useEffect(() => {
@@ -139,6 +176,9 @@ export default function BrandSettings() {
   async function handleSave() {
     setSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       const payload = {
         name: config.name || null,
         logo_url: config.logoUrl || null,
@@ -147,6 +187,7 @@ export default function BrandSettings() {
         accent_color: config.accentColor,
         font_family: config.fontFamily,
         border_radius: config.borderRadius,
+        user_id: user.id,
       };
 
       if (savedConfigId) {
