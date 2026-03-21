@@ -18,7 +18,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Search, Download, Eye, Package, Calendar,
-  Loader2, ExternalLink, Filter,
+  Loader2, ExternalLink, Filter, Link2, Copy, Check, Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 
