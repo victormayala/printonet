@@ -620,6 +620,7 @@ add_action( 'admin_init', function () {
 	register_setting( 'cs_settings', 'cs_base_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
 	register_setting( 'cs_settings', 'cs_api_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
 	register_setting( 'cs_settings', 'cs_anon_key', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+	register_setting( 'cs_settings', 'cs_user_id', [ 'sanitize_callback' => 'sanitize_text_field' ] );
 	register_setting( 'cs_settings', 'cs_button_label', [ 'sanitize_callback' => 'sanitize_text_field' ] );
 	register_setting( 'cs_settings', 'cs_button_position', [ 'sanitize_callback' => 'sanitize_text_field' ] );
 } );
