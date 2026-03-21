@@ -395,8 +395,8 @@ interface DesignStudioProps {
 const VIEW_LABELS: Record<ViewSide, string> = {
   front: "Front",
   back: "Back",
-  side1: "Side 1",
-  side2: "Side 2",
+  side1: "Left",
+  side2: "Right",
 };
 
 export default function DesignStudio({ embedMode = false, sessionId, embedProductData, brandConfig }: DesignStudioProps) {
