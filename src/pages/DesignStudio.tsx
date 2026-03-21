@@ -428,15 +428,21 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [clipartCategory, setClipartCategory] = useState<string>("Popular");
   const [fontFamily, setFontFamily] = useState<string>("Inter");
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
-  const previousViewRef = useRef<ViewSide>("front");
+  const currentCanvasViewRef = useRef<ViewSide>("front");
   const isLoadingViewRef = useRef(false);
+  const viewLoadRequestRef = useRef(0);
 
-  // Save current canvas state to the active view's slot
-  function saveViewState() {
+  function serializeCanvasState() {
+    if (!fabricRef.current) return null;
+    return JSON.stringify(fabricRef.current.toJSON());
+  }
+
+  // Save current canvas state to the currently mounted view's slot
+  function saveViewState(view: ViewSide = currentCanvasViewRef.current) {
     if (isLoadingViewRef.current) return;
-    if (!fabricRef.current) return;
-    const canvas = fabricRef.current;
-    viewStatesRef.current[previousViewRef.current] = JSON.stringify(canvas.toJSON());
+    const json = serializeCanvasState();
+    if (!json) return;
+    viewStatesRef.current[view] = json;
   }
   
   // Set up embed product data
@@ -461,6 +467,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     if (ep.image_side2) views.push("side2");
     if (views.length === 0) views.push("front");
     setAvailableViews(views);
+    currentCanvasViewRef.current = views[0];
     setActiveView(views[0]);
     setLoading(false);
   }, [embedMode, embedProductData]);
@@ -541,41 +548,39 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   useEffect(() => {
     if (!canvasReady || !fabricRef.current) return;
     const canvas = fabricRef.current;
-    const prevView = previousViewRef.current;
+    const mountedView = currentCanvasViewRef.current;
 
     const hasInventoryBackground = Boolean(getCurrentImageUrl());
 
-    if (prevView !== activeView) {
-      // Save previous view one more time (belt-and-suspenders)
-      viewStatesRef.current[prevView] = JSON.stringify(canvas.toJSON());
+    if (mountedView !== activeView) {
+      saveViewState(mountedView);
 
-      // Load new view's state
       const savedState = viewStatesRef.current[activeView];
+      const loadRequestId = ++viewLoadRequestRef.current;
       isLoadingViewRef.current = true;
 
-      if (savedState) {
-        canvas.loadFromJSON(savedState).then(() => {
-          canvas.backgroundImage = undefined;
-          canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
-          canvas.renderAll();
-          updateLayers();
-          setSelectedObject(null);
-          setUndoStack([savedState]);
-          setRedoStack([]);
-          isLoadingViewRef.current = false;
-          previousViewRef.current = activeView;
-        });
-      } else {
-        canvas.clear();
+      const finalizeViewLoad = (historyState: string) => {
+        if (viewLoadRequestRef.current !== loadRequestId) return;
         canvas.backgroundImage = undefined;
         canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
         canvas.renderAll();
         updateLayers();
         setSelectedObject(null);
-        setUndoStack([JSON.stringify(canvas.toJSON())]);
+        setUndoStack([historyState]);
         setRedoStack([]);
+        currentCanvasViewRef.current = activeView;
         isLoadingViewRef.current = false;
-        previousViewRef.current = activeView;
+      };
+
+      if (savedState) {
+        canvas.loadFromJSON(savedState).then(() => {
+          finalizeViewLoad(savedState);
+        });
+      } else {
+        canvas.clear();
+        const emptyState = JSON.stringify(canvas.toJSON());
+        viewStatesRef.current[activeView] = emptyState;
+        finalizeViewLoad(emptyState);
       }
     } else {
       canvas.backgroundImage = undefined;
@@ -611,9 +616,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   function saveState() {
     const canvas = fabricRef.current;
-    if (!canvas) return;
+    if (!canvas || isLoadingViewRef.current) return;
     const json = JSON.stringify(canvas.toJSON());
-    viewStatesRef.current[activeView] = json;
+    viewStatesRef.current[currentCanvasViewRef.current] = json;
     setUndoStack((prev) => [...prev, json]);
     setRedoStack([]);
   }
@@ -621,22 +626,36 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   function undo() {
     const canvas = fabricRef.current;
     if (!canvas || undoStack.length <= 1) return;
+    const view = currentCanvasViewRef.current;
     const newUndo = [...undoStack];
     const current = newUndo.pop()!;
     setRedoStack((prev) => [...prev, current]);
     const prev = newUndo[newUndo.length - 1];
     setUndoStack(newUndo);
-    canvas.loadFromJSON(prev).then(() => { canvas.renderAll(); updateLayers(); });
+    isLoadingViewRef.current = true;
+    canvas.loadFromJSON(prev).then(() => {
+      canvas.renderAll();
+      updateLayers();
+      viewStatesRef.current[view] = JSON.stringify(canvas.toJSON());
+      isLoadingViewRef.current = false;
+    });
   }
 
   function redo() {
     const canvas = fabricRef.current;
     if (!canvas || redoStack.length === 0) return;
+    const view = currentCanvasViewRef.current;
     const newRedo = [...redoStack];
     const next = newRedo.pop()!;
     setRedoStack(newRedo);
     setUndoStack((prev) => [...prev, next]);
-    canvas.loadFromJSON(next).then(() => { canvas.renderAll(); updateLayers(); });
+    isLoadingViewRef.current = true;
+    canvas.loadFromJSON(next).then(() => {
+      canvas.renderAll();
+      updateLayers();
+      viewStatesRef.current[view] = JSON.stringify(canvas.toJSON());
+      isLoadingViewRef.current = false;
+    });
   }
 
   function addText() {
