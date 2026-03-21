@@ -629,6 +629,7 @@ function cs_render_settings_page() {
 	$base_url        = get_option( 'cs_base_url', '' );
 	$api_url         = get_option( 'cs_api_url', '' );
 	$anon_key        = get_option( 'cs_anon_key', '' );
+	$user_id         = get_option( 'cs_user_id', '' );
 	$button_label    = get_option( 'cs_button_label', '🎨 Customize This Product' );
 	$button_position = get_option( 'cs_button_position', 'before_add_to_cart' );
 	?>
