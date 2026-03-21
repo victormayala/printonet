@@ -23,7 +23,7 @@ export default function EmbedCustomizer() {
   const [error, setError] = useState<string | null>(null);
 
   // Parse brand config from URL params
-  const brandConfig = useMemo<BrandConfig>(() => {
+  const urlBrandConfig = useMemo<BrandConfig | null>(() => {
     const theme = searchParams.get("brandTheme");
     const primary = searchParams.get("brandPrimary");
     const accent = searchParams.get("brandAccent");
@@ -31,6 +31,11 @@ export default function EmbedCustomizer() {
     const radius = searchParams.get("brandRadius");
     const name = searchParams.get("brandName");
     const logoUrl = searchParams.get("brandLogo");
+
+    // Only use URL params if at least one brand param was actually provided
+    if (!theme && !primary && !accent && !font && !radius && !name && !logoUrl) {
+      return null;
+    }
 
     return {
       name: name || DEFAULT_BRAND_CONFIG.name,
@@ -43,10 +48,13 @@ export default function EmbedCustomizer() {
     };
   }, [searchParams]);
 
+  // Effective brand: URL params > DB config > defaults
+  const effectiveBrand = urlBrandConfig || dbBrandConfig || DEFAULT_BRAND_CONFIG;
+
   // Apply brand CSS vars to document root when in embed mode
   useEffect(() => {
-    applyBrandCSS(document.documentElement, brandConfig);
-  }, [brandConfig]);
+    applyBrandCSS(document.documentElement, effectiveBrand);
+  }, [effectiveBrand]);
 
   // Fetch brand config from DB when session has a user_id
   const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
