@@ -13,6 +13,8 @@ import Developers from "./pages/Developers";
 import Demo from "./pages/Demo";
 import BrandSettings from "./pages/BrandSettings";
 import Products from "./pages/Products";
+import Orders from "./pages/Orders";
+import Templates from "./pages/Templates";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ProfileSettings from "./pages/ProfileSettings";
