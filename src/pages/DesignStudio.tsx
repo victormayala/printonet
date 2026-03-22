@@ -734,14 +734,16 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   function updateLayers() {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const objects = canvas.getObjects().map((obj: any, i: number) => ({
-      id: i,
-      type: obj.type,
-      name: obj.customName || `${obj.type} ${i + 1}`,
-      visible: obj.visible !== false,
-      locked: obj.lockMovementX && obj.lockMovementY,
-      obj,
-    }));
+    const objects = canvas.getObjects()
+      .filter((obj: any) => (obj as any).customName !== PRINT_AREA_RECT_NAME)
+      .map((obj: any, i: number) => ({
+        id: i,
+        type: obj.type,
+        name: obj.customName || `${obj.type} ${i + 1}`,
+        visible: obj.visible !== false,
+        locked: obj.lockMovementX && obj.lockMovementY,
+        obj,
+      }));
     setLayers([...objects].reverse());
   }
 
