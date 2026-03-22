@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory_products ADD COLUMN print_areas jsonb DEFAULT '{}'::jsonb;

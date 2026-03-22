@@ -370,6 +370,7 @@ interface InventoryProduct {
   image_back: string | null;
   image_side1: string | null;
   image_side2: string | null;
+  print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
 }
 
 interface EmbedProductData {
@@ -381,6 +382,7 @@ interface EmbedProductData {
   image_side1?: string;
   image_side2?: string;
   variants?: Array<{ color: string; colorName: string; hex: string }>;
+  print_areas?: Record<string, { x: number; y: number; width: number; height: number }>;
 }
 
 import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
@@ -485,7 +487,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   function serializeCanvasState() {
     if (!fabricRef.current) return null;
-    return JSON.stringify(fabricRef.current.toJSON());
+    // Temporarily remove print area boundary before serializing
+    const canvas = fabricRef.current;
+    const paRects = canvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
+    paRects.forEach((o) => canvas.remove(o));
+    const json = JSON.stringify(canvas.toJSON());
+    // Re-add them
+    paRects.forEach((o) => { canvas.add(o); canvas.sendObjectToBack(o); });
+    return json;
   }
 
   // Save current canvas state to the currently mounted view's slot
@@ -509,6 +518,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       image_back: embedProductData.image_back || null,
       image_side1: embedProductData.image_side1 || null,
       image_side2: embedProductData.image_side2 || null,
+      print_areas: embedProductData.print_areas || null,
     };
     setInvProduct(ep);
     const views: ViewSide[] = [];
@@ -533,6 +543,79 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       side2: invProduct.image_side2,
     };
     return map[activeView] || null;
+  }
+
+  // Get print area for current view (percentage-based)
+  function getCurrentPrintArea(): { x: number; y: number; width: number; height: number } | null {
+    if (!invProduct?.print_areas) return null;
+    const viewKey = activeView === "side1" ? "side1" : activeView === "side2" ? "side2" : activeView;
+    return invProduct.print_areas[viewKey] || null;
+  }
+
+  const PRINT_AREA_RECT_NAME = "__print_area_boundary__";
+
+  // Add/update print area boundary rect on canvas
+  function updatePrintAreaRect(canvas: FabricCanvas) {
+    // Remove existing boundary
+    const existing = canvas.getObjects().filter((o: any) => o.customName === PRINT_AREA_RECT_NAME);
+    existing.forEach((o) => canvas.remove(o));
+
+    const pa = getCurrentPrintArea();
+    if (!pa) return;
+
+    const cw = canvas.getWidth();
+    const ch = canvas.getHeight();
+    const x = (pa.x / 100) * cw;
+    const y = (pa.y / 100) * ch;
+    const w = (pa.width / 100) * cw;
+    const h = (pa.height / 100) * ch;
+
+    const boundary = new Rect({
+      left: x,
+      top: y,
+      width: w,
+      height: h,
+      fill: "transparent",
+      stroke: "hsl(var(--primary))",
+      strokeWidth: 2,
+      strokeDashArray: [8, 4],
+      selectable: false,
+      evented: false,
+      excludeFromExport: true,
+    });
+    (boundary as any).customName = PRINT_AREA_RECT_NAME;
+    canvas.add(boundary);
+    // Send to back so it's behind design objects
+    canvas.sendObjectToBack(boundary);
+    canvas.renderAll();
+  }
+
+  // Constrain object within print area bounds
+  function constrainToPrintArea(obj: any) {
+    const canvas = fabricRef.current;
+    if (!canvas || !invProduct?.print_areas) return;
+    const pa = getCurrentPrintArea();
+    if (!pa) return;
+    if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
+
+    const cw = canvas.getWidth();
+    const ch = canvas.getHeight();
+    const minX = (pa.x / 100) * cw;
+    const minY = (pa.y / 100) * ch;
+    const maxX = minX + (pa.width / 100) * cw;
+    const maxY = minY + (pa.height / 100) * ch;
+
+    const bound = obj.getBoundingRect();
+    let newLeft = obj.left;
+    let newTop = obj.top;
+
+    if (bound.left < minX) newLeft += minX - bound.left;
+    if (bound.top < minY) newTop += minY - bound.top;
+    if (bound.left + bound.width > maxX) newLeft -= (bound.left + bound.width) - maxX;
+    if (bound.top + bound.height > maxY) newTop -= (bound.top + bound.height) - maxY;
+
+    obj.set({ left: newLeft, top: newTop });
+    obj.setCoords();
   }
 
   // Initialize canvas with responsive sizing
@@ -565,6 +648,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("object:modified", () => { saveViewState(); saveState(); updateLayers(); });
     canvas.on("object:added", () => { saveViewState(); updateLayers(); });
     canvas.on("object:removed", () => { saveViewState(); updateLayers(); });
+    canvas.on("object:moving", (e: any) => constrainToPrintArea(e.target));
+    canvas.on("object:scaling", (e: any) => constrainToPrintArea(e.target));
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
@@ -614,6 +699,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         if (viewLoadRequestRef.current !== loadRequestId) return;
         canvas.backgroundImage = undefined;
         canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+        updatePrintAreaRect(canvas);
         canvas.renderAll();
         updateLayers();
         setSelectedObject(null);
@@ -636,6 +722,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     } else {
       canvas.backgroundImage = undefined;
       canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+      updatePrintAreaRect(canvas);
       canvas.renderAll();
     }
   }, [activeView, invProduct, selectedVariant, canvasReady]);
@@ -654,14 +741,16 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   function updateLayers() {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const objects = canvas.getObjects().map((obj: any, i: number) => ({
-      id: i,
-      type: obj.type,
-      name: obj.customName || `${obj.type} ${i + 1}`,
-      visible: obj.visible !== false,
-      locked: obj.lockMovementX && obj.lockMovementY,
-      obj,
-    }));
+    const objects = canvas.getObjects()
+      .filter((obj: any) => (obj as any).customName !== PRINT_AREA_RECT_NAME)
+      .map((obj: any, i: number) => ({
+        id: i,
+        type: obj.type,
+        name: obj.customName || `${obj.type} ${i + 1}`,
+        visible: obj.visible !== false,
+        locked: obj.lockMovementX && obj.lockMovementY,
+        obj,
+      }));
     setLayers([...objects].reverse());
   }
 
@@ -1219,9 +1308,27 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         await canvas.loadFromJSON(stateJson);
         canvas.backgroundColor = "rgba(0,0,0,0)";
         canvas.backgroundImage = undefined;
+
+        // Remove print area boundary rects before export
+        const paRects = canvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
+        paRects.forEach((o) => canvas.remove(o));
         canvas.renderAll();
 
-        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
+        // Determine export region: crop to print area if defined
+        const viewKey = view === "side1" ? "side1" : view === "side2" ? "side2" : view;
+        const pa = invProduct?.print_areas?.[viewKey];
+        const cw = canvas.getWidth();
+        const ch = canvas.getHeight();
+
+        const exportOptions: any = { format: "png", multiplier: 2 };
+        if (pa) {
+          exportOptions.left = (pa.x / 100) * cw;
+          exportOptions.top = (pa.y / 100) * ch;
+          exportOptions.width = (pa.width / 100) * cw;
+          exportOptions.height = (pa.height / 100) * ch;
+        }
+
+        const dataUrl = canvas.toDataURL(exportOptions);
 
         // Try uploading to storage, fall back to data URL
         let publicUrl = dataUrl;

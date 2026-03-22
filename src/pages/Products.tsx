@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ type Product = {
   variants: any;
   is_active: boolean;
   created_at: string;
+  print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
@@ -152,6 +154,9 @@ function ProductForm({
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
+    (product?.print_areas as any) || {}
+  );
 
   const IMAGE_SIDES = [
     { key: "front", label: "Front", value: imageFront, setter: setImageFront },
@@ -193,6 +198,7 @@ function ProductForm({
       image_side1: imageLeft || null,
       image_side2: imageRight || null,
       is_active: isActive,
+      print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
       ...(product ? {} : { user_id: user?.id }),
     };
 
@@ -239,42 +245,74 @@ function ProductForm({
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {IMAGE_SIDES.map(({ key, label, value, setter }) => (
-          <div key={key} className="space-y-2">
-            <Label>{label} Image</Label>
-            {value ? (
-              <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
-                <img src={value} alt={label} className="w-full h-full object-cover" />
-                <button
-                  onClick={() => setter("")}
-                  className="absolute top-2 right-2 rounded-full bg-background/80 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
-                {uploading === key ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Upload {label.toLowerCase()}</span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) uploadImage(f, key);
-                  }}
-                />
-              </label>
-            )}
-          </div>
-        ))}
+        {IMAGE_SIDES.map(({ key, label, value, setter }) => {
+          const printAreaKey = key === "left" ? "side1" : key === "right" ? "side2" : key;
+          return (
+            <div key={key} className="space-y-2">
+              <Label>{label} Image</Label>
+              {value ? (
+                <>
+                  <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
+                    <img src={value} alt={label} className="w-full h-full object-cover" />
+                    {printAreas[printAreaKey] && (
+                      <div
+                        className="absolute border-2 border-dashed border-primary/60 pointer-events-none"
+                        style={{
+                          left: `${printAreas[printAreaKey].x}%`,
+                          top: `${printAreas[printAreaKey].y}%`,
+                          width: `${printAreas[printAreaKey].width}%`,
+                          height: `${printAreas[printAreaKey].height}%`,
+                        }}
+                      />
+                    )}
+                    <button
+                      onClick={() => setter("")}
+                      className="absolute top-2 right-2 rounded-full bg-background/80 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <PrintAreaEditor
+                    imageUrl={value}
+                    sideLabel={label}
+                    value={printAreas[printAreaKey] || null}
+                    onChange={(area) => {
+                      if (area) {
+                        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
+                      } else {
+                        setPrintAreas((prev) => {
+                          const next = { ...prev };
+                          delete next[printAreaKey];
+                          return next;
+                        });
+                      }
+                    }}
+                  />
+                </>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
+                  {uploading === key ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Upload {label.toLowerCase()}</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadImage(f, key);
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+          );
+        })}
       </div>
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
@@ -694,7 +732,7 @@ export default function Products() {
     // so inactive ones won't show. For a dashboard we need all.
     // Since RLS is (is_active = true) for SELECT, we'll work with that limitation.
     const { data, error } = await supabase.from("inventory_products").select("*").order("created_at", { ascending: false });
-    if (!error && data) setProducts(data as Product[]);
+    if (!error && data) setProducts(data as unknown as Product[]);
     setLoading(false);
   };
 
