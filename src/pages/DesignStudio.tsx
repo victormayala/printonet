@@ -1301,9 +1301,27 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         await canvas.loadFromJSON(stateJson);
         canvas.backgroundColor = "rgba(0,0,0,0)";
         canvas.backgroundImage = undefined;
+
+        // Remove print area boundary rects before export
+        const paRects = canvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
+        paRects.forEach((o) => canvas.remove(o));
         canvas.renderAll();
 
-        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
+        // Determine export region: crop to print area if defined
+        const viewKey = view === "side1" ? "side1" : view === "side2" ? "side2" : view;
+        const pa = invProduct?.print_areas?.[viewKey];
+        const cw = canvas.getWidth();
+        const ch = canvas.getHeight();
+
+        const exportOptions: any = { format: "png", multiplier: 2 };
+        if (pa) {
+          exportOptions.left = (pa.x / 100) * cw;
+          exportOptions.top = (pa.y / 100) * ch;
+          exportOptions.width = (pa.width / 100) * cw;
+          exportOptions.height = (pa.height / 100) * ch;
+        }
+
+        const dataUrl = canvas.toDataURL(exportOptions);
 
         // Try uploading to storage, fall back to data URL
         let publicUrl = dataUrl;
