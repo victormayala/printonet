@@ -382,6 +382,7 @@ interface EmbedProductData {
   image_side1?: string;
   image_side2?: string;
   variants?: Array<{ color: string; colorName: string; hex: string }>;
+  print_areas?: Record<string, { x: number; y: number; width: number; height: number }>;
 }
 
 import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
