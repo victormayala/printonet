@@ -732,7 +732,7 @@ export default function Products() {
     // so inactive ones won't show. For a dashboard we need all.
     // Since RLS is (is_active = true) for SELECT, we'll work with that limitation.
     const { data, error } = await supabase.from("inventory_products").select("*").order("created_at", { ascending: false });
-    if (!error && data) setProducts(data as Product[]);
+    if (!error && data) setProducts(data as unknown as Product[]);
     setLoading(false);
   };
 
