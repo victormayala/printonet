@@ -657,8 +657,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", () => setSelectedObject(null));
     canvas.on("object:modified", () => { saveViewState(); saveState(); updateLayers(); });
-    canvas.on("object:added", () => { saveViewState(); updateLayers(); });
-    canvas.on("object:removed", () => { saveViewState(); updateLayers(); });
+    canvas.on("object:added", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
+    canvas.on("object:removed", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
     canvas.on("object:moving", (e: any) => constrainToPrintArea(e.target));
     canvas.on("object:scaling", (e: any) => constrainToPrintArea(e.target));
     canvas.on("mouse:dblclick", (e: any) => {
