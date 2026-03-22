@@ -629,7 +629,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
+    if (!canvasRef.current || !containerRef.current) {
+      console.log("[DesignStudio] Canvas init skipped - refs not ready");
+      return;
+    }
 
     if (fabricRef.current) {
       fabricRef.current.dispose();
@@ -639,6 +642,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const container = containerRef.current;
     const w = container.clientWidth;
     const h = container.clientHeight;
+    console.log("[DesignStudio] Canvas init:", { w, h, embedMode, hasProduct: !!invProduct });
 
     const canvas = new FabricCanvas(canvasRef.current, {
       width: w,

@@ -67,12 +67,16 @@ export default function EmbedCustomizer() {
       .eq("id", sessionId)
       .single()
       .then(async ({ data, error: err }) => {
+        console.log("[EmbedCustomizer] Session fetch result:", { data: !!data, error: err, sessionId });
         if (err || !data) {
+          console.error("[EmbedCustomizer] Session error:", err);
           setError("Session not found or expired.");
         } else if (data.status === "completed") {
           setError("This session has already been completed.");
         } else {
-          setProductData(data.product_data as unknown as SessionProductData);
+          const pd = data.product_data as unknown as SessionProductData;
+          console.log("[EmbedCustomizer] Product data:", pd);
+          setProductData(pd);
 
           // Fetch brand config if session has a user_id and no URL brand params
           const userId = (data as any).user_id;
