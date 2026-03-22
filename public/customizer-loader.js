@@ -39,7 +39,7 @@
   function fetchProducts(callback) {
     if (_products) return callback(null, _products);
 
-    var url = SUPABASE_URL + '/rest/v1/inventory_products?is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,user_id';
+    var url = SUPABASE_URL + '/rest/v1/inventory_products?is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id';
     var headers = {
       'apikey': ANON_KEY,
       'Authorization': 'Bearer ' + ANON_KEY,
