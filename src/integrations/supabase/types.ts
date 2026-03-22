@@ -150,6 +150,7 @@ export type Database = {
           image_side2: string | null
           is_active: boolean
           name: string
+          print_areas: Json | null
           updated_at: string
           user_id: string | null
           variants: Json | null
@@ -166,6 +167,7 @@ export type Database = {
           image_side2?: string | null
           is_active?: boolean
           name: string
+          print_areas?: Json | null
           updated_at?: string
           user_id?: string | null
           variants?: Json | null
@@ -182,6 +184,7 @@ export type Database = {
           image_side2?: string | null
           is_active?: boolean
           name?: string
+          print_areas?: Json | null
           updated_at?: string
           user_id?: string | null
           variants?: Json | null
