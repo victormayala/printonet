@@ -715,6 +715,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     } else {
       canvas.backgroundImage = undefined;
       canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+      updatePrintAreaRect(canvas);
       canvas.renderAll();
     }
   }, [activeView, invProduct, selectedVariant, canvasReady]);
