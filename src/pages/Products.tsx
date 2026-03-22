@@ -197,6 +197,7 @@ function ProductForm({
       image_side1: imageLeft || null,
       image_side2: imageRight || null,
       is_active: isActive,
+      print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
       ...(product ? {} : { user_id: user?.id }),
     };
 
