@@ -487,7 +487,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   function serializeCanvasState() {
     if (!fabricRef.current) return null;
-    return JSON.stringify(fabricRef.current.toJSON());
+    // Temporarily remove print area boundary before serializing
+    const canvas = fabricRef.current;
+    const paRects = canvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
+    paRects.forEach((o) => canvas.remove(o));
+    const json = JSON.stringify(canvas.toJSON());
+    // Re-add them
+    paRects.forEach((o) => { canvas.add(o); canvas.sendObjectToBack(o); });
+    return json;
   }
 
   // Save current canvas state to the currently mounted view's slot
