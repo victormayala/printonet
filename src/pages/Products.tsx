@@ -153,6 +153,9 @@ function ProductForm({
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
+    (product?.print_areas as any) || {}
+  );
 
   const IMAGE_SIDES = [
     { key: "front", label: "Front", value: imageFront, setter: setImageFront },
