@@ -370,6 +370,7 @@ interface InventoryProduct {
   image_back: string | null;
   image_side1: string | null;
   image_side2: string | null;
+  print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
 }
 
 interface EmbedProductData {
