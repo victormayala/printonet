@@ -511,6 +511,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       image_back: embedProductData.image_back || null,
       image_side1: embedProductData.image_side1 || null,
       image_side2: embedProductData.image_side2 || null,
+      print_areas: embedProductData.print_areas || null,
     };
     setInvProduct(ep);
     const views: ViewSide[] = [];
