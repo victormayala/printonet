@@ -73,6 +73,7 @@
         image_side1: product.image_side1 || undefined,
         image_side2: product.image_side2 || undefined,
         variants: product.variants || [],
+        print_areas: product.print_areas || undefined,
       },
       userId: product.user_id || USER_ID || null,
       wcProductId: wcProductId || null,
