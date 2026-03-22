@@ -641,6 +641,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("object:modified", () => { saveViewState(); saveState(); updateLayers(); });
     canvas.on("object:added", () => { saveViewState(); updateLayers(); });
     canvas.on("object:removed", () => { saveViewState(); updateLayers(); });
+    canvas.on("object:moving", (e: any) => constrainToPrintArea(e.target));
+    canvas.on("object:scaling", (e: any) => constrainToPrintArea(e.target));
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
