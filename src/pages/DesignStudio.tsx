@@ -692,6 +692,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         if (viewLoadRequestRef.current !== loadRequestId) return;
         canvas.backgroundImage = undefined;
         canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+        updatePrintAreaRect(canvas);
         canvas.renderAll();
         updateLayers();
         setSelectedObject(null);
