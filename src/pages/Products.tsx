@@ -32,6 +32,7 @@ type Product = {
   variants: any;
   is_active: boolean;
   created_at: string;
+  print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
