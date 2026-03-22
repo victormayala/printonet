@@ -1547,7 +1547,19 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             <Redo2 className="h-4 w-4" />
           </Button>
 
-
+          {/* Print area boundary toggle */}
+          {getCurrentPrintArea() && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPrintAreaBoundary(!showPrintAreaBoundary)}
+              className={`gap-1.5 text-xs ${showPrintAreaBoundary ? "text-primary" : "text-sidebar-foreground"} hover:bg-sidebar-accent`}
+              title={showPrintAreaBoundary ? "Hide print area boundary" : "Show print area boundary"}
+            >
+              {showPrintAreaBoundary ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              Print Area
+            </Button>
+          )}
           {/* View switcher — only show available views */}
           {availableViews.length > 1 && (
             <>
