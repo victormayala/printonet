@@ -538,6 +538,79 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     return map[activeView] || null;
   }
 
+  // Get print area for current view (percentage-based)
+  function getCurrentPrintArea(): { x: number; y: number; width: number; height: number } | null {
+    if (!invProduct?.print_areas) return null;
+    const viewKey = activeView === "side1" ? "side1" : activeView === "side2" ? "side2" : activeView;
+    return invProduct.print_areas[viewKey] || null;
+  }
+
+  const PRINT_AREA_RECT_NAME = "__print_area_boundary__";
+
+  // Add/update print area boundary rect on canvas
+  function updatePrintAreaRect(canvas: FabricCanvas) {
+    // Remove existing boundary
+    const existing = canvas.getObjects().filter((o: any) => o.customName === PRINT_AREA_RECT_NAME);
+    existing.forEach((o) => canvas.remove(o));
+
+    const pa = getCurrentPrintArea();
+    if (!pa) return;
+
+    const cw = canvas.getWidth();
+    const ch = canvas.getHeight();
+    const x = (pa.x / 100) * cw;
+    const y = (pa.y / 100) * ch;
+    const w = (pa.width / 100) * cw;
+    const h = (pa.height / 100) * ch;
+
+    const boundary = new Rect({
+      left: x,
+      top: y,
+      width: w,
+      height: h,
+      fill: "transparent",
+      stroke: "hsl(var(--primary))",
+      strokeWidth: 2,
+      strokeDashArray: [8, 4],
+      selectable: false,
+      evented: false,
+      excludeFromExport: true,
+    });
+    (boundary as any).customName = PRINT_AREA_RECT_NAME;
+    canvas.add(boundary);
+    // Send to back so it's behind design objects
+    canvas.sendObjectToBack(boundary);
+    canvas.renderAll();
+  }
+
+  // Constrain object within print area bounds
+  function constrainToPrintArea(obj: any) {
+    const canvas = fabricRef.current;
+    if (!canvas || !invProduct?.print_areas) return;
+    const pa = getCurrentPrintArea();
+    if (!pa) return;
+    if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
+
+    const cw = canvas.getWidth();
+    const ch = canvas.getHeight();
+    const minX = (pa.x / 100) * cw;
+    const minY = (pa.y / 100) * ch;
+    const maxX = minX + (pa.width / 100) * cw;
+    const maxY = minY + (pa.height / 100) * ch;
+
+    const bound = obj.getBoundingRect();
+    let newLeft = obj.left;
+    let newTop = obj.top;
+
+    if (bound.left < minX) newLeft += minX - bound.left;
+    if (bound.top < minY) newTop += minY - bound.top;
+    if (bound.left + bound.width > maxX) newLeft -= (bound.left + bound.width) - maxX;
+    if (bound.top + bound.height > maxY) newTop -= (bound.top + bound.height) - maxY;
+
+    obj.set({ left: newLeft, top: newTop });
+    obj.setCoords();
+  }
+
   // Initialize canvas with responsive sizing
   const [canvasReady, setCanvasReady] = useState(false);
 
