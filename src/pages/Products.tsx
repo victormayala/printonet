@@ -245,42 +245,74 @@ function ProductForm({
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {IMAGE_SIDES.map(({ key, label, value, setter }) => (
-          <div key={key} className="space-y-2">
-            <Label>{label} Image</Label>
-            {value ? (
-              <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
-                <img src={value} alt={label} className="w-full h-full object-cover" />
-                <button
-                  onClick={() => setter("")}
-                  className="absolute top-2 right-2 rounded-full bg-background/80 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
-                {uploading === key ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Upload {label.toLowerCase()}</span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) uploadImage(f, key);
-                  }}
-                />
-              </label>
-            )}
-          </div>
-        ))}
+        {IMAGE_SIDES.map(({ key, label, value, setter }) => {
+          const printAreaKey = key === "left" ? "side1" : key === "right" ? "side2" : key;
+          return (
+            <div key={key} className="space-y-2">
+              <Label>{label} Image</Label>
+              {value ? (
+                <>
+                  <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
+                    <img src={value} alt={label} className="w-full h-full object-cover" />
+                    {printAreas[printAreaKey] && (
+                      <div
+                        className="absolute border-2 border-dashed border-primary/60 pointer-events-none"
+                        style={{
+                          left: `${printAreas[printAreaKey].x}%`,
+                          top: `${printAreas[printAreaKey].y}%`,
+                          width: `${printAreas[printAreaKey].width}%`,
+                          height: `${printAreas[printAreaKey].height}%`,
+                        }}
+                      />
+                    )}
+                    <button
+                      onClick={() => setter("")}
+                      className="absolute top-2 right-2 rounded-full bg-background/80 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <PrintAreaEditor
+                    imageUrl={value}
+                    sideLabel={label}
+                    value={printAreas[printAreaKey] || null}
+                    onChange={(area) => {
+                      if (area) {
+                        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
+                      } else {
+                        setPrintAreas((prev) => {
+                          const next = { ...prev };
+                          delete next[printAreaKey];
+                          return next;
+                        });
+                      }
+                    }}
+                  />
+                </>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
+                  {uploading === key ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Upload {label.toLowerCase()}</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadImage(f, key);
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+          );
+        })}
       </div>
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
