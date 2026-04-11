@@ -484,6 +484,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiHistory, setAiHistory] = useState<Array<{ prompt: string; imageUrl: string }>>([]);
+  const [removingBg, setRemovingBg] = useState(false);
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const currentCanvasViewRef = useRef<ViewSide>("front");
   const isLoadingViewRef = useRef(false);
@@ -1382,6 +1383,36 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     imgEl.src = imageUrl;
   }
 
+  async function removeBackground() {
+    const canvas = fabricRef.current;
+    if (!canvas || removingBg) return;
+    const active = canvas.getActiveObject();
+    if (!active || !(active as any).getElement) return;
+
+    const sourceUrl = extractAiDesignImage(active);
+    if (!sourceUrl) {
+      alert("Could not extract image data.");
+      return;
+    }
+
+    setRemovingBg(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("remove-background", {
+        body: { imageUrl: sourceUrl },
+      });
+      if (error) throw new Error(error.message || "Background removal failed");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.imageUrl) throw new Error("No image returned");
+
+      replaceAiDesignImage(active, data.imageUrl);
+    } catch (err: any) {
+      console.error("Remove background error:", err);
+      alert(err.message || "Failed to remove background. Try again.");
+    } finally {
+      setRemovingBg(false);
+    }
+  }
+
   function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -1786,6 +1817,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                     </Button>
                   )}
                 </div>
+
+                {isEditMode && (
+                  <Button
+                    variant="outline"
+                    onClick={removeBackground}
+                    disabled={removingBg}
+                    className="w-full gap-2 border-sidebar-border"
+                  >
+                    <Eraser className="h-4 w-4" />
+                    {removingBg ? "Removing Background..." : "Remove Background"}
+                  </Button>
+                )}
 
                 {aiGenerating && (
                   <div className="flex items-center justify-center py-6">
