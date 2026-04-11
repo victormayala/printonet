@@ -466,7 +466,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const fabricRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTool, setActiveTool] = useState<string>("text");
+  const [activeTool, setActiveTool] = useState<string>("ai");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [activeView, setActiveView] = useState<ViewSide>("front");
   const [availableViews, setAvailableViews] = useState<ViewSide[]>(["front"]);
@@ -481,6 +481,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [clipartCategory, setClipartCategory] = useState<string>("Popular");
   const [fontFamily, setFontFamily] = useState<string>("Inter");
   const [showPrintAreaBoundary, setShowPrintAreaBoundary] = useState(true);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiHistory, setAiHistory] = useState<Array<{ prompt: string; imageUrl: string }>>([]);
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const currentCanvasViewRef = useRef<ViewSide>("front");
   const isLoadingViewRef = useRef(false);
@@ -1266,6 +1269,53 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
 
+  async function generateAiDesign() {
+    if (!aiPrompt.trim() || aiGenerating) return;
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-design", {
+        body: { prompt: aiPrompt.trim() },
+      });
+      if (error) throw new Error(error.message || "Generation failed");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.imageUrl) throw new Error("No image generated");
+
+      const imageUrl = data.imageUrl;
+      setAiHistory((prev) => [{ prompt: aiPrompt.trim(), imageUrl }, ...prev.slice(0, 9)]);
+
+      // Add to canvas
+      addAiImageToCanvas(imageUrl);
+      setAiPrompt("");
+    } catch (err: any) {
+      console.error("AI generation error:", err);
+      alert(err.message || "Failed to generate design. Try again.");
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
+  function addAiImageToCanvas(imageUrl: string) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const imgEl = new Image();
+    imgEl.crossOrigin = "anonymous";
+    imgEl.onload = () => {
+      const scale = Math.min(300 / imgEl.width, 300 / imgEl.height, 1);
+      const img = new FabricImage(imgEl, {
+        left: 100, top: 100,
+        scaleX: scale, scaleY: scale,
+      });
+      (img as any).customName = "AI Design";
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      saveState();
+    };
+    imgEl.onerror = () => {
+      console.error("Failed to load AI generated image");
+    };
+    imgEl.src = imageUrl;
+  }
+
   function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -1417,6 +1467,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
   const tools = [
+    { id: "ai", icon: Wand2, label: "AI" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
     { id: "clipart", icon: Sticker, label: "Clipart" },
@@ -1631,6 +1682,83 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                 {selectedPropertiesPanel}
                 <Separator className="bg-sidebar-border" />
               </>
+            )}
+
+            {activeTool === "ai" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Describe your design</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") generateAiDesign(); }}
+                      placeholder="e.g. A cool dragon breathing fire..."
+                      className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
+                      disabled={aiGenerating}
+                    />
+                  </div>
+                  <Button
+                    onClick={generateAiDesign}
+                    disabled={aiGenerating || !aiPrompt.trim()}
+                    className="w-full gap-2"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    {aiGenerating ? "Generating..." : "Generate Design"}
+                  </Button>
+                </div>
+
+                {aiGenerating && (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <p className="text-xs text-muted-foreground">Creating your design...</p>
+                    </div>
+                  </div>
+                )}
+
+                {aiHistory.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Generations</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {aiHistory.map((item, i) => (
+                        <button
+                          key={i}
+                          onClick={() => addAiImageToCanvas(item.imageUrl)}
+                          className="group relative border border-sidebar-border rounded-lg overflow-hidden hover:border-primary/50 transition-all"
+                          title={`Re-add: ${item.prompt}`}
+                        >
+                          <img src={item.imageUrl} alt={item.prompt} className="w-full aspect-square object-cover" />
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-[9px] text-white truncate">{item.prompt}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prompt Ideas</label>
+                  <div className="space-y-1">
+                    {[
+                      "A vintage-style logo with an eagle",
+                      "Abstract geometric pattern in blue and gold",
+                      "Floral wreath with roses",
+                      "Retro sunset with palm trees",
+                      "Minimalist mountain landscape",
+                    ].map((idea) => (
+                      <button
+                        key={idea}
+                        onClick={() => setAiPrompt(idea)}
+                        className="w-full text-left text-xs px-2.5 py-1.5 rounded-md border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/30 transition-colors text-muted-foreground hover:text-sidebar-foreground"
+                      >
+                        {idea}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
 
             {activeTool === "text" && !selectedObject && (
