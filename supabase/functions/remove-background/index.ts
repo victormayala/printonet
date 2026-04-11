@@ -42,7 +42,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Remove the background from this image completely. Make the background fully transparent. Keep only the main subject/design element. Output exactly one image with a transparent background.",
+                text: "Remove the background from this image. Replace the background with a solid bright green color (hex #00FF00, pure green screen). Keep only the main subject/design element exactly as it is — do not alter its colors, details, or shape. The entire background area must be filled with exactly #00FF00 green and nothing else. Output exactly one image.",
               },
               {
                 type: "image_url",
