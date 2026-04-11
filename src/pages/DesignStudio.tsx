@@ -1481,7 +1481,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         const cw = canvas.getWidth();
         const ch = canvas.getHeight();
 
-        const exportOptions: any = { format: "png", multiplier: 2 };
+        const exportOptions: any = { format: "png", multiplier: 4 };
         if (pa) {
           exportOptions.left = (pa.x / 100) * cw;
           exportOptions.top = (pa.y / 100) * ch;
