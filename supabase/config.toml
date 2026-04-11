@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.import-woocommerce-products]
 verify_jwt = false
+
+[functions.upscale-design]
+verify_jwt = false
