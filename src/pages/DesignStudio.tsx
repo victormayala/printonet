@@ -1765,13 +1765,24 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                     />
                   </div>
                   <Button
-                    onClick={generateAiDesign}
+                    onClick={() => generateAiDesign(false)}
                     disabled={aiGenerating || !aiPrompt.trim()}
                     className="w-full gap-2"
                   >
                     <Wand2 className="h-4 w-4" />
-                    {aiGenerating ? "Generating..." : "Generate Design"}
+                    {aiGenerating ? (isEditMode ? "Editing..." : "Generating...") : (isEditMode ? "Edit Design" : "Generate Design")}
                   </Button>
+                  {isEditMode && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => generateAiDesign(true)}
+                      disabled={aiGenerating || !aiPrompt.trim()}
+                      className="w-full text-xs text-muted-foreground"
+                    >
+                      Generate New Instead
+                    </Button>
+                  )}
                 </div>
 
                 {aiGenerating && (
