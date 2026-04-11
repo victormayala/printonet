@@ -44,6 +44,7 @@ serve(async (req) => {
             content: enhancedPrompt,
           },
         ],
+        modalities: ["image", "text"],
       }),
     });
 
@@ -76,8 +77,18 @@ serve(async (req) => {
     
     let imageUrl: string | null = null;
     
-    // Check for inline_data in content parts (Gemini image generation format)
-    if (message?.content && Array.isArray(message.content)) {
+    // Check for images array (Lovable AI Gateway format)
+    if (message?.images && Array.isArray(message.images)) {
+      for (const img of message.images) {
+        if (img.type === "image_url" && img.image_url?.url) {
+          imageUrl = img.image_url.url;
+          break;
+        }
+      }
+    }
+    
+    // Fallback: check content parts
+    if (!imageUrl && message?.content && Array.isArray(message.content)) {
       for (const part of message.content) {
         if (part.type === "image_url" && part.image_url?.url) {
           imageUrl = part.image_url.url;
