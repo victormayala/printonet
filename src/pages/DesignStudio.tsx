@@ -1753,13 +1753,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             {activeTool === "ai" && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Describe your design</label>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {isEditMode ? "Describe changes to your design" : "Describe your design"}
+                  </label>
                   <div className="flex gap-2">
                     <Input
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") generateAiDesign(); }}
-                      placeholder="e.g. A cool dragon breathing fire..."
+                      placeholder={isEditMode ? "e.g. Make it blue, add a border..." : "e.g. A cool dragon breathing fire..."}
                       className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
                       disabled={aiGenerating}
                     />
