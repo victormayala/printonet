@@ -485,6 +485,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiHistory, setAiHistory] = useState<Array<{ prompt: string; imageUrl: string }>>([]);
   const [removingBg, setRemovingBg] = useState(false);
+  const [aiStyle, setAiStyle] = useState<string>("");
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const currentCanvasViewRef = useRef<ViewSide>("front");
   const isLoadingViewRef = useRef(false);
@@ -1308,8 +1309,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         sourceImage = extractAiDesignImage(selectedAi) || undefined;
       }
 
+      const styledPrompt = aiStyle ? `${aiStyle} style: ${aiPrompt.trim()}` : aiPrompt.trim();
+
       const { data, error } = await supabase.functions.invoke("generate-design", {
-        body: { prompt: aiPrompt.trim(), ...(sourceImage ? { sourceImage } : {}) },
+        body: { prompt: styledPrompt, ...(sourceImage ? { sourceImage } : {}) },
       });
       if (error) throw new Error(error.message || "Generation failed");
       if (data?.error) throw new Error(data.error);
@@ -1817,6 +1820,39 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                     </Button>
                   )}
                 </div>
+
+                {!isEditMode && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Style Preset</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: "None", value: "" },
+                        { label: "Vintage", value: "Vintage retro distressed" },
+                        { label: "Minimalist", value: "Clean minimalist simple" },
+                        { label: "Graffiti", value: "Urban graffiti street art spray paint" },
+                        { label: "Watercolor", value: "Soft watercolor painting" },
+                        { label: "Neon", value: "Bright neon glowing" },
+                        { label: "Tattoo", value: "Traditional tattoo ink illustration" },
+                        { label: "Pixel Art", value: "Retro pixel art 8-bit" },
+                        { label: "Japanese", value: "Japanese ukiyo-e woodblock print" },
+                        { label: "Pop Art", value: "Bold pop art comic book" },
+                        { label: "Botanical", value: "Detailed botanical illustration" },
+                      ].map((preset) => (
+                        <button
+                          key={preset.value}
+                          onClick={() => setAiStyle(preset.value)}
+                          className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                            aiStyle === preset.value
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-sidebar-border text-muted-foreground hover:border-primary/40 hover:bg-sidebar-accent"
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {isEditMode && (
                   <Button
