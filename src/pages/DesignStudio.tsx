@@ -1269,6 +1269,53 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
 
+  async function generateAiDesign() {
+    if (!aiPrompt.trim() || aiGenerating) return;
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-design", {
+        body: { prompt: aiPrompt.trim() },
+      });
+      if (error) throw new Error(error.message || "Generation failed");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.imageUrl) throw new Error("No image generated");
+
+      const imageUrl = data.imageUrl;
+      setAiHistory((prev) => [{ prompt: aiPrompt.trim(), imageUrl }, ...prev.slice(0, 9)]);
+
+      // Add to canvas
+      addAiImageToCanvas(imageUrl);
+      setAiPrompt("");
+    } catch (err: any) {
+      console.error("AI generation error:", err);
+      alert(err.message || "Failed to generate design. Try again.");
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
+  function addAiImageToCanvas(imageUrl: string) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const imgEl = new Image();
+    imgEl.crossOrigin = "anonymous";
+    imgEl.onload = () => {
+      const scale = Math.min(300 / imgEl.width, 300 / imgEl.height, 1);
+      const img = new FabricImage(imgEl, {
+        left: 100, top: 100,
+        scaleX: scale, scaleY: scale,
+      });
+      (img as any).customName = "AI Design";
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      saveState();
+    };
+    imgEl.onerror = () => {
+      console.error("Failed to load AI generated image");
+    };
+    imgEl.src = imageUrl;
+  }
+
   function addClipart(clipartItem: { name: string; icon: React.ComponentType<any> }) {
     const canvas = fabricRef.current;
     if (!canvas) return;
