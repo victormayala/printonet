@@ -1269,12 +1269,46 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
 
-  async function generateAiDesign() {
+  // Check if the currently selected object is an AI Design
+  function getSelectedAiDesign(): any | null {
+    const canvas = fabricRef.current;
+    if (!canvas) return null;
+    const active = canvas.getActiveObject();
+    if (active && (active as any).customName === "AI Design") return active;
+    return null;
+  }
+
+  const isEditMode = !!getSelectedAiDesign();
+
+  // Extract the current image of the selected AI design as a data URL
+  function extractAiDesignImage(obj: any): string | null {
+    try {
+      const el = obj.getElement?.();
+      if (!el) return null;
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = el.naturalWidth || el.width;
+      tempCanvas.height = el.naturalHeight || el.height;
+      const ctx = tempCanvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(el, 0, 0);
+      return tempCanvas.toDataURL("image/png");
+    } catch {
+      return null;
+    }
+  }
+
+  async function generateAiDesign(forceNew = false) {
     if (!aiPrompt.trim() || aiGenerating) return;
     setAiGenerating(true);
     try {
+      const selectedAi = !forceNew ? getSelectedAiDesign() : null;
+      let sourceImage: string | undefined;
+      if (selectedAi) {
+        sourceImage = extractAiDesignImage(selectedAi) || undefined;
+      }
+
       const { data, error } = await supabase.functions.invoke("generate-design", {
-        body: { prompt: aiPrompt.trim() },
+        body: { prompt: aiPrompt.trim(), ...(sourceImage ? { sourceImage } : {}) },
       });
       if (error) throw new Error(error.message || "Generation failed");
       if (data?.error) throw new Error(data.error);
@@ -1283,8 +1317,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       const imageUrl = data.imageUrl;
       setAiHistory((prev) => [{ prompt: aiPrompt.trim(), imageUrl }, ...prev.slice(0, 9)]);
 
-      // Add to canvas
-      addAiImageToCanvas(imageUrl);
+      if (selectedAi) {
+        // Edit mode: replace image in-place, keeping position/scale/rotation
+        replaceAiDesignImage(selectedAi, imageUrl);
+      } else {
+        addAiImageToCanvas(imageUrl);
+      }
       setAiPrompt("");
     } catch (err: any) {
       console.error("AI generation error:", err);
@@ -1292,6 +1330,34 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     } finally {
       setAiGenerating(false);
     }
+  }
+
+  function replaceAiDesignImage(existingObj: any, newImageUrl: string) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const imgEl = new Image();
+    imgEl.crossOrigin = "anonymous";
+    imgEl.onload = () => {
+      // Preserve transforms
+      const props = {
+        left: existingObj.left,
+        top: existingObj.top,
+        scaleX: existingObj.scaleX,
+        scaleY: existingObj.scaleY,
+        angle: existingObj.angle,
+        flipX: existingObj.flipX,
+        flipY: existingObj.flipY,
+        opacity: existingObj.opacity,
+      };
+      const newImg = new FabricImage(imgEl, props);
+      (newImg as any).customName = "AI Design";
+      canvas.remove(existingObj);
+      canvas.add(newImg);
+      canvas.setActiveObject(newImg);
+      saveState();
+    };
+    imgEl.onerror = () => console.error("Failed to load edited AI image");
+    imgEl.src = newImageUrl;
   }
 
   function addAiImageToCanvas(imageUrl: string) {
@@ -1687,25 +1753,38 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             {activeTool === "ai" && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Describe your design</label>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {isEditMode ? "Describe changes to your design" : "Describe your design"}
+                  </label>
                   <div className="flex gap-2">
                     <Input
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") generateAiDesign(); }}
-                      placeholder="e.g. A cool dragon breathing fire..."
+                      placeholder={isEditMode ? "e.g. Make it blue, add a border..." : "e.g. A cool dragon breathing fire..."}
                       className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
                       disabled={aiGenerating}
                     />
                   </div>
                   <Button
-                    onClick={generateAiDesign}
+                    onClick={() => generateAiDesign(false)}
                     disabled={aiGenerating || !aiPrompt.trim()}
                     className="w-full gap-2"
                   >
                     <Wand2 className="h-4 w-4" />
-                    {aiGenerating ? "Generating..." : "Generate Design"}
+                    {aiGenerating ? (isEditMode ? "Editing..." : "Generating...") : (isEditMode ? "Edit Design" : "Generate Design")}
                   </Button>
+                  {isEditMode && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => generateAiDesign(true)}
+                      disabled={aiGenerating || !aiPrompt.trim()}
+                      className="w-full text-xs text-muted-foreground"
+                    >
+                      Generate New Instead
+                    </Button>
+                  )}
                 </div>
 
                 {aiGenerating && (
