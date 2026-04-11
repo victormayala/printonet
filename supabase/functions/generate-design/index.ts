@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, sourceImage } = await req.json();
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return new Response(JSON.stringify({ error: "A design prompt is required" }), {
         status: 400,
@@ -28,7 +28,31 @@ serve(async (req) => {
       });
     }
 
-    const enhancedPrompt = `Generate exactly one single design image for a product customizer: ${prompt.trim()}. Output only one image, not multiple. The design should be on a clean white background, suitable for printing on apparel or products. High quality, vibrant colors, professional design.`;
+    const isEdit = typeof sourceImage === "string" && sourceImage.length > 0;
+
+    // Build messages depending on whether this is an edit or new generation
+    let messages: any[];
+
+    if (isEdit) {
+      const editInstruction = `Edit this existing design: ${prompt.trim()}. Keep the overall composition and style, only apply the requested change. Output exactly one image.`;
+      messages = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: editInstruction },
+            { type: "image_url", image_url: { url: sourceImage } },
+          ],
+        },
+      ];
+    } else {
+      const enhancedPrompt = `Generate exactly one single design image for a product customizer: ${prompt.trim()}. Output only one image, not multiple. The design should be on a clean white background, suitable for printing on apparel or products. High quality, vibrant colors, professional design.`;
+      messages = [
+        {
+          role: "user",
+          content: enhancedPrompt,
+        },
+      ];
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -38,12 +62,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3.1-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: enhancedPrompt,
-          },
-        ],
+        messages,
         modalities: ["image", "text"],
       }),
     });
@@ -71,7 +90,6 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    // Extract image from the response
     const choice = data.choices?.[0];
     const message = choice?.message;
     
@@ -102,7 +120,6 @@ serve(async (req) => {
     }
 
     if (!imageUrl) {
-      // Try to find base64 image data in string content
       const content = typeof message?.content === "string" ? message.content : "";
       const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
       if (base64Match) {
