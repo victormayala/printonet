@@ -1684,6 +1684,83 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
               </>
             )}
 
+            {activeTool === "ai" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Describe your design</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") generateAiDesign(); }}
+                      placeholder="e.g. A cool dragon breathing fire..."
+                      className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
+                      disabled={aiGenerating}
+                    />
+                  </div>
+                  <Button
+                    onClick={generateAiDesign}
+                    disabled={aiGenerating || !aiPrompt.trim()}
+                    className="w-full gap-2"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    {aiGenerating ? "Generating..." : "Generate Design"}
+                  </Button>
+                </div>
+
+                {aiGenerating && (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <p className="text-xs text-muted-foreground">Creating your design...</p>
+                    </div>
+                  </div>
+                )}
+
+                {aiHistory.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Generations</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {aiHistory.map((item, i) => (
+                        <button
+                          key={i}
+                          onClick={() => addAiImageToCanvas(item.imageUrl)}
+                          className="group relative border border-sidebar-border rounded-lg overflow-hidden hover:border-primary/50 transition-all"
+                          title={`Re-add: ${item.prompt}`}
+                        >
+                          <img src={item.imageUrl} alt={item.prompt} className="w-full aspect-square object-cover" />
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-[9px] text-white truncate">{item.prompt}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prompt Ideas</label>
+                  <div className="space-y-1">
+                    {[
+                      "A vintage-style logo with an eagle",
+                      "Abstract geometric pattern in blue and gold",
+                      "Floral wreath with roses",
+                      "Retro sunset with palm trees",
+                      "Minimalist mountain landscape",
+                    ].map((idea) => (
+                      <button
+                        key={idea}
+                        onClick={() => setAiPrompt(idea)}
+                        className="w-full text-left text-xs px-2.5 py-1.5 rounded-md border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/30 transition-colors text-muted-foreground hover:text-sidebar-foreground"
+                      >
+                        {idea}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTool === "text" && !selectedObject && (
                   <>
                     <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
