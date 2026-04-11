@@ -466,7 +466,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const fabricRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTool, setActiveTool] = useState<string>("text");
+  const [activeTool, setActiveTool] = useState<string>("ai");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [activeView, setActiveView] = useState<ViewSide>("front");
   const [availableViews, setAvailableViews] = useState<ViewSide[]>(["front"]);
