@@ -1407,7 +1407,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       if (data?.error) throw new Error(data.error);
       if (!data?.imageUrl) throw new Error("No image returned");
 
-      replaceAiDesignImage(active, data.imageUrl);
+      // Convert green-screen background to actual transparency
+      const transparentUrl = await chromaKeyGreen(data.imageUrl);
+      replaceAiDesignImage(active, transparentUrl);
     } catch (err: any) {
       console.error("Remove background error:", err);
       alert(err.message || "Failed to remove background. Try again.");
