@@ -1,41 +1,34 @@
 
 
-## Plan: AI Design Edit Mode (non-destructive edits)
+## Plan: High-Quality Print Export for AI Designs
 
-### What changes
-When a user has already generated (or selected) an AI design on the canvas and types a follow-up prompt, the system sends the **existing image + the new instruction** to the AI model's image-editing endpoint. The model returns a modified version of the same design rather than a brand-new one.
+### The Problem
+- Canvas exports at **2× multiplier** on a ~600px canvas = ~1200px output
+- For a 12″×16″ print area, that's only ~75-100 DPI — below professional print quality (300 DPI)
+- AI-generated images from Gemini are typically ~1024×1024px, which limits the source quality
+- The Print View page claims "150+ DPI recommended" but the system doesn't deliver that
 
-### How it works
+### Proposed Solution: Higher Export Multiplier + AI Upscaling
 
-```text
-User generates "A dragon logo"
-  → New image appears on canvas
+**1. Increase export multiplier** (`src/pages/DesignStudio.tsx`)
+- Change `multiplier: 2` → `multiplier: 4` (or even `5`) in the export options
+- This gives ~2400-3000px output from a 600px canvas, reaching ~150-190 DPI for a 16″ print
+- Minimal code change, immediate improvement
 
-User types "Make the dragon blue"
-  → System detects active AI design on canvas
-  → Extracts its image as base64
-  → Sends (image + edit prompt) to edge function
-  → Model edits the existing image
-  → Replaces the canvas object with the edited version
-```
+**2. AI-powered image upscaling edge function** (`supabase/functions/upscale-design/index.ts`)
+- Create a new edge function that takes a design image and upscales it using the Gemini image model with an explicit "upscale this image to maximum resolution, preserve all details" prompt
+- This can be triggered on the Print View page as an optional "Enhance for Print" button, or automatically during the export flow
 
-### Changes
+**3. Update Print View** (`src/pages/PrintView.tsx`)
+- Add an "Enhance for Print" button per image that calls the upscale function
+- Show actual resolution/DPI info next to each downloaded file
+- Update the print specs section to reflect the real output quality
 
-**1. Edge function (`supabase/functions/generate-design/index.ts`)**
-- Accept an optional `sourceImage` field (base64 data URL) in the request body
-- When `sourceImage` is present, send it as a multimodal message (text + image) to the same `gemini-3.1-flash-image-preview` model with `modalities: ["image", "text"]`
-- The prompt becomes an edit instruction: "Edit this design: [user prompt]. Keep the overall composition, only apply the requested change."
-- When `sourceImage` is absent, behave exactly as today (generate from scratch)
-
-**2. Design Studio UI (`src/pages/DesignStudio.tsx`)**
-- Track the last AI-generated image URL in state (`lastAiImageUrl`)
-- When the currently selected canvas object is an AI Design (`customName === "AI Design"`), extract its current image as a data URL
-- Change the "Generate Design" button label to "Edit Design" when an AI image is selected
-- On submit, call the edge function with both `prompt` and `sourceImage`
-- Replace the existing canvas object's image source with the edited result (same position, scale, rotation) instead of adding a new object
-- Add a small "New Design" link/button so users can opt into generating from scratch even when an AI design is selected
+### Recommendation
+The simplest high-impact change is **option 1 alone** — bumping the multiplier to 4×. This doubles the current resolution with a one-line change. The AI upscaling (option 2) adds more complexity but can produce genuinely print-ready 300 DPI files.
 
 ### Files modified
-- `supabase/functions/generate-design/index.ts` — add `sourceImage` input, multimodal edit request
-- `src/pages/DesignStudio.tsx` — edit-mode detection, UI label swap, image replacement logic
+- `src/pages/DesignStudio.tsx` — increase export multiplier
+- `supabase/functions/upscale-design/index.ts` — new edge function for AI upscaling (optional)
+- `src/pages/PrintView.tsx` — enhance button + resolution info (optional)
 
