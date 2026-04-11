@@ -28,7 +28,7 @@ serve(async (req) => {
       });
     }
 
-    const enhancedPrompt = `Create a design for a product customizer: ${prompt.trim()}. The design should be on a clean white background, suitable for printing on apparel or products. High quality, vibrant colors, professional design.`;
+    const enhancedPrompt = `Generate exactly one single design image for a product customizer: ${prompt.trim()}. Output only one image, not multiple. The design should be on a clean white background, suitable for printing on apparel or products. High quality, vibrant colors, professional design.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
