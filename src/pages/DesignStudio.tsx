@@ -1270,6 +1270,38 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     });
   }
 
+  // Chroma-key: replace bright green (#00FF00) background with transparency
+  function chromaKeyGreen(imgSrc: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = img.width;
+        c.height = img.height;
+        const ctx = c.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas context unavailable"));
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, c.width, c.height);
+        const d = imageData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          // Detect green-screen pixels: high green, low red & blue
+          if (g > 180 && r < 100 && b < 100) {
+            d[i + 3] = 0; // fully transparent
+          } else if (g > 150 && r < 130 && b < 130 && g > r * 1.4 && g > b * 1.4) {
+            // Edge pixels with green fringing - partial transparency
+            const greenness = (g - Math.max(r, b)) / g;
+            d[i + 3] = Math.round(255 * (1 - greenness));
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        resolve(c.toDataURL("image/png"));
+      };
+      img.onerror = () => reject(new Error("Failed to load image for chroma key"));
+      img.src = imgSrc;
+    });
+  }
 
   // Check if the currently selected object is an AI Design
   function getSelectedAiDesign(): any | null {
