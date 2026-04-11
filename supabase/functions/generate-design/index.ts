@@ -44,6 +44,7 @@ serve(async (req) => {
             content: enhancedPrompt,
           },
         ],
+        modalities: ["image", "text"],
       }),
     });
 
