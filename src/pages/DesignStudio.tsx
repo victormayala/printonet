@@ -481,6 +481,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [clipartCategory, setClipartCategory] = useState<string>("Popular");
   const [fontFamily, setFontFamily] = useState<string>("Inter");
   const [showPrintAreaBoundary, setShowPrintAreaBoundary] = useState(true);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiHistory, setAiHistory] = useState<Array<{ prompt: string; imageUrl: string }>>([]);
   const viewStatesRef = useRef<Record<ViewSide, string | null>>({ front: null, back: null, side1: null, side2: null });
   const currentCanvasViewRef = useRef<ViewSide>("front");
   const isLoadingViewRef = useRef(false);
@@ -1417,6 +1420,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
   const tools = [
+    { id: "ai", icon: Wand2, label: "AI" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
     { id: "clipart", icon: Sticker, label: "Clipart" },
