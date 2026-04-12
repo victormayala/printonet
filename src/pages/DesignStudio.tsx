@@ -731,6 +731,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     obj.setCoords();
   }
 
+  // Get center of print area in canvas coordinates, or fallback to canvas center
+  function getPrintAreaCenter() {
+    const canvas = fabricRef.current;
+    if (!canvas) return { cx: 150, cy: 250 };
+    const pa = getCurrentPrintArea();
+    if (!pa) return { cx: canvas.getWidth() / 2, cy: canvas.getHeight() / 2 };
+    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
+    return { cx: px + pw / 2, cy: py + ph / 2 };
+  }
   // Initialize canvas with responsive sizing
   const [canvasReady, setCanvasReady] = useState(false);
 
@@ -763,7 +772,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", () => setSelectedObject(null));
     canvas.on("object:modified", () => { saveViewState(); saveState(); updateLayers(); });
-    canvas.on("object:added", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
+    canvas.on("object:added", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; constrainToPrintArea(e.target); saveViewState(); updateLayers(); });
     canvas.on("object:removed", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
     canvas.on("object:moving", (e: any) => constrainToPrintArea(e.target));
     canvas.on("object:scaling", (e: any) => constrainToPrintArea(e.target));
@@ -919,8 +928,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const canvas = fabricRef.current;
     if (!canvas) return;
     loadGoogleFont(fontFamily);
+    const { cx, cy } = getPrintAreaCenter();
     const text = new FabricText(textInput, {
-      left: 150, top: 250, fontSize, fill: fillColor, fontFamily,
+      left: cx, top: cy, fontSize, fill: fillColor, fontFamily, originX: 'center', originY: 'center',
     });
     (text as any).customName = `Text: "${textInput.slice(0, 12)}"`;
     canvas.add(text);
@@ -948,8 +958,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     loadGoogleFont(fontFamily);
     const radius = 200;
     const archPath = createArchPath(radius, 180);
+    const { cx, cy } = getPrintAreaCenter();
     const text = new FabricText(textInput, {
-      left: 150, top: 200, fontSize, fill: fillColor, fontFamily,
+      left: cx, top: cy, fontSize, fill: fillColor, fontFamily, originX: 'center', originY: 'center',
       path: archPath,
     });
     (text as any).customName = `Arch: "${textInput.slice(0, 12)}"`;
@@ -1067,7 +1078,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const canvas = fabricRef.current;
     if (!canvas) return;
     let obj: any;
-    const commonProps = { left: 180, top: 220, fill: fillColor };
+    const { cx, cy } = getPrintAreaCenter();
+    const commonProps = { left: cx, top: cy, fill: fillColor, originX: 'center' as const, originY: 'center' as const };
     switch (shape) {
       case "rect":
         obj = new Rect({ ...commonProps, width: 120, height: 100, rx: 8, ry: 8 });
@@ -1221,8 +1233,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       source: patternCanvas,
       repeat: "repeat",
     });
+    const { cx, cy } = getPrintAreaCenter();
     const rect = new Rect({
-      left: 180, top: 220, width: size, height: size,
+      left: cx, top: cy, width: size, height: size, originX: 'center', originY: 'center',
       fill: fabricPattern,
       stroke: fillColor,
       strokeWidth: 1,
@@ -1241,9 +1254,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     reader.onload = (event) => {
       const imgEl = new Image();
       imgEl.onload = () => {
+        const { cx, cy } = getPrintAreaCenter();
         const scale = Math.min(300 / imgEl.width, 300 / imgEl.height, 1);
         const img = new FabricImage(imgEl, {
-          left: 100, top: 100,
+          left: cx, top: cy, originX: 'center', originY: 'center',
           scaleX: scale,
           scaleY: scale,
         });
@@ -1503,9 +1517,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const imgEl = new Image();
     imgEl.crossOrigin = "anonymous";
     imgEl.onload = () => {
+      const { cx, cy } = getPrintAreaCenter();
       const scale = Math.min(300 / imgEl.width, 300 / imgEl.height, 1);
       const img = new FabricImage(imgEl, {
-        left: 100, top: 100,
+        left: cx, top: cy, originX: 'center', originY: 'center',
         scaleX: scale, scaleY: scale,
       });
       (img as any).customName = "AI Design";
@@ -1561,8 +1576,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const url = URL.createObjectURL(blob);
     const imgEl = new Image();
     imgEl.onload = () => {
+      const { cx, cy } = getPrintAreaCenter();
       const img = new FabricImage(imgEl, {
-        left: 150, top: 200,
+        left: cx, top: cy, originX: 'center', originY: 'center',
         scaleX: 1, scaleY: 1,
       });
       (img as any).customName = `Clipart: ${clipartItem.name}`;
