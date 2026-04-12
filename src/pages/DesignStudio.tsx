@@ -4,6 +4,7 @@ import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Li
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import {
