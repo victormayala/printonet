@@ -1468,10 +1468,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       selectedObject.set("opacity", value / 100);
       setObjectProps((p) => ({ ...p, opacity: value }));
     } else if (prop === "fill") {
-      selectedObject.set("fill", value);
-      setObjectProps((p) => ({ ...p, fill: value }));
-      setFillColor(value);
-    }
+      updateFillColor(value);
+      return;
     fabricRef.current?.renderAll();
     saveState();
   }
