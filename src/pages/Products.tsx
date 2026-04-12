@@ -15,7 +15,7 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List,
-  ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink
+  ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
@@ -157,6 +157,28 @@ function ProductForm({
   const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
     (product?.print_areas as any) || {}
   );
+  const [detecting, setDetecting] = useState<string | null>(null);
+
+  const autoDetectPrintArea = async (imageUrl: string, sideKey: string) => {
+    const printAreaKey = sideKey === "left" ? "side1" : sideKey === "right" ? "side2" : sideKey;
+    setDetecting(sideKey);
+    try {
+      const { data, error } = await supabase.functions.invoke("detect-print-area", {
+        body: { imageUrl },
+      });
+      if (error) throw error;
+      if (data?.printArea) {
+        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: data.printArea }));
+        toast({ title: `Print area detected for ${sideKey}` });
+      } else {
+        throw new Error("No print area detected");
+      }
+    } catch (err: any) {
+      toast({ title: "Detection failed", description: err.message, variant: "destructive" });
+    } finally {
+      setDetecting(null);
+    }
+  };
 
   const IMAGE_SIDES = [
     { key: "front", label: "Front", value: imageFront, setter: setImageFront },
@@ -272,22 +294,39 @@ function ProductForm({
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <PrintAreaEditor
-                    imageUrl={value}
-                    sideLabel={label}
-                    value={printAreas[printAreaKey] || null}
-                    onChange={(area) => {
-                      if (area) {
-                        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
-                      } else {
-                        setPrintAreas((prev) => {
-                          const next = { ...prev };
-                          delete next[printAreaKey];
-                          return next;
-                        });
-                      }
-                    }}
-                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <PrintAreaEditor
+                      imageUrl={value}
+                      sideLabel={label}
+                      value={printAreas[printAreaKey] || null}
+                      onChange={(area) => {
+                        if (area) {
+                          setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
+                        } else {
+                          setPrintAreas((prev) => {
+                            const next = { ...prev };
+                            delete next[printAreaKey];
+                            return next;
+                          });
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      disabled={detecting === key}
+                      onClick={() => autoDetectPrintArea(value, key)}
+                    >
+                      {detecting === key ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Auto-Detect
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
