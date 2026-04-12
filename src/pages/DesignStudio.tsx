@@ -1000,10 +1000,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const obj = e.selected?.[0];
     if (obj) {
       setSelectedObject(obj);
+      const objFill = typeof obj.fill === "string" ? obj.fill : "#000000";
       setObjectProps({
         opacity: Math.round((obj.opacity || 1) * 100),
-        fill: typeof obj.fill === "string" ? obj.fill : "#000000",
+        fill: objFill,
       });
+      setFillColor(objFill);
     }
   }
 
@@ -1468,9 +1470,20 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     } else if (prop === "fill") {
       selectedObject.set("fill", value);
       setObjectProps((p) => ({ ...p, fill: value }));
+      setFillColor(value);
     }
     fabricRef.current?.renderAll();
     saveState();
+  }
+
+  function updateFillColor(value: string) {
+    setFillColor(value);
+    if (selectedObject) {
+      selectedObject.set("fill", value);
+      setObjectProps((p) => ({ ...p, fill: value }));
+      fabricRef.current?.renderAll();
+      saveState();
+    }
   }
 
   // Determine product info
