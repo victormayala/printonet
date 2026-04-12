@@ -675,12 +675,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     if (!pa) return;
     if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
 
-    const cw = canvas.getWidth();
-    const ch = canvas.getHeight();
-    const minX = (pa.x / 100) * cw;
-    const minY = (pa.y / 100) * ch;
-    const maxX = minX + (pa.width / 100) * cw;
-    const maxY = minY + (pa.height / 100) * ch;
+    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
+    const minX = px;
+    const minY = py;
+    const maxX = px + pw;
+    const maxY = py + ph;
 
     const bound = obj.getBoundingRect();
     let newLeft = obj.left;
