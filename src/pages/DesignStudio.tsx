@@ -2087,7 +2087,16 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const dataUrl = canvas.toDataURL(exportOptions);
         const publicUrl = await uploadPng(dataUrl, view);
-        const previewDataUrl = await generateCompositePreview(imageMap[view] || null, dataUrl, pa || undefined);
+
+        // Generate composite preview using full canvas (no crop) for accurate placement
+        const fullCanvasDataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
+        const previewDataUrl = await generateCompositePreview(
+          imageMap[view] || null,
+          fullCanvasDataUrl,
+          cw,
+          ch,
+          imageBounds
+        );
         const previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
 
         sides.push({
