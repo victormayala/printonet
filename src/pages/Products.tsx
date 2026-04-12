@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
-  Code, Copy, Check, ExternalLink, Info, LayoutGrid, List,
+  Code, Copy, Check, ExternalLink, Info, LayoutGrid, List, Eye,
   ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -922,6 +922,9 @@ export default function Products() {
                             <span className="absolute top-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => window.open(`/embed/${p.id}`, '_blank')} title="Preview Customizer">
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -970,7 +973,10 @@ export default function Products() {
                             {p.is_active ? "Active" : "Inactive"}
                           </span>
                         </span>
-                        <div className="w-20 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-24 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => window.open(`/embed/${p.id}`, '_blank')} title="Preview Customizer">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
