@@ -509,6 +509,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const url = getCurrentImageUrl();
     if (!url || !fabricRef.current) {
       setImageBounds(null);
+      imageBoundsRef.current = null;
       return;
     }
     const img = new Image();
@@ -517,9 +518,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       if (!canvas) return;
       const bounds = computeImageBounds(canvas.getWidth(), canvas.getHeight(), img.naturalWidth, img.naturalHeight);
       setImageBounds(bounds);
+      imageBoundsRef.current = bounds;
     };
     img.src = url;
   }, [activeView, invProduct, loading]);
+
+  // Keep refs in sync
+  useEffect(() => { invProductRef.current = invProduct; }, [invProduct]);
+  useEffect(() => { imageBoundsRef.current = imageBounds; }, [imageBounds]);
 
   // Recalculate image bounds on canvas resize
   useEffect(() => {
