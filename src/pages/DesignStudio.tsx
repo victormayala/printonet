@@ -1581,10 +1581,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const exportOptions: any = { format: "png", multiplier: 4 };
         if (pa) {
-          exportOptions.left = (pa.x / 100) * cw;
-          exportOptions.top = (pa.y / 100) * ch;
-          exportOptions.width = (pa.width / 100) * cw;
-          exportOptions.height = (pa.height / 100) * ch;
+          // Use image bounds for accurate cropping if available
+          if (imageBounds) {
+            exportOptions.left = imageBounds.x + (pa.x / 100) * imageBounds.w;
+            exportOptions.top = imageBounds.y + (pa.y / 100) * imageBounds.h;
+            exportOptions.width = (pa.width / 100) * imageBounds.w;
+            exportOptions.height = (pa.height / 100) * imageBounds.h;
+          } else {
+            exportOptions.left = (pa.x / 100) * cw;
+            exportOptions.top = (pa.y / 100) * ch;
+            exportOptions.width = (pa.width / 100) * cw;
+            exportOptions.height = (pa.height / 100) * ch;
+          }
         }
 
         const dataUrl = canvas.toDataURL(exportOptions);
