@@ -191,62 +191,15 @@
         label.textContent = side.view;
         card.appendChild(label);
 
-        // Composite container: product image + design overlay
-        var compositeWrap = document.createElement('div');
-        compositeWrap.style.cssText = 'position:relative;width:100%;aspect-ratio:1;background:#f5f5f5;';
+        // Use the pre-rendered composite preview (previewPNG) as a single image
+        // This ensures consistency across the summary modal, cart, and checkout
+        var previewSrc = side.previewPNG || side.designPNG;
+        var previewImg = document.createElement('img');
+        previewImg.src = previewSrc;
+        previewImg.alt = side.view + ' preview';
+        previewImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
 
-        if (side.productImage) {
-          var productImg = document.createElement('img');
-          productImg.src = side.productImage;
-          productImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
-          productImg.alt = side.view + ' product';
-          compositeWrap.appendChild(productImg);
-        }
-
-        var designImg = document.createElement('img');
-        designImg.src = side.designPNG;
-        designImg.alt = side.view + ' design';
-
-        // Position design within print area if available
-        if (side.printArea && side.productImage) {
-          var pa = side.printArea;
-          designImg.style.cssText = 'position:absolute;object-fit:contain;pointer-events:none;';
-          // We need to calculate position after the product image loads to account for object-fit:contain letterboxing
-          var positionDesign = function () {
-            var wrapRect = compositeWrap.getBoundingClientRect();
-            var cw = wrapRect.width;
-            var ch = wrapRect.height;
-            // Find rendered image bounds within object-fit:contain
-            var pImg = compositeWrap.querySelector('img');
-            if (pImg && pImg.naturalWidth && pImg.naturalHeight) {
-              var scale = Math.min(cw / pImg.naturalWidth, ch / pImg.naturalHeight);
-              var rw = pImg.naturalWidth * scale;
-              var rh = pImg.naturalHeight * scale;
-              var offX = (cw - rw) / 2;
-              var offY = (ch - rh) / 2;
-              var left = offX + (pa.x / 100) * rw;
-              var top = offY + (pa.y / 100) * rh;
-              var width = (pa.width / 100) * rw;
-              var height = (pa.height / 100) * rh;
-              designImg.style.left = (left / cw * 100) + '%';
-              designImg.style.top = (top / ch * 100) + '%';
-              designImg.style.width = (width / cw * 100) + '%';
-              designImg.style.height = (height / ch * 100) + '%';
-            }
-          };
-          if (side.productImage) {
-            var tempImg = new Image();
-            tempImg.onload = positionDesign;
-            tempImg.src = side.productImage;
-          }
-          // Also try positioning after a short delay as fallback
-          setTimeout(positionDesign, 300);
-        } else {
-          designImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
-        }
-        compositeWrap.appendChild(designImg);
-
-        card.appendChild(compositeWrap);
+        card.appendChild(previewImg);
         grid.appendChild(card);
       });
 
