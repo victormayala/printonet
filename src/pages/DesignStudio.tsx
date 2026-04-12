@@ -656,7 +656,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       width: pw,
       height: ph,
       fill: "transparent",
-      stroke: "hsl(var(--primary))",
+      stroke: "#6366f1",
       strokeWidth: 2,
       strokeDashArray: [8, 4],
       selectable: false,
@@ -795,12 +795,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const boundary = canvas.getObjects().find((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
     if (!boundary) return;
 
-    boundary.set({ stroke: "hsl(var(--destructive))", strokeWidth: 3 });
+    boundary.set({ stroke: "#ef4444", strokeWidth: 3 });
     canvas.renderAll();
 
     if (boundaryFlashTimerRef.current) clearTimeout(boundaryFlashTimerRef.current);
     boundaryFlashTimerRef.current = setTimeout(() => {
-      boundary.set({ stroke: "hsl(var(--primary))", strokeWidth: 2 });
+      boundary.set({ stroke: "#6366f1", strokeWidth: 2 });
       canvas.renderAll();
       boundaryFlashTimerRef.current = null;
     }, 400);
