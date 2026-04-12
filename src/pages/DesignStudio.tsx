@@ -1958,6 +1958,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     { id: "shapes", icon: Square, label: "Shapes" },
     { id: "clipart", icon: Sticker, label: "Clipart" },
     { id: "upload", icon: Upload, label: "Upload" },
+    { id: "ai", icon: Wand2, label: "AI" },
+    { id: "layers", icon: LayersIcon, label: "Layers" },
   ];
 
   function updateSelectedText(newText: string) {
