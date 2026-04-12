@@ -806,7 +806,30 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     }, 400);
   }
 
-  function enforcePrintAreaBounds(obj: any, mode: "move" | "strict" = "strict") {
+  function clampScaleInsidePrintArea(obj: any) {
+    const coords = getCurrentPrintAreaCoords();
+    if (!coords) return;
+    const { px, py, pw, ph } = coords;
+
+    // After scaling, clamp scale so bounding rect fits inside print area
+    obj.setCoords();
+    let bound = obj.getBoundingRect();
+
+    // If it overflows, shrink scale to fit
+    if (bound.width > pw || bound.height > ph) {
+      const ratioW = pw / bound.width;
+      const ratioH = ph / bound.height;
+      const shrink = Math.min(ratioW, ratioH);
+      obj.scaleX = (obj.scaleX || 1) * shrink;
+      obj.scaleY = (obj.scaleY || 1) * shrink;
+      obj.setCoords();
+    }
+
+    // Then clamp position
+    clampObjectPositionInsidePrintArea(obj);
+  }
+
+  function enforcePrintAreaBounds(obj: any, mode: "move" | "scale" | "strict" = "strict") {
     if (!obj || (obj as any).customName === PRINT_AREA_RECT_NAME) return;
 
     if (isObjectInsidePrintArea(obj)) {
@@ -817,6 +840,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     if (mode === "move") {
       const wasClamped = clampObjectPositionInsidePrintArea(obj);
       if (wasClamped && isObjectInsidePrintArea(obj)) {
+        rememberLastValidTransform(obj);
+        flashPrintAreaBoundary();
+        return;
+      }
+    }
+
+    if (mode === "scale") {
+      clampScaleInsidePrintArea(obj);
+      if (isObjectInsidePrintArea(obj)) {
         rememberLastValidTransform(obj);
         flashPrintAreaBoundary();
         return;
@@ -883,7 +915,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     });
     canvas.on("object:removed", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
     canvas.on("object:moving", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "move"); });
-    canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "strict"); });
+    canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "scale"); });
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
