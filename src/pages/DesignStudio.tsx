@@ -2138,9 +2138,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Toolbar */}
-        <div className="flex w-72 flex-col border-r border-sidebar-border bg-toolbar-bg">
-          <div className="flex border-b border-sidebar-border">
+        {/* Left Toolbar — vertical icon strip + content panel */}
+        <div className="flex border-r border-sidebar-border bg-toolbar-bg">
+          {/* Vertical icon strip */}
+          <div className="flex flex-col border-r border-sidebar-border bg-toolbar-bg">
             {tools.map((t) => (
               <button
                 key={t.id}
@@ -2148,44 +2149,48 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                   setActiveTool(t.id);
                   if (t.id === "upload") fileInputRef.current?.click();
                 }}
-                className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${activeTool === t.id ? "bg-sidebar-accent text-primary" : "hover:bg-sidebar-accent/50 text-sidebar-foreground"}`}
+                className={`flex flex-col items-center gap-1 px-3 py-3 text-xs transition-colors ${activeTool === t.id ? "bg-sidebar-accent text-primary" : "hover:bg-sidebar-accent/50 text-sidebar-foreground"}`}
               >
                 <t.icon className="h-4 w-4" />
-                {t.label}
+                <span className="text-[10px]">{t.label}</span>
               </button>
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Unified Color Picker — works before and after adding elements */}
-            <div className="space-y-2 border border-sidebar-border rounded-lg p-3 bg-sidebar-accent/30">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Color</label>
-              <div className="flex flex-wrap gap-1.5">
-                {["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#6366f1","#a855f7","#ec4899","#64748b","#78716c"].map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => updateFillColor(c)}
-                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${fillColor === c ? "border-primary ring-2 ring-primary/30 scale-110" : "border-border"}`}
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="color" value={fillColor} onChange={(e) => updateFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer border-0" />
-                <Input value={fillColor} onChange={(e) => updateFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-              </div>
-            </div>
+          {/* Content panel */}
+          <div className="w-64 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Unified Color Picker */}
+              {activeTool !== "layers" && activeTool !== "ai" && (
+                <div className="space-y-2 border border-sidebar-border rounded-lg p-3 bg-sidebar-accent/30">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Color</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#6366f1","#a855f7","#ec4899","#64748b","#78716c"].map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => updateFillColor(c)}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${fillColor === c ? "border-primary ring-2 ring-primary/30 scale-110" : "border-border"}`}
+                        style={{ backgroundColor: c }}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={fillColor} onChange={(e) => updateFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer border-0" />
+                    <Input value={fillColor} onChange={(e) => updateFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+                  </div>
+                </div>
+              )}
 
-            {/* Show selected object properties panel */}
-            {selectedObject && selectedPropertiesPanel && (
-              <>
-                {selectedPropertiesPanel}
-                <Separator className="bg-sidebar-border" />
-              </>
-            )}
+              {/* Selected object properties */}
+              {selectedObject && selectedPropertiesPanel && activeTool !== "layers" && activeTool !== "ai" && (
+                <>
+                  {selectedPropertiesPanel}
+                  <Separator className="bg-sidebar-border" />
+                </>
+              )}
 
-            {activeTool === "text" && !selectedObject && (
+              {activeTool === "text" && !selectedObject && (
                   <>
                     <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
                       <Type className="h-4 w-4" /> Add Custom Text
