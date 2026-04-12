@@ -1557,10 +1557,10 @@ add_action( 'wp_footer', function () {
 					link.style.marginTop = '6px';
 					link.textContent = 'View full size →';
 					wrap.appendChild(lbl);
-					function addStack(targetUrl, w, h){
+					function addStack(targetUrl, w, h, printArea){
 						var stack = document.createElement('div');
 						stack.className = 'cs-block-cart-composite';
-						stack.style.cssText = 'position:relative;width:'+w+'px;height:'+h+'px;margin-top:4px;';
+						stack.style.cssText = 'position:relative;width:'+w+'px;height:'+h+'px;margin-top:4px;overflow:hidden;';
 						if(line.product_thumb_url){
 							var pimg = document.createElement('img');
 							pimg.alt = '';
@@ -1571,7 +1571,32 @@ add_action( 'wp_footer', function () {
 						var dimg = document.createElement('img');
 						dimg.alt = '';
 						dimg.setAttribute('src', targetUrl);
-						dimg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;';
+						if(printArea && line.product_thumb_url){
+							dimg.style.cssText = 'position:absolute;object-fit:contain;z-index:2;pointer-events:none;';
+							dimg.setAttribute('data-pa-x', printArea.x);
+							dimg.setAttribute('data-pa-y', printArea.y);
+							dimg.setAttribute('data-pa-w', printArea.width);
+							dimg.setAttribute('data-pa-h', printArea.height);
+							dimg.className = 'cs-design-needs-pa';
+							var pimgRef = stack.querySelector('img');
+							if(pimgRef){
+								function applyPA(){
+									var nw=pimgRef.naturalWidth||w,nh=pimgRef.naturalHeight||h;
+									var s=Math.min(w/nw,h/nh);
+									var rw=nw*s,rh=nh*s;
+									var offX=(w-rw)/2,offY=(h-rh)/2;
+									dimg.style.left=(offX+(printArea.x/100)*rw)+'px';
+									dimg.style.top=(offY+(printArea.y/100)*rh)+'px';
+									dimg.style.width=((printArea.width/100)*rw)+'px';
+									dimg.style.height=((printArea.height/100)*rh)+'px';
+								}
+								if(pimgRef.complete&&pimgRef.naturalWidth)applyPA();
+								else pimgRef.addEventListener('load',applyPA);
+								setTimeout(applyPA,200);
+							}
+						} else {
+							dimg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;';
+						}
 						stack.appendChild(dimg);
 						return stack;
 					}
