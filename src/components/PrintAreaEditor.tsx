@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Crop, RotateCcw } from "lucide-react";
 
 export interface PrintArea {
-  x: number; // percentage
+  x: number; // percentage of image
   y: number;
   width: number;
   height: number;
@@ -17,22 +17,90 @@ interface PrintAreaEditorProps {
   onChange: (area: PrintArea | null) => void;
 }
 
+interface ImageBounds {
+  x: number; y: number; w: number; h: number;
+}
+
 export default function PrintAreaEditor({ imageUrl, sideLabel, value, onChange }: PrintAreaEditorProps) {
   const [open, setOpen] = useState(false);
   const [dragging, setDragging] = useState<"move" | "resize" | null>(null);
+  // area is always in image-relative percentages (0-100)
   const [area, setArea] = useState<PrintArea>(
     value || { x: 20, y: 15, width: 60, height: 70 }
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null);
   const dragStartRef = useRef<{ mx: number; my: number; area: PrintArea }>({ mx: 0, my: 0, area: { x: 0, y: 0, width: 0, height: 0 } });
 
   useEffect(() => {
     if (value) setArea(value);
   }, [value]);
 
-  const getContainerRect = useCallback(() => {
-    return containerRef.current?.getBoundingClientRect() ?? null;
+  const computeImageBounds = useCallback(() => {
+    const container = containerRef.current;
+    const img = imgRef.current;
+    if (!container || !img || !img.naturalWidth || !img.naturalHeight) return;
+
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const scale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+    const rw = img.naturalWidth * scale;
+    const rh = img.naturalHeight * scale;
+    setImageBounds({ x: (cw - rw) / 2, y: (ch - rh) / 2, w: rw, h: rh });
   }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(computeImageBounds);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [computeImageBounds, open]);
+
+  // Convert image-relative % to container pixel position
+  const areaToContainerStyle = useCallback(() => {
+    if (!imageBounds || !containerRef.current) {
+      // Fallback: treat as container-relative (square images)
+      return {
+        left: `${area.x}%`,
+        top: `${area.y}%`,
+        width: `${area.width}%`,
+        height: `${area.height}%`,
+      };
+    }
+    const cw = containerRef.current.clientWidth;
+    const ch = containerRef.current.clientHeight;
+    const px = imageBounds.x + (area.x / 100) * imageBounds.w;
+    const py = imageBounds.y + (area.y / 100) * imageBounds.h;
+    const pw = (area.width / 100) * imageBounds.w;
+    const ph = (area.height / 100) * imageBounds.h;
+    return {
+      left: `${(px / cw) * 100}%`,
+      top: `${(py / ch) * 100}%`,
+      width: `${(pw / cw) * 100}%`,
+      height: `${(ph / ch) * 100}%`,
+    };
+  }, [area, imageBounds]);
+
+  // Convert container-relative SVG coordinates for the mask
+  const areaSvgCoords = useCallback(() => {
+    if (!imageBounds || !containerRef.current) {
+      return { x: area.x, y: area.y, width: area.width, height: area.height };
+    }
+    const cw = containerRef.current.clientWidth;
+    const ch = containerRef.current.clientHeight;
+    const px = imageBounds.x + (area.x / 100) * imageBounds.w;
+    const py = imageBounds.y + (area.y / 100) * imageBounds.h;
+    const pw = (area.width / 100) * imageBounds.w;
+    const ph = (area.height / 100) * imageBounds.h;
+    return {
+      x: (px / cw) * 100,
+      y: (py / ch) * 100,
+      width: (pw / cw) * 100,
+      height: (ph / ch) * 100,
+    };
+  }, [area, imageBounds]);
 
   const handleMouseDown = (e: React.MouseEvent, type: "move" | "resize") => {
     e.preventDefault();
@@ -45,11 +113,11 @@ export default function PrintAreaEditor({ imageUrl, sideLabel, value, onChange }
     if (!dragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const rect = getContainerRect();
-      if (!rect) return;
+      if (!imageBounds) return;
       const { mx, my, area: startArea } = dragStartRef.current;
-      const dx = ((e.clientX - mx) / rect.width) * 100;
-      const dy = ((e.clientY - my) / rect.height) * 100;
+      // Convert pixel delta to image-relative percentage
+      const dx = ((e.clientX - mx) / imageBounds.w) * 100;
+      const dy = ((e.clientY - my) / imageBounds.h) * 100;
 
       if (dragging === "move") {
         const newX = Math.max(0, Math.min(100 - startArea.width, startArea.x + dx));
@@ -70,7 +138,7 @@ export default function PrintAreaEditor({ imageUrl, sideLabel, value, onChange }
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [dragging, getContainerRect]);
+  }, [dragging, imageBounds]);
 
   const handleSave = () => {
     onChange({ x: Math.round(area.x), y: Math.round(area.y), width: Math.round(area.width), height: Math.round(area.height) });
@@ -82,6 +150,9 @@ export default function PrintAreaEditor({ imageUrl, sideLabel, value, onChange }
     setArea({ x: 20, y: 15, width: 60, height: 70 });
     setOpen(false);
   };
+
+  const containerStyle = areaToContainerStyle();
+  const svgCoords = areaSvgCoords();
 
   return (
     <>
@@ -114,10 +185,12 @@ export default function PrintAreaEditor({ imageUrl, sideLabel, value, onChange }
             className="relative w-full aspect-square rounded-lg overflow-hidden border bg-muted select-none"
           >
             <img
+              ref={imgRef}
               src={imageUrl}
               alt={sideLabel}
               className="w-full h-full object-contain pointer-events-none"
               draggable={false}
+              onLoad={computeImageBounds}
             />
             {/* Dimmed overlay outside print area */}
             <div className="absolute inset-0 pointer-events-none">
@@ -126,10 +199,10 @@ export default function PrintAreaEditor({ imageUrl, sideLabel, value, onChange }
                   <mask id="print-area-mask">
                     <rect width="100" height="100" fill="white" />
                     <rect
-                      x={area.x}
-                      y={area.y}
-                      width={area.width}
-                      height={area.height}
+                      x={svgCoords.x}
+                      y={svgCoords.y}
+                      width={svgCoords.width}
+                      height={svgCoords.height}
                       fill="black"
                     />
                   </mask>
@@ -145,12 +218,7 @@ export default function PrintAreaEditor({ imageUrl, sideLabel, value, onChange }
             {/* Draggable print area */}
             <div
               className="absolute border-2 border-dashed border-primary cursor-move"
-              style={{
-                left: `${area.x}%`,
-                top: `${area.y}%`,
-                width: `${area.width}%`,
-                height: `${area.height}%`,
-              }}
+              style={containerStyle}
               onMouseDown={(e) => handleMouseDown(e, "move")}
             >
               <div className="absolute inset-0 flex items-center justify-center">
