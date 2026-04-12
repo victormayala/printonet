@@ -1248,7 +1248,45 @@ add_action( 'wp_head', function () {
 		.cs-block-cart-design-preview img { max-width:120px;max-height:120px;display:block;border-radius:4px; }
 		.cs-block-cart-composite { position:relative; border-radius:6px; overflow:hidden; background:#f3f4f6; }
 		.cs-block-cart-composite img { display:block; }
-	</style>';
+	</style>
+	<script>
+	/* Position design overlays within print areas for cart thumbnails */
+	(function(){
+		function positionPrintAreaDesigns(){
+			var els = document.querySelectorAll(".cs-design-needs-pa");
+			els.forEach(function(designImg){
+				var container = designImg.parentElement;
+				if(!container) return;
+				var baseImg = container.querySelector("img.cs-product-base-img") || container.querySelector(".cs-product-base-wrap img");
+				if(!baseImg) return;
+				var paX = parseFloat(designImg.getAttribute("data-pa-x")) || 0;
+				var paY = parseFloat(designImg.getAttribute("data-pa-y")) || 0;
+				var paW = parseFloat(designImg.getAttribute("data-pa-w")) || 100;
+				var paH = parseFloat(designImg.getAttribute("data-pa-h")) || 100;
+				function apply(){
+					var cw = container.offsetWidth;
+					var ch = container.offsetHeight;
+					if(!cw || !ch) return;
+					var nw = baseImg.naturalWidth || cw;
+					var nh = baseImg.naturalHeight || ch;
+					var scale = Math.min(cw/nw, ch/nh);
+					var rw = nw*scale, rh = nh*scale;
+					var offX = (cw-rw)/2, offY = (ch-rh)/2;
+					designImg.style.left = (offX + (paX/100)*rw) + "px";
+					designImg.style.top = (offY + (paY/100)*rh) + "px";
+					designImg.style.width = ((paW/100)*rw) + "px";
+					designImg.style.height = ((paH/100)*rh) + "px";
+				}
+				if(baseImg.complete && baseImg.naturalWidth) apply();
+				else baseImg.addEventListener("load", apply);
+				setTimeout(apply, 200);
+			});
+		}
+		if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", positionPrintAreaDesigns);
+		else positionPrintAreaDesigns();
+		new MutationObserver(positionPrintAreaDesigns).observe(document.body,{childList:true,subtree:true});
+	})();
+	</script>';
 } );
 
 /* ================================================================
