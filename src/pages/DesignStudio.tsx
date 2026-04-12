@@ -1788,6 +1788,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       });
       (img as any).customName = `Clipart: ${clipartItem.name}`;
       (img as any)._clipartIconName = clipartItem.name;
+      (img as any)._clipartColor = fillColor;
       canvas.add(img);
       canvas.setActiveObject(img);
       saveState();
