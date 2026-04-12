@@ -1000,10 +1000,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const obj = e.selected?.[0];
     if (obj) {
       setSelectedObject(obj);
+      const objFill = typeof obj.fill === "string" ? obj.fill : "#000000";
       setObjectProps({
         opacity: Math.round((obj.opacity || 1) * 100),
-        fill: typeof obj.fill === "string" ? obj.fill : "#000000",
+        fill: objFill,
       });
+      setFillColor(objFill);
     }
   }
 
@@ -1468,9 +1470,20 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     } else if (prop === "fill") {
       selectedObject.set("fill", value);
       setObjectProps((p) => ({ ...p, fill: value }));
+      setFillColor(value);
     }
     fabricRef.current?.renderAll();
     saveState();
+  }
+
+  function updateFillColor(value: string) {
+    setFillColor(value);
+    if (selectedObject) {
+      selectedObject.set("fill", value);
+      setObjectProps((p) => ({ ...p, fill: value }));
+      fabricRef.current?.renderAll();
+      saveState();
+    }
   }
 
   // Determine product info
@@ -1970,24 +1983,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         <label className="text-xs text-muted-foreground">Opacity: {objectProps.opacity}%</label>
         <Slider value={[objectProps.opacity]} onValueChange={([v]) => updateSelectedProp("opacity", v)} min={0} max={100} />
       </div>
-      <div className="space-y-2">
-        <label className="text-xs text-muted-foreground">Color</label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#6366f1","#a855f7","#ec4899","#64748b","#78716c"].map((c) => (
-            <button
-              key={c}
-              onClick={() => updateSelectedProp("fill", c)}
-              className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${objectProps.fill === c ? "border-primary ring-2 ring-primary/30 scale-110" : "border-border"}`}
-              style={{ backgroundColor: c }}
-              title={c}
-            />
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <input type="color" value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="h-8 w-8 rounded cursor-pointer border-0" />
-          <Input value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-        </div>
-      </div>
       <Button variant="destructive" size="sm" onClick={deleteSelected} className="w-full gap-2">
         <Trash2 className="h-3.5 w-3.5" /> Delete
       </Button>
@@ -2095,7 +2090,27 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Show selected object properties panel for any object type */}
+            {/* Unified Color Picker — works before and after adding elements */}
+            <div className="space-y-2 border border-sidebar-border rounded-lg p-3 bg-sidebar-accent/30">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Color</label>
+              <div className="flex flex-wrap gap-1.5">
+                {["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#6366f1","#a855f7","#ec4899","#64748b","#78716c"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => updateFillColor(c)}
+                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${fillColor === c ? "border-primary ring-2 ring-primary/30 scale-110" : "border-border"}`}
+                    style={{ backgroundColor: c }}
+                    title={c}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="color" value={fillColor} onChange={(e) => updateFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer border-0" />
+                <Input value={fillColor} onChange={(e) => updateFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
+              </div>
+            </div>
+
+            {/* Show selected object properties panel */}
             {selectedObject && selectedPropertiesPanel && (
               <>
                 {selectedPropertiesPanel}
@@ -2283,13 +2298,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
             {activeTool === "shapes" && (
               <>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Fill Color</label>
-                  <div className="flex items-center gap-2">
-                    <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
-                    <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-                  </div>
-                </div>
                 <div className="grid grid-cols-4 gap-2">
                   {([
                     { id: "rect", icon: <Square className="h-6 w-6" />, label: "Rectangle" },
@@ -2358,13 +2366,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
             {activeTool === "clipart" && (
               <>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Color</label>
-                  <div className="flex items-center gap-2">
-                    <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
-                    <Input value={fillColor} onChange={(e) => setFillColor(e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
-                  </div>
-                </div>
                 <div className="flex gap-1 flex-wrap">
                   {Object.keys(CLIPART_CATEGORIES).map((cat) => (
                     <button
