@@ -1954,11 +1954,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
   const tools = [
+    { id: "ai", icon: Wand2, label: "AI" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
     { id: "clipart", icon: Sticker, label: "Clipart" },
     { id: "upload", icon: Upload, label: "Upload" },
-    { id: "ai", icon: Wand2, label: "AI" },
     { id: "layers", icon: LayersIcon, label: "Layers" },
   ];
 
