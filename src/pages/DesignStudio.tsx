@@ -676,71 +676,93 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     updatePrintAreaRect(fabricRef.current);
   }, [showPrintAreaBoundary, imageBounds]);
 
-  // Constrain and snap object within print area bounds
-  const SNAP_THRESHOLD = 8; // pixels
-
-  function constrainToPrintArea(obj: any) {
+  // Hard containment: keep last valid transform and revert any move/scale that exits the print area
+  function getCurrentPrintAreaCoords() {
     const canvas = fabricRef.current;
-    if (!canvas) return;
+    if (!canvas) return null;
     const product = invProductRef.current;
-    if (!product?.print_areas) return;
+    if (!product?.print_areas) return null;
     const viewKey = currentCanvasViewRef.current === "side1" ? "side1" : currentCanvasViewRef.current === "side2" ? "side2" : currentCanvasViewRef.current;
     const pa = product.print_areas[viewKey];
-    if (!pa) return;
-    if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
+    if (!pa) return null;
+    return printAreaToCanvasCoords(pa);
+  }
 
-    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
+  function isObjectInsidePrintArea(obj: any) {
+    const coords = getCurrentPrintAreaCoords();
+    if (!coords) return true;
+    const { px, py, pw, ph } = coords;
     const minX = px;
     const minY = py;
     const maxX = px + pw;
     const maxY = py + ph;
-    const centerX = px + pw / 2;
-    const centerY = py + ph / 2;
-
     const bound = obj.getBoundingRect();
-    let newLeft = obj.left;
-    let newTop = obj.top;
+    return (
+      bound.left >= minX &&
+      bound.top >= minY &&
+      bound.left + bound.width <= maxX &&
+      bound.top + bound.height <= maxY
+    );
+  }
 
-    // Snap to edges and center before constraining
-    const objCenterX = bound.left + bound.width / 2;
-    const objCenterY = bound.top + bound.height / 2;
+  function rememberLastValidTransform(obj: any) {
+    if (!obj || (obj as any).customName === PRINT_AREA_RECT_NAME) return;
+    (obj as any).__lastValidTransform = {
+      left: obj.left,
+      top: obj.top,
+      scaleX: obj.scaleX,
+      scaleY: obj.scaleY,
+      angle: obj.angle,
+      skewX: obj.skewX,
+      skewY: obj.skewY,
+      flipX: obj.flipX,
+      flipY: obj.flipY,
+    };
+  }
 
-    // Snap left edge
-    if (Math.abs(bound.left - minX) < SNAP_THRESHOLD) {
-      newLeft += minX - bound.left;
-    }
-    // Snap right edge
-    else if (Math.abs(bound.left + bound.width - maxX) < SNAP_THRESHOLD) {
-      newLeft -= (bound.left + bound.width) - maxX;
-    }
-    // Snap horizontal center
-    else if (Math.abs(objCenterX - centerX) < SNAP_THRESHOLD) {
-      newLeft += centerX - objCenterX;
-    }
-
-    // Snap top edge
-    if (Math.abs(bound.top - minY) < SNAP_THRESHOLD) {
-      newTop += minY - bound.top;
-    }
-    // Snap bottom edge
-    else if (Math.abs(bound.top + bound.height - maxY) < SNAP_THRESHOLD) {
-      newTop -= (bound.top + bound.height) - maxY;
-    }
-    // Snap vertical center
-    else if (Math.abs(objCenterY - centerY) < SNAP_THRESHOLD) {
-      newTop += centerY - objCenterY;
-    }
-
-    // Re-check bounds after snapping to enforce containment
-    const updatedLeft = newLeft - obj.left + bound.left;
-    const updatedTop = newTop - obj.top + bound.top;
-    if (updatedLeft < minX) newLeft += minX - updatedLeft;
-    if (updatedTop < minY) newTop += minY - updatedTop;
-    if (updatedLeft + bound.width > maxX) newLeft -= (updatedLeft + bound.width) - maxX;
-    if (updatedTop + bound.height > maxY) newTop -= (updatedTop + bound.height) - maxY;
-
-    obj.set({ left: newLeft, top: newTop });
+  function restoreLastValidTransform(obj: any) {
+    const last = (obj as any)?.__lastValidTransform;
+    if (!last) return;
+    obj.set(last);
     obj.setCoords();
+  }
+
+  function centerObjectInPrintArea(obj: any) {
+    const coords = getCurrentPrintAreaCoords();
+    const canvas = fabricRef.current;
+    if (!obj || !canvas) return;
+
+    if (!coords) {
+      obj.set({ left: canvas.getWidth() / 2, top: canvas.getHeight() / 2 });
+      obj.setCoords();
+      rememberLastValidTransform(obj);
+      return;
+    }
+
+    const { px, py, pw, ph } = coords;
+    obj.set({ left: px + pw / 2, top: py + ph / 2, originX: "center", originY: "center" });
+    obj.setCoords();
+
+    if (!isObjectInsidePrintArea(obj)) {
+      const bound = obj.getBoundingRect();
+      const fitScale = Math.min(pw / bound.width, ph / bound.height, 1);
+      if (fitScale < 1) {
+        obj.scaleX = (obj.scaleX || 1) * fitScale;
+        obj.scaleY = (obj.scaleY || 1) * fitScale;
+        obj.setCoords();
+      }
+    }
+
+    rememberLastValidTransform(obj);
+  }
+
+  function enforcePrintAreaBounds(obj: any) {
+    if (!obj || (obj as any).customName === PRINT_AREA_RECT_NAME) return;
+    if (isObjectInsidePrintArea(obj)) {
+      rememberLastValidTransform(obj);
+    } else {
+      restoreLastValidTransform(obj);
+    }
   }
 
   // Get center of print area in canvas coordinates, or fallback to canvas center
