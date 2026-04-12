@@ -915,7 +915,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     });
     canvas.on("object:removed", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
     canvas.on("object:moving", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "move"); });
-    canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "strict"); });
+    canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "scale"); });
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
