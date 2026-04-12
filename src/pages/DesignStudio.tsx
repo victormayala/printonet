@@ -1901,7 +1901,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       // Save current view state
       viewStatesRef.current[activeView] = JSON.stringify(canvas.toJSON());
 
-      const sides: Array<{ view: string; designPNG: string; productImage: string; canvasJSON: string; printArea?: { x: number; y: number; width: number; height: number } }> = [];
+      const sides: Array<{ view: string; designPNG: string; previewPNG?: string; productImage: string; canvasJSON: string; printArea?: { x: number; y: number; width: number; height: number } }> = [];
 
       const imageMap: Record<string, string | null> = {
         front: invProduct?.image_front || null,
@@ -1910,10 +1910,115 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         side2: invProduct?.image_side2 || null,
       };
 
+      const loadImageForComposite = async (src: string) => {
+        let resolvedSrc = src;
+        let objectUrl: string | null = null;
+
+        if (src && !src.startsWith("data:")) {
+          try {
+            const response = await fetch(src);
+            const blob = await response.blob();
+            objectUrl = URL.createObjectURL(blob);
+            resolvedSrc = objectUrl;
+          } catch (err) {
+            console.warn("Falling back to direct image load for composite:", err);
+          }
+        }
+
+        return await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            resolve(img);
+          };
+          img.onerror = () => {
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            reject(new Error(`Failed to load image: ${src}`));
+          };
+          img.src = resolvedSrc;
+        });
+      };
+
+      const uploadPng = async (pngUrl: string, suffix: string) => {
+        let publicUrl = pngUrl;
+
+        try {
+          const blob = await (await fetch(pngUrl)).blob();
+          const fileName = `${sessionId || "export"}_${suffix}_${Date.now()}.png`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("design-exports")
+            .upload(fileName, blob, { contentType: "image/png" });
+
+          if (uploadData && !uploadError) {
+            publicUrl = supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl;
+          }
+        } catch (uploadErr) {
+          console.warn("Storage upload failed, using data URL:", uploadErr);
+        }
+
+        return publicUrl;
+      };
+
+      const generateCompositePreview = async (
+        productImageUrl: string | null,
+        designUrl: string,
+        printArea?: { x: number; y: number; width: number; height: number }
+      ) => {
+        if (!designUrl) return "";
+        if (!productImageUrl) return designUrl;
+
+        try {
+          const [productImg, designImg] = await Promise.all([
+            loadImageForComposite(productImageUrl),
+            loadImageForComposite(designUrl),
+          ]);
+
+          const baseWidth = productImg.naturalWidth || productImg.width || 1200;
+          const baseHeight = productImg.naturalHeight || productImg.height || 1200;
+          const outputSize = Math.max(Math.min(Math.max(baseWidth, baseHeight), 1600), 1200);
+
+          const previewCanvas = document.createElement("canvas");
+          previewCanvas.width = outputSize;
+          previewCanvas.height = outputSize;
+
+          const ctx = previewCanvas.getContext("2d");
+          if (!ctx) return designUrl;
+
+          ctx.clearRect(0, 0, outputSize, outputSize);
+
+          const scale = Math.min(outputSize / baseWidth, outputSize / baseHeight);
+          const renderedWidth = baseWidth * scale;
+          const renderedHeight = baseHeight * scale;
+          const offsetX = (outputSize - renderedWidth) / 2;
+          const offsetY = (outputSize - renderedHeight) / 2;
+
+          ctx.drawImage(productImg, offsetX, offsetY, renderedWidth, renderedHeight);
+
+          if (printArea) {
+            ctx.drawImage(
+              designImg,
+              offsetX + (printArea.x / 100) * renderedWidth,
+              offsetY + (printArea.y / 100) * renderedHeight,
+              (printArea.width / 100) * renderedWidth,
+              (printArea.height / 100) * renderedHeight
+            );
+          } else {
+            ctx.drawImage(designImg, offsetX, offsetY, renderedWidth, renderedHeight);
+          }
+
+          return previewCanvas.toDataURL("image/png");
+        } catch (err) {
+          console.warn("Composite preview generation failed:", err);
+          return designUrl;
+        }
+      };
+
       for (const view of availableViews) {
         const stateJson = viewStatesRef.current[view];
         if (!stateJson) {
-          sides.push({ view, designPNG: "", productImage: imageMap[view] || "", canvasJSON: "{}" });
+          sides.push({ view, designPNG: "", previewPNG: "", productImage: imageMap[view] || "", canvasJSON: "{}" });
           continue;
         }
 
@@ -1950,27 +2055,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         }
 
         const dataUrl = canvas.toDataURL(exportOptions);
-
-        // Try uploading to storage, fall back to data URL
-        let publicUrl = dataUrl;
-        try {
-          const blob = await (await fetch(dataUrl)).blob();
-          const fileName = `${sessionId || "export"}_${view}_${Date.now()}.png`;
-
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("design-exports")
-            .upload(fileName, blob, { contentType: "image/png" });
-
-          if (uploadData && !uploadError) {
-            publicUrl = supabase.storage.from("design-exports").getPublicUrl(uploadData.path).data.publicUrl;
-          }
-        } catch (uploadErr) {
-          console.warn("Storage upload failed, using data URL:", uploadErr);
-        }
+        const publicUrl = await uploadPng(dataUrl, view);
+        const previewDataUrl = await generateCompositePreview(imageMap[view] || null, dataUrl, pa || undefined);
+        const previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
 
         sides.push({
           view,
           designPNG: publicUrl,
+          previewPNG: previewUrl,
           productImage: imageMap[view] || "",
           canvasJSON: stateJson,
           printArea: pa || undefined,
