@@ -1470,6 +1470,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     } else if (prop === "fill") {
       updateFillColor(value);
       return;
+    }
     fabricRef.current?.renderAll();
     saveState();
   }
