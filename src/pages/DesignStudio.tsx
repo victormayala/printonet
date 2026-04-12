@@ -661,11 +661,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.renderAll();
   }
 
-  // Toggle print area boundary visibility
+  // Toggle print area boundary visibility / update when image bounds change
   useEffect(() => {
     if (!fabricRef.current) return;
     updatePrintAreaRect(fabricRef.current);
-  }, [showPrintAreaBoundary]);
+  }, [showPrintAreaBoundary, imageBounds]);
 
   // Constrain object within print area bounds
   function constrainToPrintArea(obj: any) {
