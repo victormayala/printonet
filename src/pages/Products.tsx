@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
+import PrintAreaOverlay from "@/components/PrintAreaOverlay";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -277,15 +278,7 @@ function ProductForm({
                   <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
                     <img src={value} alt={label} className="w-full h-full object-contain" />
                     {printAreas[printAreaKey] && (
-                      <div
-                        className="absolute border-2 border-dashed border-primary/60 pointer-events-none"
-                        style={{
-                          left: `${printAreas[printAreaKey].x}%`,
-                          top: `${printAreas[printAreaKey].y}%`,
-                          width: `${printAreas[printAreaKey].width}%`,
-                          height: `${printAreas[printAreaKey].height}%`,
-                        }}
-                      />
+                      <PrintAreaOverlay imageUrl={value} printArea={printAreas[printAreaKey]} />
                     )}
                     <button
                       onClick={() => setter("")}
