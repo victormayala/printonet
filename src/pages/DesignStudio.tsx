@@ -1901,7 +1901,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       // Save current view state
       viewStatesRef.current[activeView] = JSON.stringify(canvas.toJSON());
 
-      const sides: Array<{ view: string; designPNG: string; productImage: string; canvasJSON: string }> = [];
+      const sides: Array<{ view: string; designPNG: string; productImage: string; canvasJSON: string; printArea?: { x: number; y: number; width: number; height: number } }> = [];
 
       const imageMap: Record<string, string | null> = {
         front: invProduct?.image_front || null,
@@ -1973,6 +1973,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           designPNG: publicUrl,
           productImage: imageMap[view] || "",
           canvasJSON: stateJson,
+          printArea: pa || undefined,
         });
       }
 
