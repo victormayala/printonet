@@ -1430,6 +1430,19 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     if (active) { canvas.remove(active); setSelectedObject(null); saveState(); }
   }
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        e.preventDefault();
+        deleteSelected();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
   function toggleVisibility(layerObj: any) {
     layerObj.visible = !layerObj.visible;
     fabricRef.current?.renderAll();
