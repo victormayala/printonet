@@ -1479,10 +1479,53 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   function updateFillColor(value: string) {
     setFillColor(value);
     if (selectedObject) {
-      selectedObject.set("fill", value);
-      setObjectProps((p) => ({ ...p, fill: value }));
-      fabricRef.current?.renderAll();
-      saveState();
+      const canvas = fabricRef.current;
+      // For clipart (FabricImage from SVG), re-render with new color
+      if ((selectedObject as any)._clipartIconName && selectedObject instanceof FabricImage) {
+        const iconName = (selectedObject as any)._clipartIconName;
+        // Find the icon component
+        let iconComp: React.ComponentType<any> | null = null;
+        for (const cat of Object.values(CLIPART_CATEGORIES)) {
+          const found = cat.find(c => c.name === iconName);
+          if (found) { iconComp = found.icon; break; }
+        }
+        if (iconComp) {
+          const svgString = ReactDOMServer.renderToStaticMarkup(
+            React.createElement(iconComp, { size: 120, color: value, strokeWidth: 1.5 })
+          );
+          const blob = new Blob([svgString], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const imgEl = new Image();
+          imgEl.onload = () => {
+            const prevLeft = selectedObject.left;
+            const prevTop = selectedObject.top;
+            const prevScaleX = selectedObject.scaleX;
+            const prevScaleY = selectedObject.scaleY;
+            const prevAngle = selectedObject.angle;
+            const newImg = new FabricImage(imgEl, {
+              left: prevLeft, top: prevTop,
+              scaleX: prevScaleX, scaleY: prevScaleY,
+              angle: prevAngle,
+              originX: selectedObject.originX,
+              originY: selectedObject.originY,
+            });
+            (newImg as any).customName = (selectedObject as any).customName;
+            (newImg as any)._clipartIconName = iconName;
+            canvas?.remove(selectedObject);
+            canvas?.add(newImg);
+            canvas?.setActiveObject(newImg);
+            canvas?.renderAll();
+            saveState();
+            URL.revokeObjectURL(url);
+          };
+          imgEl.src = url;
+        }
+      } else {
+        selectedObject.set("fill", value);
+        setObjectProps((p) => ({ ...p, fill: value }));
+        fabricRef.current?.renderAll();
+        saveState();
+      }
     }
   }
 
