@@ -1517,9 +1517,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const imgEl = new Image();
     imgEl.crossOrigin = "anonymous";
     imgEl.onload = () => {
+      const { cx, cy } = getPrintAreaCenter();
       const scale = Math.min(300 / imgEl.width, 300 / imgEl.height, 1);
       const img = new FabricImage(imgEl, {
-        left: 100, top: 100,
+        left: cx, top: cy, originX: 'center', originY: 'center',
         scaleX: scale, scaleY: scale,
       });
       (img as any).customName = "AI Design";
@@ -1575,8 +1576,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const url = URL.createObjectURL(blob);
     const imgEl = new Image();
     imgEl.onload = () => {
+      const { cx, cy } = getPrintAreaCenter();
       const img = new FabricImage(imgEl, {
-        left: 150, top: 200,
+        left: cx, top: cy, originX: 'center', originY: 'center',
         scaleX: 1, scaleY: 1,
       });
       (img as any).customName = `Clipart: ${clipartItem.name}`;
