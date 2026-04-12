@@ -1963,16 +1963,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
       const generateCompositePreview = async (
         productImageUrl: string | null,
-        designUrl: string,
-        printArea?: { x: number; y: number; width: number; height: number }
+        fullCanvasDataUrl: string,
+        canvasWidth: number,
+        canvasHeight: number,
+        imgBounds: { x: number; y: number; w: number; h: number } | null
       ) => {
-        if (!designUrl) return "";
-        if (!productImageUrl) return designUrl;
+        if (!fullCanvasDataUrl) return "";
+        if (!productImageUrl) return fullCanvasDataUrl;
 
         try {
-          const [productImg, designImg] = await Promise.all([
+          const [productImg, canvasImg] = await Promise.all([
             loadImageForComposite(productImageUrl),
-            loadImageForComposite(designUrl),
+            loadImageForComposite(fullCanvasDataUrl),
           ]);
 
           const baseWidth = productImg.naturalWidth || productImg.width || 1200;
@@ -1984,34 +1986,39 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           previewCanvas.height = outputSize;
 
           const ctx = previewCanvas.getContext("2d");
-          if (!ctx) return designUrl;
+          if (!ctx) return fullCanvasDataUrl;
 
           ctx.clearRect(0, 0, outputSize, outputSize);
 
-          const scale = Math.min(outputSize / baseWidth, outputSize / baseHeight);
-          const renderedWidth = baseWidth * scale;
-          const renderedHeight = baseHeight * scale;
-          const offsetX = (outputSize - renderedWidth) / 2;
-          const offsetY = (outputSize - renderedHeight) / 2;
+          // Draw product image centered (object-contain)
+          const prodScale = Math.min(outputSize / baseWidth, outputSize / baseHeight);
+          const prodW = baseWidth * prodScale;
+          const prodH = baseHeight * prodScale;
+          const prodOffX = (outputSize - prodW) / 2;
+          const prodOffY = (outputSize - prodH) / 2;
 
-          ctx.drawImage(productImg, offsetX, offsetY, renderedWidth, renderedHeight);
+          ctx.drawImage(productImg, prodOffX, prodOffY, prodW, prodH);
 
-          if (printArea) {
-            ctx.drawImage(
-              designImg,
-              offsetX + (printArea.x / 100) * renderedWidth,
-              offsetY + (printArea.y / 100) * renderedHeight,
-              (printArea.width / 100) * renderedWidth,
-              (printArea.height / 100) * renderedHeight
-            );
+          // Overlay the full canvas export on top, mapped so the image region aligns
+          // The canvas had the product image at imgBounds within canvasWidth x canvasHeight.
+          // We need to scale and position the canvas overlay so imgBounds maps to the product rect.
+          if (imgBounds && imgBounds.w > 0 && imgBounds.h > 0) {
+            const scaleX = prodW / imgBounds.w;
+            const scaleY = prodH / imgBounds.h;
+            const drawX = prodOffX - imgBounds.x * scaleX;
+            const drawY = prodOffY - imgBounds.y * scaleY;
+            const drawW = canvasWidth * scaleX;
+            const drawH = canvasHeight * scaleY;
+            ctx.drawImage(canvasImg, drawX, drawY, drawW, drawH);
           } else {
-            ctx.drawImage(designImg, offsetX, offsetY, renderedWidth, renderedHeight);
+            // Fallback: stretch canvas over the product area
+            ctx.drawImage(canvasImg, prodOffX, prodOffY, prodW, prodH);
           }
 
           return previewCanvas.toDataURL("image/png");
         } catch (err) {
           console.warn("Composite preview generation failed:", err);
-          return designUrl;
+          return fullCanvasDataUrl;
         }
       };
 
@@ -2080,7 +2087,16 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const dataUrl = canvas.toDataURL(exportOptions);
         const publicUrl = await uploadPng(dataUrl, view);
-        const previewDataUrl = await generateCompositePreview(imageMap[view] || null, dataUrl, pa || undefined);
+
+        // Generate composite preview using full canvas (no crop) for accurate placement
+        const fullCanvasDataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
+        const previewDataUrl = await generateCompositePreview(
+          imageMap[view] || null,
+          fullCanvasDataUrl,
+          cw,
+          ch,
+          imageBounds
+        );
         const previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
 
         sides.push({
