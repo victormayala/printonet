@@ -490,6 +490,76 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const currentCanvasViewRef = useRef<ViewSide>("front");
   const isLoadingViewRef = useRef(false);
   const viewLoadRequestRef = useRef(0);
+  const [imageBounds, setImageBounds] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // Compute where the product image actually renders within the canvas (object-contain)
+  function computeImageBounds(canvasW: number, canvasH: number, imgNatW: number, imgNatH: number) {
+    const scale = Math.min(canvasW / imgNatW, canvasH / imgNatH);
+    const w = imgNatW * scale;
+    const h = imgNatH * scale;
+    const x = (canvasW - w) / 2;
+    const y = (canvasH - h) / 2;
+    return { x, y, w, h };
+  }
+
+  // Load the current background image's natural dimensions and compute bounds
+  useEffect(() => {
+    const url = getCurrentImageUrl();
+    if (!url || !fabricRef.current) {
+      setImageBounds(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      const bounds = computeImageBounds(canvas.getWidth(), canvas.getHeight(), img.naturalWidth, img.naturalHeight);
+      setImageBounds(bounds);
+    };
+    img.src = url;
+  }, [activeView, invProduct, loading]);
+
+  // Recalculate image bounds on canvas resize
+  useEffect(() => {
+    if (!containerRef.current || !imageBounds) return;
+    const url = getCurrentImageUrl();
+    if (!url) return;
+    const observer = new ResizeObserver(() => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = fabricRef.current;
+        if (!canvas) return;
+        const bounds = computeImageBounds(canvas.getWidth(), canvas.getHeight(), img.naturalWidth, img.naturalHeight);
+        setImageBounds(bounds);
+      };
+      img.src = url;
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [activeView, invProduct]);
+
+  // Convert print area percentages to canvas pixel coordinates using image bounds
+  function printAreaToCanvasCoords(pa: { x: number; y: number; width: number; height: number }) {
+    const canvas = fabricRef.current;
+    if (!canvas) return { px: 0, py: 0, pw: 0, ph: 0 };
+    const bounds = imageBounds;
+    if (bounds) {
+      // Map percentages relative to the actual image position within canvas
+      return {
+        px: bounds.x + (pa.x / 100) * bounds.w,
+        py: bounds.y + (pa.y / 100) * bounds.h,
+        pw: (pa.width / 100) * bounds.w,
+        ph: (pa.height / 100) * bounds.h,
+      };
+    }
+    // Fallback: no image bounds, use full canvas
+    return {
+      px: (pa.x / 100) * canvas.getWidth(),
+      py: (pa.y / 100) * canvas.getHeight(),
+      pw: (pa.width / 100) * canvas.getWidth(),
+      ph: (pa.height / 100) * canvas.getHeight(),
+    };
+  }
 
   function serializeCanvasState() {
     if (!fabricRef.current) return null;
@@ -569,18 +639,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const pa = getCurrentPrintArea();
     if (!pa || !showPrintAreaBoundary) return;
 
-    const cw = canvas.getWidth();
-    const ch = canvas.getHeight();
-    const x = (pa.x / 100) * cw;
-    const y = (pa.y / 100) * ch;
-    const w = (pa.width / 100) * cw;
-    const h = (pa.height / 100) * ch;
+    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
 
     const boundary = new Rect({
-      left: x,
-      top: y,
-      width: w,
-      height: h,
+      left: px,
+      top: py,
+      width: pw,
+      height: ph,
       fill: "transparent",
       stroke: "hsl(var(--primary))",
       strokeWidth: 2,
@@ -596,11 +661,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.renderAll();
   }
 
-  // Toggle print area boundary visibility
+  // Toggle print area boundary visibility / update when image bounds change
   useEffect(() => {
     if (!fabricRef.current) return;
     updatePrintAreaRect(fabricRef.current);
-  }, [showPrintAreaBoundary]);
+  }, [showPrintAreaBoundary, imageBounds]);
 
   // Constrain object within print area bounds
   function constrainToPrintArea(obj: any) {
@@ -610,12 +675,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     if (!pa) return;
     if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
 
-    const cw = canvas.getWidth();
-    const ch = canvas.getHeight();
-    const minX = (pa.x / 100) * cw;
-    const minY = (pa.y / 100) * ch;
-    const maxX = minX + (pa.width / 100) * cw;
-    const maxY = minY + (pa.height / 100) * ch;
+    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
+    const minX = px;
+    const minY = py;
+    const maxX = px + pw;
+    const maxY = py + ph;
 
     const bound = obj.getBoundingRect();
     let newLeft = obj.left;
@@ -1517,10 +1581,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const exportOptions: any = { format: "png", multiplier: 4 };
         if (pa) {
-          exportOptions.left = (pa.x / 100) * cw;
-          exportOptions.top = (pa.y / 100) * ch;
-          exportOptions.width = (pa.width / 100) * cw;
-          exportOptions.height = (pa.height / 100) * ch;
+          // Use image bounds for accurate cropping if available
+          if (imageBounds) {
+            exportOptions.left = imageBounds.x + (pa.x / 100) * imageBounds.w;
+            exportOptions.top = imageBounds.y + (pa.y / 100) * imageBounds.h;
+            exportOptions.width = (pa.width / 100) * imageBounds.w;
+            exportOptions.height = (pa.height / 100) * imageBounds.h;
+          } else {
+            exportOptions.left = (pa.x / 100) * cw;
+            exportOptions.top = (pa.y / 100) * ch;
+            exportOptions.width = (pa.width / 100) * cw;
+            exportOptions.height = (pa.height / 100) * ch;
+          }
         }
 
         const dataUrl = canvas.toDataURL(exportOptions);
