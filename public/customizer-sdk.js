@@ -191,15 +191,62 @@
         label.textContent = side.view;
         card.appendChild(label);
 
-        // Use the pre-rendered composite preview (previewPNG) as a single image
-        // This ensures consistency across the summary modal, cart, and checkout
-        var previewSrc = side.previewPNG || side.designPNG;
-        var previewImg = document.createElement('img');
-        previewImg.src = previewSrc;
-        previewImg.alt = side.view + ' preview';
-        previewImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
+        // Prefer live product + design layering when available so the summary stays visible
+        // even if a saved composite preview could not include the product image.
+        if (side.productImage && side.designPNG) {
+          var stage = document.createElement('div');
+          stage.style.cssText = 'position:relative;width:100%;aspect-ratio:1;background:#f5f5f5;overflow:hidden;';
 
-        card.appendChild(previewImg);
+          var productImg = document.createElement('img');
+          productImg.src = side.productImage;
+          productImg.alt = side.view + ' product preview';
+          productImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;';
+          stage.appendChild(productImg);
+
+          var designImg = document.createElement('img');
+          designImg.src = side.designPNG;
+          designImg.alt = side.view + ' design preview';
+          designImg.style.cssText = 'position:absolute;object-fit:contain;display:block;';
+
+          if (side.printArea) {
+            var applyPlacement = function () {
+              var cw = stage.clientWidth;
+              var ch = stage.clientHeight;
+              if (!cw || !ch) return;
+              var nw = productImg.naturalWidth || cw;
+              var nh = productImg.naturalHeight || ch;
+              var scale = Math.min(cw / nw, ch / nh);
+              var renderedW = nw * scale;
+              var renderedH = nh * scale;
+              var offsetX = (cw - renderedW) / 2;
+              var offsetY = (ch - renderedH) / 2;
+
+              designImg.style.left = (offsetX + (side.printArea.x / 100) * renderedW) + 'px';
+              designImg.style.top = (offsetY + (side.printArea.y / 100) * renderedH) + 'px';
+              designImg.style.width = ((side.printArea.width / 100) * renderedW) + 'px';
+              designImg.style.height = ((side.printArea.height / 100) * renderedH) + 'px';
+            };
+
+            if (productImg.complete && productImg.naturalWidth) {
+              applyPlacement();
+            } else {
+              productImg.onload = applyPlacement;
+            }
+            setTimeout(applyPlacement, 0);
+          } else {
+            designImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;';
+          }
+
+          stage.appendChild(designImg);
+          card.appendChild(stage);
+        } else {
+          var previewSrc = side.previewPNG || side.designPNG;
+          var previewImg = document.createElement('img');
+          previewImg.src = previewSrc;
+          previewImg.alt = side.view + ' preview';
+          previewImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
+          card.appendChild(previewImg);
+        }
         grid.appendChild(card);
       });
 
