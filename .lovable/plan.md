@@ -1,34 +1,33 @@
 
 
-## Plan: High-Quality Print Export for AI Designs
+## Plan: AI-Powered Auto-Detect Print Areas
 
-### The Problem
-- Canvas exports at **2× multiplier** on a ~600px canvas = ~1200px output
-- For a 12″×16″ print area, that's only ~75-100 DPI — below professional print quality (300 DPI)
-- AI-generated images from Gemini are typically ~1024×1024px, which limits the source quality
-- The Print View page claims "150+ DPI recommended" but the system doesn't deliver that
+### What it does
+When a store owner uploads a product image, they can click an "Auto-Detect Print Area" button. An AI vision model analyzes the image — identifying the garment's printable surface (e.g., the flat chest area of a t-shirt, the front panel of a hoodie) — and returns percentage-based coordinates (x, y, width, height) that get saved as the print area. The existing constraint system in the Design Studio already enforces that designs stay within print area bounds, so no changes are needed there.
 
-### Proposed Solution: Higher Export Multiplier + AI Upscaling
+### Implementation
 
-**1. Increase export multiplier** (`src/pages/DesignStudio.tsx`)
-- Change `multiplier: 2` → `multiplier: 4` (or even `5`) in the export options
-- This gives ~2400-3000px output from a 600px canvas, reaching ~150-190 DPI for a 16″ print
-- Minimal code change, immediate improvement
+**1. New edge function: `supabase/functions/detect-print-area/index.ts`**
+- Accepts `{ imageUrl: string }` 
+- Sends the product image to `google/gemini-2.5-flash` (vision-capable, fast, cost-effective) with a structured output prompt
+- Uses tool calling to extract `{ x, y, width, height }` as percentages
+- Returns the detected print area coordinates
 
-**2. AI-powered image upscaling edge function** (`supabase/functions/upscale-design/index.ts`)
-- Create a new edge function that takes a design image and upscales it using the Gemini image model with an explicit "upscale this image to maximum resolution, preserve all details" prompt
-- This can be triggered on the Print View page as an optional "Enhance for Print" button, or automatically during the export flow
+**2. Update Products page: `src/pages/Products.tsx`**
+- Add an "Auto-Detect" button (with a Wand/Sparkles icon) next to each "Set Print Area" button
+- When clicked, sends the product image URL to the new edge function
+- On success, updates `printAreas` state for that side — same data format the manual editor already uses
+- Shows a loading spinner during detection
+- User can still manually adjust the result via the existing PrintAreaEditor
 
-**3. Update Print View** (`src/pages/PrintView.tsx`)
-- Add an "Enhance for Print" button per image that calls the upscale function
-- Show actual resolution/DPI info next to each downloaded file
-- Update the print specs section to reflect the real output quality
+**3. Config: `supabase/config.toml`**
+- Register `detect-print-area` function with `verify_jwt = false`
 
-### Recommendation
-The simplest high-impact change is **option 1 alone** — bumping the multiplier to 4×. This doubles the current resolution with a one-line change. The AI upscaling (option 2) adds more complexity but can produce genuinely print-ready 300 DPI files.
+### How the AI prompt works
+The prompt instructs the model to look at the product photo and identify the largest flat, unobstructed area suitable for printing. It returns coordinates as percentages of the image dimensions using tool calling for reliable structured output. The model considers garment type (t-shirt, hoodie, mug, cap) and avoids seams, zippers, collars, and edges.
 
 ### Files modified
-- `src/pages/DesignStudio.tsx` — increase export multiplier
-- `supabase/functions/upscale-design/index.ts` — new edge function for AI upscaling (optional)
-- `src/pages/PrintView.tsx` — enhance button + resolution info (optional)
+- `supabase/functions/detect-print-area/index.ts` — new edge function
+- `src/pages/Products.tsx` — add "Auto-Detect" button per image side
+- `supabase/config.toml` — register new function
 
