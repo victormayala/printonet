@@ -491,6 +491,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const isLoadingViewRef = useRef(false);
   const viewLoadRequestRef = useRef(0);
   const [imageBounds, setImageBounds] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const imageBoundsRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const invProductRef = useRef(invProduct);
 
   // Compute where the product image actually renders within the canvas (object-contain)
   function computeImageBounds(canvasW: number, canvasH: number, imgNatW: number, imgNatH: number) {
@@ -507,6 +509,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const url = getCurrentImageUrl();
     if (!url || !fabricRef.current) {
       setImageBounds(null);
+      imageBoundsRef.current = null;
       return;
     }
     const img = new Image();
@@ -515,9 +518,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       if (!canvas) return;
       const bounds = computeImageBounds(canvas.getWidth(), canvas.getHeight(), img.naturalWidth, img.naturalHeight);
       setImageBounds(bounds);
+      imageBoundsRef.current = bounds;
     };
     img.src = url;
   }, [activeView, invProduct, loading]);
+
+  // Keep refs in sync
+  useEffect(() => { invProductRef.current = invProduct; }, [invProduct]);
+  useEffect(() => { imageBoundsRef.current = imageBounds; }, [imageBounds]);
 
   // Recalculate image bounds on canvas resize
   useEffect(() => {
@@ -542,7 +550,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   function printAreaToCanvasCoords(pa: { x: number; y: number; width: number; height: number }) {
     const canvas = fabricRef.current;
     if (!canvas) return { px: 0, py: 0, pw: 0, ph: 0 };
-    const bounds = imageBounds;
+    // Use ref for fresh value in event handlers
+    const bounds = imageBoundsRef.current;
     if (bounds) {
       // Map percentages relative to the actual image position within canvas
       return {
@@ -672,8 +681,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   function constrainToPrintArea(obj: any) {
     const canvas = fabricRef.current;
-    if (!canvas || !invProduct?.print_areas) return;
-    const pa = getCurrentPrintArea();
+    if (!canvas) return;
+    const product = invProductRef.current;
+    if (!product?.print_areas) return;
+    const viewKey = currentCanvasViewRef.current === "side1" ? "side1" : currentCanvasViewRef.current === "side2" ? "side2" : currentCanvasViewRef.current;
+    const pa = product.print_areas[viewKey];
     if (!pa) return;
     if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
 
