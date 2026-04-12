@@ -2408,12 +2408,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       {isEditMode ? "Describe changes to your design" : "Describe your design"}
                     </label>
-                    <Input
+                    <Textarea
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") generateAiDesign(); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); generateAiDesign(); } }}
                       placeholder={isEditMode ? "e.g. Make it blue, add a border..." : "e.g. A cool dragon breathing fire..."}
-                      className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
+                      className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs min-h-[80px] resize-none"
                       disabled={aiGenerating}
                     />
                     <Button
