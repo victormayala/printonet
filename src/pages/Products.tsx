@@ -275,7 +275,7 @@ function ProductForm({
               {value ? (
                 <>
                   <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
-                    <img src={value} alt={label} className="w-full h-full object-cover" />
+                    <img src={value} alt={label} className="w-full h-full object-contain" />
                     {printAreas[printAreaKey] && (
                       <div
                         className="absolute border-2 border-dashed border-primary/60 pointer-events-none"
