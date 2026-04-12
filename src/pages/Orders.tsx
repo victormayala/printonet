@@ -97,7 +97,7 @@ export default function Orders() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Orders</h1>
         <p className="text-muted-foreground text-sm mt-1">
@@ -144,8 +144,8 @@ export default function Orders() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-md border">
-          <Table>
+        <div className="rounded-md border overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>

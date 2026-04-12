@@ -253,10 +253,10 @@ export default function BrandSettings() {
 
   return (
     <div className="bg-background">
-      <div className="p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h2 className="font-display text-2xl font-bold">Brand Settings</h2>
+            <h2 className="font-display text-xl sm:text-2xl font-bold">Brand Settings</h2>
             <p className="mt-1 text-muted-foreground">
               Configure colors, logo, and fonts to match your brand.
             </p>
@@ -524,7 +524,7 @@ export default function BrandSettings() {
                     </div>
 
                     {/* Body */}
-                    <div className="flex" style={{ height: 240 }}>
+                    <div className="flex" style={{ minHeight: 200, height: "clamp(180px, 30vw, 240px)" }}>
                       {/* Sidebar */}
                       <div
                         className="w-20 border-r flex flex-col items-center pt-3 gap-3"

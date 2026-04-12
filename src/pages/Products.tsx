@@ -784,12 +784,12 @@ export default function Products() {
 
   return (
     <div className="bg-background">
-      <div className="p-6 lg:p-8 max-w-5xl">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
         <Tabs defaultValue="products">
-          <TabsList className="mb-6">
-            <TabsTrigger value="products" className="gap-2"><Store className="h-4 w-4" /> My Products</TabsTrigger>
-            <TabsTrigger value="shopify" className="gap-2"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
-            <TabsTrigger value="woocommerce" className="gap-2"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
+          <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
+            <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Store className="h-4 w-4" /> <span className="hidden xs:inline">My </span>Products</TabsTrigger>
+            <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
+            <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
@@ -809,7 +809,7 @@ export default function Products() {
             ) : (
               <>
                 {products.length > 0 && (
-                  <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed bg-muted/30 p-4 mb-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border border-dashed bg-muted/30 p-4 mb-6">
                     <div className="flex items-start gap-3 text-sm">
                       <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                       <p className="text-muted-foreground">
@@ -820,9 +820,9 @@ export default function Products() {
                     <UniversalSnippetDialog />
                   </div>
                 )}
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 mb-6">
                   <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     {/* Category filter */}
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
                       <SelectTrigger className="w-[140px] h-9 text-xs">
@@ -907,7 +907,7 @@ export default function Products() {
                     <p className="text-sm text-muted-foreground">Try adjusting your filters.</p>
                   </Card>
                 ) : viewMode === "grid" ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                     {filteredAndSortedProducts.map((p) => (
                       <Card key={p.id} className="overflow-hidden group">
                         <div className="aspect-square bg-muted relative">
@@ -921,7 +921,7 @@ export default function Products() {
                           {!p.is_active && (
                             <span className="absolute top-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
-                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
@@ -944,7 +944,8 @@ export default function Products() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-lg border overflow-hidden">
+                  <div className="rounded-lg border overflow-hidden overflow-x-auto">
+                    <div className="min-w-[600px]">
                     <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
                       <span className="w-10" />
                       <span>Product</span>
@@ -973,7 +974,7 @@ export default function Products() {
                             {p.is_active ? "Active" : "Inactive"}
                           </span>
                         </span>
-                        <div className="w-24 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-24 flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
@@ -986,6 +987,7 @@ export default function Products() {
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
                 )}
               </>

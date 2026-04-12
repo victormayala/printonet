@@ -157,10 +157,10 @@ export default function Templates() {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Design Templates</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Design Templates</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Create reusable design templates that customers can use as starting points.
           </p>
