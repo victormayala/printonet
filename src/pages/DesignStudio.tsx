@@ -639,18 +639,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const pa = getCurrentPrintArea();
     if (!pa || !showPrintAreaBoundary) return;
 
-    const cw = canvas.getWidth();
-    const ch = canvas.getHeight();
-    const x = (pa.x / 100) * cw;
-    const y = (pa.y / 100) * ch;
-    const w = (pa.width / 100) * cw;
-    const h = (pa.height / 100) * ch;
+    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
 
     const boundary = new Rect({
-      left: x,
-      top: y,
-      width: w,
-      height: h,
+      left: px,
+      top: py,
+      width: pw,
+      height: ph,
       fill: "transparent",
       stroke: "hsl(var(--primary))",
       strokeWidth: 2,
