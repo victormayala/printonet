@@ -950,7 +950,7 @@ export default function Products() {
                       <span>Product</span>
                       <span className="w-24 text-right">Price</span>
                       <span className="w-20 text-center">Status</span>
-                      <span className="w-20 text-right">Actions</span>
+                      <span className="w-24 text-right">Actions</span>
                     </div>
                     {filteredAndSortedProducts.map((p) => (
                       <div key={p.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center px-4 py-3 border-b last:border-b-0 hover:bg-muted/30 transition-colors group">
