@@ -466,7 +466,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const fabricRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTool, setActiveTool] = useState<string>("ai");
+  const [activeTool, setActiveTool] = useState<string>("text");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [activeView, setActiveView] = useState<ViewSide>("front");
   const [availableViews, setAvailableViews] = useState<ViewSide[]>(["front"]);
@@ -1933,7 +1933,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   }
 
   const tools = [
-    { id: "ai", icon: Wand2, label: "AI" },
     { id: "text", icon: Type, label: "Text" },
     { id: "shapes", icon: Square, label: "Shapes" },
     { id: "clipart", icon: Sticker, label: "Clipart" },
@@ -2163,141 +2162,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
               </>
             )}
 
-            {activeTool === "ai" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    {isEditMode ? "Describe changes to your design" : "Describe your design"}
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") generateAiDesign(); }}
-                      placeholder={isEditMode ? "e.g. Make it blue, add a border..." : "e.g. A cool dragon breathing fire..."}
-                      className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
-                      disabled={aiGenerating}
-                    />
-                  </div>
-                  <Button
-                    onClick={() => generateAiDesign(false)}
-                    disabled={aiGenerating || !aiPrompt.trim()}
-                    className="w-full gap-2"
-                  >
-                    <Wand2 className="h-4 w-4" />
-                    {aiGenerating ? (isEditMode ? "Editing..." : "Generating...") : (isEditMode ? "Edit Design" : "Generate Design")}
-                  </Button>
-                  {isEditMode && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => generateAiDesign(true)}
-                      disabled={aiGenerating || !aiPrompt.trim()}
-                      className="w-full text-xs text-muted-foreground"
-                    >
-                      Generate New Instead
-                    </Button>
-                  )}
-                </div>
-
-                {!isEditMode && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Style Preset</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { label: "None", value: "" },
-                        { label: "Vintage", value: "Vintage retro distressed" },
-                        { label: "Minimalist", value: "Clean minimalist simple" },
-                        { label: "Graffiti", value: "Urban graffiti street art spray paint" },
-                        { label: "Watercolor", value: "Soft watercolor painting" },
-                        { label: "Neon", value: "Bright neon glowing" },
-                        { label: "Tattoo", value: "Traditional tattoo ink illustration" },
-                        { label: "Pixel Art", value: "Retro pixel art 8-bit" },
-                        { label: "Japanese", value: "Japanese ukiyo-e woodblock print" },
-                        { label: "Pop Art", value: "Bold pop art comic book" },
-                        { label: "Botanical", value: "Detailed botanical illustration" },
-                      ].map((preset) => (
-                        <button
-                          key={preset.value}
-                          onClick={() => setAiStyle(preset.value)}
-                          className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
-                            aiStyle === preset.value
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "border-sidebar-border text-muted-foreground hover:border-primary/40 hover:bg-sidebar-accent"
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {isEditMode && (
-                  <Button
-                    variant="outline"
-                    onClick={removeBackground}
-                    disabled={removingBg}
-                    className="w-full gap-2 border-sidebar-border"
-                  >
-                    <Eraser className="h-4 w-4" />
-                    {removingBg ? "Removing Background..." : "Remove Background"}
-                  </Button>
-                )}
-
-                {aiGenerating && (
-                  <div className="flex items-center justify-center py-6">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      <p className="text-xs text-muted-foreground">Creating your design...</p>
-                    </div>
-                  </div>
-                )}
-
-                {aiHistory.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Generations</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {aiHistory.map((item, i) => (
-                        <button
-                          key={i}
-                          onClick={() => addAiImageToCanvas(item.imageUrl)}
-                          className="group relative border border-sidebar-border rounded-lg overflow-hidden hover:border-primary/50 transition-all"
-                          title={`Re-add: ${item.prompt}`}
-                        >
-                          <img src={item.imageUrl} alt={item.prompt} className="w-full aspect-square object-cover" />
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <p className="text-[9px] text-white truncate">{item.prompt}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prompt Ideas</label>
-                  <div className="space-y-1">
-                    {[
-                      "A vintage-style logo with an eagle",
-                      "Abstract geometric pattern in blue and gold",
-                      "Floral wreath with roses",
-                      "Retro sunset with palm trees",
-                      "Minimalist mountain landscape",
-                    ].map((idea) => (
-                      <button
-                        key={idea}
-                        onClick={() => setAiPrompt(idea)}
-                        className="w-full text-left text-xs px-2.5 py-1.5 rounded-md border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/30 transition-colors text-muted-foreground hover:text-sidebar-foreground"
-                      >
-                        {idea}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {activeTool === "text" && !selectedObject && (
                   <>
                     <Button onClick={addText} variant="outline" className="w-full gap-2 border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80">
@@ -2460,8 +2324,149 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           </div>
         </div>
 
-        {/* Right Panel — Layers */}
-        <div className="w-64 border-l border-sidebar-border bg-toolbar-bg flex flex-col">
+        {/* Right Panel — AI + Layers */}
+        <div className="w-72 border-l border-sidebar-border bg-toolbar-bg flex flex-col">
+          {/* AI Assistant */}
+          <div className="border-b border-sidebar-border">
+            <div className="flex items-center gap-2 p-4 border-b border-sidebar-border">
+              <Wand2 className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">AI Assistant</span>
+            </div>
+            <div className="p-4 space-y-4 max-h-[50vh] overflow-y-auto">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {isEditMode ? "Describe changes to your design" : "Describe your design"}
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") generateAiDesign(); }}
+                    placeholder={isEditMode ? "e.g. Make it blue, add a border..." : "e.g. A cool dragon breathing fire..."}
+                    className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground text-xs"
+                    disabled={aiGenerating}
+                  />
+                </div>
+                <Button
+                  onClick={() => generateAiDesign(false)}
+                  disabled={aiGenerating || !aiPrompt.trim()}
+                  className="w-full gap-2"
+                >
+                  <Wand2 className="h-4 w-4" />
+                  {aiGenerating ? (isEditMode ? "Editing..." : "Generating...") : (isEditMode ? "Edit Design" : "Generate Design")}
+                </Button>
+                {isEditMode && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateAiDesign(true)}
+                    disabled={aiGenerating || !aiPrompt.trim()}
+                    className="w-full text-xs text-muted-foreground"
+                  >
+                    Generate New Instead
+                  </Button>
+                )}
+              </div>
+
+              {!isEditMode && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Style Preset</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: "None", value: "" },
+                      { label: "Vintage", value: "Vintage retro distressed" },
+                      { label: "Minimalist", value: "Clean minimalist simple" },
+                      { label: "Graffiti", value: "Urban graffiti street art spray paint" },
+                      { label: "Watercolor", value: "Soft watercolor painting" },
+                      { label: "Neon", value: "Bright neon glowing" },
+                      { label: "Tattoo", value: "Traditional tattoo ink illustration" },
+                      { label: "Pixel Art", value: "Retro pixel art 8-bit" },
+                      { label: "Japanese", value: "Japanese ukiyo-e woodblock print" },
+                      { label: "Pop Art", value: "Bold pop art comic book" },
+                      { label: "Botanical", value: "Detailed botanical illustration" },
+                    ].map((preset) => (
+                      <button
+                        key={preset.value}
+                        onClick={() => setAiStyle(preset.value)}
+                        className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                          aiStyle === preset.value
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-sidebar-border text-muted-foreground hover:border-primary/40 hover:bg-sidebar-accent"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isEditMode && (
+                <Button
+                  variant="outline"
+                  onClick={removeBackground}
+                  disabled={removingBg}
+                  className="w-full gap-2 border-sidebar-border"
+                >
+                  <Eraser className="h-4 w-4" />
+                  {removingBg ? "Removing Background..." : "Remove Background"}
+                </Button>
+              )}
+
+              {aiGenerating && (
+                <div className="flex items-center justify-center py-6">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <p className="text-xs text-muted-foreground">Creating your design...</p>
+                  </div>
+                </div>
+              )}
+
+              {aiHistory.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Generations</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {aiHistory.map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => addAiImageToCanvas(item.imageUrl)}
+                        className="group relative border border-sidebar-border rounded-lg overflow-hidden hover:border-primary/50 transition-all"
+                        title={`Re-add: ${item.prompt}`}
+                      >
+                        <img src={item.imageUrl} alt={item.prompt} className="w-full aspect-square object-cover" />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <p className="text-[9px] text-white truncate">{item.prompt}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prompt Ideas</label>
+                <div className="space-y-1">
+                  {[
+                    "A vintage-style logo with an eagle",
+                    "Abstract geometric pattern in blue and gold",
+                    "Floral wreath with roses",
+                    "Retro sunset with palm trees",
+                    "Minimalist mountain landscape",
+                  ].map((idea) => (
+                    <button
+                      key={idea}
+                      onClick={() => setAiPrompt(idea)}
+                      className="w-full text-left text-xs px-2.5 py-1.5 rounded-md border border-sidebar-border hover:bg-sidebar-accent hover:border-primary/30 transition-colors text-muted-foreground hover:text-sidebar-foreground"
+                    >
+                      {idea}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Layers */}
           <div className="flex items-center gap-2 p-4 border-b border-sidebar-border">
             <LayersIcon className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">Layers</span>
