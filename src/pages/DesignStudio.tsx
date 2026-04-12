@@ -2023,7 +2023,31 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         }
 
         // Load the view state temporarily to export
-        await canvas.loadFromJSON(stateJson);
+        // Replace stale blob: URLs in canvas JSON so Fabric can load images
+        let cleanedJson = stateJson;
+        if (typeof cleanedJson === "string" && cleanedJson.includes("blob:")) {
+          try {
+            const parsed = JSON.parse(cleanedJson);
+            const replaceBlobUrls = (obj: any) => {
+              if (!obj) return;
+              if (typeof obj === "object") {
+                for (const key of Object.keys(obj)) {
+                  if (typeof obj[key] === "string" && obj[key].startsWith("blob:")) {
+                    // Replace with a transparent 1x1 pixel so it loads without error
+                    obj[key] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
+                  } else if (typeof obj[key] === "object") {
+                    replaceBlobUrls(obj[key]);
+                  }
+                }
+              }
+            };
+            replaceBlobUrls(parsed);
+            cleanedJson = JSON.stringify(parsed);
+          } catch (e) {
+            console.warn("Failed to clean blob URLs from canvas JSON:", e);
+          }
+        }
+        await canvas.loadFromJSON(cleanedJson);
         canvas.backgroundColor = "rgba(0,0,0,0)";
         canvas.backgroundImage = undefined;
 
