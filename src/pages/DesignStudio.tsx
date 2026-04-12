@@ -1962,23 +1962,21 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       };
 
       const generateCompositePreview = async (
-        productImageUrl: string | null,
+        productImg: HTMLImageElement | null,
         fullCanvasDataUrl: string,
         canvasWidth: number,
         canvasHeight: number,
         imgBounds: { x: number; y: number; w: number; h: number } | null
       ) => {
         if (!fullCanvasDataUrl) return "";
-        if (!productImageUrl) return fullCanvasDataUrl;
+        if (!productImg) return fullCanvasDataUrl;
 
         try {
-          const [productImg, canvasImg] = await Promise.all([
-            loadImageForComposite(productImageUrl),
-            loadImageForComposite(fullCanvasDataUrl),
-          ]);
+          const canvasImg = await loadImageForComposite(fullCanvasDataUrl);
 
           const baseWidth = productImg.naturalWidth || productImg.width || 1200;
           const baseHeight = productImg.naturalHeight || productImg.height || 1200;
+          const resolvedBounds = imgBounds || computeImageBounds(canvasWidth, canvasHeight, baseWidth, baseHeight);
           const outputSize = Math.max(Math.min(Math.max(baseWidth, baseHeight), 1600), 1200);
 
           const previewCanvas = document.createElement("canvas");
@@ -1990,7 +1988,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
           ctx.clearRect(0, 0, outputSize, outputSize);
 
-          // Draw product image centered (object-contain)
           const prodScale = Math.min(outputSize / baseWidth, outputSize / baseHeight);
           const prodW = baseWidth * prodScale;
           const prodH = baseHeight * prodScale;
@@ -1999,19 +1996,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
           ctx.drawImage(productImg, prodOffX, prodOffY, prodW, prodH);
 
-          // Overlay the full canvas export on top, mapped so the image region aligns
-          // The canvas had the product image at imgBounds within canvasWidth x canvasHeight.
-          // We need to scale and position the canvas overlay so imgBounds maps to the product rect.
-          if (imgBounds && imgBounds.w > 0 && imgBounds.h > 0) {
-            const scaleX = prodW / imgBounds.w;
-            const scaleY = prodH / imgBounds.h;
-            const drawX = prodOffX - imgBounds.x * scaleX;
-            const drawY = prodOffY - imgBounds.y * scaleY;
+          if (resolvedBounds && resolvedBounds.w > 0 && resolvedBounds.h > 0) {
+            const scaleX = prodW / resolvedBounds.w;
+            const scaleY = prodH / resolvedBounds.h;
+            const drawX = prodOffX - resolvedBounds.x * scaleX;
+            const drawY = prodOffY - resolvedBounds.y * scaleY;
             const drawW = canvasWidth * scaleX;
             const drawH = canvasHeight * scaleY;
             ctx.drawImage(canvasImg, drawX, drawY, drawW, drawH);
           } else {
-            // Fallback: stretch canvas over the product area
             ctx.drawImage(canvasImg, prodOffX, prodOffY, prodW, prodH);
           }
 
@@ -2029,8 +2022,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           continue;
         }
 
-        // Load the view state temporarily to export
-        // Replace stale blob: URLs in canvas JSON so Fabric can load images
         let cleanedJson = stateJson;
         if (typeof cleanedJson === "string" && cleanedJson.includes("blob:")) {
           try {
@@ -2040,7 +2031,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
               if (typeof obj === "object") {
                 for (const key of Object.keys(obj)) {
                   if (typeof obj[key] === "string" && obj[key].startsWith("blob:")) {
-                    // Replace with a transparent 1x1 pixel so it loads without error
                     obj[key] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
                   } else if (typeof obj[key] === "object") {
                     replaceBlobUrls(obj[key]);
@@ -2054,29 +2044,42 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             console.warn("Failed to clean blob URLs from canvas JSON:", e);
           }
         }
+
         await canvas.loadFromJSON(cleanedJson);
         canvas.backgroundColor = "rgba(0,0,0,0)";
         canvas.backgroundImage = undefined;
 
-        // Remove print area boundary rects before export
         const paRects = canvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
         paRects.forEach((o) => canvas.remove(o));
         canvas.renderAll();
 
-        // Determine export region: crop to print area if defined
         const viewKey = view === "side1" ? "side1" : view === "side2" ? "side2" : view;
         const pa = invProduct?.print_areas?.[viewKey];
         const cw = canvas.getWidth();
         const ch = canvas.getHeight();
+        const productImageUrl = imageMap[view] || null;
+
+        let productImg: HTMLImageElement | null = null;
+        let viewImageBounds: { x: number; y: number; w: number; h: number } | null = null;
+
+        if (productImageUrl) {
+          try {
+            productImg = await loadImageForComposite(productImageUrl);
+            const naturalWidth = productImg.naturalWidth || productImg.width || cw;
+            const naturalHeight = productImg.naturalHeight || productImg.height || ch;
+            viewImageBounds = computeImageBounds(cw, ch, naturalWidth, naturalHeight);
+          } catch (productErr) {
+            console.warn(`Failed to load product image for ${view} preview:`, productErr);
+          }
+        }
 
         const exportOptions: any = { format: "png", multiplier: 4 };
         if (pa) {
-          // Use image bounds for accurate cropping if available
-          if (imageBounds) {
-            exportOptions.left = imageBounds.x + (pa.x / 100) * imageBounds.w;
-            exportOptions.top = imageBounds.y + (pa.y / 100) * imageBounds.h;
-            exportOptions.width = (pa.width / 100) * imageBounds.w;
-            exportOptions.height = (pa.height / 100) * imageBounds.h;
+          if (viewImageBounds) {
+            exportOptions.left = viewImageBounds.x + (pa.x / 100) * viewImageBounds.w;
+            exportOptions.top = viewImageBounds.y + (pa.y / 100) * viewImageBounds.h;
+            exportOptions.width = (pa.width / 100) * viewImageBounds.w;
+            exportOptions.height = (pa.height / 100) * viewImageBounds.h;
           } else {
             exportOptions.left = (pa.x / 100) * cw;
             exportOptions.top = (pa.y / 100) * ch;
@@ -2087,23 +2090,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const dataUrl = canvas.toDataURL(exportOptions);
         const publicUrl = await uploadPng(dataUrl, view);
-
-        // Generate composite preview using full canvas (no crop) for accurate placement
         const fullCanvasDataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
-        const previewDataUrl = await generateCompositePreview(
-          imageMap[view] || null,
-          fullCanvasDataUrl,
-          cw,
-          ch,
-          imageBounds
-        );
+        const previewDataUrl = await generateCompositePreview(productImg, fullCanvasDataUrl, cw, ch, viewImageBounds);
         const previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
 
         sides.push({
           view,
           designPNG: publicUrl,
           previewPNG: previewUrl,
-          productImage: imageMap[view] || "",
+          productImage: productImageUrl || "",
           canvasJSON: stateJson,
           printArea: pa || undefined,
         });
