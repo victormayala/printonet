@@ -676,7 +676,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     updatePrintAreaRect(fabricRef.current);
   }, [showPrintAreaBoundary, imageBounds]);
 
-  // Hard containment: keep last valid transform and revert any move/scale that exits the print area
+  // Hard containment: clamp movement to the print area and revert unsupported transforms that exit it
   function getCurrentPrintAreaCoords() {
     const canvas = fabricRef.current;
     if (!canvas) return null;
@@ -727,6 +727,37 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     obj.setCoords();
   }
 
+  function clampObjectPositionInsidePrintArea(obj: any) {
+    const coords = getCurrentPrintAreaCoords();
+    if (!coords || !obj) return false;
+
+    const { px, py, pw, ph } = coords;
+    const bound = obj.getBoundingRect();
+    let dx = 0;
+    let dy = 0;
+
+    if (bound.left < px) {
+      dx = px - bound.left;
+    } else if (bound.left + bound.width > px + pw) {
+      dx = px + pw - (bound.left + bound.width);
+    }
+
+    if (bound.top < py) {
+      dy = py - bound.top;
+    } else if (bound.top + bound.height > py + ph) {
+      dy = py + ph - (bound.top + bound.height);
+    }
+
+    if (dx === 0 && dy === 0) return false;
+
+    obj.set({
+      left: (obj.left || 0) + dx,
+      top: (obj.top || 0) + dy,
+    });
+    obj.setCoords();
+    return true;
+  }
+
   function centerObjectInPrintArea(obj: any) {
     const coords = getCurrentPrintAreaCoords();
     const canvas = fabricRef.current;
@@ -764,8 +795,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const boundary = canvas.getObjects().find((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
     if (!boundary) return;
 
-    // Flash red
-    boundary.set({ stroke: "#ef4444", strokeWidth: 3 });
+    boundary.set({ stroke: "hsl(var(--destructive))", strokeWidth: 3 });
     canvas.renderAll();
 
     if (boundaryFlashTimerRef.current) clearTimeout(boundaryFlashTimerRef.current);
@@ -776,12 +806,30 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     }, 400);
   }
 
-  function enforcePrintAreaBounds(obj: any) {
+  function enforcePrintAreaBounds(obj: any, mode: "move" | "strict" = "strict") {
     if (!obj || (obj as any).customName === PRINT_AREA_RECT_NAME) return;
+
     if (isObjectInsidePrintArea(obj)) {
       rememberLastValidTransform(obj);
-    } else {
-      restoreLastValidTransform(obj);
+      return;
+    }
+
+    if (mode === "move") {
+      const wasClamped = clampObjectPositionInsidePrintArea(obj);
+      if (wasClamped && isObjectInsidePrintArea(obj)) {
+        rememberLastValidTransform(obj);
+        flashPrintAreaBoundary();
+        return;
+      }
+    }
+
+    restoreLastValidTransform(obj);
+    if (!isObjectInsidePrintArea(obj)) {
+      clampObjectPositionInsidePrintArea(obj);
+    }
+
+    if (isObjectInsidePrintArea(obj)) {
+      rememberLastValidTransform(obj);
       flashPrintAreaBoundary();
     }
   }
@@ -826,16 +874,16 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", () => setSelectedObject(null));
-    canvas.on("object:modified", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target); saveViewState(); saveState(); updateLayers(); });
+    canvas.on("object:modified", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "strict"); saveViewState(); saveState(); updateLayers(); });
     canvas.on("object:added", (e: any) => {
       if (isLoadingViewRef.current || (e.target as any)?.customName === PRINT_AREA_RECT_NAME) return;
-      enforcePrintAreaBounds(e.target);
+      enforcePrintAreaBounds(e.target, "strict");
       saveViewState();
       updateLayers();
     });
     canvas.on("object:removed", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
-    canvas.on("object:moving", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target); });
-    canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target); });
+    canvas.on("object:moving", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "move"); });
+    canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "strict"); });
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
