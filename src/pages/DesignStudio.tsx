@@ -1970,10 +1970,21 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         <label className="text-xs text-muted-foreground">Opacity: {objectProps.opacity}%</label>
         <Slider value={[objectProps.opacity]} onValueChange={([v]) => updateSelectedProp("opacity", v)} min={0} max={100} />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <label className="text-xs text-muted-foreground">Color</label>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#6366f1","#a855f7","#ec4899","#64748b","#78716c"].map((c) => (
+            <button
+              key={c}
+              onClick={() => updateSelectedProp("fill", c)}
+              className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${objectProps.fill === c ? "border-primary ring-2 ring-primary/30 scale-110" : "border-border"}`}
+              style={{ backgroundColor: c }}
+              title={c}
+            />
+          ))}
+        </div>
         <div className="flex items-center gap-2">
-          <input type="color" value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+          <input type="color" value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="h-8 w-8 rounded cursor-pointer border-0" />
           <Input value={objectProps.fill} onChange={(e) => updateSelectedProp("fill", e.target.value)} className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground font-mono text-xs" />
         </div>
       </div>
