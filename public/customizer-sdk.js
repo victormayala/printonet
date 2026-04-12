@@ -191,9 +191,15 @@
         label.textContent = side.view;
         card.appendChild(label);
 
-        // Prefer live product + design layering when available so the summary stays visible
-        // even if a saved composite preview could not include the product image.
-        if (side.productImage && side.designPNG) {
+        var previewSrc = side.previewPNG || '';
+
+        if (previewSrc) {
+          var previewImg = document.createElement('img');
+          previewImg.src = previewSrc;
+          previewImg.alt = side.view + ' preview';
+          previewImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
+          card.appendChild(previewImg);
+        } else if (side.productImage && side.designPNG) {
           var stage = document.createElement('div');
           stage.style.cssText = 'position:relative;width:100%;aspect-ratio:1;background:#f5f5f5;overflow:hidden;';
 
@@ -240,12 +246,11 @@
           stage.appendChild(designImg);
           card.appendChild(stage);
         } else {
-          var previewSrc = side.previewPNG || side.designPNG;
-          var previewImg = document.createElement('img');
-          previewImg.src = previewSrc;
-          previewImg.alt = side.view + ' preview';
-          previewImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
-          card.appendChild(previewImg);
+          var fallbackImg = document.createElement('img');
+          fallbackImg.src = side.designPNG;
+          fallbackImg.alt = side.view + ' preview';
+          fallbackImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
+          card.appendChild(fallbackImg);
         }
         grid.appendChild(card);
       });
