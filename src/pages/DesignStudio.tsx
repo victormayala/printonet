@@ -722,7 +722,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   function restoreLastValidTransform(obj: any) {
     const last = (obj as any)?.__lastValidTransform;
-    if (!last) return;
+    if (!last) {
+      centerObjectInPrintArea(obj);
+      return;
+    }
     obj.set(last);
     obj.setCoords();
   }
@@ -733,7 +736,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     if (!obj || !canvas) return;
 
     if (!coords) {
-      obj.set({ left: canvas.getWidth() / 2, top: canvas.getHeight() / 2 });
+      obj.set({ left: canvas.getWidth() / 2, top: canvas.getHeight() / 2, originX: "center", originY: "center" });
       obj.setCoords();
       rememberLastValidTransform(obj);
       return;
@@ -758,11 +761,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   function enforcePrintAreaBounds(obj: any) {
     if (!obj || (obj as any).customName === PRINT_AREA_RECT_NAME) return;
-    if (isObjectInsidePrintArea(obj)) {
-      rememberLastValidTransform(obj);
-    } else {
-      restoreLastValidTransform(obj);
-    }
+    if (isObjectInsidePrintArea(obj)) rememberLastValidTransform(obj);
+    else restoreLastValidTransform(obj);
   }
 
   // Get center of print area in canvas coordinates, or fallback to canvas center
@@ -805,11 +805,16 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", () => setSelectedObject(null));
-    canvas.on("object:modified", () => { saveViewState(); saveState(); updateLayers(); });
-    canvas.on("object:added", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; constrainToPrintArea(e.target); saveViewState(); updateLayers(); });
+    canvas.on("object:modified", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target); saveViewState(); saveState(); updateLayers(); });
+    canvas.on("object:added", (e: any) => {
+      if (isLoadingViewRef.current || (e.target as any)?.customName === PRINT_AREA_RECT_NAME) return;
+      enforcePrintAreaBounds(e.target);
+      saveViewState();
+      updateLayers();
+    });
     canvas.on("object:removed", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
-    canvas.on("object:moving", (e: any) => constrainToPrintArea(e.target));
-    canvas.on("object:scaling", (e: any) => constrainToPrintArea(e.target));
+    canvas.on("object:moving", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target); });
+    canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target); });
     canvas.on("mouse:dblclick", (e: any) => {
       const target = e.target;
       if (target && target instanceof Group) {
@@ -857,6 +862,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
       const finalizeViewLoad = (historyState: string) => {
         if (viewLoadRequestRef.current !== loadRequestId) return;
+        canvas.getObjects().forEach((obj: any) => {
+          if ((obj as any).customName !== PRINT_AREA_RECT_NAME) rememberLastValidTransform(obj);
+        });
         canvas.backgroundImage = undefined;
         canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
         updatePrintAreaRect(canvas);
@@ -934,6 +942,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     setUndoStack(newUndo);
     isLoadingViewRef.current = true;
     canvas.loadFromJSON(prev).then(() => {
+      canvas.getObjects().forEach((obj: any) => {
+        if ((obj as any).customName !== PRINT_AREA_RECT_NAME) rememberLastValidTransform(obj);
+      });
       canvas.renderAll();
       updateLayers();
       viewStatesRef.current[view] = JSON.stringify(canvas.toJSON());
@@ -951,6 +962,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     setUndoStack((prev) => [...prev, next]);
     isLoadingViewRef.current = true;
     canvas.loadFromJSON(next).then(() => {
+      canvas.getObjects().forEach((obj: any) => {
+        if ((obj as any).customName !== PRINT_AREA_RECT_NAME) rememberLastValidTransform(obj);
+      });
       canvas.renderAll();
       updateLayers();
       viewStatesRef.current[view] = JSON.stringify(canvas.toJSON());
