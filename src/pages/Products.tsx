@@ -294,22 +294,39 @@ function ProductForm({
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <PrintAreaEditor
-                    imageUrl={value}
-                    sideLabel={label}
-                    value={printAreas[printAreaKey] || null}
-                    onChange={(area) => {
-                      if (area) {
-                        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
-                      } else {
-                        setPrintAreas((prev) => {
-                          const next = { ...prev };
-                          delete next[printAreaKey];
-                          return next;
-                        });
-                      }
-                    }}
-                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <PrintAreaEditor
+                      imageUrl={value}
+                      sideLabel={label}
+                      value={printAreas[printAreaKey] || null}
+                      onChange={(area) => {
+                        if (area) {
+                          setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
+                        } else {
+                          setPrintAreas((prev) => {
+                            const next = { ...prev };
+                            delete next[printAreaKey];
+                            return next;
+                          });
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      disabled={detecting === key}
+                      onClick={() => autoDetectPrintArea(value, key)}
+                    >
+                      {detecting === key ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Auto-Detect
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed aspect-square cursor-pointer hover:border-primary/40 transition-colors">
