@@ -64,7 +64,7 @@ export default function Index() {
           <div className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-1.5 text-sm text-muted-foreground mb-6">
             Embeddable Product Customizer
           </div>
-          <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-[1.1]">
+          <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-[1.1]">
             Add product{" "}
             <span className="text-gradient">customization</span>{" "}
             to any store
@@ -167,7 +167,7 @@ export default function Index() {
 
       {/* Footer */}
       <footer className="border-t py-8">
-        <div className="container flex items-center justify-between text-sm text-muted-foreground">
+        <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <img src={logo} alt="Customizer Studio" className="h-6" />
           </div>

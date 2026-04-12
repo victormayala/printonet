@@ -121,7 +121,7 @@ const { sessionId, status, designOutput } = await response.json();
 
   return (
     <div className="bg-background">
-      <div className="p-6 lg:p-8 space-y-8">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-8">
         {/* Intro */}
         <div className="space-y-3">
           <h2 className="text-3xl font-bold tracking-tight">Embed the Customizer in Your Store</h2>
