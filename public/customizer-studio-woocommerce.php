@@ -300,10 +300,8 @@ function cs_get_stacked_preview_url_for_cart_item( $cart_item ) {
 		return '';
 	}
 	$thumb = cs_get_cart_item_product_thumb_url( $cart_item );
-	if ( count( $sides ) > 1 ) {
-		return cs_build_stacked_preview_page_url( $thumb, $design, $sides );
-	}
-	return cs_build_stacked_preview_page_url( $thumb, $design );
+	// Always pass sides so print_area data reaches the preview page
+	return cs_build_stacked_preview_page_url( $thumb, $design, ! empty( $sides ) ? $sides : null );
 }
 
 /**
@@ -348,10 +346,8 @@ function cs_get_stacked_preview_url_for_order_item( $item ) {
 			}
 		}
 	}
-	if ( count( $sides ) > 1 ) {
-		return cs_build_stacked_preview_page_url( $thumb, $design !== '' ? $design : ( $sides[0]['url'] ?? '' ), $sides );
-	}
-	return cs_build_stacked_preview_page_url( $thumb, $design !== '' ? $design : ( $sides[0]['url'] ?? '' ) );
+	$primary_url = $design !== '' ? $design : ( $sides[0]['url'] ?? '' );
+	return cs_build_stacked_preview_page_url( $thumb, $primary_url, ! empty( $sides ) ? $sides : null );
 }
 
 /**
