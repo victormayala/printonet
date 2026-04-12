@@ -117,10 +117,28 @@ function cs_sanitize_customizer_sides_array( $arr ) {
 		if ( $url === '' ) {
 			continue;
 		}
-		$out[] = [
+		$side = [
 			'view' => $view,
 			'url'  => $url,
 		];
+		// Preserve print area coordinates for proportional positioning
+		if ( isset( $row['print_area'] ) && is_array( $row['print_area'] ) ) {
+			$pa = $row['print_area'];
+			$side['print_area'] = [
+				'x'      => isset( $pa['x'] ) ? floatval( $pa['x'] ) : 0,
+				'y'      => isset( $pa['y'] ) ? floatval( $pa['y'] ) : 0,
+				'width'  => isset( $pa['width'] ) ? floatval( $pa['width'] ) : 100,
+				'height' => isset( $pa['height'] ) ? floatval( $pa['height'] ) : 100,
+			];
+		}
+		// Preserve product image URL for composite previews
+		if ( isset( $row['product_image'] ) ) {
+			$img = cs_sanitize_design_source( $row['product_image'] );
+			if ( $img !== '' ) {
+				$side['product_image'] = $img;
+			}
+		}
+		$out[] = $side;
 	}
 	return $out;
 }
@@ -377,12 +395,44 @@ function cs_output_design_preview_page() {
 		body{margin:0;min-height:100vh;background:#0f0f10;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
 		.cs-dsp-wrap{position:relative;width:min(92vw,520px);aspect-ratio:1;max-height:85vh;background:#1a1a1c;border-radius:16px;overflow:hidden;border:1px solid #2d2d32;box-shadow:0 20px 50px rgba(0,0,0,.45);}
 		.cs-dsp-wrap img.cs-dsp-product{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;}
-		.cs-dsp-wrap img.cs-dsp-design{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;}
+		.cs-dsp-wrap img.cs-dsp-design{position:absolute;object-fit:contain;z-index:2;pointer-events:none;}
+		.cs-dsp-wrap img.cs-dsp-design-full{inset:0;width:100%;height:100%;}
 		.cs-dsp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:min(96vw,920px);margin-top:8px;}
 		.cs-dsp-panel{position:relative;aspect-ratio:1;background:#1a1a1c;border-radius:12px;overflow:hidden;border:1px solid #2d2d32;}
 		.cs-dsp-panel .cs-dsp-label{position:absolute;top:8px;left:8px;z-index:4;background:rgba(0,0,0,.55);padding:4px 8px;border-radius:6px;font-size:12px;text-transform:capitalize;}
 		p.cs-dsp-note{margin-top:20px;font-size:14px;color:#9ca3af;text-align:center;max-width:36rem;line-height:1.5;}
-	</style></head><body>';
+	</style>
+	<script>
+	function csPositionDesign(container){
+		var designImg = container.querySelector("img.cs-dsp-design[data-pa-x]");
+		if(!designImg) return;
+		var baseImg = container.querySelector("img.cs-dsp-product");
+		if(!baseImg) return;
+		var paX=parseFloat(designImg.getAttribute("data-pa-x"))||0;
+		var paY=parseFloat(designImg.getAttribute("data-pa-y"))||0;
+		var paW=parseFloat(designImg.getAttribute("data-pa-w"))||100;
+		var paH=parseFloat(designImg.getAttribute("data-pa-h"))||100;
+		function apply(){
+			var cw=container.offsetWidth,ch=container.offsetHeight;
+			if(!cw||!ch)return;
+			var nw=baseImg.naturalWidth||cw,nh=baseImg.naturalHeight||ch;
+			var s=Math.min(cw/nw,ch/nh);
+			var rw=nw*s,rh=nh*s;
+			var offX=(cw-rw)/2,offY=(ch-rh)/2;
+			designImg.style.left=(offX+(paX/100)*rw)+"px";
+			designImg.style.top=(offY+(paY/100)*rh)+"px";
+			designImg.style.width=((paW/100)*rw)+"px";
+			designImg.style.height=((paH/100)*rh)+"px";
+		}
+		if(baseImg.complete&&baseImg.naturalWidth)apply();
+		else baseImg.addEventListener("load",apply);
+		setTimeout(apply,200);
+	}
+	document.addEventListener("DOMContentLoaded",function(){
+		document.querySelectorAll(".cs-dsp-wrap,.cs-dsp-panel").forEach(csPositionDesign);
+	});
+	</script>
+	</head><body>';
 
 	if ( count( $sides ) > 1 ) {
 		echo '<h1 style="font-size:1.1rem;margin:0 0 12px;font-weight:600;">' . esc_html__( 'All sides', 'customizer-studio-for-woocommerce' ) . '</h1>';
@@ -397,23 +447,44 @@ function cs_output_design_preview_page() {
 				continue;
 			}
 			$dattr = cs_esc_design_attr( $u );
+			$spa = isset( $side['print_area'] ) && is_array( $side['print_area'] ) ? $side['print_area'] : null;
 			echo '<div class="cs-dsp-panel" role="img" aria-label="' . esc_attr( $v ) . '">';
 			echo '<span class="cs-dsp-label">' . esc_html( $v ) . '</span>';
 			if ( $product_attr !== '' ) {
 				echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
 			}
-			echo '<img class="cs-dsp-design" src="' . $dattr . '" alt="">';
+			if ( $spa && $product_attr !== '' ) {
+				echo '<img class="cs-dsp-design" src="' . $dattr . '" alt=""'
+					. ' data-pa-x="' . esc_attr( $spa['x'] ) . '"'
+					. ' data-pa-y="' . esc_attr( $spa['y'] ) . '"'
+					. ' data-pa-w="' . esc_attr( $spa['width'] ) . '"'
+					. ' data-pa-h="' . esc_attr( $spa['height'] ) . '">';
+			} else {
+				echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $dattr . '" alt="">';
+			}
 			echo '</div>';
 		}
 		echo '</div>';
 		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your art per side (front). Save or print from your browser.', 'customizer-studio-for-woocommerce' ) . '</p>';
 	} else {
 		$design_attr = cs_esc_design_attr( $design_src !== '' ? $design_src : ( is_array( $sides[0] ?? null ) && ! empty( $sides[0]['url'] ) ? $sides[0]['url'] : '' ) );
+		$primary_pa = null;
+		if ( ! empty( $sides[0]['print_area'] ) && is_array( $sides[0]['print_area'] ) ) {
+			$primary_pa = $sides[0]['print_area'];
+		}
 		echo '<div class="cs-dsp-wrap" role="img" aria-label="' . esc_attr__( 'Product with custom design overlay', 'customizer-studio-for-woocommerce' ) . '">';
 		if ( $product_attr !== '' ) {
 			echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
 		}
-		echo '<img class="cs-dsp-design" src="' . $design_attr . '" alt="">';
+		if ( $primary_pa && $product_attr !== '' ) {
+			echo '<img class="cs-dsp-design" src="' . $design_attr . '" alt=""'
+				. ' data-pa-x="' . esc_attr( $primary_pa['x'] ) . '"'
+				. ' data-pa-y="' . esc_attr( $primary_pa['y'] ) . '"'
+				. ' data-pa-w="' . esc_attr( $primary_pa['width'] ) . '"'
+				. ' data-pa-h="' . esc_attr( $primary_pa['height'] ) . '">';
+		} else {
+			echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $design_attr . '" alt="">';
+		}
 		echo '</div>';
 		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your custom design (front). Use your browser to save or print.', 'customizer-studio-for-woocommerce' ) . '</p>';
 	}
@@ -1061,14 +1132,39 @@ function cs_render_cart_thumb_composite_html( $cart_item, $inner_image_html = ''
 	$product_img   = cs_get_cart_item_product_thumb_url( $cart_item );
 	$multi         = count( $sides ) > 1;
 
+	// Get print area from the primary (front) side
+	$primary_side = null;
+	foreach ( $sides as $s ) {
+		if ( isset( $s['view'] ) && $s['view'] === 'front' ) {
+			$primary_side = $s;
+			break;
+		}
+	}
+	if ( ! $primary_side && ! empty( $sides ) ) {
+		$primary_side = $sides[0];
+	}
+	$print_area = isset( $primary_side['print_area'] ) ? $primary_side['print_area'] : null;
+
+	$uid = 'cs-ct-' . wp_generate_password( 8, false, false );
+
 	$html  = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
-	$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+	$html .= '<div id="' . esc_attr( $uid ) . '" class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
 	if ( $inner_image_html !== '' ) {
 		$html .= '<div class="cs-product-base-wrap" style="position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;">' . $inner_image_html . '</div>';
 	} elseif ( $product_img ) {
 		$html .= '<img src="' . $product_img . '" alt="" class="cs-product-base-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
 	}
-	$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+	if ( $print_area && $product_img ) {
+		// Design positioned within print area — use percentage-based positioning
+		$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img cs-design-needs-pa" '
+			. 'data-pa-x="' . esc_attr( $print_area['x'] ) . '" '
+			. 'data-pa-y="' . esc_attr( $print_area['y'] ) . '" '
+			. 'data-pa-w="' . esc_attr( $print_area['width'] ) . '" '
+			. 'data-pa-h="' . esc_attr( $print_area['height'] ) . '" '
+			. 'style="position:absolute;object-fit:contain;z-index:2;pointer-events:none;" />';
+	} else {
+		$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+	}
 	$html .= '</div>';
 
 	if ( $multi ) {
@@ -1082,12 +1178,22 @@ function cs_render_cart_thumb_composite_html( $cart_item, $inner_image_html = ''
 			if ( $u === '' ) {
 				continue;
 			}
+			$spa = isset( $side['print_area'] ) ? $side['print_area'] : null;
 			$html .= '<div style="text-align:center;flex:0 0 auto;">';
 			$html .= '<div class="cs-cart-thumb cs-side-mini" style="position:relative;width:44px;height:44px;border-radius:4px;overflow:hidden;background:#eee;margin:0 auto;">';
 			if ( $product_img ) {
 				$html .= '<img src="' . $product_img . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
 			}
-			$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+			if ( $spa && $product_img ) {
+				$html .= '<img src="' . $u . '" alt="" class="cs-design-needs-pa" '
+					. 'data-pa-x="' . esc_attr( $spa['x'] ) . '" '
+					. 'data-pa-y="' . esc_attr( $spa['y'] ) . '" '
+					. 'data-pa-w="' . esc_attr( $spa['width'] ) . '" '
+					. 'data-pa-h="' . esc_attr( $spa['height'] ) . '" '
+					. 'style="position:absolute;object-fit:contain;z-index:2;pointer-events:none;" />';
+			} else {
+				$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+			}
 			$html .= '</div>';
 			if ( $v !== '' ) {
 				$html .= '<span style="font-size:9px;color:#6b7280;text-transform:capitalize;display:block;margin-top:2px;">' . esc_html( $v ) . '</span>';
@@ -1195,7 +1301,45 @@ add_action( 'wp_head', function () {
 		.cs-block-cart-design-preview img { max-width:120px;max-height:120px;display:block;border-radius:4px; }
 		.cs-block-cart-composite { position:relative; border-radius:6px; overflow:hidden; background:#f3f4f6; }
 		.cs-block-cart-composite img { display:block; }
-	</style>';
+	</style>
+	<script>
+	/* Position design overlays within print areas for cart thumbnails */
+	(function(){
+		function positionPrintAreaDesigns(){
+			var els = document.querySelectorAll(".cs-design-needs-pa");
+			els.forEach(function(designImg){
+				var container = designImg.parentElement;
+				if(!container) return;
+				var baseImg = container.querySelector("img.cs-product-base-img") || container.querySelector(".cs-product-base-wrap img");
+				if(!baseImg) return;
+				var paX = parseFloat(designImg.getAttribute("data-pa-x")) || 0;
+				var paY = parseFloat(designImg.getAttribute("data-pa-y")) || 0;
+				var paW = parseFloat(designImg.getAttribute("data-pa-w")) || 100;
+				var paH = parseFloat(designImg.getAttribute("data-pa-h")) || 100;
+				function apply(){
+					var cw = container.offsetWidth;
+					var ch = container.offsetHeight;
+					if(!cw || !ch) return;
+					var nw = baseImg.naturalWidth || cw;
+					var nh = baseImg.naturalHeight || ch;
+					var scale = Math.min(cw/nw, ch/nh);
+					var rw = nw*scale, rh = nh*scale;
+					var offX = (cw-rw)/2, offY = (ch-rh)/2;
+					designImg.style.left = (offX + (paX/100)*rw) + "px";
+					designImg.style.top = (offY + (paY/100)*rh) + "px";
+					designImg.style.width = ((paW/100)*rw) + "px";
+					designImg.style.height = ((paH/100)*rh) + "px";
+				}
+				if(baseImg.complete && baseImg.naturalWidth) apply();
+				else baseImg.addEventListener("load", apply);
+				setTimeout(apply, 200);
+			});
+		}
+		if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", positionPrintAreaDesigns);
+		else positionPrintAreaDesigns();
+		new MutationObserver(positionPrintAreaDesigns).observe(document.body,{childList:true,subtree:true});
+	})();
+	</script>';
 } );
 
 /* ================================================================
@@ -1413,10 +1557,10 @@ add_action( 'wp_footer', function () {
 					link.style.marginTop = '6px';
 					link.textContent = 'View full size →';
 					wrap.appendChild(lbl);
-					function addStack(targetUrl, w, h){
+					function addStack(targetUrl, w, h, printArea){
 						var stack = document.createElement('div');
 						stack.className = 'cs-block-cart-composite';
-						stack.style.cssText = 'position:relative;width:'+w+'px;height:'+h+'px;margin-top:4px;';
+						stack.style.cssText = 'position:relative;width:'+w+'px;height:'+h+'px;margin-top:4px;overflow:hidden;';
 						if(line.product_thumb_url){
 							var pimg = document.createElement('img');
 							pimg.alt = '';
@@ -1427,7 +1571,32 @@ add_action( 'wp_footer', function () {
 						var dimg = document.createElement('img');
 						dimg.alt = '';
 						dimg.setAttribute('src', targetUrl);
-						dimg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;';
+						if(printArea && line.product_thumb_url){
+							dimg.style.cssText = 'position:absolute;object-fit:contain;z-index:2;pointer-events:none;';
+							dimg.setAttribute('data-pa-x', printArea.x);
+							dimg.setAttribute('data-pa-y', printArea.y);
+							dimg.setAttribute('data-pa-w', printArea.width);
+							dimg.setAttribute('data-pa-h', printArea.height);
+							dimg.className = 'cs-design-needs-pa';
+							var pimgRef = stack.querySelector('img');
+							if(pimgRef){
+								function applyPA(){
+									var nw=pimgRef.naturalWidth||w,nh=pimgRef.naturalHeight||h;
+									var s=Math.min(w/nw,h/nh);
+									var rw=nw*s,rh=nh*s;
+									var offX=(w-rw)/2,offY=(h-rh)/2;
+									dimg.style.left=(offX+(printArea.x/100)*rw)+'px';
+									dimg.style.top=(offY+(printArea.y/100)*rh)+'px';
+									dimg.style.width=((printArea.width/100)*rw)+'px';
+									dimg.style.height=((printArea.height/100)*rh)+'px';
+								}
+								if(pimgRef.complete&&pimgRef.naturalWidth)applyPA();
+								else pimgRef.addEventListener('load',applyPA);
+								setTimeout(applyPA,200);
+							}
+						} else {
+							dimg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;';
+						}
 						stack.appendChild(dimg);
 						return stack;
 					}
@@ -1439,7 +1608,7 @@ add_action( 'wp_footer', function () {
 							cell.style.textAlign = 'center';
 							var u = side.url || '';
 							if(!u) return;
-							cell.appendChild(addStack(u, 88, 88));
+							cell.appendChild(addStack(u, 88, 88, side.print_area || null));
 							var vn = document.createElement('span');
 							vn.style.cssText = 'font-size:10px;color:#6b7280;text-transform:capitalize;display:block;margin-top:4px;';
 							vn.textContent = side.view || '';
@@ -1448,7 +1617,8 @@ add_action( 'wp_footer', function () {
 						});
 						wrap.appendChild(grid);
 					} else if(line.product_thumb_url){
-						wrap.appendChild(addStack(line.design_url, 120, 120));
+						var primarySide = (line.sides && line.sides.length) ? line.sides[0] : null;
+						wrap.appendChild(addStack(line.design_url, 120, 120, primarySide && primarySide.print_area ? primarySide.print_area : null));
 					} else {
 						var img = document.createElement('img');
 						img.alt = '';
@@ -1561,7 +1731,39 @@ add_action( 'wp_footer', function () {
 					overlay.src = match.design_url;
 					overlay.alt = '';
 					overlay.className = 'cs-design-overlay';
-					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
+					// Check for print area data in the primary side
+					var primarySide = (match.sides && match.sides.length) ? (match.sides.find(function(s){return s.view==='front'}) || match.sides[0]) : null;
+					var pa = primarySide && primarySide.print_area ? primarySide.print_area : null;
+					if(pa && match.product_thumb_url){
+						overlay.style.cssText = 'position:absolute;object-fit:contain;pointer-events:none;z-index:3;';
+						overlay.setAttribute('data-pa-x', pa.x);
+						overlay.setAttribute('data-pa-y', pa.y);
+						overlay.setAttribute('data-pa-w', pa.width);
+						overlay.setAttribute('data-pa-h', pa.height);
+						overlay.className += ' cs-design-needs-pa';
+						var baseRef = container.querySelector('img:not(.cs-design-overlay)');
+						if(baseRef){
+							(function(o,b,c,p){
+								function ap(){
+									var cw=c.offsetWidth,ch=c.offsetHeight;
+									if(!cw||!ch)return;
+									var nw=b.naturalWidth||cw,nh=b.naturalHeight||ch;
+									var s=Math.min(cw/nw,ch/nh);
+									var rw=nw*s,rh=nh*s;
+									var offX=(cw-rw)/2,offY=(ch-rh)/2;
+									o.style.left=(offX+(p.x/100)*rw)+'px';
+									o.style.top=(offY+(p.y/100)*rh)+'px';
+									o.style.width=((p.width/100)*rw)+'px';
+									o.style.height=((p.height/100)*rh)+'px';
+								}
+								if(b.complete&&b.naturalWidth)ap();
+								else b.addEventListener('load',ap);
+								setTimeout(ap,200);
+							})(overlay,baseRef,container,pa);
+						}
+					} else {
+						overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
+					}
 					container.appendChild(overlay);
 					appendViewDesignLink(container, match.design_url, true, match.stacked_preview_url);
 				});
@@ -1603,7 +1805,33 @@ add_action( 'wp_footer', function () {
 					overlay.src = match.design_url;
 					overlay.alt = '';
 					overlay.className = 'cs-design-overlay';
-					overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
+					var primarySide = (match.sides && match.sides.length) ? (match.sides.find(function(s){return s.view==='front'}) || match.sides[0]) : null;
+					var pa = primarySide && primarySide.print_area ? primarySide.print_area : null;
+					if(pa && match.product_thumb_url){
+						overlay.style.cssText = 'position:absolute;object-fit:contain;pointer-events:none;z-index:3;';
+						var baseRef = imgWrap.querySelector('img:not(.cs-design-overlay)');
+						if(baseRef){
+							(function(o,b,c,p){
+								function ap(){
+									var cw=c.offsetWidth,ch=c.offsetHeight;
+									if(!cw||!ch)return;
+									var nw=b.naturalWidth||cw,nh=b.naturalHeight||ch;
+									var s=Math.min(cw/nw,ch/nh);
+									var rw=nw*s,rh=nh*s;
+									var offX=(cw-rw)/2,offY=(ch-rh)/2;
+									o.style.left=(offX+(p.x/100)*rw)+'px';
+									o.style.top=(offY+(p.y/100)*rh)+'px';
+									o.style.width=((p.width/100)*rw)+'px';
+									o.style.height=((p.height/100)*rh)+'px';
+								}
+								if(b.complete&&b.naturalWidth)ap();
+								else b.addEventListener('load',ap);
+								setTimeout(ap,200);
+							})(overlay,baseRef,imgWrap,pa);
+						}
+					} else {
+						overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
+					}
 					imgWrap.appendChild(overlay);
 					appendViewDesignLink(imgWrap, match.design_url, false, match.stacked_preview_url);
 				});
