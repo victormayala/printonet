@@ -157,6 +157,28 @@ function ProductForm({
   const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
     (product?.print_areas as any) || {}
   );
+  const [detecting, setDetecting] = useState<string | null>(null);
+
+  const autoDetectPrintArea = async (imageUrl: string, sideKey: string) => {
+    const printAreaKey = sideKey === "left" ? "side1" : sideKey === "right" ? "side2" : sideKey;
+    setDetecting(sideKey);
+    try {
+      const { data, error } = await supabase.functions.invoke("detect-print-area", {
+        body: { imageUrl },
+      });
+      if (error) throw error;
+      if (data?.printArea) {
+        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: data.printArea }));
+        toast({ title: `Print area detected for ${sideKey}` });
+      } else {
+        throw new Error("No print area detected");
+      }
+    } catch (err: any) {
+      toast({ title: "Detection failed", description: err.message, variant: "destructive" });
+    } finally {
+      setDetecting(null);
+    }
+  };
 
   const IMAGE_SIDES = [
     { key: "front", label: "Front", value: imageFront, setter: setImageFront },
