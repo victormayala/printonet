@@ -1079,14 +1079,39 @@ function cs_render_cart_thumb_composite_html( $cart_item, $inner_image_html = ''
 	$product_img   = cs_get_cart_item_product_thumb_url( $cart_item );
 	$multi         = count( $sides ) > 1;
 
+	// Get print area from the primary (front) side
+	$primary_side = null;
+	foreach ( $sides as $s ) {
+		if ( isset( $s['view'] ) && $s['view'] === 'front' ) {
+			$primary_side = $s;
+			break;
+		}
+	}
+	if ( ! $primary_side && ! empty( $sides ) ) {
+		$primary_side = $sides[0];
+	}
+	$print_area = isset( $primary_side['print_area'] ) ? $primary_side['print_area'] : null;
+
+	$uid = 'cs-ct-' . wp_generate_password( 8, false, false );
+
 	$html  = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
-	$html .= '<div class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
+	$html .= '<div id="' . esc_attr( $uid ) . '" class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
 	if ( $inner_image_html !== '' ) {
 		$html .= '<div class="cs-product-base-wrap" style="position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;">' . $inner_image_html . '</div>';
 	} elseif ( $product_img ) {
 		$html .= '<img src="' . $product_img . '" alt="" class="cs-product-base-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
 	}
-	$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+	if ( $print_area && $product_img ) {
+		// Design positioned within print area — use percentage-based positioning
+		$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img cs-design-needs-pa" '
+			. 'data-pa-x="' . esc_attr( $print_area['x'] ) . '" '
+			. 'data-pa-y="' . esc_attr( $print_area['y'] ) . '" '
+			. 'data-pa-w="' . esc_attr( $print_area['width'] ) . '" '
+			. 'data-pa-h="' . esc_attr( $print_area['height'] ) . '" '
+			. 'style="position:absolute;object-fit:contain;z-index:2;pointer-events:none;" />';
+	} else {
+		$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+	}
 	$html .= '</div>';
 
 	if ( $multi ) {
@@ -1100,12 +1125,22 @@ function cs_render_cart_thumb_composite_html( $cart_item, $inner_image_html = ''
 			if ( $u === '' ) {
 				continue;
 			}
+			$spa = isset( $side['print_area'] ) ? $side['print_area'] : null;
 			$html .= '<div style="text-align:center;flex:0 0 auto;">';
 			$html .= '<div class="cs-cart-thumb cs-side-mini" style="position:relative;width:44px;height:44px;border-radius:4px;overflow:hidden;background:#eee;margin:0 auto;">';
 			if ( $product_img ) {
 				$html .= '<img src="' . $product_img . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
 			}
-			$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+			if ( $spa && $product_img ) {
+				$html .= '<img src="' . $u . '" alt="" class="cs-design-needs-pa" '
+					. 'data-pa-x="' . esc_attr( $spa['x'] ) . '" '
+					. 'data-pa-y="' . esc_attr( $spa['y'] ) . '" '
+					. 'data-pa-w="' . esc_attr( $spa['width'] ) . '" '
+					. 'data-pa-h="' . esc_attr( $spa['height'] ) . '" '
+					. 'style="position:absolute;object-fit:contain;z-index:2;pointer-events:none;" />';
+			} else {
+				$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+			}
 			$html .= '</div>';
 			if ( $v !== '' ) {
 				$html .= '<span style="font-size:9px;color:#6b7280;text-transform:capitalize;display:block;margin-top:2px;">' . esc_html( $v ) . '</span>';
