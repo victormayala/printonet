@@ -1392,6 +1392,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       strokeWidth: 1,
     });
     (rect as any).customName = patternType.charAt(0).toUpperCase() + patternType.slice(1) + " Pattern";
+    (rect as any)._patternType = patternType;
+    (rect as any)._patternColor = fillColor;
     canvas.add(rect);
     canvas.setActiveObject(rect);
     saveState();
@@ -1541,6 +1543,76 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         setObjectProps((p) => ({ ...p, fill: value }));
         fabricRef.current?.renderAll();
         saveState();
+      } else if ((selectedObject as any)._patternType) {
+        // Re-create pattern with new color
+        const patternType = (selectedObject as any)._patternType;
+        const tileSize = 20;
+        const patternCanvas = document.createElement("canvas");
+        patternCanvas.width = tileSize;
+        patternCanvas.height = tileSize;
+        const ctx = patternCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, tileSize, tileSize);
+          ctx.strokeStyle = value;
+          ctx.fillStyle = value;
+          ctx.lineWidth = 2;
+          switch (patternType) {
+            case "stripes":
+              ctx.beginPath();
+              ctx.moveTo(0, 0); ctx.lineTo(tileSize, tileSize);
+              ctx.moveTo(-tileSize / 2, tileSize / 2); ctx.lineTo(tileSize / 2, tileSize * 1.5);
+              ctx.moveTo(tileSize / 2, -tileSize / 2); ctx.lineTo(tileSize * 1.5, tileSize / 2);
+              ctx.stroke();
+              break;
+            case "dots":
+              ctx.beginPath();
+              ctx.arc(tileSize / 2, tileSize / 2, 3, 0, Math.PI * 2);
+              ctx.fill();
+              break;
+            case "grid":
+              ctx.beginPath();
+              ctx.moveTo(tileSize, 0); ctx.lineTo(tileSize, tileSize);
+              ctx.moveTo(0, tileSize); ctx.lineTo(tileSize, tileSize);
+              ctx.stroke();
+              break;
+            case "checkerboard":
+              ctx.fillRect(0, 0, tileSize / 2, tileSize / 2);
+              ctx.fillRect(tileSize / 2, tileSize / 2, tileSize / 2, tileSize / 2);
+              break;
+            case "zigzag":
+              ctx.beginPath();
+              ctx.moveTo(0, tileSize / 2);
+              ctx.lineTo(tileSize / 4, 0);
+              ctx.lineTo(tileSize / 2, tileSize / 2);
+              ctx.lineTo(tileSize * 3 / 4, 0);
+              ctx.lineTo(tileSize, tileSize / 2);
+              ctx.stroke();
+              break;
+            case "crosshatch":
+              ctx.beginPath();
+              ctx.moveTo(0, 0); ctx.lineTo(tileSize, tileSize);
+              ctx.moveTo(tileSize, 0); ctx.lineTo(0, tileSize);
+              ctx.stroke();
+              break;
+            case "horizontal":
+              ctx.beginPath();
+              ctx.moveTo(0, tileSize / 2); ctx.lineTo(tileSize, tileSize / 2);
+              ctx.stroke();
+              break;
+            case "vertical":
+              ctx.beginPath();
+              ctx.moveTo(tileSize / 2, 0); ctx.lineTo(tileSize / 2, tileSize);
+              ctx.stroke();
+              break;
+          }
+          const fabricPattern = new Pattern({ source: patternCanvas, repeat: "repeat" });
+          selectedObject.set("fill", fabricPattern);
+          selectedObject.set("stroke", value);
+          (selectedObject as any)._patternColor = value;
+          setObjectProps((p) => ({ ...p, fill: value }));
+          fabricRef.current?.renderAll();
+          saveState();
+        }
       } else {
         selectedObject.set("fill", value);
         setObjectProps((p) => ({ ...p, fill: value }));
