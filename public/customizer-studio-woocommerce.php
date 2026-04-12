@@ -395,12 +395,44 @@ function cs_output_design_preview_page() {
 		body{margin:0;min-height:100vh;background:#0f0f10;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
 		.cs-dsp-wrap{position:relative;width:min(92vw,520px);aspect-ratio:1;max-height:85vh;background:#1a1a1c;border-radius:16px;overflow:hidden;border:1px solid #2d2d32;box-shadow:0 20px 50px rgba(0,0,0,.45);}
 		.cs-dsp-wrap img.cs-dsp-product{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;}
-		.cs-dsp-wrap img.cs-dsp-design{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;}
+		.cs-dsp-wrap img.cs-dsp-design{position:absolute;object-fit:contain;z-index:2;pointer-events:none;}
+		.cs-dsp-wrap img.cs-dsp-design-full{inset:0;width:100%;height:100%;}
 		.cs-dsp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:min(96vw,920px);margin-top:8px;}
 		.cs-dsp-panel{position:relative;aspect-ratio:1;background:#1a1a1c;border-radius:12px;overflow:hidden;border:1px solid #2d2d32;}
 		.cs-dsp-panel .cs-dsp-label{position:absolute;top:8px;left:8px;z-index:4;background:rgba(0,0,0,.55);padding:4px 8px;border-radius:6px;font-size:12px;text-transform:capitalize;}
 		p.cs-dsp-note{margin-top:20px;font-size:14px;color:#9ca3af;text-align:center;max-width:36rem;line-height:1.5;}
-	</style></head><body>';
+	</style>
+	<script>
+	function csPositionDesign(container){
+		var designImg = container.querySelector("img.cs-dsp-design[data-pa-x]");
+		if(!designImg) return;
+		var baseImg = container.querySelector("img.cs-dsp-product");
+		if(!baseImg) return;
+		var paX=parseFloat(designImg.getAttribute("data-pa-x"))||0;
+		var paY=parseFloat(designImg.getAttribute("data-pa-y"))||0;
+		var paW=parseFloat(designImg.getAttribute("data-pa-w"))||100;
+		var paH=parseFloat(designImg.getAttribute("data-pa-h"))||100;
+		function apply(){
+			var cw=container.offsetWidth,ch=container.offsetHeight;
+			if(!cw||!ch)return;
+			var nw=baseImg.naturalWidth||cw,nh=baseImg.naturalHeight||ch;
+			var s=Math.min(cw/nw,ch/nh);
+			var rw=nw*s,rh=nh*s;
+			var offX=(cw-rw)/2,offY=(ch-rh)/2;
+			designImg.style.left=(offX+(paX/100)*rw)+"px";
+			designImg.style.top=(offY+(paY/100)*rh)+"px";
+			designImg.style.width=((paW/100)*rw)+"px";
+			designImg.style.height=((paH/100)*rh)+"px";
+		}
+		if(baseImg.complete&&baseImg.naturalWidth)apply();
+		else baseImg.addEventListener("load",apply);
+		setTimeout(apply,200);
+	}
+	document.addEventListener("DOMContentLoaded",function(){
+		document.querySelectorAll(".cs-dsp-wrap,.cs-dsp-panel").forEach(csPositionDesign);
+	});
+	</script>
+	</head><body>';
 
 	if ( count( $sides ) > 1 ) {
 		echo '<h1 style="font-size:1.1rem;margin:0 0 12px;font-weight:600;">' . esc_html__( 'All sides', 'customizer-studio-for-woocommerce' ) . '</h1>';
