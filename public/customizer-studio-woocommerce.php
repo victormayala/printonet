@@ -114,13 +114,24 @@ function cs_sanitize_customizer_sides_array( $arr ) {
 		} elseif ( isset( $row['designPNG'] ) ) {
 			$url = cs_sanitize_design_source( $row['designPNG'] );
 		}
-		if ( $url === '' ) {
+		$preview_url = '';
+		if ( isset( $row['preview_url'] ) ) {
+			$preview_url = cs_sanitize_design_source( $row['preview_url'] );
+		} elseif ( isset( $row['previewPNG'] ) ) {
+			$preview_url = cs_sanitize_design_source( $row['previewPNG'] );
+		}
+		if ( $url === '' && $preview_url === '' ) {
 			continue;
 		}
 		$side = [
 			'view' => $view,
-			'url'  => $url,
 		];
+		if ( $url !== '' ) {
+			$side['url'] = $url;
+		}
+		if ( $preview_url !== '' ) {
+			$side['preview_url'] = $preview_url;
+		}
 		// Preserve print area coordinates for proportional positioning
 		if ( isset( $row['print_area'] ) && is_array( $row['print_area'] ) ) {
 			$pa = $row['print_area'];
@@ -141,6 +152,55 @@ function cs_sanitize_customizer_sides_array( $arr ) {
 		$out[] = $side;
 	}
 	return $out;
+}
+
+/**
+ * Prefer a saved composite preview when available.
+ *
+ * @param array $side Sanitized side data.
+ * @return string
+ */
+function cs_get_side_preview_url( $side ) {
+	if ( ! is_array( $side ) ) {
+		return '';
+	}
+	$preview = $side['preview_url'] ?? '';
+	return is_string( $preview ) ? $preview : '';
+}
+
+/**
+ * Best display URL for a side.
+ *
+ * @param array $side Sanitized side data.
+ * @return string
+ */
+function cs_get_side_display_url( $side ) {
+	$preview = cs_get_side_preview_url( $side );
+	if ( $preview !== '' ) {
+		return $preview;
+	}
+	$design = is_array( $side ) && isset( $side['url'] ) && is_string( $side['url'] ) ? $side['url'] : '';
+	return $design;
+}
+
+/**
+ * Front side when present, else first side with a display URL.
+ *
+ * @param array $sides Sanitized sides.
+ * @return array|null
+ */
+function cs_get_primary_side_from_sides( array $sides ) {
+	foreach ( $sides as $side ) {
+		if ( is_array( $side ) && ( $side['view'] ?? '' ) === 'front' && cs_get_side_display_url( $side ) !== '' ) {
+			return $side;
+		}
+	}
+	foreach ( $sides as $side ) {
+		if ( is_array( $side ) && cs_get_side_display_url( $side ) !== '' ) {
+			return $side;
+		}
+	}
+	return null;
 }
 
 /**
@@ -294,7 +354,7 @@ function cs_build_stacked_preview_page_url( $product_thumb_url, $design_url, $si
  * @return string
  */
 function cs_get_stacked_preview_url_for_cart_item( $cart_item ) {
-	$design = cs_get_cart_item_design_url( $cart_item );
+	$design = cs_get_cart_item_display_url( $cart_item );
 	$sides  = cs_get_cart_item_sides( $cart_item );
 	if ( $design === '' && empty( $sides ) ) {
 		return '';
@@ -322,6 +382,11 @@ function cs_get_stacked_preview_url_for_order_item( $item ) {
 		if ( is_array( $decoded ) ) {
 			$sides = cs_sanitize_customizer_sides_array( $decoded );
 		}
+	}
+	$primary_side = cs_get_primary_side_from_sides( $sides );
+	$display_url  = cs_get_side_display_url( $primary_side );
+	if ( $display_url !== '' ) {
+		$design = $display_url;
 	}
 	if ( $design === '' && empty( $sides ) ) {
 		return '';
@@ -431,58 +496,88 @@ function cs_output_design_preview_page() {
 	</head><body>';
 
 	if ( count( $sides ) > 1 ) {
-		echo '<h1 style="font-size:1.1rem;margin:0 0 12px;font-weight:600;">' . esc_html__( 'All sides', 'customizer-studio-for-woocommerce' ) . '</h1>';
+		echo '<h1 style="font-size:1.1rem;margin:0 0 12px;font-weight:600;">' . esc_html__( 'Saved previews', 'customizer-studio-for-woocommerce' ) . '</h1>';
 		echo '<div class="cs-dsp-grid">';
 		foreach ( $sides as $side ) {
 			if ( ! is_array( $side ) ) {
 				continue;
 			}
 			$v = isset( $side['view'] ) ? sanitize_text_field( (string) $side['view'] ) : 'side';
-			$u = isset( $side['url'] ) ? $side['url'] : '';
-			if ( ! is_string( $u ) || $u === '' ) {
+			$display_url = cs_get_side_display_url( $side );
+			if ( $display_url === '' ) {
 				continue;
 			}
-			$dattr = cs_esc_design_attr( $u );
+			$side_preview     = cs_get_side_preview_url( $side );
+			$display_attr     = cs_esc_design_attr( $display_url );
+			$raw_design_attr  = ! empty( $side['url'] ) && is_string( $side['url'] ) ? cs_esc_design_attr( $side['url'] ) : '';
+			$side_product_attr = '';
+			if ( ! empty( $side['product_image'] ) && is_string( $side['product_image'] ) ) {
+				$side_product_attr = cs_esc_design_attr( $side['product_image'] );
+			}
+			if ( $side_product_attr === '' ) {
+				$side_product_attr = $product_attr;
+			}
 			$spa = isset( $side['print_area'] ) && is_array( $side['print_area'] ) ? $side['print_area'] : null;
 			echo '<div class="cs-dsp-panel" role="img" aria-label="' . esc_attr( $v ) . '">';
 			echo '<span class="cs-dsp-label">' . esc_html( $v ) . '</span>';
-			if ( $product_attr !== '' ) {
-				echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
-			}
-			if ( $spa && $product_attr !== '' ) {
-				echo '<img class="cs-dsp-design" src="' . $dattr . '" alt=""'
+			if ( $side_preview !== '' ) {
+				echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $display_attr . '" alt="">';
+			} else {
+				if ( $side_product_attr !== '' ) {
+					echo '<img class="cs-dsp-product" src="' . $side_product_attr . '" alt="">';
+				}
+				if ( $spa && $side_product_attr !== '' && $raw_design_attr !== '' ) {
+					echo '<img class="cs-dsp-design" src="' . $raw_design_attr . '" alt=""'
 					. ' data-pa-x="' . esc_attr( $spa['x'] ) . '"'
 					. ' data-pa-y="' . esc_attr( $spa['y'] ) . '"'
 					. ' data-pa-w="' . esc_attr( $spa['width'] ) . '"'
 					. ' data-pa-h="' . esc_attr( $spa['height'] ) . '">';
-			} else {
-				echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $dattr . '" alt="">';
+				} else {
+					echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $display_attr . '" alt="">';
+				}
 			}
 			echo '</div>';
 		}
 		echo '</div>';
-		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your art per side (front). Save or print from your browser.', 'customizer-studio-for-woocommerce' ) . '</p>';
+		echo '<p class="cs-dsp-note">' . esc_html__( 'These are the saved product previews for each side. Save or print from your browser.', 'customizer-studio-for-woocommerce' ) . '</p>';
 	} else {
-		$design_attr = cs_esc_design_attr( $design_src !== '' ? $design_src : ( is_array( $sides[0] ?? null ) && ! empty( $sides[0]['url'] ) ? $sides[0]['url'] : '' ) );
-		$primary_pa = null;
-		if ( ! empty( $sides[0]['print_area'] ) && is_array( $sides[0]['print_area'] ) ) {
-			$primary_pa = $sides[0]['print_area'];
+		$primary_side = cs_get_primary_side_from_sides( $sides );
+		$primary_display_url = cs_get_side_display_url( $primary_side );
+		$primary_preview = cs_get_side_preview_url( $primary_side );
+		$design_attr = cs_esc_design_attr( $primary_display_url !== '' ? $primary_display_url : $design_src );
+		$raw_design_attr = '';
+		if ( is_array( $primary_side ) && ! empty( $primary_side['url'] ) && is_string( $primary_side['url'] ) ) {
+			$raw_design_attr = cs_esc_design_attr( $primary_side['url'] );
 		}
+		$primary_product_attr = '';
+		if ( is_array( $primary_side ) && ! empty( $primary_side['product_image'] ) && is_string( $primary_side['product_image'] ) ) {
+			$primary_product_attr = cs_esc_design_attr( $primary_side['product_image'] );
+		}
+		if ( $primary_product_attr === '' ) {
+			$primary_product_attr = $product_attr;
+		}
+		$primary_pa = is_array( $primary_side ) && ! empty( $primary_side['print_area'] ) && is_array( $primary_side['print_area'] )
+			? $primary_side['print_area']
+			: null;
 		echo '<div class="cs-dsp-wrap" role="img" aria-label="' . esc_attr__( 'Product with custom design overlay', 'customizer-studio-for-woocommerce' ) . '">';
-		if ( $product_attr !== '' ) {
-			echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
-		}
-		if ( $primary_pa && $product_attr !== '' ) {
-			echo '<img class="cs-dsp-design" src="' . $design_attr . '" alt=""'
+		if ( $primary_preview !== '' ) {
+			echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $design_attr . '" alt="">';
+		} else {
+			if ( $primary_product_attr !== '' ) {
+				echo '<img class="cs-dsp-product" src="' . $primary_product_attr . '" alt="">';
+			}
+			if ( $primary_pa && $primary_product_attr !== '' && $raw_design_attr !== '' ) {
+				echo '<img class="cs-dsp-design" src="' . $raw_design_attr . '" alt=""'
 				. ' data-pa-x="' . esc_attr( $primary_pa['x'] ) . '"'
 				. ' data-pa-y="' . esc_attr( $primary_pa['y'] ) . '"'
 				. ' data-pa-w="' . esc_attr( $primary_pa['width'] ) . '"'
 				. ' data-pa-h="' . esc_attr( $primary_pa['height'] ) . '">';
-		} else {
-			echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $design_attr . '" alt="">';
+			} else {
+				echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $design_attr . '" alt="">';
+			}
 		}
 		echo '</div>';
-		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your custom design (front). Use your browser to save or print.', 'customizer-studio-for-woocommerce' ) . '</p>';
+		echo '<p class="cs-dsp-note">' . esc_html__( 'This is the saved customized product preview. Use your browser to save or print.', 'customizer-studio-for-woocommerce' ) . '</p>';
 	}
 	echo '</body></html>';
 	exit;
@@ -1068,6 +1163,32 @@ function cs_get_cart_item_design_url( $cart_item ) {
 }
 
 /**
+ * Best saved preview for cart/checkout display.
+ *
+ * @param array $cart_item Cart line.
+ * @return string
+ */
+function cs_get_cart_item_display_url( $cart_item ) {
+	$primary_side = cs_get_primary_side_from_sides( cs_get_cart_item_sides( $cart_item ) );
+	$display_url  = cs_get_side_display_url( $primary_side );
+	if ( $display_url !== '' ) {
+		return $display_url;
+	}
+	return cs_get_cart_item_design_url( $cart_item );
+}
+
+/**
+ * Whether the primary side has a saved composite snapshot.
+ *
+ * @param array $cart_item Cart line.
+ * @return bool
+ */
+function cs_cart_item_has_saved_preview( $cart_item ) {
+	$primary_side = cs_get_primary_side_from_sides( cs_get_cart_item_sides( $cart_item ) );
+	return cs_get_side_preview_url( $primary_side ) !== '';
+}
+
+/**
  * Whether the line has any customizer artwork (any side).
  *
  * @param array $cart_item Cart line.
@@ -1122,44 +1243,44 @@ function cs_render_cart_thumb_composite_html( $cart_item, $inner_image_html = ''
 		return '';
 	}
 	$sides         = cs_get_cart_item_sides( $cart_item );
-	$primary       = cs_get_cart_item_design_url( $cart_item );
-	$design_src    = cs_esc_design_attr( $primary );
+	$primary_side  = cs_get_primary_side_from_sides( $sides );
+	$primary_raw   = is_array( $primary_side ) && ! empty( $primary_side['url'] ) ? $primary_side['url'] : cs_get_cart_item_design_url( $cart_item );
+	$primary_show  = is_array( $primary_side ) ? cs_get_side_display_url( $primary_side ) : $primary_raw;
+	$design_src    = cs_esc_design_attr( $primary_show );
+	$raw_design_src = $primary_raw !== '' ? cs_esc_design_attr( $primary_raw ) : '';
 	$preview_href  = cs_get_stacked_preview_url_for_cart_item( $cart_item );
 	$product_img   = cs_get_cart_item_product_thumb_url( $cart_item );
 	$multi         = count( $sides ) > 1;
 
-	// Get print area from the primary (front) side
-	$primary_side = null;
-	foreach ( $sides as $s ) {
-		if ( isset( $s['view'] ) && $s['view'] === 'front' ) {
-			$primary_side = $s;
-			break;
-		}
-	}
-	if ( ! $primary_side && ! empty( $sides ) ) {
-		$primary_side = $sides[0];
-	}
 	$print_area = isset( $primary_side['print_area'] ) ? $primary_side['print_area'] : null;
+	$has_saved_preview = cs_get_side_preview_url( $primary_side ) !== '';
+	$fallback_product_img = is_array( $primary_side ) && ! empty( $primary_side['product_image'] )
+		? cs_esc_design_attr( $primary_side['product_image'] )
+		: $product_img;
 
 	$uid = 'cs-ct-' . wp_generate_password( 8, false, false );
 
 	$html  = '<div class="cs-cart-thumb-wrap" style="display:inline-block;vertical-align:middle;text-align:center;">';
 	$html .= '<div id="' . esc_attr( $uid ) . '" class="cs-cart-thumb" style="position:relative;width:80px;height:80px;border-radius:4px;overflow:hidden;background:#f5f5f5;">';
-	if ( $inner_image_html !== '' ) {
-		$html .= '<div class="cs-product-base-wrap" style="position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;">' . $inner_image_html . '</div>';
-	} elseif ( $product_img ) {
-		$html .= '<img src="' . $product_img . '" alt="" class="cs-product-base-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
-	}
-	if ( $print_area && $product_img ) {
+	if ( $has_saved_preview ) {
+		$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+	} else {
+		if ( $inner_image_html !== '' ) {
+			$html .= '<div class="cs-product-base-wrap" style="position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;">' . $inner_image_html . '</div>';
+		} elseif ( $fallback_product_img ) {
+			$html .= '<img src="' . $fallback_product_img . '" alt="" class="cs-product-base-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
+		}
+		if ( $print_area && $fallback_product_img && $raw_design_src !== '' ) {
 		// Design positioned within print area — use percentage-based positioning
-		$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img cs-design-needs-pa" '
+			$html .= '<img src="' . $raw_design_src . '" alt="" class="cs-design-top-img cs-design-needs-pa" '
 			. 'data-pa-x="' . esc_attr( $print_area['x'] ) . '" '
 			. 'data-pa-y="' . esc_attr( $print_area['y'] ) . '" '
 			. 'data-pa-w="' . esc_attr( $print_area['width'] ) . '" '
 			. 'data-pa-h="' . esc_attr( $print_area['height'] ) . '" '
 			. 'style="position:absolute;object-fit:contain;z-index:2;pointer-events:none;" />';
-	} else {
-		$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+		} else {
+			$html .= '<img src="' . $design_src . '" alt="" class="cs-design-top-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+		}
 	}
 	$html .= '</div>';
 
@@ -1170,25 +1291,33 @@ function cs_render_cart_thumb_composite_html( $cart_item, $inner_image_html = ''
 				continue;
 			}
 			$v = isset( $side['view'] ) ? (string) $side['view'] : '';
-			$u = isset( $side['url'] ) ? cs_esc_design_attr( $side['url'] ) : '';
+			$display_u = cs_get_side_display_url( $side );
+			$u = $display_u !== '' ? cs_esc_design_attr( $display_u ) : '';
 			if ( $u === '' ) {
 				continue;
 			}
 			$spa = isset( $side['print_area'] ) ? $side['print_area'] : null;
+			$side_product_img = ! empty( $side['product_image'] ) ? cs_esc_design_attr( $side['product_image'] ) : $product_img;
+			$side_preview = cs_get_side_preview_url( $side ) !== '';
+			$side_raw = ! empty( $side['url'] ) && is_string( $side['url'] ) ? cs_esc_design_attr( $side['url'] ) : $u;
 			$html .= '<div style="text-align:center;flex:0 0 auto;">';
 			$html .= '<div class="cs-cart-thumb cs-side-mini" style="position:relative;width:44px;height:44px;border-radius:4px;overflow:hidden;background:#eee;margin:0 auto;">';
-			if ( $product_img ) {
-				$html .= '<img src="' . $product_img . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
-			}
-			if ( $spa && $product_img ) {
-				$html .= '<img src="' . $u . '" alt="" class="cs-design-needs-pa" '
+			if ( $side_preview ) {
+				$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+			} else {
+				if ( $side_product_img ) {
+					$html .= '<img src="' . $side_product_img . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
+				}
+				if ( $spa && $side_product_img ) {
+					$html .= '<img src="' . $side_raw . '" alt="" class="cs-design-needs-pa" '
 					. 'data-pa-x="' . esc_attr( $spa['x'] ) . '" '
 					. 'data-pa-y="' . esc_attr( $spa['y'] ) . '" '
 					. 'data-pa-w="' . esc_attr( $spa['width'] ) . '" '
 					. 'data-pa-h="' . esc_attr( $spa['height'] ) . '" '
 					. 'style="position:absolute;object-fit:contain;z-index:2;pointer-events:none;" />';
-			} else {
-				$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+				} else {
+					$html .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
+				}
 			}
 			$html .= '</div>';
 			if ( $v !== '' ) {
@@ -1353,14 +1482,17 @@ add_action( 'wp_footer', function () {
 		if ( ! cs_cart_item_has_customizer_design( $cart_item ) ) {
 			continue;
 		}
-		$design_url = cs_get_cart_item_design_url( $cart_item );
-		$sides      = cs_get_cart_item_sides( $cart_item );
+		$design_url  = cs_get_cart_item_design_url( $cart_item );
+		$display_url = cs_get_cart_item_display_url( $cart_item );
+		$sides       = cs_get_cart_item_sides( $cart_item );
 		$design_map[ $cart_item_key ] = [
 			'product_id'          => (int) $cart_item['product_id'],
 			'variation_id'        => (int) ( $cart_item['variation_id'] ?? 0 ),
 			// Raw value — wp_json_encode handles escaping. esc_url() strips data: URIs used by many customizers.
-			'design_url'          => $design_url,
+			'design_url'          => $display_url,
+			'raw_design_url'      => $design_url,
 			'sides'               => $sides,
+			'has_preview'         => cs_cart_item_has_saved_preview( $cart_item ),
 			'name'                => $cart_item['data'] ? $cart_item['data']->get_name() : '',
 			'product_thumb_url'   => cs_get_cart_item_product_thumb_url( $cart_item ),
 			'stacked_preview_url' => cs_get_stacked_preview_url_for_cart_item( $cart_item ),
@@ -1375,11 +1507,14 @@ add_action( 'wp_footer', function () {
 	$cart_line_order = [];
 	foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
 		$du = cs_get_cart_item_design_url( $cart_item );
+		$display = cs_get_cart_item_display_url( $cart_item );
 		if ( ! cs_cart_item_has_customizer_design( $cart_item ) ) {
 			$cart_line_order[] = [
 				'cart_item_key'       => $cart_item_key,
 				'design_url'          => '',
+				'raw_design_url'      => '',
 				'sides'               => [],
+				'has_preview'         => false,
 				'product_id'          => (int) $cart_item['product_id'],
 				'variation_id'        => (int) ( $cart_item['variation_id'] ?? 0 ),
 				'name'                => $cart_item['data'] ? $cart_item['data']->get_name() : '',
@@ -1390,8 +1525,10 @@ add_action( 'wp_footer', function () {
 		}
 		$cart_line_order[] = [
 			'cart_item_key'         => $cart_item_key,
-			'design_url'            => $du ? $du : '',
+			'design_url'            => $display ? $display : '',
+			'raw_design_url'        => $du ? $du : '',
 			'sides'                 => cs_get_cart_item_sides( $cart_item ),
+			'has_preview'           => cs_cart_item_has_saved_preview( $cart_item ),
 			'product_id'            => (int) $cart_item['product_id'],
 			'variation_id'        => (int) ( $cart_item['variation_id'] ?? 0 ),
 			'name'                  => $cart_item['data'] ? $cart_item['data']->get_name() : '',
@@ -1557,7 +1694,8 @@ add_action( 'wp_footer', function () {
 						var stack = document.createElement('div');
 						stack.className = 'cs-block-cart-composite';
 						stack.style.cssText = 'position:relative;width:'+w+'px;height:'+h+'px;margin-top:4px;overflow:hidden;';
-						if(line.product_thumb_url){
+						var shouldUsePreview = !!targetUrl && (!!(line.has_preview) || String(targetUrl).indexOf('data:image/') === 0 || String(targetUrl).indexOf('/design-exports/') !== -1);
+						if(line.product_thumb_url && !shouldUsePreview){
 							var pimg = document.createElement('img');
 							pimg.alt = '';
 							pimg.setAttribute('src', line.product_thumb_url);
@@ -1567,7 +1705,7 @@ add_action( 'wp_footer', function () {
 						var dimg = document.createElement('img');
 						dimg.alt = '';
 						dimg.setAttribute('src', targetUrl);
-						if(printArea && line.product_thumb_url){
+						if(printArea && line.product_thumb_url && !shouldUsePreview){
 							dimg.style.cssText = 'position:absolute;object-fit:contain;z-index:2;pointer-events:none;';
 							dimg.setAttribute('data-pa-x', printArea.x);
 							dimg.setAttribute('data-pa-y', printArea.y);
@@ -1602,9 +1740,9 @@ add_action( 'wp_footer', function () {
 						line.sides.forEach(function(side){
 							var cell = document.createElement('div');
 							cell.style.textAlign = 'center';
-							var u = side.url || '';
+								var u = side.preview_url || side.url || '';
 							if(!u) return;
-							cell.appendChild(addStack(u, 88, 88, side.print_area || null));
+								cell.appendChild(addStack(u, 88, 88, side.preview_url ? null : (side.print_area || null)));
 							var vn = document.createElement('span');
 							vn.style.cssText = 'font-size:10px;color:#6b7280;text-transform:capitalize;display:block;margin-top:4px;';
 							vn.textContent = side.view || '';
@@ -1612,9 +1750,10 @@ add_action( 'wp_footer', function () {
 							grid.appendChild(cell);
 						});
 						wrap.appendChild(grid);
-					} else if(line.product_thumb_url){
+						} else if(line.design_url){
 						var primarySide = (line.sides && line.sides.length) ? line.sides[0] : null;
-						wrap.appendChild(addStack(line.design_url, 120, 120, primarySide && primarySide.print_area ? primarySide.print_area : null));
+							var primaryPrintArea = primarySide && primarySide.preview_url ? null : (primarySide && primarySide.print_area ? primarySide.print_area : null);
+							wrap.appendChild(addStack(line.design_url, 120, 120, primaryPrintArea));
 					} else {
 						var img = document.createElement('img');
 						img.alt = '';
@@ -1727,8 +1866,20 @@ add_action( 'wp_footer', function () {
 					overlay.src = match.design_url;
 					overlay.alt = '';
 					overlay.className = 'cs-design-overlay';
+					var previewSide = (match.sides && match.sides.length) ? (match.sides.find(function(s){return s.view==='front';}) || match.sides[0]) : null;
+					var hasPreview = !!(match.has_preview || (previewSide && previewSide.preview_url));
+					if(hasPreview){
+						var existingBase = container.querySelector('img:not(.cs-design-overlay)');
+						if(existingBase){
+							existingBase.style.opacity = '0';
+						}
+						overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
+						container.appendChild(overlay);
+						appendViewDesignLink(container, match.design_url, true, match.stacked_preview_url);
+						return;
+					}
 					// Check for print area data in the primary side
-					var primarySide = (match.sides && match.sides.length) ? (match.sides.find(function(s){return s.view==='front'}) || match.sides[0]) : null;
+					var primarySide = previewSide;
 					var pa = primarySide && primarySide.print_area ? primarySide.print_area : null;
 					if(pa && match.product_thumb_url){
 						overlay.style.cssText = 'position:absolute;object-fit:contain;pointer-events:none;z-index:3;';
@@ -1795,13 +1946,24 @@ add_action( 'wp_footer', function () {
 					var imgWrap = thumbTd.querySelector('a') || thumbTd;
 					imgWrap.style.position = 'relative';
 					imgWrap.style.display = 'inline-block';
-					ensureProductBaseImage(imgWrap, match);
-					stackProductImageBehindDesign(imgWrap);
 					var overlay = document.createElement('img');
 					overlay.src = match.design_url;
 					overlay.alt = '';
 					overlay.className = 'cs-design-overlay';
 					var primarySide = (match.sides && match.sides.length) ? (match.sides.find(function(s){return s.view==='front'}) || match.sides[0]) : null;
+					var hasPreview = !!(match.has_preview || (primarySide && primarySide.preview_url));
+					if(hasPreview){
+						var existingBase = imgWrap.querySelector('img:not(.cs-design-overlay)');
+						if(existingBase){
+							existingBase.style.opacity = '0';
+						}
+						overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:3;';
+						imgWrap.appendChild(overlay);
+						appendViewDesignLink(imgWrap, match.design_url, true, match.stacked_preview_url);
+						return;
+					}
+					ensureProductBaseImage(imgWrap, match);
+					stackProductImageBehindDesign(imgWrap);
 					var pa = primarySide && primarySide.print_area ? primarySide.print_area : null;
 					if(pa && match.product_thumb_url){
 						overlay.style.cssText = 'position:absolute;object-fit:contain;pointer-events:none;z-index:3;';
@@ -1854,28 +2016,23 @@ add_action( 'wp_footer', function () {
 
 // Show "Customized" label in cart item details (+ inline preview when we have image data)
 add_filter( 'woocommerce_get_item_data', function ( $item_data, $cart_item ) {
-	$design_url = cs_get_cart_item_design_url( $cart_item );
+	$design_url = cs_get_cart_item_display_url( $cart_item );
 	$sides      = cs_get_cart_item_sides( $cart_item );
 	if ( ! empty( $design_url ) || ! empty( $sides ) || ! empty( $cart_item['customizer_session_id'] ) ) {
 		$value = '✓ Custom design applied';
 		if ( ! empty( $design_url ) || ! empty( $sides ) ) {
 			$preview_href = cs_get_stacked_preview_url_for_cart_item( $cart_item );
-			$pthumb       = cs_get_cart_item_product_thumb_url( $cart_item );
 			if ( count( $sides ) > 1 ) {
 				$value .= '<br/><div class="cs-item-data-sides" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">';
 				foreach ( $sides as $side ) {
-					$u = isset( $side['url'] ) ? cs_esc_design_attr( $side['url'] ) : '';
+					$display_url = cs_get_side_display_url( $side );
+					$u = $display_url !== '' ? cs_esc_design_attr( $display_url ) : '';
 					$v = isset( $side['view'] ) ? esc_html( (string) $side['view'] ) : '';
 					if ( $u === '' ) {
 						continue;
 					}
 					$value .= '<div style="text-align:center;">';
-					$value .= '<span style="position:relative;display:inline-block;width:100px;height:100px;border-radius:6px;overflow:hidden;border:1px solid #e5e7eb;background:#f3f4f6;">';
-					if ( $pthumb ) {
-						$value .= '<img src="' . $pthumb . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
-					}
-					$value .= '<img src="' . $u . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
-					$value .= '</span>';
+					$value .= '<img src="' . $u . '" alt="" style="width:100px;height:100px;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;background:#f3f4f6;display:block;" />';
 					if ( $v !== '' ) {
 						$value .= '<span style="font-size:11px;color:#6b7280;text-transform:capitalize;display:block;margin-top:4px;">' . $v . '</span>';
 					}
@@ -1884,14 +2041,7 @@ add_filter( 'woocommerce_get_item_data', function ( $item_data, $cart_item ) {
 				$value .= '</div>';
 			} elseif ( ! empty( $design_url ) ) {
 				$src = cs_esc_design_attr( $design_url );
-				if ( $pthumb ) {
-					$value .= '<br/><span class="cs-item-data-composite" style="position:relative;display:inline-block;width:120px;height:120px;margin-top:8px;border-radius:6px;overflow:hidden;border:1px solid #e5e7eb;background:#f3f4f6;">';
-					$value .= '<img src="' . $pthumb . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;" />';
-					$value .= '<img src="' . $src . '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none;" />';
-					$value .= '</span>';
-				} else {
-					$value .= '<br/><img src="' . $src . '" alt="" style="max-width:120px;max-height:120px;margin-top:8px;border-radius:6px;border:1px solid #e5e7eb;display:block;" />';
-				}
+				$value .= '<br/><img src="' . $src . '" alt="" style="width:120px;height:120px;object-fit:contain;margin-top:8px;border-radius:6px;border:1px solid #e5e7eb;background:#f3f4f6;display:block;" />';
 			}
 			$value .= ' <a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener" style="margin-left:0;margin-top:6px;display:inline-block;color:#2563eb;">View full size →</a>';
 		} elseif ( ! empty( $cart_item['customizer_session_id'] ) ) {
@@ -2003,14 +2153,14 @@ add_action( 'woocommerce_after_order_itemmeta', function ( $item_id, $item, $pro
 			$preview_href = cs_get_stacked_preview_url_for_order_item( $item );
 			echo '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">';
 			foreach ( $sides as $side ) {
-				$u = isset( $side['url'] ) ? $side['url'] : '';
+				$u = cs_get_side_display_url( $side );
 				$v = isset( $side['view'] ) ? (string) $side['view'] : '';
 				if ( $u === '' ) {
 					continue;
 				}
 				echo '<div style="text-align:center;">';
 				echo '<a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener">';
-				echo '<img src="' . cs_esc_design_attr( $u ) . '" alt="" style="max-width:88px;margin-top:4px;border-radius:4px;border:1px solid #ddd;display:block;" />';
+				echo '<img src="' . cs_esc_design_attr( $u ) . '" alt="" style="width:88px;height:88px;object-fit:contain;margin-top:4px;border-radius:4px;border:1px solid #ddd;background:#f3f4f6;display:block;" />';
 				echo '</a>';
 				if ( $v !== '' ) {
 					echo '<span style="font-size:10px;color:#666;text-transform:capitalize;">' . esc_html( $v ) . '</span>';
@@ -2018,11 +2168,16 @@ add_action( 'woocommerce_after_order_itemmeta', function ( $item_id, $item, $pro
 				echo '</div>';
 			}
 			echo '</div>';
-		} elseif ( $design_url ) {
+		} else {
+			$primary_side = cs_get_primary_side_from_sides( $sides );
+			$display_url = cs_get_side_display_url( $primary_side );
+			$single_src = $display_url !== '' ? $display_url : $design_url;
+			if ( $single_src ) {
 			$preview_href = cs_get_stacked_preview_url_for_order_item( $item );
 			echo '<a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener">';
-			echo '<img src="' . cs_esc_design_attr( $design_url ) . '" alt="Custom Design" style="max-width:120px;margin-top:4px;border-radius:4px;border:1px solid #ddd;" />';
+			echo '<img src="' . cs_esc_design_attr( $single_src ) . '" alt="Custom Design" style="width:120px;height:120px;object-fit:contain;margin-top:4px;border-radius:4px;border:1px solid #ddd;background:#f3f4f6;" />';
 			echo '</a>';
+			}
 		}
 		echo '</div>';
 	}
@@ -2106,8 +2261,17 @@ add_action( 'woocommerce_after_single_product', function () {
 				// Multi-side JSON + primary design URL (backward compatible)
 				var sides = detail.sides || [];
 				var sidePayload = sides.map(function(s) {
-					return { view: (s.view || 'front'), url: (s.designPNG || s.url || '') };
-				}).filter(function(x) { return x.url; });
+					var side = { view: (s.view || 'front') };
+					var designUrl = s.designPNG || s.url || '';
+					var previewUrl = s.previewPNG || s.preview_url || '';
+					var printArea = s.printArea || s.print_area || null;
+					var productImage = s.productImage || s.product_image || '';
+					if (designUrl) side.url = designUrl;
+					if (previewUrl) side.preview_url = previewUrl;
+					if (printArea) side.print_area = printArea;
+					if (productImage) side.product_image = productImage;
+					return side;
+				}).filter(function(x) { return x.url || x.preview_url; });
 				var sidesInput = form.querySelector('input[name="customizer_sides"]');
 				if (sidePayload.length) {
 					if (!sidesInput) {
@@ -2119,16 +2283,17 @@ add_action( 'woocommerce_after_single_product', function () {
 					sidesInput.value = JSON.stringify(sidePayload);
 				}
 				var front = sidePayload.find(function(s) { return s.view === 'front'; }) || sidePayload[0];
-				if (front && front.url) {
+				if (front && (front.url || front.preview_url)) {
+					var frontUrl = front.url || front.preview_url;
 					var designInput = form.querySelector('input[name="customizer_design_url"]');
 					if (!designInput) {
 						designInput = document.createElement('input');
 						designInput.type = 'hidden';
 						designInput.name = 'customizer_design_url';
-						designInput.value = front.url;
+						designInput.value = frontUrl;
 						form.appendChild(designInput);
 					} else {
-						designInput.value = front.url;
+						designInput.value = frontUrl;
 					}
 				}
 			}
@@ -2298,10 +2463,19 @@ add_action( 'wp_footer', function () {
 
 			var sides = detail.sides || [];
 			var sidePayload = sides.map(function(s) {
-				return { view: (s.view || 'front'), url: (s.designPNG || s.url || '') };
-			}).filter(function(x) { return x.url; });
+				var side = { view: (s.view || 'front') };
+				var designUrl = s.designPNG || s.url || '';
+				var previewUrl = s.previewPNG || s.preview_url || '';
+				var printArea = s.printArea || s.print_area || null;
+				var productImage = s.productImage || s.product_image || '';
+				if (designUrl) side.url = designUrl;
+				if (previewUrl) side.preview_url = previewUrl;
+				if (printArea) side.print_area = printArea;
+				if (productImage) side.product_image = productImage;
+				return side;
+			}).filter(function(x) { return x.url || x.preview_url; });
 			var front = sidePayload.find(function(s) { return s.view === 'front'; }) || sidePayload[0];
-			var designUrl = front ? front.url : '';
+			var designUrl = front ? (front.url || front.preview_url) : '';
 
 			var formData = new FormData();
 			formData.append('action', 'cs_add_to_cart');
