@@ -491,6 +491,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const isLoadingViewRef = useRef(false);
   const viewLoadRequestRef = useRef(0);
   const [imageBounds, setImageBounds] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const imageBoundsRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const invProductRef = useRef(invProduct);
 
   // Compute where the product image actually renders within the canvas (object-contain)
   function computeImageBounds(canvasW: number, canvasH: number, imgNatW: number, imgNatH: number) {
