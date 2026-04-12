@@ -667,7 +667,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     updatePrintAreaRect(fabricRef.current);
   }, [showPrintAreaBoundary, imageBounds]);
 
-  // Constrain object within print area bounds
+  // Constrain and snap object within print area bounds
+  const SNAP_THRESHOLD = 8; // pixels
+
   function constrainToPrintArea(obj: any) {
     const canvas = fabricRef.current;
     if (!canvas || !invProduct?.print_areas) return;
@@ -680,15 +682,50 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const minY = py;
     const maxX = px + pw;
     const maxY = py + ph;
+    const centerX = px + pw / 2;
+    const centerY = py + ph / 2;
 
     const bound = obj.getBoundingRect();
     let newLeft = obj.left;
     let newTop = obj.top;
 
-    if (bound.left < minX) newLeft += minX - bound.left;
-    if (bound.top < minY) newTop += minY - bound.top;
-    if (bound.left + bound.width > maxX) newLeft -= (bound.left + bound.width) - maxX;
-    if (bound.top + bound.height > maxY) newTop -= (bound.top + bound.height) - maxY;
+    // Snap to edges and center before constraining
+    const objCenterX = bound.left + bound.width / 2;
+    const objCenterY = bound.top + bound.height / 2;
+
+    // Snap left edge
+    if (Math.abs(bound.left - minX) < SNAP_THRESHOLD) {
+      newLeft += minX - bound.left;
+    }
+    // Snap right edge
+    else if (Math.abs(bound.left + bound.width - maxX) < SNAP_THRESHOLD) {
+      newLeft -= (bound.left + bound.width) - maxX;
+    }
+    // Snap horizontal center
+    else if (Math.abs(objCenterX - centerX) < SNAP_THRESHOLD) {
+      newLeft += centerX - objCenterX;
+    }
+
+    // Snap top edge
+    if (Math.abs(bound.top - minY) < SNAP_THRESHOLD) {
+      newTop += minY - bound.top;
+    }
+    // Snap bottom edge
+    else if (Math.abs(bound.top + bound.height - maxY) < SNAP_THRESHOLD) {
+      newTop -= (bound.top + bound.height) - maxY;
+    }
+    // Snap vertical center
+    else if (Math.abs(objCenterY - centerY) < SNAP_THRESHOLD) {
+      newTop += centerY - objCenterY;
+    }
+
+    // Re-check bounds after snapping to enforce containment
+    const updatedLeft = newLeft - obj.left + bound.left;
+    const updatedTop = newTop - obj.top + bound.top;
+    if (updatedLeft < minX) newLeft += minX - updatedLeft;
+    if (updatedTop < minY) newTop += minY - updatedTop;
+    if (updatedLeft + bound.width > maxX) newLeft -= (updatedLeft + bound.width) - maxX;
+    if (updatedTop + bound.height > maxY) newTop -= (updatedTop + bound.height) - maxY;
 
     obj.set({ left: newLeft, top: newTop });
     obj.setCoords();
