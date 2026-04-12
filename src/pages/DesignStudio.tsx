@@ -731,6 +731,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     obj.setCoords();
   }
 
+  // Get center of print area in canvas coordinates, or fallback to canvas center
+  function getPrintAreaCenter() {
+    const canvas = fabricRef.current;
+    if (!canvas) return { cx: 150, cy: 250 };
+    const pa = getCurrentPrintArea();
+    if (!pa) return { cx: canvas.getWidth() / 2, cy: canvas.getHeight() / 2 };
+    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
+    return { cx: px + pw / 2, cy: py + ph / 2 };
+  }
   // Initialize canvas with responsive sizing
   const [canvasReady, setCanvasReady] = useState(false);
 
