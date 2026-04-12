@@ -490,6 +490,76 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const currentCanvasViewRef = useRef<ViewSide>("front");
   const isLoadingViewRef = useRef(false);
   const viewLoadRequestRef = useRef(0);
+  const [imageBounds, setImageBounds] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // Compute where the product image actually renders within the canvas (object-contain)
+  function computeImageBounds(canvasW: number, canvasH: number, imgNatW: number, imgNatH: number) {
+    const scale = Math.min(canvasW / imgNatW, canvasH / imgNatH);
+    const w = imgNatW * scale;
+    const h = imgNatH * scale;
+    const x = (canvasW - w) / 2;
+    const y = (canvasH - h) / 2;
+    return { x, y, w, h };
+  }
+
+  // Load the current background image's natural dimensions and compute bounds
+  useEffect(() => {
+    const url = getCurrentImageUrl();
+    if (!url || !fabricRef.current) {
+      setImageBounds(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      const bounds = computeImageBounds(canvas.getWidth(), canvas.getHeight(), img.naturalWidth, img.naturalHeight);
+      setImageBounds(bounds);
+    };
+    img.src = url;
+  }, [activeView, invProduct, loading]);
+
+  // Recalculate image bounds on canvas resize
+  useEffect(() => {
+    if (!containerRef.current || !imageBounds) return;
+    const url = getCurrentImageUrl();
+    if (!url) return;
+    const observer = new ResizeObserver(() => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = fabricRef.current;
+        if (!canvas) return;
+        const bounds = computeImageBounds(canvas.getWidth(), canvas.getHeight(), img.naturalWidth, img.naturalHeight);
+        setImageBounds(bounds);
+      };
+      img.src = url;
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [activeView, invProduct]);
+
+  // Convert print area percentages to canvas pixel coordinates using image bounds
+  function printAreaToCanvasCoords(pa: { x: number; y: number; width: number; height: number }) {
+    const canvas = fabricRef.current;
+    if (!canvas) return { px: 0, py: 0, pw: 0, ph: 0 };
+    const bounds = imageBounds;
+    if (bounds) {
+      // Map percentages relative to the actual image position within canvas
+      return {
+        px: bounds.x + (pa.x / 100) * bounds.w,
+        py: bounds.y + (pa.y / 100) * bounds.h,
+        pw: (pa.width / 100) * bounds.w,
+        ph: (pa.height / 100) * bounds.h,
+      };
+    }
+    // Fallback: no image bounds, use full canvas
+    return {
+      px: (pa.x / 100) * canvas.getWidth(),
+      py: (pa.y / 100) * canvas.getHeight(),
+      pw: (pa.width / 100) * canvas.getWidth(),
+      ph: (pa.height / 100) * canvas.getHeight(),
+    };
+  }
 
   function serializeCanvasState() {
     if (!fabricRef.current) return null;
