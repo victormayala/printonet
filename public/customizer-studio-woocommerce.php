@@ -117,10 +117,28 @@ function cs_sanitize_customizer_sides_array( $arr ) {
 		if ( $url === '' ) {
 			continue;
 		}
-		$out[] = [
+		$side = [
 			'view' => $view,
 			'url'  => $url,
 		];
+		// Preserve print area coordinates for proportional positioning
+		if ( isset( $row['print_area'] ) && is_array( $row['print_area'] ) ) {
+			$pa = $row['print_area'];
+			$side['print_area'] = [
+				'x'      => isset( $pa['x'] ) ? floatval( $pa['x'] ) : 0,
+				'y'      => isset( $pa['y'] ) ? floatval( $pa['y'] ) : 0,
+				'width'  => isset( $pa['width'] ) ? floatval( $pa['width'] ) : 100,
+				'height' => isset( $pa['height'] ) ? floatval( $pa['height'] ) : 100,
+			];
+		}
+		// Preserve product image URL for composite previews
+		if ( isset( $row['product_image'] ) ) {
+			$img = cs_sanitize_design_source( $row['product_image'] );
+			if ( $img !== '' ) {
+				$side['product_image'] = $img;
+			}
+		}
+		$out[] = $side;
 	}
 	return $out;
 }

@@ -331,6 +331,14 @@
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
         if (frontSide && frontSide.designPNG) formData.append('customizer_design_url', frontSide.designPNG);
+        // Send full sides data including print area coordinates for proportional positioning
+        var sidesData = payload.sides.map(function (s) {
+          var side = { view: s.view, url: s.designPNG };
+          if (s.printArea) side.print_area = s.printArea;
+          if (s.productImage) side.product_image = s.productImage;
+          return side;
+        });
+        formData.append('customizer_sides', JSON.stringify(sidesData));
       }
 
       fetch('/?wc-ajax=add_to_cart', {
