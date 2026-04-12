@@ -447,23 +447,44 @@ function cs_output_design_preview_page() {
 				continue;
 			}
 			$dattr = cs_esc_design_attr( $u );
+			$spa = isset( $side['print_area'] ) && is_array( $side['print_area'] ) ? $side['print_area'] : null;
 			echo '<div class="cs-dsp-panel" role="img" aria-label="' . esc_attr( $v ) . '">';
 			echo '<span class="cs-dsp-label">' . esc_html( $v ) . '</span>';
 			if ( $product_attr !== '' ) {
 				echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
 			}
-			echo '<img class="cs-dsp-design" src="' . $dattr . '" alt="">';
+			if ( $spa && $product_attr !== '' ) {
+				echo '<img class="cs-dsp-design" src="' . $dattr . '" alt=""'
+					. ' data-pa-x="' . esc_attr( $spa['x'] ) . '"'
+					. ' data-pa-y="' . esc_attr( $spa['y'] ) . '"'
+					. ' data-pa-w="' . esc_attr( $spa['width'] ) . '"'
+					. ' data-pa-h="' . esc_attr( $spa['height'] ) . '">';
+			} else {
+				echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $dattr . '" alt="">';
+			}
 			echo '</div>';
 		}
 		echo '</div>';
 		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your art per side (front). Save or print from your browser.', 'customizer-studio-for-woocommerce' ) . '</p>';
 	} else {
 		$design_attr = cs_esc_design_attr( $design_src !== '' ? $design_src : ( is_array( $sides[0] ?? null ) && ! empty( $sides[0]['url'] ) ? $sides[0]['url'] : '' ) );
+		$primary_pa = null;
+		if ( ! empty( $sides[0]['print_area'] ) && is_array( $sides[0]['print_area'] ) ) {
+			$primary_pa = $sides[0]['print_area'];
+		}
 		echo '<div class="cs-dsp-wrap" role="img" aria-label="' . esc_attr__( 'Product with custom design overlay', 'customizer-studio-for-woocommerce' ) . '">';
 		if ( $product_attr !== '' ) {
 			echo '<img class="cs-dsp-product" src="' . $product_attr . '" alt="">';
 		}
-		echo '<img class="cs-dsp-design" src="' . $design_attr . '" alt="">';
+		if ( $primary_pa && $product_attr !== '' ) {
+			echo '<img class="cs-dsp-design" src="' . $design_attr . '" alt=""'
+				. ' data-pa-x="' . esc_attr( $primary_pa['x'] ) . '"'
+				. ' data-pa-y="' . esc_attr( $primary_pa['y'] ) . '"'
+				. ' data-pa-w="' . esc_attr( $primary_pa['width'] ) . '"'
+				. ' data-pa-h="' . esc_attr( $primary_pa['height'] ) . '">';
+		} else {
+			echo '<img class="cs-dsp-design cs-dsp-design-full" src="' . $design_attr . '" alt="">';
+		}
 		echo '</div>';
 		echo '<p class="cs-dsp-note">' . esc_html__( 'Product image (back) and your custom design (front). Use your browser to save or print.', 'customizer-studio-for-woocommerce' ) . '</p>';
 	}
