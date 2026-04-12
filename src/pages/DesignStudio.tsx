@@ -692,16 +692,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const coords = getCurrentPrintAreaCoords();
     if (!coords) return true;
     const { px, py, pw, ph } = coords;
-    const minX = px;
-    const minY = py;
-    const maxX = px + pw;
-    const maxY = py + ph;
+    const TOLERANCE = 2; // pixels of slack to prevent edge-locking
     const bound = obj.getBoundingRect();
     return (
-      bound.left >= minX &&
-      bound.top >= minY &&
-      bound.left + bound.width <= maxX &&
-      bound.top + bound.height <= maxY
+      bound.left >= px - TOLERANCE &&
+      bound.top >= py - TOLERANCE &&
+      bound.left + bound.width <= px + pw + TOLERANCE &&
+      bound.top + bound.height <= py + ph + TOLERANCE
     );
   }
 
