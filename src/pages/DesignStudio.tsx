@@ -1520,6 +1520,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           };
           imgEl.src = url;
         }
+    } else if (selectedObject instanceof Group) {
+        // For groups (e.g. text templates), update fill on all children
+        selectedObject.getObjects().forEach((child: any) => {
+          child.set("fill", value);
+        });
+        setObjectProps((p) => ({ ...p, fill: value }));
+        fabricRef.current?.renderAll();
+        saveState();
       } else {
         selectedObject.set("fill", value);
         setObjectProps((p) => ({ ...p, fill: value }));
