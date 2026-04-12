@@ -759,10 +759,34 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     rememberLastValidTransform(obj);
   }
 
+  const boundaryFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function flashPrintAreaBoundary() {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const boundary = canvas.getObjects().find((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
+    if (!boundary) return;
+
+    // Flash red
+    boundary.set({ stroke: "#ef4444", strokeWidth: 3 });
+    canvas.renderAll();
+
+    if (boundaryFlashTimerRef.current) clearTimeout(boundaryFlashTimerRef.current);
+    boundaryFlashTimerRef.current = setTimeout(() => {
+      boundary.set({ stroke: "hsl(var(--primary))", strokeWidth: 2 });
+      canvas.renderAll();
+      boundaryFlashTimerRef.current = null;
+    }, 400);
+  }
+
   function enforcePrintAreaBounds(obj: any) {
     if (!obj || (obj as any).customName === PRINT_AREA_RECT_NAME) return;
-    if (isObjectInsidePrintArea(obj)) rememberLastValidTransform(obj);
-    else restoreLastValidTransform(obj);
+    if (isObjectInsidePrintArea(obj)) {
+      rememberLastValidTransform(obj);
+    } else {
+      restoreLastValidTransform(obj);
+      flashPrintAreaBoundary();
+    }
   }
 
   // Get center of print area in canvas coordinates, or fallback to canvas center
