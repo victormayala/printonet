@@ -550,7 +550,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   function printAreaToCanvasCoords(pa: { x: number; y: number; width: number; height: number }) {
     const canvas = fabricRef.current;
     if (!canvas) return { px: 0, py: 0, pw: 0, ph: 0 };
-    const bounds = imageBounds;
+    // Use ref for fresh value in event handlers
+    const bounds = imageBoundsRef.current;
     if (bounds) {
       // Map percentages relative to the actual image position within canvas
       return {
@@ -680,8 +681,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   function constrainToPrintArea(obj: any) {
     const canvas = fabricRef.current;
-    if (!canvas || !invProduct?.print_areas) return;
-    const pa = getCurrentPrintArea();
+    if (!canvas) return;
+    const product = invProductRef.current;
+    if (!product?.print_areas) return;
+    const viewKey = currentCanvasViewRef.current === "side1" ? "side1" : currentCanvasViewRef.current === "side2" ? "side2" : currentCanvasViewRef.current;
+    const pa = product.print_areas[viewKey];
     if (!pa) return;
     if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
 
