@@ -1000,7 +1000,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const obj = e.selected?.[0];
     if (obj) {
       setSelectedObject(obj);
-      const objFill = typeof obj.fill === "string" ? obj.fill : "#000000";
+      const objFill = (obj as any)._clipartColor || (typeof obj.fill === "string" ? obj.fill : "#000000");
       setObjectProps({
         opacity: Math.round((obj.opacity || 1) * 100),
         fill: objFill,
@@ -1510,6 +1510,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
             });
             (newImg as any).customName = (selectedObject as any).customName;
             (newImg as any)._clipartIconName = iconName;
+            (newImg as any)._clipartColor = value;
             canvas?.remove(selectedObject);
             canvas?.add(newImg);
             canvas?.setActiveObject(newImg);
