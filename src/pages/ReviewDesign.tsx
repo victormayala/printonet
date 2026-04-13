@@ -78,8 +78,8 @@ export default function ReviewDesign() {
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-3">
-          <div className="mx-auto w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
-            <CheckCircle className="h-7 w-7 text-green-600" />
+          <div className="mx-auto w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+            <CheckCircle className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Design Complete!</h1>
           <p className="text-muted-foreground">
