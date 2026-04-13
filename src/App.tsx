@@ -23,6 +23,7 @@ import ProductPreview from "./pages/ProductPreview";
 import ReviewDesign from "./pages/ReviewDesign";
 import Checkout from "./pages/Checkout";
 import CheckoutReturn from "./pages/CheckoutReturn";
+import Cart from "./pages/Cart";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
