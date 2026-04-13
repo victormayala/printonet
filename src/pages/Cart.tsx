@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
@@ -6,7 +6,23 @@ import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Sparkles } from "lucide-r
 
 export default function Cart() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { items, updateQuantity, removeItem, totalCents, totalItems } = useCart();
+
+  const returnUrl = searchParams.get("returnUrl") || "";
+  const keepShoppingHref = returnUrl || "/products";
+  const isExternal = returnUrl.startsWith("http");
+
+  const KeepShoppingButton = ({ className = "", variant = "ghost" as const, size = "sm" as const, children }: { className?: string; variant?: any; size?: any; children: React.ReactNode }) =>
+    isExternal ? (
+      <Button variant={variant} size={size} className={className} asChild>
+        <a href={keepShoppingHref}>{children}</a>
+      </Button>
+    ) : (
+      <Button variant={variant} size={size} className={className} asChild>
+        <Link to={keepShoppingHref}>{children}</Link>
+      </Button>
+    );
 
   if (items.length === 0) {
     return (
@@ -19,18 +35,15 @@ export default function Cart() {
           <p className="text-sm text-muted-foreground">
             Design a custom product and add it to your cart to get started.
           </p>
-          <Button asChild>
-            <Link to="/products">
-              <Sparkles className="h-4 w-4 mr-2" /> Browse Products
-            </Link>
-          </Button>
+          <KeepShoppingButton variant="default" size="default">
+            <Sparkles className="h-4 w-4 mr-2" /> Browse Products
+          </KeepShoppingButton>
         </div>
       </div>
     );
   }
 
   const handleCheckout = () => {
-    // Pass all cart items as query params to the checkout page
     const firstItem = items[0];
     const totalAmount = totalCents;
     const productNames = items.map((i) => `${i.productName} (x${i.quantity})`).join(", ");
@@ -49,11 +62,9 @@ export default function Cart() {
           <h1 className="text-2xl font-bold text-foreground">
             Your Cart ({totalItems} {totalItems === 1 ? "item" : "items"})
           </h1>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/products">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Keep Shopping
-            </Link>
-          </Button>
+          <KeepShoppingButton>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Keep Shopping
+          </KeepShoppingButton>
         </div>
 
         {/* Cart items */}
@@ -131,11 +142,9 @@ export default function Cart() {
             <span>${(totalCents / 100).toFixed(2)}</span>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" asChild>
-              <Link to="/products">
-                <Sparkles className="h-4 w-4 mr-2" /> Keep Customizing
-              </Link>
-            </Button>
+            <KeepShoppingButton variant="outline" size="default" className="flex-1">
+              <Sparkles className="h-4 w-4 mr-2" /> Keep Customizing
+            </KeepShoppingButton>
             <Button className="flex-[2]" onClick={handleCheckout}>
               <ShoppingCart className="h-4 w-4 mr-2" /> Checkout · ${(totalCents / 100).toFixed(2)}
             </Button>
