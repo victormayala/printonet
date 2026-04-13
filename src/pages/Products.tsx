@@ -842,25 +842,39 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const handleBrowse = async (query?: string) => {
+  const handleBrowse = async (query?: string, page = 1) => {
     const creds = getCredentials();
     if (!creds.account_number || !creds.api_key) return;
     setBrowsing(true);
-    setSelectedStyleIds(new Set());
+    if (page === 1) setSelectedStyleIds(new Set());
     try {
       const searchTerm = query !== undefined ? query : searchQuery;
       const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
-        body: { action: "browse", ...creds, search: searchTerm || undefined },
+        body: { action: "browse", ...creds, search: searchTerm || undefined, page, per_page: 50 },
       });
       if (error) throw error;
       const styles = data.styles || [];
-      setCatalogResults(styles);
+      if (page === 1) {
+        setCatalogResults(styles);
+      } else {
+        setCatalogResults((prev) => [...prev, ...styles]);
+      }
+      setCurrentPage(data.page || page);
+      setTotalPages(data.total_pages || 1);
+      setTotalResults(data.total || 0);
       setHasLoadedCatalog(true);
-      // Extract unique categories
-      const cats = Array.from(new Set(styles.map((s: any) => s.baseCategory).filter(Boolean))) as string[];
-      setCategories(cats.sort());
-      setCategoryFilter("all");
-      if (!styles.length && searchTerm) {
+      // Extract unique categories (merge with existing for appended pages)
+      if (page === 1) {
+        const cats = Array.from(new Set(styles.map((s: any) => s.baseCategory).filter(Boolean))) as string[];
+        setCategories(cats.sort());
+        setCategoryFilter("all");
+      } else {
+        setCategories((prev) => {
+          const merged = new Set([...prev, ...styles.map((s: any) => s.baseCategory).filter(Boolean)]);
+          return Array.from(merged).sort() as string[];
+        });
+      }
+      if (!styles.length && searchTerm && page === 1) {
         toast({ title: "No results found", description: "Try a different search term." });
       }
     } catch (err: any) {
