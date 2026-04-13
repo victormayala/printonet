@@ -1579,6 +1579,27 @@ export default function Products() {
                             <span className="text-sm text-muted-foreground">{p.category}</span>
                             <span className="text-sm font-medium">${p.base_price.toFixed(2)}</span>
                           </div>
+                          {Array.isArray(p.variants) && p.variants.length > 0 && (
+                            <div className="mt-2 space-y-1.5">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {p.variants.slice(0, 8).map((v: any, i: number) => (
+                                  <div
+                                    key={i}
+                                    className="w-4 h-4 rounded-full border shadow-sm shrink-0"
+                                    style={{ backgroundColor: v.hex || '#ccc' }}
+                                    title={v.color}
+                                  />
+                                ))}
+                                {p.variants.length > 8 && (
+                                  <span className="text-[10px] text-muted-foreground">+{p.variants.length - 8}</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground">
+                                {p.variants.length} color{p.variants.length !== 1 ? 's' : ''}
+                                {p.variants[0]?.sizes?.length > 0 && ` · ${p.variants[0].sizes.length} size${p.variants[0].sizes.length !== 1 ? 's' : ''}`}
+                              </p>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
@@ -1606,7 +1627,27 @@ export default function Products() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">{p.category}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-muted-foreground">{p.category}</p>
+                            {Array.isArray(p.variants) && p.variants.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                {p.variants.slice(0, 5).map((v: any, i: number) => (
+                                  <div
+                                    key={i}
+                                    className="w-3 h-3 rounded-full border shadow-sm"
+                                    style={{ backgroundColor: v.hex || '#ccc' }}
+                                    title={v.color}
+                                  />
+                                ))}
+                                {p.variants.length > 5 && (
+                                  <span className="text-[10px] text-muted-foreground">+{p.variants.length - 5}</span>
+                                )}
+                                <span className="text-[10px] text-muted-foreground ml-1">
+                                  · {p.variants[0]?.sizes?.length || 0} sizes
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <span className="w-24 text-right text-sm font-medium tabular-nums">${p.base_price.toFixed(2)}</span>
                         <span className="w-20 text-center">
