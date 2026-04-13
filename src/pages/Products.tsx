@@ -1700,6 +1700,9 @@ export default function Products() {
                             <span className="absolute bottom-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handlePushSingleProduct(p.id); }} title="Push to Store">
+                              <Send className="h-3.5 w-3.5" />
+                            </Button>
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); window.open(`/preview/${p.id}`, '_blank'); }} title="Preview Customizer">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
