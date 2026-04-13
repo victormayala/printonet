@@ -755,6 +755,28 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
+  const [detailStyle, setDetailStyle] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const handleViewDetails = async (styleID: number) => {
+    const creds = getCredentials();
+    setDetailsOpen(true);
+    setLoadingDetails(true);
+    setDetailStyle(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: { action: "details", ...creds, style_id: styleID },
+      });
+      if (error) throw error;
+      setDetailStyle(data);
+    } catch (err: any) {
+      toast({ title: "Failed to load details", description: err.message, variant: "destructive" });
+      setDetailsOpen(false);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   const fetchIntegration = async () => {
     if (!user) return;
