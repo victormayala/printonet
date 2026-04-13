@@ -2197,10 +2197,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         }
 
         const dataUrl = canvas.toDataURL(exportOptions);
-        const publicUrl = await uploadPng(dataUrl, view);
         const canonicalOverlayDataUrl = await renderCanonicalOverlay(cleanedJson, viewImageBounds, productSize);
         const previewDataUrl = await generateCompositePreview(productImg, canonicalOverlayDataUrl);
-        const previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
+
+        // For authenticated users, upload directly; for embed mode, defer to edge function
+        let publicUrl = dataUrl;
+        let previewUrl = previewDataUrl;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          publicUrl = await uploadPng(dataUrl, view);
+          previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
+        }
 
         sides.push({
           view,
@@ -2225,12 +2233,27 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         variant: selectedVariant || null,
       };
 
-      // If embed mode, complete session and post message to parent
+      // If embed mode, complete session via edge function (handles uploads with service role)
       if (embedMode && sessionId) {
+        // Build upload list for sides with data URLs that need server-side upload
+        const uploads: Array<{ dataUrl: string; fileName: string; sideIndex: number; field: string }> = [];
+        result.sides.forEach((side, i) => {
+          if (side.designPNG?.startsWith("data:")) {
+            uploads.push({ dataUrl: side.designPNG, fileName: `${sessionId}_${side.view}_${Date.now()}.png`, sideIndex: i, field: "designPNG" });
+          }
+          if (side.previewPNG?.startsWith("data:")) {
+            uploads.push({ dataUrl: side.previewPNG, fileName: `${sessionId}_${side.view}_preview_${Date.now()}.png`, sideIndex: i, field: "previewPNG" });
+          }
+        });
+
         try {
-          await supabase.functions.invoke("complete-session", {
-            body: { sessionId, designOutput: result },
+          const { data: completeData } = await supabase.functions.invoke("complete-session", {
+            body: { sessionId, designOutput: result, uploads },
           });
+          // Update result with server-returned URLs
+          if (completeData?.designOutput?.sides) {
+            result.sides = completeData.designOutput.sides;
+          }
         } catch (sessionErr) {
           console.warn("Session completion API call failed:", sessionErr);
         }
@@ -2246,7 +2269,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           navigate(`/review/${sessionId}`);
         }
       } else if (sessionId) {
-        // Non-embed mode with session — navigate to review
+        // Non-embed mode with session — save and navigate to review
+        try {
+          await supabase.functions.invoke("complete-session", {
+            body: { sessionId, designOutput: result },
+          });
+        } catch (sessionErr) {
+          console.warn("Session completion API call failed:", sessionErr);
+        }
         navigate(`/review/${sessionId}`);
       }
 
