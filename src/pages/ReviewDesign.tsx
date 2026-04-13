@@ -96,24 +96,33 @@ export default function ReviewDesign() {
   const sides = designOutput?.sides?.filter((s) => s.previewPNG || s.designPNG) || [];
   const basePrice = resolvedPrice;
 
-  const handleCheckout = () => {
-    const priceInCents = Math.round(basePrice * 100) || 1000;
-    navigate(`/checkout/${sessionId}?qty=${quantity}&price=${priceInCents}`);
-  };
-
   const isEmbedded = window !== window.parent;
 
   const handleAddToCart = () => {
-    const payload = { ...designOutput, quantity, sessionId };
-    // Post message for SDK consumers (WooCommerce, Shopify, etc.)
-    window.parent.postMessage(
-      { source: "customizer-studio", type: "review-add-to-cart", payload },
-      "*"
-    );
-    // Dispatch a custom event for same-window listeners
-    document.dispatchEvent(new CustomEvent("customizer:addtocart", { detail: payload }));
+    const previewSide = sides.find((s) => s.previewPNG) || sides[0];
+    const priceInCents = Math.round(basePrice * 100);
+
+    addItem({
+      sessionId: sessionId!,
+      productName,
+      previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
+      quantity,
+      priceInCents,
+      variant: variantLabel || undefined,
+    });
+
+    if (isEmbedded) {
+      // Post message for SDK consumers (WooCommerce, Shopify, etc.)
+      const payload = { ...designOutput, quantity, sessionId };
+      window.parent.postMessage(
+        { source: "customizer-studio", type: "review-add-to-cart", payload },
+        "*"
+      );
+      document.dispatchEvent(new CustomEvent("customizer:addtocart", { detail: payload }));
+    }
+
     setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2500);
+    setTimeout(() => navigate("/cart"), 600);
   };
 
   return (
