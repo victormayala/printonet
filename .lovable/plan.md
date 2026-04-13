@@ -1,46 +1,65 @@
 
 
-## Plan: Integrate Cart with Store Owner's Website
+## Plan: Keep Hosted Cart, Sync to Store's Native Cart
 
 ### Problem
-When a customer completes a design and adds to cart, the "Keep Shopping" button navigates to `/products` (the dashboard). It should take them back to the store owner's website. Additionally, there's no way for the store to show cart count or access the hosted cart after the customizer closes.
+The customizer maintains its own cart (localStorage-based, hosted checkout via Stripe), while the store (e.g. WooCommerce) has its own cart. When a customer adds a customized product, it only appears in the customizer's cart -- the store's cart count and contents stay unchanged, causing confusion.
 
 ### Approach
 
-**1. Pass the store URL through the flow**
+Sync customized items into the store's native cart automatically while keeping the hosted cart as the source of truth for design data and checkout.
 
-- The loader/SDK already has `data-base-url` and the store's origin. We need to pass a `returnUrl` (the store's URL) through the session so the Review and Cart pages know where to send the customer.
-- Add `returnUrl` as a query parameter when the SDK opens the review page, e.g. `/review/:sessionId?returnUrl=https://store.com`
-- The Review page passes it along to the Cart page via navigation state or query param.
+**1. Auto-add to WooCommerce cart on "Add to Cart"**
 
-**2. Update Review page**
-- Read `returnUrl` from query params (falling back to `document.referrer` or `/products`)
-- Pass `returnUrl` to the Cart page when navigating after "Add to Cart"
+When the Review page fires `review-add-to-cart` via postMessage, the SDK already calls `_addToCart()` which posts to `/?wc-ajax=add_to_cart`. This works for simple products. The issue is that when using the hosted review page (opened in a new tab), the postMessage doesn't reach the store page.
 
-**3. Update Cart page**
-- Read `returnUrl` from query params or navigation state
-- "Keep Shopping" / "Keep Customizing" buttons link to `returnUrl` instead of `/products`
-- If no `returnUrl`, fall back to `/products` (dashboard user)
+Fix: After adding to the hosted cart, also call back to the store's WooCommerce REST endpoint to add the item to the WC cart. The SDK will do this from the store's origin page when it receives the `cart-updated` message.
 
-**4. Add a floating cart widget to the SDK/loader**
+**2. SDK listens for cart changes and syncs to WooCommerce**
 
-The loader script will inject a small floating cart badge on the store's page that:
-- Shows the current cart item count (reads from the same `localStorage` key `customizer_cart`)
-- Clicking it opens the hosted cart page (`BASE_URL + /cart`) in a new tab or iframe overlay
-- Automatically appears after the first item is added
-- Styled as a small floating button in the bottom-right corner
+- When the SDK's floating cart widget receives a `cart-updated` message (from the review/cart page opened in a new tab via `window.opener.postMessage`), it will also trigger WooCommerce add-to-cart for any new items.
+- Store the last-synced session IDs in localStorage to avoid duplicate adds.
 
-**5. SDK: Post cart updates back to the parent**
+**3. Pass WC product ID through the flow**
 
-When the Review page adds to cart, it already posts a message. We'll also post the updated cart count so the store's floating widget can update in real-time.
+- The loader already knows the `data-wc-product-id`. Pass it through to the review page as a query param so the hosted cart item knows which WC product to sync.
+- Store `wcProductId` in the CartItem so the SDK can use it when syncing back.
+
+**4. Update the floating cart widget**
+
+- Instead of showing its own count, the widget will show the combined count (or just link to the store's cart page if WC is detected).
+- Add a `cartUrl` config option so store owners can point the widget to their native cart page instead of the hosted one.
 
 ### Files to change
 
 | File | Change |
 |------|--------|
-| `public/customizer-sdk.js` | Pass `returnUrl` (current page URL) when opening review page; add floating cart widget that reads `customizer_cart` from localStorage and listens for cart update messages |
-| `public/customizer-loader.js` | Pass store return URL through to SDK |
-| `src/pages/ReviewDesign.tsx` | Read `returnUrl` from query params; pass to cart on navigation |
-| `src/pages/Cart.tsx` | Read `returnUrl`; use it for "Keep Shopping" links instead of `/products` |
-| `src/hooks/useCart.ts` | After updating cart, post a `window.postMessage` with cart count for cross-window communication |
+| `public/customizer-sdk.js` | On `cart-updated` message from opener, call `_addToCart()` with the WC product ID to sync to WooCommerce. Track synced sessions to avoid duplicates. Add `cartUrl` config for widget link target. |
+| `public/customizer-loader.js` | Pass `wcProductId` as query param when opening review page. Add `data-cart-url` attribute support. |
+| `src/pages/ReviewDesign.tsx` | Read `wcProductId` from query params, include it in the cart item and in the `review-add-to-cart` postMessage payload. |
+| `src/hooks/useCart.ts` | Add `wcProductId` to CartItem interface. Include it in broadcast messages so the SDK can sync. |
+| `public/customizer-studio-woocommerce.php` | Pass WC product ID through to the customizer session flow so it's available on the review page. |
+
+### How syncing works (sequence)
+
+```text
+Customer clicks "Add to Cart" on Review page (new tab)
+  ├─ Item saved to localStorage (customizer_cart)
+  ├─ postMessage({ type: "cart-updated", payload: { totalItems, newItem: { wcProductId, sessionId } } })
+  │     sent to window.opener (store page)
+  └─ Navigate to /cart
+
+Store page (SDK running):
+  ├─ Receives "cart-updated" message
+  ├─ Checks if sessionId already synced (localStorage: customizer_synced_sessions)
+  ├─ If not synced & wcProductId exists:
+  │     POST /?wc-ajax=add_to_cart with product_id + customizer metadata
+  │     jQuery(document.body).trigger('added_to_cart') to update WC mini-cart
+  └─ Updates floating widget count
+```
+
+### Edge cases handled
+- **No WC product ID**: Items without a `wcProductId` (non-WooCommerce stores) skip the sync -- hosted cart/checkout works standalone.
+- **Duplicate prevention**: Synced session IDs are tracked in localStorage so refreshing the store page doesn't re-add items.
+- **Variable products**: If WC returns an error (variable product needs variation), redirect to product page with session param (existing behavior).
 
