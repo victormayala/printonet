@@ -176,8 +176,17 @@ export default function ReviewDesign() {
               <ShoppingCart className="h-4 w-4 mr-2" /> Checkout · ${(basePrice * quantity).toFixed(2)}
             </Button>
           ) : (
-            <Button className="flex-[2]" onClick={handleAddToCart}>
-              <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+            <Button
+              className="flex-[2]"
+              onClick={handleAddToCart}
+              disabled={addedToCart}
+              variant={addedToCart ? "outline" : "default"}
+            >
+              {addedToCart ? (
+                <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
+              ) : (
+                <><ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart</>
+              )}
             </Button>
           )}
         </div>
