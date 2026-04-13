@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.get-stripe-price]
 verify_jwt = false
+
+[functions.import-ssactivewear-products]
+verify_jwt = false
