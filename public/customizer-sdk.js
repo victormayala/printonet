@@ -32,7 +32,7 @@
 (function (root) {
   'use strict';
 
-  var _config = { apiUrl: '', baseUrl: '' };
+  var _config = { apiUrl: '', baseUrl: '', cartUrl: '' };
   var _overlay = null;
   var _iframe = null;
   var _callbacks = {};
@@ -43,6 +43,7 @@
   function init(options) {
     _config.apiUrl = options.apiUrl || '';
     _config.baseUrl = options.baseUrl || '';
+    _config.cartUrl = options.cartUrl || '';
   }
 
   function open(options) {
@@ -393,8 +394,9 @@
   function _createCartWidget() {
     if (_cartWidget) return;
 
+    var cartLink = _config.cartUrl || ((_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href));
     _cartWidget = document.createElement('a');
-    _cartWidget.href = (_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href);
+    _cartWidget.href = cartLink;
     _cartWidget.target = '_blank';
     _cartWidget.rel = 'noopener';
     _cartWidget.style.cssText =
