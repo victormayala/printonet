@@ -1966,7 +1966,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         fullCanvasDataUrl: string,
         canvasWidth: number,
         canvasHeight: number,
-        imgBounds: { x: number; y: number; w: number; h: number } | null
       ) => {
         if (!fullCanvasDataUrl) return "";
         if (!productImg) return fullCanvasDataUrl;
@@ -1974,39 +1973,31 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         try {
           const canvasImg = await loadImageForComposite(fullCanvasDataUrl);
 
-          const baseWidth = productImg.naturalWidth || productImg.width || 1200;
-          const baseHeight = productImg.naturalHeight || productImg.height || 1200;
-          const resolvedBounds = imgBounds || computeImageBounds(canvasWidth, canvasHeight, baseWidth, baseHeight);
-          const outputSize = Math.max(Math.min(Math.max(baseWidth, baseHeight), 1600), 1200);
+          // Use 2x the canvas dimensions for crisp output
+          const outW = canvasWidth * 2;
+          const outH = canvasHeight * 2;
 
           const previewCanvas = document.createElement("canvas");
-          previewCanvas.width = outputSize;
-          previewCanvas.height = outputSize;
-
+          previewCanvas.width = outW;
+          previewCanvas.height = outH;
           const ctx = previewCanvas.getContext("2d");
           if (!ctx) return fullCanvasDataUrl;
 
-          ctx.clearRect(0, 0, outputSize, outputSize);
+          ctx.clearRect(0, 0, outW, outH);
 
-          const prodScale = Math.min(outputSize / baseWidth, outputSize / baseHeight);
-          const prodW = baseWidth * prodScale;
-          const prodH = baseHeight * prodScale;
-          const prodOffX = (outputSize - prodW) / 2;
-          const prodOffY = (outputSize - prodH) / 2;
+          // Draw product image with object-contain — exactly as CSS does it
+          const natW = productImg.naturalWidth || productImg.width;
+          const natH = productImg.naturalHeight || productImg.height;
+          const scale = Math.min(outW / natW, outH / natH);
+          const prodW = natW * scale;
+          const prodH = natH * scale;
+          const prodX = (outW - prodW) / 2;
+          const prodY = (outH - prodH) / 2;
+          ctx.drawImage(productImg, prodX, prodY, prodW, prodH);
 
-          ctx.drawImage(productImg, prodOffX, prodOffY, prodW, prodH);
-
-          if (resolvedBounds && resolvedBounds.w > 0 && resolvedBounds.h > 0) {
-            const scaleX = prodW / resolvedBounds.w;
-            const scaleY = prodH / resolvedBounds.h;
-            const drawX = prodOffX - resolvedBounds.x * scaleX;
-            const drawY = prodOffY - resolvedBounds.y * scaleY;
-            const drawW = canvasWidth * scaleX;
-            const drawH = canvasHeight * scaleY;
-            ctx.drawImage(canvasImg, drawX, drawY, drawW, drawH);
-          } else {
-            ctx.drawImage(canvasImg, prodOffX, prodOffY, prodW, prodH);
-          }
+          // Draw the full fabric canvas on top at the same output size
+          // This works because both share the same coordinate space in the DOM
+          ctx.drawImage(canvasImg, 0, 0, outW, outH);
 
           return previewCanvas.toDataURL("image/png");
         } catch (err) {
