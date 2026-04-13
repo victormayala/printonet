@@ -1,33 +1,53 @@
 
+Recommended reset
 
-## Plan: AI-Powered Auto-Detect Print Areas
+I recommend we stop using WooCommerce as the place that tries to rebuild the final preview. Right now the preview is being rendered in 3 different places:
 
-### What it does
-When a store owner uploads a product image, they can click an "Auto-Detect Print Area" button. An AI vision model analyzes the image — identifying the garment's printable surface (e.g., the flat chest area of a t-shirt, the front panel of a hoodie) — and returns percentage-based coordinates (x, y, width, height) that get saved as the print area. The existing constraint system in the Design Studio already enforces that designs stay within print area bounds, so no changes are needed there.
+- live editor in `src/pages/DesignStudio.tsx`
+- summary modal in `public/customizer-sdk.js`
+- cart/checkout overlays in `public/customizer-studio-woocommerce.php`
 
-### Implementation
+That split is the reason the image keeps drifting.
 
-**1. New edge function: `supabase/functions/detect-print-area/index.ts`**
-- Accepts `{ imageUrl: string }` 
-- Sends the product image to `google/gemini-2.5-flash` (vision-capable, fast, cost-effective) with a structured output prompt
-- Uses tool calling to extract `{ x, y, width, height }` as percentages
-- Returns the detected print area coordinates
+```text
+Customizer
+  -> save one canonical preview asset per side
+  -> open hosted Review page
+  -> hosted Cart / Checkout
+  -> optional sync back to WooCommerce
+```
 
-**2. Update Products page: `src/pages/Products.tsx`**
-- Add an "Auto-Detect" button (with a Wand/Sparkles icon) next to each "Set Print Area" button
-- When clicked, sends the product image URL to the new edge function
-- On success, updates `printAreas` state for that side — same data format the manual editor already uses
-- Shows a loading spinner during detection
-- User can still manually adjust the result via the existing PrintAreaEditor
+Plan
 
-**3. Config: `supabase/config.toml`**
-- Register `detect-print-area` function with `verify_jwt = false`
+1. Make the saved preview the only source of truth
+- Generate previews from a fixed offscreen render size, not from the responsive editor viewport.
+- Save per-side composite images plus a primary preview URL on the session.
+- Save variant + render metadata so nothing has to be recalculated later.
 
-### How the AI prompt works
-The prompt instructs the model to look at the product photo and identify the largest flat, unobstructed area suitable for printing. It returns coordinates as percentages of the image dimensions using tool calling for reliable structured output. The model considers garment type (t-shirt, hoodie, mug, cap) and avoids seams, zippers, collars, and edges.
+2. Replace the “design complete” modal with a hosted Review page
+- Add a route like `/review/:sessionId`.
+- Show the exact saved preview(s), selected color, quantity, price, and Edit / Continue actions.
+- This becomes the first thing the customer sees after finishing the design.
 
-### Files modified
-- `supabase/functions/detect-print-area/index.ts` — new edge function
-- `src/pages/Products.tsx` — add "Auto-Detect" button per image side
-- `supabase/config.toml` — register new function
+3. Recommended path: host cart and checkout here
+- Build cart + checkout pages that always display the same saved preview image.
+- Use built-in payments for checkout.
+- Keep WooCommerce for product import and optional order sync only.
 
+4. Faster fallback if you want a smaller first step
+- Skip WooCommerce cart entirely.
+- Use the hosted Review page as the confirmation step, then send users straight to external checkout.
+- WooCommerce no longer owns preview rendering.
+
+5. Simplify WooCommerce
+- Remove thumbnail overlay/fallback rendering as a required shopper flow.
+- Keep only metadata storage, add-to-cart handoff if needed, and a “View design” link that opens the hosted review page or saved snapshot.
+
+Technical details
+- Frontend: `src/App.tsx`, `src/pages/DesignStudio.tsx`, `public/customizer-sdk.js`, plus new review/cart/checkout pages.
+- Backend: extend session data for canonical preview metadata; add protected cart/order tables with proper access rules.
+- Key rule: review, cart, checkout, order history, and emails must all read the same stored image URL and never recalculate placement again.
+
+My recommendation
+- If you want 1:1 preview all the way through payment, hosted review + hosted cart + hosted checkout in this app is the right solution.
+- If you want the quickest reset, build the hosted Review page first and bypass WooCommerce cart thumbnails entirely.
