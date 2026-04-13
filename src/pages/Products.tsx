@@ -1404,7 +1404,7 @@ function ProductCardImage({ product, hasVariantImages, children }: { product: Pr
   );
 }
 
-
+export default function Products() {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
