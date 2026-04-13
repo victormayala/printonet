@@ -1422,6 +1422,7 @@ export default function Products() {
   const [loadingIntegrations, setLoadingIntegrations] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
+  const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
