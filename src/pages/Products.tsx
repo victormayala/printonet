@@ -1803,6 +1803,74 @@ export default function Products() {
             <SSActivewearImport onDone={fetchProducts} />
           </TabsContent>
         </Tabs>
+
+        {/* Push to Store Dialog */}
+        <Dialog open={pushDialogOpen} onOpenChange={setPushDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" /> Push to Store
+              </DialogTitle>
+              <DialogDescription>
+                Push {selectedProductIds.size} selected product{selectedProductIds.size !== 1 ? "s" : ""} to a connected store.
+              </DialogDescription>
+            </DialogHeader>
+
+            {loadingIntegrations ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : integrations.length === 0 ? (
+              <div className="text-center py-6 space-y-2">
+                <Store className="h-10 w-10 mx-auto text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify or WooCommerce store first.</p>
+              </div>
+            ) : pushResults ? (
+              <div className="space-y-3">
+                <div className="rounded-lg border p-4 space-y-2">
+                  <p className="text-sm font-medium">Push Complete</p>
+                  <div className="flex gap-4 text-sm">
+                    {pushResults.created > 0 && <span className="text-emerald-600">{pushResults.created} created</span>}
+                    {pushResults.updated > 0 && <span className="text-blue-600">{pushResults.updated} updated</span>}
+                    {pushResults.failed > 0 && <span className="text-destructive">{pushResults.failed} failed</span>}
+                  </div>
+                  {pushResults.errors?.length > 0 && (
+                    <div className="mt-2 text-xs text-destructive space-y-1">
+                      {pushResults.errors.map((e, i) => <p key={i}>{e}</p>)}
+                    </div>
+                  )}
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => setPushDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {integrations.map((integ) => (
+                  <Button
+                    key={integ.id}
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    disabled={pushing}
+                    onClick={() => handlePushToStore(integ)}
+                  >
+                    {pushing ? (
+                      <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                    ) : integ.platform === "shopify" ? (
+                      <ShoppingBag className="h-5 w-5 shrink-0" />
+                    ) : (
+                      <Globe className="h-5 w-5 shrink-0" />
+                    )}
+                    <div className="text-left">
+                      <p className="font-medium text-sm capitalize">{integ.platform}</p>
+                      <p className="text-xs text-muted-foreground">{integ.store_url}</p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
