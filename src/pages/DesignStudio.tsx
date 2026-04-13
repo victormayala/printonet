@@ -675,6 +675,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   // Get current background image URL
   function getCurrentImageUrl(): string | null {
     if (!invProduct) return null;
+    // If a variant with an image is selected and we're on the front view, use variant image
+    if (selectedVariant?.image && activeView === "front") {
+      return selectedVariant.image;
+    }
     const map: Record<ViewSide, string | null> = {
       front: invProduct.image_front,
       back: invProduct.image_back,
