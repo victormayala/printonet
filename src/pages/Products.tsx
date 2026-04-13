@@ -1765,7 +1765,11 @@ export default function Products() {
                           )}
                           {Array.isArray(p.variants) && p.variants.length > 0 && (
                             <div className="mt-2 space-y-1.5">
-                              <div className="flex items-center gap-1 flex-wrap">
+                              <button
+                                className="flex items-center gap-1 flex-wrap cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={(e) => { e.stopPropagation(); setVariantDetailProduct(p); }}
+                                title="View all variants"
+                              >
                                 {p.variants.slice(0, 8).map((v: any, i: number) => (
                                   <div
                                     key={i}
@@ -1777,7 +1781,7 @@ export default function Products() {
                                 {p.variants.length > 8 && (
                                   <span className="text-[10px] text-muted-foreground">+{p.variants.length - 8}</span>
                                 )}
-                              </div>
+                              </button>
                               <p className="text-[11px] text-muted-foreground">
                                 {p.variants.length} color{p.variants.length !== 1 ? 's' : ''}
                                 {p.variants[0]?.sizes?.length > 0 && ` · ${p.variants[0].sizes.length} size${p.variants[0].sizes.length !== 1 ? 's' : ''}`}
