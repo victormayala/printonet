@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group, Path, Pattern } from "fabric";
+import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group, Path, Pattern, Point } from "fabric";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -493,6 +493,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const viewLoadRequestRef = useRef(0);
   const [imageBounds, setImageBounds] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const imageBoundsRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const imageAspectRatioRef = useRef<number | null>(null);
   const invProductRef = useRef(invProduct);
 
   // Compute where the product image actually renders within the canvas (object-contain)
@@ -505,18 +506,66 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     return { x, y, w, h };
   }
 
+  function computeImageBoundsFromAspect(canvasW: number, canvasH: number, aspectRatio: number) {
+    let w = canvasW;
+    let h = w / aspectRatio;
+
+    if (h > canvasH) {
+      h = canvasH;
+      w = h * aspectRatio;
+    }
+
+    return {
+      x: (canvasW - w) / 2,
+      y: (canvasH - h) / 2,
+      w,
+      h,
+    };
+  }
+
+  function remapCanvasObjectsToImageBounds(
+    canvas: FabricCanvas,
+    fromBounds: { x: number; y: number; w: number; h: number },
+    toBounds: { x: number; y: number; w: number; h: number }
+  ) {
+    if (fromBounds.w === 0 || fromBounds.h === 0) return;
+
+    const scaleX = toBounds.w / fromBounds.w;
+    const scaleY = toBounds.h / fromBounds.h;
+
+    canvas.getObjects().forEach((obj: any) => {
+      if ((obj as any).customName === PRINT_AREA_RECT_NAME) return;
+
+      const center = obj.getCenterPoint();
+      const relX = (center.x - fromBounds.x) / fromBounds.w;
+      const relY = (center.y - fromBounds.y) / fromBounds.h;
+      const nextCenterX = toBounds.x + relX * toBounds.w;
+      const nextCenterY = toBounds.y + relY * toBounds.h;
+
+      obj.set({
+        scaleX: (obj.scaleX ?? 1) * scaleX,
+        scaleY: (obj.scaleY ?? 1) * scaleY,
+      });
+      obj.setPositionByOrigin(new Point(nextCenterX, nextCenterY), "center", "center");
+      obj.setCoords();
+      rememberLastValidTransform(obj);
+    });
+  }
+
   // Load the current background image's natural dimensions and compute bounds
   useEffect(() => {
     const url = getCurrentImageUrl();
     if (!url || !fabricRef.current) {
       setImageBounds(null);
       imageBoundsRef.current = null;
+      imageAspectRatioRef.current = null;
       return;
     }
     const img = new Image();
     img.onload = () => {
       const canvas = fabricRef.current;
       if (!canvas) return;
+      imageAspectRatioRef.current = img.naturalWidth / img.naturalHeight;
       const bounds = computeImageBounds(canvas.getWidth(), canvas.getHeight(), img.naturalWidth, img.naturalHeight);
       setImageBounds(bounds);
       imageBoundsRef.current = bounds;
@@ -931,10 +980,28 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0 && fabricRef.current) {
-          fabricRef.current.setDimensions({ width, height });
-          fabricRef.current.renderAll();
+        const liveCanvas = fabricRef.current;
+        if (width <= 0 || height <= 0 || !liveCanvas) continue;
+
+        const prevWidth = liveCanvas.getWidth();
+        const prevHeight = liveCanvas.getHeight();
+        if (prevWidth === width && prevHeight === height) continue;
+
+        const prevBounds = imageBoundsRef.current;
+        const aspectRatio = imageAspectRatioRef.current;
+
+        liveCanvas.setDimensions({ width, height });
+
+        if (prevBounds && aspectRatio) {
+          const nextBounds = computeImageBoundsFromAspect(width, height, aspectRatio);
+          remapCanvasObjectsToImageBounds(liveCanvas, prevBounds, nextBounds);
+          imageBoundsRef.current = nextBounds;
+          setImageBounds(nextBounds);
+          updatePrintAreaRect(liveCanvas);
+          saveViewState();
         }
+
+        liveCanvas.renderAll();
       }
     });
     resizeObserver.observe(container);
