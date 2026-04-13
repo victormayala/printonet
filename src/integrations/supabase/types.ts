@@ -191,6 +191,56 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          amount_total: number | null
+          created_at: string
+          currency: string | null
+          customer_email: string | null
+          environment: string
+          id: string
+          session_id: string | null
+          status: string
+          stripe_checkout_id: string | null
+          stripe_payment_intent: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_total?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          environment?: string
+          id?: string
+          session_id?: string | null
+          status?: string
+          stripe_checkout_id?: string | null
+          stripe_payment_intent?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_total?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          environment?: string
+          id?: string
+          session_id?: string | null
+          status?: string
+          stripe_checkout_id?: string | null
+          stripe_payment_intent?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "customizer_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
