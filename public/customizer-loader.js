@@ -31,6 +31,7 @@
   var SUPABASE_URL = API_URL.replace('/functions/v1', '');
   var ANON_KEY = scriptTag && scriptTag.getAttribute('data-anon-key') || '';
   var USER_ID = scriptTag && scriptTag.getAttribute('data-user-id') || '';
+  var CART_URL = scriptTag && scriptTag.getAttribute('data-cart-url') || '';
 
   var _products = null; // cached after first fetch
   var _pickerOverlay = null;
@@ -63,7 +64,7 @@
       console.error('[CustomizerLoader] SDK not loaded');
       return;
     }
-    window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL });
+    window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL, cartUrl: CART_URL });
     window.CustomizerStudio.open({
       product: {
         name: product.name,
@@ -211,7 +212,7 @@
   // --- Initialize ---
   function init() {
     loadSDK(function () {
-      window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL });
+      window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL, cartUrl: CART_URL });
       document.addEventListener('click', handleClick);
       // Auto-show floating cart widget on store pages
       window.CustomizerStudio.showCartWidget();

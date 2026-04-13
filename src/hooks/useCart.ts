@@ -7,6 +7,7 @@ export interface CartItem {
   quantity: number;
   priceInCents: number; // unit price
   variant?: string;
+  wcProductId?: string;
 }
 
 const CART_KEY = "customizer_cart";
@@ -24,13 +25,22 @@ function saveCart(items: CartItem[]) {
   localStorage.setItem(CART_KEY, JSON.stringify(items));
 }
 
+/** Track the last broadcast item to include in message for WC sync */
+let _lastAddedItem: CartItem | null = null;
+
 /** Broadcast cart count to parent window (for embedded store widget) */
 function broadcastCartCount(items: CartItem[]) {
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
+  const newItem = _lastAddedItem ? {
+    sessionId: _lastAddedItem.sessionId,
+    wcProductId: _lastAddedItem.wcProductId || null,
+    quantity: _lastAddedItem.quantity,
+  } : null;
+  _lastAddedItem = null;
   const message = {
     source: "customizer-studio",
     type: "cart-updated",
-    payload: { totalItems, itemCount: items.length },
+    payload: { totalItems, itemCount: items.length, newItem },
   };
   // Post to parent (if embedded)
   if (window.parent && window.parent !== window) {
@@ -51,6 +61,7 @@ export function useCart() {
   }, [items]);
 
   const addItem = useCallback((item: CartItem) => {
+    _lastAddedItem = item;
     setItems((prev) => {
       const existing = prev.find((i) => i.sessionId === item.sessionId);
       if (existing) {
