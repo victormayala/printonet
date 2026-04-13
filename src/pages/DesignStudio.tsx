@@ -1978,47 +1978,46 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       };
 
       const loadImageForComposite = async (src: string): Promise<HTMLImageElement> => {
-        // Strategy 1: fetch as blob to avoid CORS taint on canvas
-        if (src && !src.startsWith("data:")) {
-          try {
-            const response = await fetch(src);
-            if (response.ok) {
-              const blob = await response.blob();
-              const objectUrl = URL.createObjectURL(blob);
-              return await new Promise<HTMLImageElement>((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => { URL.revokeObjectURL(objectUrl); resolve(img); };
-                img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("blob img load failed")); };
-                img.src = objectUrl;
-              });
-            }
-          } catch (_e) {
-            // fetch failed (CORS), fall through
-          }
-        }
-
-        // Strategy 2: load directly with crossOrigin (works if server sends CORS headers)
-        try {
-          return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const loadFromUrl = (url: string, useCors: boolean) =>
+          new Promise<HTMLImageElement>((resolve, reject) => {
             const img = new Image();
-            img.crossOrigin = "anonymous";
+            if (useCors) img.crossOrigin = "anonymous";
             img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error("crossOrigin load failed"));
-            img.src = src;
+            img.onerror = () => reject(new Error("img load failed"));
+            img.src = url;
           });
-        } catch (_e) {
-          // fall through
-        }
 
-        // Strategy 3: load without crossOrigin — canvas will be tainted but image loads
-        // We'll draw it to an intermediate canvas via a proxy workaround
-        // Actually just load it; if canvas is tainted, toDataURL fails but we catch that in the caller
-        return await new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
-          img.src = src;
-        });
+        // Data URLs load directly
+        if (src.startsWith("data:")) return loadFromUrl(src, false);
+
+        // Strategy 1: fetch as blob (avoids CORS taint)
+        try {
+          const response = await fetch(src);
+          if (response.ok) {
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            try {
+              const img = await loadFromUrl(objectUrl, false);
+              URL.revokeObjectURL(objectUrl);
+              return img;
+            } catch {
+              URL.revokeObjectURL(objectUrl);
+            }
+          }
+        } catch (_e) { /* CORS blocked fetch, fall through */ }
+
+        // Strategy 2: proxy through edge function to get a data URL
+        try {
+          const { data } = await supabase.functions.invoke("proxy-image", {
+            body: { url: src },
+          });
+          if (data?.dataUrl) {
+            return await loadFromUrl(data.dataUrl, false);
+          }
+        } catch (_e) { /* proxy failed, fall through */ }
+
+        // Strategy 3: direct load with crossOrigin
+        return loadFromUrl(src, true);
       };
 
       const uploadPng = async (pngUrl: string, suffix: string) => {
