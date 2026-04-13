@@ -842,15 +842,23 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const handleBrowse = async (query?: string, page = 1) => {
+  const handleBrowse = async (query?: string, page = 1, cat?: string) => {
     const creds = getCredentials();
     if (!creds.account_number || !creds.api_key) return;
     setBrowsing(true);
     if (page === 1) setSelectedStyleIds(new Set());
     try {
       const searchTerm = query !== undefined ? query : searchQuery;
+      const activeCat = cat !== undefined ? cat : categoryFilter;
       const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
-        body: { action: "browse", ...creds, search: searchTerm || undefined, page, per_page: 50 },
+        body: {
+          action: "browse",
+          ...creds,
+          search: searchTerm || undefined,
+          category: activeCat !== "all" ? activeCat : undefined,
+          page,
+          per_page: 50,
+        },
       });
       if (error) throw error;
       const styles = data.styles || [];
@@ -863,17 +871,6 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
       setTotalPages(data.total_pages || 1);
       setTotalResults(data.total || 0);
       setHasLoadedCatalog(true);
-      // Extract unique categories (merge with existing for appended pages)
-      if (page === 1) {
-        const cats = Array.from(new Set(styles.map((s: any) => s.baseCategory).filter(Boolean))) as string[];
-        setCategories(cats.sort());
-        setCategoryFilter("all");
-      } else {
-        setCategories((prev) => {
-          const merged = new Set([...prev, ...styles.map((s: any) => s.baseCategory).filter(Boolean)]);
-          return Array.from(merged).sort() as string[];
-        });
-      }
       if (!styles.length && searchTerm && page === 1) {
         toast({ title: "No results found", description: "Try a different search term." });
       }
@@ -884,10 +881,32 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
-  // Auto-load catalog when connected
+  const fetchCategories = async () => {
+    const creds = getCredentials();
+    if (!creds.account_number || !creds.api_key) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: { action: "categories", ...creds },
+      });
+      if (error) return;
+      const cats = (data.categories || [])
+        .map((c: any) => c.name || c.categoryName || c)
+        .filter(Boolean)
+        .sort();
+      setCategories(cats);
+    } catch {}
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setCategoryFilter(cat);
+    handleBrowse(searchQuery, 1, cat);
+  };
+
+  // Auto-load catalog and categories when connected
   useEffect(() => {
     if (integration && !hasLoadedCatalog) {
-      handleBrowse("");
+      handleBrowse("", 1, "all");
+      fetchCategories();
     }
   }, [integration]);
 
@@ -1048,7 +1067,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 className="flex-1"
               />
               {categories.length > 1 && (
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <Select value={categoryFilter} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="w-[180px] shrink-0">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
@@ -1073,37 +1092,18 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
               </p>
             )}
 
-            {catalogResults.length > 0 && (() => {
-              const filteredResults = categoryFilter === "all"
-                ? catalogResults
-                : catalogResults.filter((s) => s.baseCategory === categoryFilter);
-              // Group by category for display
-              const grouped = new Map<string, any[]>();
-              filteredResults.forEach((s) => {
-                const cat = s.baseCategory || "Other";
-                if (!grouped.has(cat)) grouped.set(cat, []);
-                grouped.get(cat)!.push(s);
-              });
-              const sortedGroups = Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-
-              return (
+            {catalogResults.length > 0 && (
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={selectedStyleIds.size === filteredResults.length && filteredResults.length > 0}
-                        onChange={() => {
-                          if (selectedStyleIds.size === filteredResults.length) {
-                            setSelectedStyleIds(new Set());
-                          } else {
-                            setSelectedStyleIds(new Set(filteredResults.map((s) => s.styleID)));
-                          }
-                        }}
+                        checked={selectedStyleIds.size === catalogResults.length && catalogResults.length > 0}
+                        onChange={toggleSelectAll}
                         className="rounded border-input"
                       />
-                      Select all ({filteredResults.length})
+                      Select all ({catalogResults.length})
                     </label>
                     {selectedStyleIds.size > 0 && (
                       <span className="text-sm text-muted-foreground">{selectedStyleIds.size} selected</span>
@@ -1116,13 +1116,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                     </Button>
                   )}
                 </div>
-                {sortedGroups.map(([categoryName, styles]) => (
-                  <div key={categoryName} className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-foreground">{categoryName}</h3>
-                      <Badge variant="outline" className="text-xs">{styles.length}</Badge>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {catalogResults.map((style) => {
                     const isImported = importedStyleIds.has(style.styleID);
                     const isSelected = selectedStyleIds.has(style.styleID);
@@ -1151,6 +1145,11 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                               <Badge variant="secondary">Imported</Badge>
                             )}
                           </div>
+                          {style.baseCategory && (
+                            <Badge variant="outline" className="absolute top-2 right-2 text-[10px] bg-background/80">
+                              {style.baseCategory}
+                            </Badge>
+                          )}
                         </div>
                         <CardContent className="p-3 space-y-2">
                           <div>
@@ -1184,25 +1183,22 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                       </Card>
                     );
                   })}
-                    </div>
-                  </div>
-                ))}
-              {currentPage < totalPages && (
-                <div className="flex justify-center pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleBrowse(searchQuery, currentPage + 1)}
-                    disabled={browsing}
-                    className="gap-2"
-                  >
-                    {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
-                    Load More (Page {currentPage + 1} of {totalPages})
-                  </Button>
                 </div>
-              )}
+                {currentPage < totalPages && (
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleBrowse(searchQuery, currentPage + 1, categoryFilter)}
+                      disabled={browsing}
+                      className="gap-2"
+                    >
+                      {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+                      Load More (Page {currentPage + 1} of {totalPages})
+                    </Button>
+                  </div>
+                )}
               </>
-              );
-            })()}
+            )}
 
             {!browsing && hasLoadedCatalog && catalogResults.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
