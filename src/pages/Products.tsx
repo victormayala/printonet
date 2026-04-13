@@ -1199,10 +1199,6 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 )}
               </>
             )}
-              )}
-              </>
-              );
-            })()}
 
             {!browsing && hasLoadedCatalog && catalogResults.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
