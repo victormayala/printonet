@@ -20,6 +20,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ProfileSettings from "./pages/ProfileSettings";
 import PrintView from "./pages/PrintView";
 import ProductPreview from "./pages/ProductPreview";
+import ReviewDesign from "./pages/ReviewDesign";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
             <Route path="/preview/:productId" element={<ProductPreview />} />
             <Route path="/print/:sessionId" element={<PrintView />} />
+            <Route path="/review/:sessionId" element={<ReviewDesign />} />
             <Route path="/products" element={<DashboardRoute><Products /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
             <Route path="/templates" element={<DashboardRoute><Templates /></DashboardRoute>} />
