@@ -1028,7 +1028,21 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search styles (e.g. 't-shirt', 'hoodie', 'Gildan 2000')"
                 onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery)}
+                className="flex-1"
               />
+              {categories.length > 1 && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[180px] shrink-0">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button onClick={() => handleBrowse(searchQuery)} disabled={browsing} className="gap-2 shrink-0">
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Search
