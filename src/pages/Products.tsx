@@ -1657,7 +1657,7 @@ export default function Products() {
                 ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                     {filteredAndSortedProducts.map((p) => (
-                      <Card key={p.id} className="overflow-hidden group">
+                      <Card key={p.id} className={`overflow-hidden group cursor-pointer transition-all ${selectedProductIds.has(p.id) ? "ring-2 ring-primary" : ""}`} onClick={() => toggleProductSelect(p.id)}>
                         <div className="aspect-square bg-muted relative">
                           {p.image_front ? (
                             <img src={p.image_front} alt={p.name} className="w-full h-full object-cover" />
@@ -1666,8 +1666,16 @@ export default function Products() {
                               <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
                             </div>
                           )}
+                          <div className="absolute top-2 left-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedProductIds.has(p.id)}
+                              onChange={(e) => { e.stopPropagation(); toggleProductSelect(p.id); }}
+                              className="rounded border-input h-4 w-4"
+                            />
+                          </div>
                           {!p.is_active && (
-                            <span className="absolute top-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
+                            <span className="absolute bottom-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
