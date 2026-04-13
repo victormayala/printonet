@@ -16,8 +16,10 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List, Eye,
-  ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles
+  ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles,
+  Truck, Search, Download
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 
