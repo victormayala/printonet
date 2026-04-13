@@ -23,6 +23,7 @@ import ProductPreview from "./pages/ProductPreview";
 import ReviewDesign from "./pages/ReviewDesign";
 import Checkout from "./pages/Checkout";
 import CheckoutReturn from "./pages/CheckoutReturn";
+import Cart from "./pages/Cart";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,8 +52,9 @@ const App = () => (
             <Route path="/preview/:productId" element={<ProductPreview />} />
             <Route path="/print/:sessionId" element={<PrintView />} />
             <Route path="/review/:sessionId" element={<ReviewDesign />} />
-            <Route path="/checkout/:sessionId" element={<Checkout />} />
+            <Route path="/cart" element={<Cart />} />
             <Route path="/checkout/return" element={<CheckoutReturn />} />
+            <Route path="/checkout/:sessionId" element={<Checkout />} />
             <Route path="/products" element={<DashboardRoute><Products /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
             <Route path="/templates" element={<DashboardRoute><Templates /></DashboardRoute>} />

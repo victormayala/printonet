@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowLeft, Minus, Plus, ShoppingCart } from "lucide-react";
 
@@ -28,6 +29,7 @@ interface SessionRow {
 export default function ReviewDesign() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
+  const { addItem } = useCart();
   const [session, setSession] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,24 +96,33 @@ export default function ReviewDesign() {
   const sides = designOutput?.sides?.filter((s) => s.previewPNG || s.designPNG) || [];
   const basePrice = resolvedPrice;
 
-  const handleCheckout = () => {
-    const priceInCents = Math.round(basePrice * 100) || 1000;
-    navigate(`/checkout/${sessionId}?qty=${quantity}&price=${priceInCents}`);
-  };
-
   const isEmbedded = window !== window.parent;
 
   const handleAddToCart = () => {
-    const payload = { ...designOutput, quantity, sessionId };
-    // Post message for SDK consumers (WooCommerce, Shopify, etc.)
-    window.parent.postMessage(
-      { source: "customizer-studio", type: "review-add-to-cart", payload },
-      "*"
-    );
-    // Dispatch a custom event for same-window listeners
-    document.dispatchEvent(new CustomEvent("customizer:addtocart", { detail: payload }));
+    const previewSide = sides.find((s) => s.previewPNG) || sides[0];
+    const priceInCents = Math.round(basePrice * 100);
+
+    addItem({
+      sessionId: sessionId!,
+      productName,
+      previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
+      quantity,
+      priceInCents,
+      variant: variantLabel || undefined,
+    });
+
+    if (isEmbedded) {
+      // Post message for SDK consumers (WooCommerce, Shopify, etc.)
+      const payload = { ...designOutput, quantity, sessionId };
+      window.parent.postMessage(
+        { source: "customizer-studio", type: "review-add-to-cart", payload },
+        "*"
+      );
+      document.dispatchEvent(new CustomEvent("customizer:addtocart", { detail: payload }));
+    }
+
     setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2500);
+    setTimeout(() => navigate("/cart"), 600);
   };
 
   return (
@@ -188,24 +199,21 @@ export default function ReviewDesign() {
               <ArrowLeft className="h-4 w-4 mr-2" /> Edit Design
             </Link>
           </Button>
-          {basePrice > 0 ? (
-            <Button className="flex-[2]" onClick={handleCheckout}>
-              <ShoppingCart className="h-4 w-4 mr-2" /> Checkout · ${(basePrice * quantity).toFixed(2)}
-            </Button>
-          ) : (
-            <Button
-              className="flex-[2]"
-              onClick={handleAddToCart}
-              disabled={addedToCart}
-              variant={addedToCart ? "outline" : "default"}
-            >
-              {addedToCart ? (
-                <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
-              ) : (
-                <><ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart</>
-              )}
-            </Button>
-          )}
+          <Button
+            className="flex-[2]"
+            onClick={handleAddToCart}
+            disabled={addedToCart}
+            variant={addedToCart ? "outline" : "default"}
+          >
+            {addedToCart ? (
+              <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Add to Cart{basePrice > 0 ? ` · $${(basePrice * quantity).toFixed(2)}` : ""}
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>
