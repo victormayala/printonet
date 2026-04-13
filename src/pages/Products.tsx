@@ -741,6 +741,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
 
   // Catalog browser state
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
   const [catalogResults, setCatalogResults] = useState<any[]>([]);
   const [browsing, setBrowsing] = useState(false);
   const [importing, setImporting] = useState<number | null>(null);
@@ -842,37 +843,61 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
+  const updateCategoriesFromStyles = (styles: any[]) => {
+    const styleCategories = Array.from(
+      new Set(styles.map((style: any) => style.baseCategory).filter(Boolean)),
+    ) as string[];
+
+    setCategories((prev) => {
+      if (prev.length > 0) return prev;
+      return styleCategories.sort();
+    });
+  };
+
   const handleBrowse = async (query?: string, page = 1, cat?: string) => {
     const creds = getCredentials();
     if (!creds.account_number || !creds.api_key) return;
+
+    const nextSearch = query !== undefined ? query : appliedSearchQuery;
+    const activeCat = cat !== undefined ? cat : categoryFilter;
+
     setBrowsing(true);
     if (page === 1) setSelectedStyleIds(new Set());
+
     try {
-      const searchTerm = query !== undefined ? query : searchQuery;
-      const activeCat = cat !== undefined ? cat : categoryFilter;
       const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
         body: {
           action: "browse",
           ...creds,
-          search: searchTerm || undefined,
+          search: nextSearch.trim() || undefined,
           category: activeCat !== "all" ? activeCat : undefined,
           page,
           per_page: 50,
         },
       });
       if (error) throw error;
+
       const styles = data.styles || [];
       if (page === 1) {
         setCatalogResults(styles);
       } else {
         setCatalogResults((prev) => [...prev, ...styles]);
       }
+
+      setAppliedSearchQuery(nextSearch);
       setCurrentPage(data.page || page);
       setTotalPages(data.total_pages || 1);
       setTotalResults(data.total || 0);
       setHasLoadedCatalog(true);
-      if (!styles.length && searchTerm && page === 1) {
-        toast({ title: "No results found", description: "Try a different search term." });
+      updateCategoriesFromStyles(styles);
+
+      if (!styles.length && page === 1) {
+        toast({
+          title: "No results found",
+          description: nextSearch.trim()
+            ? "Try a different search term or category."
+            : "Try a different category.",
+        });
       }
     } catch (err: any) {
       toast({ title: "Browse failed", description: err.message, variant: "destructive" });
@@ -881,32 +906,15 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const fetchCategories = async () => {
-    const creds = getCredentials();
-    if (!creds.account_number || !creds.api_key) return;
-    try {
-      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
-        body: { action: "categories", ...creds },
-      });
-      if (error) return;
-      const cats = (data.categories || [])
-        .map((c: any) => c.name || c.categoryName || c)
-        .filter(Boolean)
-        .sort();
-      setCategories(cats);
-    } catch {}
-  };
-
   const handleCategoryChange = (cat: string) => {
     setCategoryFilter(cat);
-    handleBrowse(searchQuery, 1, cat);
+    handleBrowse(appliedSearchQuery, 1, cat);
   };
 
-  // Auto-load catalog and categories when connected
+  // Auto-load catalog when connected
   useEffect(() => {
     if (integration && !hasLoadedCatalog) {
       handleBrowse("", 1, "all");
-      fetchCategories();
     }
   }, [integration]);
 
@@ -1063,12 +1071,12 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search styles (e.g. 't-shirt', 'hoodie', 'Gildan 2000')"
-                onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery)}
+                onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery, 1, categoryFilter)}
                 className="flex-1"
               />
-              {categories.length > 1 && (
+              {categories.length > 0 && (
                 <Select value={categoryFilter} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-[180px] shrink-0">
+                  <SelectTrigger className="w-[200px] shrink-0">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1079,7 +1087,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                   </SelectContent>
                 </Select>
               )}
-              <Button onClick={() => handleBrowse(searchQuery)} disabled={browsing} className="gap-2 shrink-0">
+              <Button onClick={() => handleBrowse(searchQuery, 1, categoryFilter)} disabled={browsing} className="gap-2 shrink-0">
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Search
               </Button>
@@ -1188,7 +1196,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                   <div className="flex justify-center pt-2">
                     <Button
                       variant="outline"
-                      onClick={() => handleBrowse(searchQuery, currentPage + 1, categoryFilter)}
+                      onClick={() => handleBrowse(appliedSearchQuery, currentPage + 1, categoryFilter)}
                       disabled={browsing}
                       className="gap-2"
                     >

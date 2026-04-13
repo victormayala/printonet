@@ -52,7 +52,6 @@ Deno.serve(async (req) => {
       let url = `${SS_API_BASE}/styles/`
       const params: string[] = []
       if (search) params.push(`search=${encodeURIComponent(search)}`)
-      if (category) params.push(`baseCategory=${encodeURIComponent(category)}`)
       if (params.length) url += `?${params.join('&')}`
 
       const res = await fetch(url, { headers: ssHeaders })
@@ -63,7 +62,12 @@ Deno.serve(async (req) => {
         })
       }
       const styles = await res.json()
-      const allStyles = Array.isArray(styles) ? styles : []
+      const normalizedCategory = typeof category === 'string' ? category.trim().toLowerCase() : null
+      const allStyles = (Array.isArray(styles) ? styles : []).filter((style: any) => {
+        if (!normalizedCategory) return true
+        const styleCategory = typeof style?.baseCategory === 'string' ? style.baseCategory.trim().toLowerCase() : ''
+        return styleCategory === normalizedCategory
+      })
       const pageSize = per_page || 50
       const currentPage = page || 1
       const totalCount = allStyles.length
