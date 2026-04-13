@@ -749,6 +749,8 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   const [selectedStyleIds, setSelectedStyleIds] = useState<Set<number>>(new Set());
   const [bulkImporting, setBulkImporting] = useState(false);
   const [hasLoadedCatalog, setHasLoadedCatalog] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [categories, setCategories] = useState<string[]>([]);
 
   const fetchIntegration = async () => {
     if (!user) return;
@@ -848,9 +850,14 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
         body: { action: "browse", ...creds, search: searchTerm || undefined },
       });
       if (error) throw error;
-      setCatalogResults(data.styles || []);
+      const styles = data.styles || [];
+      setCatalogResults(styles);
       setHasLoadedCatalog(true);
-      if (!data.styles?.length && searchTerm) {
+      // Extract unique categories
+      const cats = Array.from(new Set(styles.map((s: any) => s.baseCategory).filter(Boolean))) as string[];
+      setCategories(cats.sort());
+      setCategoryFilter("all");
+      if (!styles.length && searchTerm) {
         toast({ title: "No results found", description: "Try a different search term." });
       }
     } catch (err: any) {
@@ -1021,25 +1028,58 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search styles (e.g. 't-shirt', 'hoodie', 'Gildan 2000')"
                 onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery)}
+                className="flex-1"
               />
+              {categories.length > 1 && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[180px] shrink-0">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button onClick={() => handleBrowse(searchQuery)} disabled={browsing} className="gap-2 shrink-0">
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Search
               </Button>
             </div>
 
-            {catalogResults.length > 0 && (
+            {catalogResults.length > 0 && (() => {
+              const filteredResults = categoryFilter === "all"
+                ? catalogResults
+                : catalogResults.filter((s) => s.baseCategory === categoryFilter);
+              // Group by category for display
+              const grouped = new Map<string, any[]>();
+              filteredResults.forEach((s) => {
+                const cat = s.baseCategory || "Other";
+                if (!grouped.has(cat)) grouped.set(cat, []);
+                grouped.get(cat)!.push(s);
+              });
+              const sortedGroups = Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+              return (
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={selectedStyleIds.size === catalogResults.length && catalogResults.length > 0}
-                        onChange={toggleSelectAll}
+                        checked={selectedStyleIds.size === filteredResults.length && filteredResults.length > 0}
+                        onChange={() => {
+                          if (selectedStyleIds.size === filteredResults.length) {
+                            setSelectedStyleIds(new Set());
+                          } else {
+                            setSelectedStyleIds(new Set(filteredResults.map((s) => s.styleID)));
+                          }
+                        }}
                         className="rounded border-input"
                       />
-                      Select all ({catalogResults.length})
+                      Select all ({filteredResults.length})
                     </label>
                     {selectedStyleIds.size > 0 && (
                       <span className="text-sm text-muted-foreground">{selectedStyleIds.size} selected</span>
@@ -1052,7 +1092,13 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {sortedGroups.map(([categoryName, styles]) => (
+                  <div key={categoryName} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">{categoryName}</h3>
+                      <Badge variant="outline" className="text-xs">{styles.length}</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {catalogResults.map((style) => {
                     const isImported = importedStyleIds.has(style.styleID);
                     const isSelected = selectedStyleIds.has(style.styleID);
@@ -1114,9 +1160,12 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                       </Card>
                     );
                   })}
-                </div>
+                    </div>
+                  </div>
+                ))}
               </>
-            )}
+              );
+            })()}
 
             {!browsing && hasLoadedCatalog && catalogResults.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
