@@ -1264,6 +1264,64 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
             )}
           </CardContent>
         </Card>
+
+        {/* Variant Details Dialog */}
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {loadingDetails ? "Loading..." : detailStyle ? `${detailStyle.brandName} ${detailStyle.styleName}` : "Style Details"}
+              </DialogTitle>
+              {detailStyle?.title && (
+                <DialogDescription>{detailStyle.title}</DialogDescription>
+              )}
+            </DialogHeader>
+            {loadingDetails ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : detailStyle ? (
+              <div className="space-y-4">
+                {detailStyle.description && (
+                  <p className="text-sm text-muted-foreground">{detailStyle.description}</p>
+                )}
+                <div className="text-sm">
+                  <span className="font-medium">{detailStyle.variants?.length || 0}</span> colors available
+                </div>
+                <div className="space-y-3">
+                  {detailStyle.variants?.map((variant: any, idx: number) => (
+                    <div key={idx} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center gap-3">
+                        {variant.hex && (
+                          <div
+                            className="w-6 h-6 rounded-full border shadow-sm shrink-0"
+                            style={{ backgroundColor: variant.hex }}
+                            title={variant.hex}
+                          />
+                        )}
+                        {variant.colorFrontImage && (
+                          <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{variant.color}</p>
+                          <p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {variant.sizes?.map((s: any, sIdx: number) => (
+                          <Badge key={sIdx} variant="secondary" className="text-[11px] font-normal gap-1">
+                            {s.size}
+                            <span className="text-muted-foreground">— ${Number(s.price).toFixed(2)}</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
