@@ -657,6 +657,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       image_side1: embedProductData.image_side1 || null,
       image_side2: embedProductData.image_side2 || null,
       print_areas: embedProductData.print_areas || null,
+      variants: embedProductData.variants || [],
     };
     setInvProduct(ep);
     const views: ViewSide[] = [];
