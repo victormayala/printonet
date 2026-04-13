@@ -191,67 +191,14 @@
         label.textContent = side.view;
         card.appendChild(label);
 
-        var previewSrc = side.previewPNG || '';
+        // Always use the canonical previewPNG snapshot — no dynamic overlays
+        var imgSrc = side.previewPNG || side.designPNG;
+        var img = document.createElement('img');
+        img.src = imgSrc;
+        img.alt = side.view + ' preview';
+        img.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
+        card.appendChild(img);
 
-        if (previewSrc) {
-          var previewImg = document.createElement('img');
-          previewImg.src = previewSrc;
-          previewImg.alt = side.view + ' preview';
-          previewImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
-          card.appendChild(previewImg);
-        } else if (side.productImage && side.designPNG) {
-          var stage = document.createElement('div');
-          stage.style.cssText = 'position:relative;width:100%;aspect-ratio:1;background:#f5f5f5;overflow:hidden;';
-
-          var productImg = document.createElement('img');
-          productImg.src = side.productImage;
-          productImg.alt = side.view + ' product preview';
-          productImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;';
-          stage.appendChild(productImg);
-
-          var designImg = document.createElement('img');
-          designImg.src = side.designPNG;
-          designImg.alt = side.view + ' design preview';
-          designImg.style.cssText = 'position:absolute;object-fit:contain;display:block;';
-
-          if (side.printArea) {
-            var applyPlacement = function () {
-              var cw = stage.clientWidth;
-              var ch = stage.clientHeight;
-              if (!cw || !ch) return;
-              var nw = productImg.naturalWidth || cw;
-              var nh = productImg.naturalHeight || ch;
-              var scale = Math.min(cw / nw, ch / nh);
-              var renderedW = nw * scale;
-              var renderedH = nh * scale;
-              var offsetX = (cw - renderedW) / 2;
-              var offsetY = (ch - renderedH) / 2;
-
-              designImg.style.left = (offsetX + (side.printArea.x / 100) * renderedW) + 'px';
-              designImg.style.top = (offsetY + (side.printArea.y / 100) * renderedH) + 'px';
-              designImg.style.width = ((side.printArea.width / 100) * renderedW) + 'px';
-              designImg.style.height = ((side.printArea.height / 100) * renderedH) + 'px';
-            };
-
-            if (productImg.complete && productImg.naturalWidth) {
-              applyPlacement();
-            } else {
-              productImg.onload = applyPlacement;
-            }
-            setTimeout(applyPlacement, 0);
-          } else {
-            designImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;';
-          }
-
-          stage.appendChild(designImg);
-          card.appendChild(stage);
-        } else {
-          var fallbackImg = document.createElement('img');
-          fallbackImg.src = side.designPNG;
-          fallbackImg.alt = side.view + ' preview';
-          fallbackImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:contain;background:#f5f5f5;display:block;';
-          card.appendChild(fallbackImg);
-        }
         grid.appendChild(card);
       });
 
