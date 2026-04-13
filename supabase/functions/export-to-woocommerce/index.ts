@@ -164,8 +164,28 @@ Deno.serve(async (req) => {
           return imageUrlToId[key];
         }
 
-        // Create variations for variable products
-        if (hasVariants && attributes.length > 0 && !existingWcId) {
+        // Create or update variations for variable products
+        if (hasVariants && attributes.length > 0) {
+          // If updating, delete existing variations first to avoid duplicates
+          if (existingWcId) {
+            try {
+              const varRes = await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations?per_page=100`, {
+                headers: { Authorization: authHeader },
+              });
+              if (varRes.ok) {
+                const existingVars = await varRes.json();
+                for (const ev of existingVars) {
+                  await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations/${ev.id}?force=true`, {
+                    method: "DELETE",
+                    headers: { Authorization: authHeader },
+                  });
+                }
+              }
+            } catch {
+              // Non-critical, continue with creation
+            }
+          }
+
           for (const variant of variants) {
             const colorName = variant.color || variant.colorName || "";
             const variantImg = variant.image || variant.colorFrontImage;
