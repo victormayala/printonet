@@ -1378,6 +1378,90 @@ export default function Products() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  // Push to Store state
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [pushDialogOpen, setPushDialogOpen] = useState(false);
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  const [loadingIntegrations, setLoadingIntegrations] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
+
+  const toggleProductSelect = (id: string) => {
+    setSelectedProductIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const toggleSelectAllProducts = () => {
+    if (selectedProductIds.size === filteredAndSortedProducts.length) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(filteredAndSortedProducts.map((p) => p.id)));
+    }
+  };
+
+  const openPushDialog = async () => {
+    setPushResults(null);
+    setPushDialogOpen(true);
+    setLoadingIntegrations(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user?.id || "")
+      .in("platform", ["shopify", "woocommerce"]);
+    setIntegrations(data || []);
+    setLoadingIntegrations(false);
+  };
+
+  const handlePushToStore = async (integration: any) => {
+    setPushing(true);
+    setPushResults(null);
+    try {
+      const ids = Array.from(selectedProductIds);
+      let data: any;
+      let error: any;
+
+      if (integration.platform === "woocommerce") {
+        const creds = integration.credentials as any;
+        ({ data, error } = await supabase.functions.invoke("export-to-woocommerce", {
+          body: {
+            product_ids: ids,
+            site_url: integration.store_url,
+            consumer_key: creds.consumer_key,
+            consumer_secret: creds.consumer_secret,
+            user_id: user?.id,
+          },
+        }));
+      } else if (integration.platform === "shopify") {
+        const creds = integration.credentials as any;
+        ({ data, error } = await supabase.functions.invoke("export-to-shopify", {
+          body: {
+            product_ids: ids,
+            store_url: integration.store_url,
+            access_token: creds.access_token,
+            user_id: user?.id,
+          },
+        }));
+      }
+
+      if (error) throw error;
+      setPushResults(data);
+      if (data.failed === 0) {
+        toast({ title: `Pushed ${data.created} new, ${data.updated} updated to ${integration.platform}` });
+        setSelectedProductIds(new Set());
+        fetchProducts();
+      } else {
+        toast({ title: `Pushed with ${data.failed} error(s)`, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Push failed", description: err.message, variant: "destructive" });
+    } finally {
+      setPushing(false);
+    }
+  };
+
   const filteredAndSortedProducts = (() => {
     let result = [...products];
     if (filterCategory !== "all") {
