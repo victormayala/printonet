@@ -1049,18 +1049,37 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
               </Button>
             </div>
 
-            {catalogResults.length > 0 && (
+            {catalogResults.length > 0 && (() => {
+              const filteredResults = categoryFilter === "all"
+                ? catalogResults
+                : catalogResults.filter((s) => s.baseCategory === categoryFilter);
+              // Group by category for display
+              const grouped = new Map<string, any[]>();
+              filteredResults.forEach((s) => {
+                const cat = s.baseCategory || "Other";
+                if (!grouped.has(cat)) grouped.set(cat, []);
+                grouped.get(cat)!.push(s);
+              });
+              const sortedGroups = Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+              return (
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={selectedStyleIds.size === catalogResults.length && catalogResults.length > 0}
-                        onChange={toggleSelectAll}
+                        checked={selectedStyleIds.size === filteredResults.length && filteredResults.length > 0}
+                        onChange={() => {
+                          if (selectedStyleIds.size === filteredResults.length) {
+                            setSelectedStyleIds(new Set());
+                          } else {
+                            setSelectedStyleIds(new Set(filteredResults.map((s) => s.styleID)));
+                          }
+                        }}
                         className="rounded border-input"
                       />
-                      Select all ({catalogResults.length})
+                      Select all ({filteredResults.length})
                     </label>
                     {selectedStyleIds.size > 0 && (
                       <span className="text-sm text-muted-foreground">{selectedStyleIds.size} selected</span>
@@ -1073,7 +1092,13 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {sortedGroups.map(([categoryName, styles]) => (
+                  <div key={categoryName} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">{categoryName}</h3>
+                      <Badge variant="outline" className="text-xs">{styles.length}</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {catalogResults.map((style) => {
                     const isImported = importedStyleIds.has(style.styleID);
                     const isSelected = selectedStyleIds.has(style.styleID);
