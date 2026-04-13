@@ -850,9 +850,14 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
         body: { action: "browse", ...creds, search: searchTerm || undefined },
       });
       if (error) throw error;
-      setCatalogResults(data.styles || []);
+      const styles = data.styles || [];
+      setCatalogResults(styles);
       setHasLoadedCatalog(true);
-      if (!data.styles?.length && searchTerm) {
+      // Extract unique categories
+      const cats = Array.from(new Set(styles.map((s: any) => s.baseCategory).filter(Boolean))) as string[];
+      setCategories(cats.sort());
+      setCategoryFilter("all");
+      if (!styles.length && searchTerm) {
         toast({ title: "No results found", description: "Try a different search term." });
       }
     } catch (err: any) {
