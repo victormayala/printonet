@@ -211,7 +211,10 @@
   // --- Initialize ---
   function init() {
     loadSDK(function () {
+      window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL });
       document.addEventListener('click', handleClick);
+      // Auto-show floating cart widget on store pages
+      window.CustomizerStudio.showCartWidget();
     });
   }
 

@@ -127,12 +127,18 @@
 
     if (data.type === 'design-complete') {
       _closeIframe();
-      // Redirect the iframe (or open) the hosted review page
-      var reviewUrl = _config.baseUrl
-        ? (_config.baseUrl + '/review/' + (data.payload && data.payload.sessionId))
-        : ('/review/' + (data.payload && data.payload.sessionId));
+      // Redirect the iframe (or open) the hosted review page with returnUrl
+      var sid = data.payload && data.payload.sessionId;
+      var reviewBase = _config.baseUrl
+        ? (_config.baseUrl + '/review/' + sid)
+        : ('/review/' + sid);
+      var storeReturnUrl = encodeURIComponent(window.location.href);
+      var reviewUrl = reviewBase + '?returnUrl=' + storeReturnUrl;
       window.open(reviewUrl, '_blank');
       _callbacks.onComplete(data.payload);
+    } else if (data.type === 'cart-updated') {
+      // Update floating cart widget count
+      _updateCartWidget(data.payload && data.payload.totalItems || 0);
     } else if (data.type === 'review-add-to-cart') {
       // Fired from the hosted review page
       _addToCart(data.payload, function (success) {
@@ -360,9 +366,83 @@
     _closeSummary();
   }
 
+  // --- Floating Cart Widget ---
+  var _cartWidget = null;
+  var _cartBadge = null;
+
+  function _getCartCount() {
+    try {
+      var raw = localStorage.getItem('customizer_cart');
+      if (!raw) return 0;
+      var items = JSON.parse(raw);
+      return items.reduce(function (sum, i) { return sum + (i.quantity || 1); }, 0);
+    } catch (_) { return 0; }
+  }
+
+  function _updateCartWidget(count) {
+    if (!_cartWidget) return;
+    if (count > 0) {
+      _cartWidget.style.display = 'flex';
+      _cartBadge.textContent = count > 99 ? '99+' : String(count);
+    } else {
+      _cartWidget.style.display = 'none';
+    }
+  }
+
+  function _createCartWidget() {
+    if (_cartWidget) return;
+
+    _cartWidget = document.createElement('a');
+    _cartWidget.href = (_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href);
+    _cartWidget.target = '_blank';
+    _cartWidget.rel = 'noopener';
+    _cartWidget.style.cssText =
+      'position:fixed;bottom:24px;right:24px;z-index:999990;width:56px;height:56px;border-radius:50%;' +
+      'background:#111;color:#fff;display:none;align-items:center;justify-content:center;' +
+      'box-shadow:0 4px 16px rgba(0,0,0,0.3);cursor:pointer;text-decoration:none;transition:transform .15s;';
+    _cartWidget.onmouseover = function () { _cartWidget.style.transform = 'scale(1.1)'; };
+    _cartWidget.onmouseout = function () { _cartWidget.style.transform = 'scale(1)'; };
+
+    // Cart icon (SVG)
+    _cartWidget.innerHTML =
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>' +
+      '<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>' +
+      '</svg>';
+
+    // Badge
+    _cartBadge = document.createElement('span');
+    _cartBadge.style.cssText =
+      'position:absolute;top:-4px;right:-4px;background:#e11d48;color:#fff;font-size:11px;font-weight:700;' +
+      'min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;' +
+      'padding:0 5px;font-family:system-ui,sans-serif;';
+    _cartWidget.appendChild(_cartBadge);
+
+    document.body.appendChild(_cartWidget);
+
+    // Init with current count
+    var count = _getCartCount();
+    _updateCartWidget(count);
+
+    // Listen for cart-updated messages from review/cart pages opened in new tabs
+    window.addEventListener('message', function (e) {
+      var d = e.data;
+      if (d && d.source === 'customizer-studio' && d.type === 'cart-updated') {
+        _updateCartWidget(d.payload && d.payload.totalItems || 0);
+      }
+    });
+
+    // Also poll localStorage periodically (for same-origin tab changes)
+    setInterval(function () {
+      var c = _getCartCount();
+      _updateCartWidget(c);
+    }, 2000);
+  }
+
   root.CustomizerStudio = {
     init: init,
     open: open,
     close: close,
+    showCartWidget: _createCartWidget,
   };
 })(typeof window !== 'undefined' ? window : this);

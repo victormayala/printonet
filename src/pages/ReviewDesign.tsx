@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
@@ -29,6 +29,7 @@ interface SessionRow {
 export default function ReviewDesign() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addItem } = useCart();
   const [session, setSession] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,8 @@ export default function ReviewDesign() {
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
   const [resolvedPrice, setResolvedPrice] = useState<number>(0);
+
+  const returnUrl = searchParams.get("returnUrl") || "";
 
   useEffect(() => {
     if (!sessionId) return;
@@ -52,7 +55,6 @@ export default function ReviewDesign() {
         }
         setSession(data as unknown as SessionRow);
 
-        // Resolve base_price: check product_data first, then look up from inventory
         const pd = data.product_data as any;
         let price = pd?.base_price || 0;
         if (!price && pd?.name) {
@@ -95,7 +97,6 @@ export default function ReviewDesign() {
   const variantLabel = designOutput?.variant?.colorName || "";
   const sides = designOutput?.sides?.filter((s) => s.previewPNG || s.designPNG) || [];
   const basePrice = resolvedPrice;
-
   const isEmbedded = window !== window.parent;
 
   const handleAddToCart = () => {
@@ -112,7 +113,6 @@ export default function ReviewDesign() {
     });
 
     if (isEmbedded) {
-      // Post message for SDK consumers (WooCommerce, Shopify, etc.)
       const payload = { ...designOutput, quantity, sessionId };
       window.parent.postMessage(
         { source: "customizer-studio", type: "review-add-to-cart", payload },
@@ -122,8 +122,12 @@ export default function ReviewDesign() {
     }
 
     setAddedToCart(true);
-    setTimeout(() => navigate("/cart"), 600);
+    const cartUrl = returnUrl ? `/cart?returnUrl=${encodeURIComponent(returnUrl)}` : "/cart";
+    setTimeout(() => navigate(cartUrl), 600);
   };
+
+  const keepShoppingHref = returnUrl || "/products";
+  const isExternal = returnUrl.startsWith("http");
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -194,11 +198,19 @@ export default function ReviewDesign() {
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" asChild>
-            <Link to={`/embed/${sessionId}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" /> Edit Design
-            </Link>
-          </Button>
+          {isExternal ? (
+            <Button variant="outline" className="flex-1" asChild>
+              <a href={keepShoppingHref}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Keep Shopping
+              </a>
+            </Button>
+          ) : (
+            <Button variant="outline" className="flex-1" asChild>
+              <Link to={`/embed/${sessionId}`}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Edit Design
+              </Link>
+            </Button>
+          )}
           <Button
             className="flex-[2]"
             onClick={handleAddToCart}
