@@ -746,6 +746,9 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   const [importing, setImporting] = useState<number | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [importedStyleIds, setImportedStyleIds] = useState<Set<number>>(new Set());
+  const [selectedStyleIds, setSelectedStyleIds] = useState<Set<number>>(new Set());
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [hasLoadedCatalog, setHasLoadedCatalog] = useState(false);
 
   const fetchIntegration = async () => {
     if (!user) return;
