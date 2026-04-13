@@ -92,7 +92,7 @@ export default function ReviewDesign() {
   const productName = productData?.name || "Your Product";
   const variantLabel = designOutput?.variant?.colorName || "";
   const sides = designOutput?.sides?.filter((s) => s.previewPNG || s.designPNG) || [];
-  const basePrice = productData?.base_price || 0;
+  const basePrice = resolvedPrice;
 
   const handleCheckout = () => {
     const priceInCents = Math.round(basePrice * 100) || 1000;
