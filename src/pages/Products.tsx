@@ -1067,7 +1067,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 className="flex-1"
               />
               {categories.length > 1 && (
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <Select value={categoryFilter} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="w-[180px] shrink-0">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
