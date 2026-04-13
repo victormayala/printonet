@@ -1066,6 +1066,13 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
               </Button>
             </div>
 
+            {hasLoadedCatalog && totalResults > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Showing {catalogResults.length} of {totalResults} results
+                {currentPage < totalPages && " — load more below"}
+              </p>
+            )}
+
             {catalogResults.length > 0 && (() => {
               const filteredResults = categoryFilter === "all"
                 ? catalogResults
