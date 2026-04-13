@@ -33,7 +33,7 @@ serve(async (req) => {
       ],
       mode: "payment",
       ui_mode: "embedded",
-      return_url: returnUrl || `${req.headers.get("origin")}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+      return_url: returnUrl || `${req.headers.get("origin") || "https://cstmzr.lovable.app"}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
       ...(customerEmail && { customer_email: customerEmail }),
       ...(sessionId && { metadata: { sessionId } }),
     });
