@@ -837,17 +837,20 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const handleBrowse = async () => {
+  const handleBrowse = async (query?: string) => {
     const creds = getCredentials();
     if (!creds.account_number || !creds.api_key) return;
     setBrowsing(true);
+    setSelectedStyleIds(new Set());
     try {
+      const searchTerm = query !== undefined ? query : searchQuery;
       const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
-        body: { action: "browse", ...creds, search: searchQuery || undefined },
+        body: { action: "browse", ...creds, search: searchTerm || undefined },
       });
       if (error) throw error;
       setCatalogResults(data.styles || []);
-      if (!data.styles?.length) {
+      setHasLoadedCatalog(true);
+      if (!data.styles?.length && searchTerm) {
         toast({ title: "No results found", description: "Try a different search term." });
       }
     } catch (err: any) {
@@ -856,6 +859,13 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
       setBrowsing(false);
     }
   };
+
+  // Auto-load catalog when connected
+  useEffect(() => {
+    if (integration && !hasLoadedCatalog) {
+      handleBrowse("");
+    }
+  }, [integration]);
 
   const handleImportStyle = async (styleID: number) => {
     const creds = getCredentials();
