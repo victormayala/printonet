@@ -1717,6 +1717,16 @@ export default function Products() {
                             <span className="text-sm text-muted-foreground">{p.category}</span>
                             <span className="text-sm font-medium">${p.base_price.toFixed(2)}</span>
                           </div>
+                          {getPushedPlatforms(p).length > 0 && (
+                            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                              {getPushedPlatforms(p).map((platform) => (
+                                <Badge key={platform} variant="outline" className="text-[10px] h-5">
+                                  {platform === "Shopify" ? <ShoppingBag className="h-2.5 w-2.5 mr-1" /> : <Globe className="h-2.5 w-2.5 mr-1" />}
+                                  {platform}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                           {Array.isArray(p.variants) && p.variants.length > 0 && (
                             <div className="mt-2 space-y-1.5">
                               <div className="flex items-center gap-1 flex-wrap">
