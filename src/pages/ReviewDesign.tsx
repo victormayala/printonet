@@ -31,7 +31,7 @@ export default function ReviewDesign() {
   const [session, setSession] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [addedToCart, setAddedToCart] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
