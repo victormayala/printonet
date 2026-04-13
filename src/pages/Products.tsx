@@ -1130,6 +1130,7 @@ export default function Products() {
             <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Store className="h-4 w-4" /> <span className="hidden xs:inline">My </span>Products</TabsTrigger>
             <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
             <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
+            <TabsTrigger value="suppliers" className="gap-2 flex-1 sm:flex-none"><Truck className="h-4 w-4" /> Suppliers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
