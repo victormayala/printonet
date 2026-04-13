@@ -64,7 +64,7 @@
       console.error('[CustomizerLoader] SDK not loaded');
       return;
     }
-    window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL });
+    window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL, cartUrl: CART_URL });
     window.CustomizerStudio.open({
       product: {
         name: product.name,
@@ -212,7 +212,7 @@
   // --- Initialize ---
   function init() {
     loadSDK(function () {
-      window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL });
+      window.CustomizerStudio.init({ apiUrl: API_URL, baseUrl: BASE_URL, cartUrl: CART_URL });
       document.addEventListener('click', handleClick);
       // Auto-show floating cart widget on store pages
       window.CustomizerStudio.showCartWidget();
