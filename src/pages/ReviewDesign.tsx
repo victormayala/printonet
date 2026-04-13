@@ -199,24 +199,21 @@ export default function ReviewDesign() {
               <ArrowLeft className="h-4 w-4 mr-2" /> Edit Design
             </Link>
           </Button>
-          {basePrice > 0 ? (
-            <Button className="flex-[2]" onClick={handleCheckout}>
-              <ShoppingCart className="h-4 w-4 mr-2" /> Checkout · ${(basePrice * quantity).toFixed(2)}
-            </Button>
-          ) : (
-            <Button
-              className="flex-[2]"
-              onClick={handleAddToCart}
-              disabled={addedToCart}
-              variant={addedToCart ? "outline" : "default"}
-            >
-              {addedToCart ? (
-                <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
-              ) : (
-                <><ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart</>
-              )}
-            </Button>
-          )}
+          <Button
+            className="flex-[2]"
+            onClick={handleAddToCart}
+            disabled={addedToCart}
+            variant={addedToCart ? "outline" : "default"}
+          >
+            {addedToCart ? (
+              <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Add to Cart{basePrice > 0 ? ` · $${(basePrice * quantity).toFixed(2)}` : ""}
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>
