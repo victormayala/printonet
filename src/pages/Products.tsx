@@ -1681,10 +1681,10 @@ export default function Products() {
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
+                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={() => deleteProduct(p.id)}>
+                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); deleteProduct(p.id); }}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
