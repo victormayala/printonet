@@ -205,6 +205,72 @@ Deno.serve(async (req) => {
       })
     }
 
+    // ACTION: details — fetch variants for a specific style
+    if (action === 'details') {
+      if (!style_id) {
+        return new Response(JSON.stringify({ error: 'style_id is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // Fetch style info
+      const styleRes = await fetch(`${SS_API_BASE}/styles/${style_id}`, { headers: ssHeaders })
+      if (!styleRes.ok) {
+        const errText = await styleRes.text()
+        return new Response(JSON.stringify({ error: `S&S API error: ${styleRes.status}`, details: errText }), {
+          status: styleRes.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      const styleArr = await styleRes.json()
+      const style = Array.isArray(styleArr) ? styleArr[0] : styleArr
+
+      // Fetch products (SKU-level) for this style
+      const prodRes = await fetch(`${SS_API_BASE}/products/?style=${style_id}`, { headers: ssHeaders })
+      if (!prodRes.ok) {
+        const errText = await prodRes.text()
+        return new Response(JSON.stringify({ error: `S&S API error: ${prodRes.status}`, details: errText }), {
+          status: prodRes.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      const products = await prodRes.json()
+
+      // Group by color
+      const colorMap = new Map<string, any[]>()
+      for (const p of (Array.isArray(products) ? products : [])) {
+        const key = p.colorName || 'Default'
+        if (!colorMap.has(key)) colorMap.set(key, [])
+        colorMap.get(key)!.push(p)
+      }
+
+      const variants = Array.from(colorMap.entries()).map(([colorName, skus]) => {
+        const first = skus[0]
+        return {
+          color: colorName,
+          hex: first.color1 || null,
+          colorFrontImage: first.colorFrontImage ? `https://www.ssactivewear.com/${first.colorFrontImage.replace('_fm.', '_fl.')}` : null,
+          colorSwatchImage: first.colorSwatchImage ? `https://www.ssactivewear.com/${first.colorSwatchImage}` : null,
+          sizes: skus.map((s: any) => ({
+            size: s.sizeName || s.size2Name || 'OS',
+            sku: s.sku,
+            price: s.customerPrice || s.piecePrice || 0,
+            qty: s.qty ?? 0,
+          })),
+        }
+      })
+
+      return new Response(JSON.stringify({
+        styleID: style?.styleID || style_id,
+        styleName: style?.styleName,
+        brandName: style?.brandName,
+        title: style?.title,
+        description: style?.description || null,
+        baseCategory: style?.baseCategory,
+        variants,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // ACTION: categories — fetch available categories
     if (action === 'categories') {
       const res = await fetch(`${SS_API_BASE}/categories/`, { headers: ssHeaders })
