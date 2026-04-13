@@ -17,7 +17,7 @@ import {
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List, Eye,
   ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles,
-  Truck, Search, Download
+  Truck, Search, Download, Send
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1378,6 +1378,90 @@ export default function Products() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  // Push to Store state
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [pushDialogOpen, setPushDialogOpen] = useState(false);
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  const [loadingIntegrations, setLoadingIntegrations] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
+
+  const toggleProductSelect = (id: string) => {
+    setSelectedProductIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const toggleSelectAllProducts = () => {
+    if (selectedProductIds.size === filteredAndSortedProducts.length) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(filteredAndSortedProducts.map((p) => p.id)));
+    }
+  };
+
+  const openPushDialog = async () => {
+    setPushResults(null);
+    setPushDialogOpen(true);
+    setLoadingIntegrations(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user?.id || "")
+      .in("platform", ["shopify", "woocommerce"]);
+    setIntegrations(data || []);
+    setLoadingIntegrations(false);
+  };
+
+  const handlePushToStore = async (integration: any) => {
+    setPushing(true);
+    setPushResults(null);
+    try {
+      const ids = Array.from(selectedProductIds);
+      let data: any;
+      let error: any;
+
+      if (integration.platform === "woocommerce") {
+        const creds = integration.credentials as any;
+        ({ data, error } = await supabase.functions.invoke("export-to-woocommerce", {
+          body: {
+            product_ids: ids,
+            site_url: integration.store_url,
+            consumer_key: creds.consumer_key,
+            consumer_secret: creds.consumer_secret,
+            user_id: user?.id,
+          },
+        }));
+      } else if (integration.platform === "shopify") {
+        const creds = integration.credentials as any;
+        ({ data, error } = await supabase.functions.invoke("export-to-shopify", {
+          body: {
+            product_ids: ids,
+            store_url: integration.store_url,
+            access_token: creds.access_token,
+            user_id: user?.id,
+          },
+        }));
+      }
+
+      if (error) throw error;
+      setPushResults(data);
+      if (data.failed === 0) {
+        toast({ title: `Pushed ${data.created} new, ${data.updated} updated to ${integration.platform}` });
+        setSelectedProductIds(new Set());
+        fetchProducts();
+      } else {
+        toast({ title: `Pushed with ${data.failed} error(s)`, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Push failed", description: err.message, variant: "destructive" });
+    } finally {
+      setPushing(false);
+    }
+  };
+
   const filteredAndSortedProducts = (() => {
     let result = [...products];
     if (filterCategory !== "all") {
@@ -1460,6 +1544,30 @@ export default function Products() {
                     <UniversalSnippetDialog />
                   </div>
                 )}
+                {/* Selection bar */}
+                {filteredAndSortedProducts.length > 0 && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedProductIds.size === filteredAndSortedProducts.length && filteredAndSortedProducts.length > 0}
+                        onChange={toggleSelectAllProducts}
+                        className="rounded border-input"
+                      />
+                      Select all
+                    </label>
+                    {selectedProductIds.size > 0 && (
+                      <>
+                        <span className="text-sm text-muted-foreground">{selectedProductIds.size} selected</span>
+                        <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={openPushDialog}>
+                          <Send className="h-3.5 w-3.5" />
+                          Push to Store
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 mb-6">
                   <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
                   <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
@@ -1549,7 +1657,7 @@ export default function Products() {
                 ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                     {filteredAndSortedProducts.map((p) => (
-                      <Card key={p.id} className="overflow-hidden group">
+                      <Card key={p.id} className={`overflow-hidden group cursor-pointer transition-all ${selectedProductIds.has(p.id) ? "ring-2 ring-primary" : ""}`} onClick={() => toggleProductSelect(p.id)}>
                         <div className="aspect-square bg-muted relative">
                           {p.image_front ? (
                             <img src={p.image_front} alt={p.name} className="w-full h-full object-cover" />
@@ -1558,17 +1666,25 @@ export default function Products() {
                               <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
                             </div>
                           )}
+                          <div className="absolute top-2 left-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedProductIds.has(p.id)}
+                              onChange={(e) => { e.stopPropagation(); toggleProductSelect(p.id); }}
+                              className="rounded border-input h-4 w-4"
+                            />
+                          </div>
                           {!p.is_active && (
-                            <span className="absolute top-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
+                            <span className="absolute bottom-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
+                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); window.open(`/preview/${p.id}`, '_blank'); }} title="Preview Customizer">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
+                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={() => deleteProduct(p.id)}>
+                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); deleteProduct(p.id); }}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -1687,6 +1803,74 @@ export default function Products() {
             <SSActivewearImport onDone={fetchProducts} />
           </TabsContent>
         </Tabs>
+
+        {/* Push to Store Dialog */}
+        <Dialog open={pushDialogOpen} onOpenChange={setPushDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" /> Push to Store
+              </DialogTitle>
+              <DialogDescription>
+                Push {selectedProductIds.size} selected product{selectedProductIds.size !== 1 ? "s" : ""} to a connected store.
+              </DialogDescription>
+            </DialogHeader>
+
+            {loadingIntegrations ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : integrations.length === 0 ? (
+              <div className="text-center py-6 space-y-2">
+                <Store className="h-10 w-10 mx-auto text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify or WooCommerce store first.</p>
+              </div>
+            ) : pushResults ? (
+              <div className="space-y-3">
+                <div className="rounded-lg border p-4 space-y-2">
+                  <p className="text-sm font-medium">Push Complete</p>
+                  <div className="flex gap-4 text-sm">
+                    {pushResults.created > 0 && <span className="text-emerald-600">{pushResults.created} created</span>}
+                    {pushResults.updated > 0 && <span className="text-blue-600">{pushResults.updated} updated</span>}
+                    {pushResults.failed > 0 && <span className="text-destructive">{pushResults.failed} failed</span>}
+                  </div>
+                  {pushResults.errors?.length > 0 && (
+                    <div className="mt-2 text-xs text-destructive space-y-1">
+                      {pushResults.errors.map((e, i) => <p key={i}>{e}</p>)}
+                    </div>
+                  )}
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => setPushDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {integrations.map((integ) => (
+                  <Button
+                    key={integ.id}
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    disabled={pushing}
+                    onClick={() => handlePushToStore(integ)}
+                  >
+                    {pushing ? (
+                      <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                    ) : integ.platform === "shopify" ? (
+                      <ShoppingBag className="h-5 w-5 shrink-0" />
+                    ) : (
+                      <Globe className="h-5 w-5 shrink-0" />
+                    )}
+                    <div className="text-left">
+                      <p className="font-medium text-sm capitalize">{integ.platform}</p>
+                      <p className="text-xs text-muted-foreground">{integ.store_url}</p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
