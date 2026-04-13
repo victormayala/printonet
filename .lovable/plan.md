@@ -1,53 +1,46 @@
 
-Recommended reset
 
-I recommend we stop using WooCommerce as the place that tries to rebuild the final preview. Right now the preview is being rendered in 3 different places:
+## Plan: Integrate Cart with Store Owner's Website
 
-- live editor in `src/pages/DesignStudio.tsx`
-- summary modal in `public/customizer-sdk.js`
-- cart/checkout overlays in `public/customizer-studio-woocommerce.php`
+### Problem
+When a customer completes a design and adds to cart, the "Keep Shopping" button navigates to `/products` (the dashboard). It should take them back to the store owner's website. Additionally, there's no way for the store to show cart count or access the hosted cart after the customizer closes.
 
-That split is the reason the image keeps drifting.
+### Approach
 
-```text
-Customizer
-  -> save one canonical preview asset per side
-  -> open hosted Review page
-  -> hosted Cart / Checkout
-  -> optional sync back to WooCommerce
-```
+**1. Pass the store URL through the flow**
 
-Plan
+- The loader/SDK already has `data-base-url` and the store's origin. We need to pass a `returnUrl` (the store's URL) through the session so the Review and Cart pages know where to send the customer.
+- Add `returnUrl` as a query parameter when the SDK opens the review page, e.g. `/review/:sessionId?returnUrl=https://store.com`
+- The Review page passes it along to the Cart page via navigation state or query param.
 
-1. Make the saved preview the only source of truth
-- Generate previews from a fixed offscreen render size, not from the responsive editor viewport.
-- Save per-side composite images plus a primary preview URL on the session.
-- Save variant + render metadata so nothing has to be recalculated later.
+**2. Update Review page**
+- Read `returnUrl` from query params (falling back to `document.referrer` or `/products`)
+- Pass `returnUrl` to the Cart page when navigating after "Add to Cart"
 
-2. Replace the “design complete” modal with a hosted Review page
-- Add a route like `/review/:sessionId`.
-- Show the exact saved preview(s), selected color, quantity, price, and Edit / Continue actions.
-- This becomes the first thing the customer sees after finishing the design.
+**3. Update Cart page**
+- Read `returnUrl` from query params or navigation state
+- "Keep Shopping" / "Keep Customizing" buttons link to `returnUrl` instead of `/products`
+- If no `returnUrl`, fall back to `/products` (dashboard user)
 
-3. Recommended path: host cart and checkout here
-- Build cart + checkout pages that always display the same saved preview image.
-- Use built-in payments for checkout.
-- Keep WooCommerce for product import and optional order sync only.
+**4. Add a floating cart widget to the SDK/loader**
 
-4. Faster fallback if you want a smaller first step
-- Skip WooCommerce cart entirely.
-- Use the hosted Review page as the confirmation step, then send users straight to external checkout.
-- WooCommerce no longer owns preview rendering.
+The loader script will inject a small floating cart badge on the store's page that:
+- Shows the current cart item count (reads from the same `localStorage` key `customizer_cart`)
+- Clicking it opens the hosted cart page (`BASE_URL + /cart`) in a new tab or iframe overlay
+- Automatically appears after the first item is added
+- Styled as a small floating button in the bottom-right corner
 
-5. Simplify WooCommerce
-- Remove thumbnail overlay/fallback rendering as a required shopper flow.
-- Keep only metadata storage, add-to-cart handoff if needed, and a “View design” link that opens the hosted review page or saved snapshot.
+**5. SDK: Post cart updates back to the parent**
 
-Technical details
-- Frontend: `src/App.tsx`, `src/pages/DesignStudio.tsx`, `public/customizer-sdk.js`, plus new review/cart/checkout pages.
-- Backend: extend session data for canonical preview metadata; add protected cart/order tables with proper access rules.
-- Key rule: review, cart, checkout, order history, and emails must all read the same stored image URL and never recalculate placement again.
+When the Review page adds to cart, it already posts a message. We'll also post the updated cart count so the store's floating widget can update in real-time.
 
-My recommendation
-- If you want 1:1 preview all the way through payment, hosted review + hosted cart + hosted checkout in this app is the right solution.
-- If you want the quickest reset, build the hosted Review page first and bypass WooCommerce cart thumbnails entirely.
+### Files to change
+
+| File | Change |
+|------|--------|
+| `public/customizer-sdk.js` | Pass `returnUrl` (current page URL) when opening review page; add floating cart widget that reads `customizer_cart` from localStorage and listens for cart update messages |
+| `public/customizer-loader.js` | Pass store return URL through to SDK |
+| `src/pages/ReviewDesign.tsx` | Read `returnUrl` from query params; pass to cart on navigation |
+| `src/pages/Cart.tsx` | Read `returnUrl`; use it for "Keep Shopping" links instead of `/products` |
+| `src/hooks/useCart.ts` | After updating cart, post a `window.postMessage` with cart count for cross-window communication |
+
