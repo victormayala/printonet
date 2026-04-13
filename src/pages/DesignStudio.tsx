@@ -2056,7 +2056,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         try {
           const canvasImg = await loadImageForComposite(fullCanvasDataUrl);
 
-          // Always render at a fixed size so the output is identical regardless of viewport
           const outW = FIXED_RENDER_SIZE;
           const outH = FIXED_RENDER_SIZE;
 
@@ -2081,7 +2080,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           // Draw design overlay scaled to the same fixed size
           ctx.drawImage(canvasImg, 0, 0, outW, outH);
 
-          return previewCanvas.toDataURL("image/png");
+          try {
+            return previewCanvas.toDataURL("image/png");
+          } catch (taintErr) {
+            // Canvas was tainted by the product image (CORS). 
+            // Workaround: convert product image to base64 via a fresh fetch through our proxy,
+            // or just return the design-only overlay
+            console.warn("Canvas tainted, returning design-only preview:", taintErr);
+            return fullCanvasDataUrl;
+          }
         } catch (err) {
           console.warn("Composite preview generation failed:", err);
           return fullCanvasDataUrl;
