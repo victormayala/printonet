@@ -1422,6 +1422,7 @@ export default function Products() {
   const [loadingIntegrations, setLoadingIntegrations] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
+  const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
@@ -1764,7 +1765,11 @@ export default function Products() {
                           )}
                           {Array.isArray(p.variants) && p.variants.length > 0 && (
                             <div className="mt-2 space-y-1.5">
-                              <div className="flex items-center gap-1 flex-wrap">
+                              <button
+                                className="flex items-center gap-1 flex-wrap cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={(e) => { e.stopPropagation(); setVariantDetailProduct(p); }}
+                                title="View all variants"
+                              >
                                 {p.variants.slice(0, 8).map((v: any, i: number) => (
                                   <div
                                     key={i}
@@ -1776,7 +1781,7 @@ export default function Products() {
                                 {p.variants.length > 8 && (
                                   <span className="text-[10px] text-muted-foreground">+{p.variants.length - 8}</span>
                                 )}
-                              </div>
+                              </button>
                               <p className="text-[11px] text-muted-foreground">
                                 {p.variants.length} color{p.variants.length !== 1 ? 's' : ''}
                                 {p.variants[0]?.sizes?.length > 0 && ` · ${p.variants[0].sizes.length} size${p.variants[0].sizes.length !== 1 ? 's' : ''}`}
@@ -1814,7 +1819,11 @@ export default function Products() {
                           <div className="flex items-center gap-2">
                             <p className="text-xs text-muted-foreground">{p.category}</p>
                             {Array.isArray(p.variants) && p.variants.length > 0 && (
-                              <div className="flex items-center gap-1">
+                              <button
+                                className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={(e) => { e.stopPropagation(); setVariantDetailProduct(p); }}
+                                title="View all variants"
+                              >
                                 {p.variants.slice(0, 5).map((v: any, i: number) => (
                                   <div
                                     key={i}
@@ -1829,7 +1838,7 @@ export default function Products() {
                                 <span className="text-[10px] text-muted-foreground ml-1">
                                   · {p.variants[0]?.sizes?.length || 0} sizes
                                 </span>
-                              </div>
+                              </button>
                             )}
                           </div>
                         </div>
@@ -1874,6 +1883,60 @@ export default function Products() {
             <SSActivewearImport onDone={fetchProducts} />
           </TabsContent>
         </Tabs>
+
+        {/* Variant Detail Dialog */}
+        <Dialog open={!!variantDetailProduct} onOpenChange={(open) => { if (!open) setVariantDetailProduct(null); }}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{variantDetailProduct?.name}</DialogTitle>
+              <DialogDescription>
+                {variantDetailProduct?.category} · ${variantDetailProduct?.base_price.toFixed(2)}
+              </DialogDescription>
+            </DialogHeader>
+            {variantDetailProduct && Array.isArray(variantDetailProduct.variants) && (
+              <div className="space-y-4">
+                <div className="text-sm">
+                  <span className="font-medium">{variantDetailProduct.variants.length}</span> color{variantDetailProduct.variants.length !== 1 ? 's' : ''} available
+                </div>
+                <div className="space-y-3">
+                  {variantDetailProduct.variants.map((variant: any, idx: number) => (
+                    <div key={idx} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center gap-3">
+                        {variant.hex && (
+                          <div
+                            className="w-6 h-6 rounded-full border shadow-sm shrink-0"
+                            style={{ backgroundColor: variant.hex }}
+                            title={variant.hex}
+                          />
+                        )}
+                        {variant.image && (
+                          <img src={variant.image} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
+                        )}
+                        {variant.colorFrontImage && !variant.image && (
+                          <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{variant.color}</p>
+                          <p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p>
+                        </div>
+                      </div>
+                      {variant.sizes?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {variant.sizes.map((s: any, sIdx: number) => (
+                            <Badge key={sIdx} variant="secondary" className="text-[11px] font-normal gap-1">
+                              {s.size}
+                              {s.price && <span className="text-muted-foreground">— ${Number(s.price).toFixed(2)}</span>}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Push to Store Dialog */}
         <Dialog open={pushDialogOpen} onOpenChange={setPushDialogOpen}>
