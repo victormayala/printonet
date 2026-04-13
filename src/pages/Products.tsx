@@ -1394,6 +1394,28 @@ export default function Products() {
     });
   };
 
+  const handlePushSingleProduct = async (productId: string) => {
+    setSelectedProductIds(new Set([productId]));
+    setPushResults(null);
+    setPushDialogOpen(true);
+    setLoadingIntegrations(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user?.id || "")
+      .in("platform", ["shopify", "woocommerce"]);
+    setIntegrations(data || []);
+    setLoadingIntegrations(false);
+  };
+
+  const getPushedPlatforms = (product: Product): string[] => {
+    const platforms: string[] = [];
+    const src = (product as any).supplier_source;
+    if (src?.external_ids?.woocommerce) platforms.push("WooCommerce");
+    if (src?.external_ids?.shopify) platforms.push("Shopify");
+    return platforms;
+  };
+
   const toggleSelectAllProducts = () => {
     if (selectedProductIds.size === filteredAndSortedProducts.length) {
       setSelectedProductIds(new Set());
@@ -1678,6 +1700,9 @@ export default function Products() {
                             <span className="absolute bottom-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handlePushSingleProduct(p.id); }} title="Push to Store">
+                              <Send className="h-3.5 w-3.5" />
+                            </Button>
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); window.open(`/preview/${p.id}`, '_blank'); }} title="Preview Customizer">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
@@ -1695,6 +1720,16 @@ export default function Products() {
                             <span className="text-sm text-muted-foreground">{p.category}</span>
                             <span className="text-sm font-medium">${p.base_price.toFixed(2)}</span>
                           </div>
+                          {getPushedPlatforms(p).length > 0 && (
+                            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                              {getPushedPlatforms(p).map((platform) => (
+                                <Badge key={platform} variant="outline" className="text-[10px] h-5">
+                                  {platform === "Shopify" ? <ShoppingBag className="h-2.5 w-2.5 mr-1" /> : <Globe className="h-2.5 w-2.5 mr-1" />}
+                                  {platform}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                           {Array.isArray(p.variants) && p.variants.length > 0 && (
                             <div className="mt-2 space-y-1.5">
                               <div className="flex items-center gap-1 flex-wrap">
@@ -1771,7 +1806,10 @@ export default function Products() {
                             {p.is_active ? "Active" : "Inactive"}
                           </span>
                         </span>
-                        <div className="w-24 flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <div className="w-28 flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handlePushSingleProduct(p.id)} title="Push to Store">
+                            <Send className="h-3.5 w-3.5" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
                             <Eye className="h-3.5 w-3.5" />
                           </Button>

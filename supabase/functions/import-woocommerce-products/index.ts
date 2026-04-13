@@ -38,12 +38,25 @@ Deno.serve(async (req) => {
 
     const products = await wcRes.json();
 
-    // On sync, delete ALL existing products for this user first, then re-import
+    // On sync, only delete WooCommerce-sourced products (not all user products)
     if (is_sync && user_id) {
-      await supabase
+      const { data: existing } = await supabase
         .from("inventory_products")
-        .delete()
+        .select("id, supplier_source")
         .eq("user_id", user_id);
+      
+      if (existing) {
+        const wcProductIds = existing
+          .filter((p: any) => p.supplier_source?.provider === "woocommerce")
+          .map((p: any) => p.id);
+        
+        if (wcProductIds.length > 0) {
+          await supabase
+            .from("inventory_products")
+            .delete()
+            .in("id", wcProductIds);
+        }
+      }
     }
 
     let importedCount = 0;
@@ -67,6 +80,11 @@ Deno.serve(async (req) => {
         variants,
         is_active: product.status === "publish",
         user_id: user_id || null,
+        supplier_source: {
+          provider: "woocommerce",
+          wc_product_id: product.id,
+          external_ids: { woocommerce: product.id },
+        },
       };
 
       const { error } = await supabase.from("inventory_products").insert(row);
