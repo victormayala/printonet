@@ -984,7 +984,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                           </div>
                         )}
                         {isImported && (
-                          <Badge className="absolute top-2 left-2 bg-emerald-500/90">Imported</Badge>
+                          <Badge variant="secondary" className="absolute top-2 left-2">Imported</Badge>
                         )}
                       </div>
                       <CardContent className="p-3 space-y-2">
