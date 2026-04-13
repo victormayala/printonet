@@ -746,6 +746,9 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   const [importing, setImporting] = useState<number | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [importedStyleIds, setImportedStyleIds] = useState<Set<number>>(new Set());
+  const [selectedStyleIds, setSelectedStyleIds] = useState<Set<number>>(new Set());
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [hasLoadedCatalog, setHasLoadedCatalog] = useState(false);
 
   const fetchIntegration = async () => {
     if (!user) return;
@@ -834,17 +837,20 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const handleBrowse = async () => {
+  const handleBrowse = async (query?: string) => {
     const creds = getCredentials();
     if (!creds.account_number || !creds.api_key) return;
     setBrowsing(true);
+    setSelectedStyleIds(new Set());
     try {
+      const searchTerm = query !== undefined ? query : searchQuery;
       const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
-        body: { action: "browse", ...creds, search: searchQuery || undefined },
+        body: { action: "browse", ...creds, search: searchTerm || undefined },
       });
       if (error) throw error;
       setCatalogResults(data.styles || []);
-      if (!data.styles?.length) {
+      setHasLoadedCatalog(true);
+      if (!data.styles?.length && searchTerm) {
         toast({ title: "No results found", description: "Try a different search term." });
       }
     } catch (err: any) {
@@ -853,6 +859,13 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
       setBrowsing(false);
     }
   };
+
+  // Auto-load catalog when connected
+  useEffect(() => {
+    if (integration && !hasLoadedCatalog) {
+      handleBrowse("");
+    }
+  }, [integration]);
 
   const handleImportStyle = async (styleID: number) => {
     const creds = getCredentials();
@@ -864,11 +877,57 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
       if (error) throw error;
       toast({ title: `Imported! ${data.imported} new, ${data.updated} updated` });
       setImportedStyleIds((prev) => new Set(prev).add(styleID));
+      setSelectedStyleIds((prev) => { const n = new Set(prev); n.delete(styleID); return n; });
       onDone();
     } catch (err: any) {
       toast({ title: "Import failed", description: err.message, variant: "destructive" });
     } finally {
       setImporting(null);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (selectedStyleIds.size === 0) return;
+    const creds = getCredentials();
+    setBulkImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: {
+          action: "sync",
+          ...creds,
+          style_ids: Array.from(selectedStyleIds),
+          user_id: user?.id,
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Imported ${data.imported} new, ${data.updated} updated products` });
+      setImportedStyleIds((prev) => {
+        const n = new Set(prev);
+        selectedStyleIds.forEach((id) => n.add(id));
+        return n;
+      });
+      setSelectedStyleIds(new Set());
+      onDone();
+    } catch (err: any) {
+      toast({ title: "Bulk import failed", description: err.message, variant: "destructive" });
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
+  const toggleSelect = (styleID: number) => {
+    setSelectedStyleIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(styleID)) n.delete(styleID); else n.add(styleID);
+      return n;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedStyleIds.size === catalogResults.length) {
+      setSelectedStyleIds(new Set());
+    } else {
+      setSelectedStyleIds(new Set(catalogResults.map((s) => s.styleID)));
     }
   };
 
@@ -961,64 +1020,108 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search styles (e.g. 't-shirt', 'hoodie', 'Gildan 2000')"
-                onKeyDown={(e) => e.key === "Enter" && handleBrowse()}
+                onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery)}
               />
-              <Button onClick={handleBrowse} disabled={browsing} className="gap-2 shrink-0">
+              <Button onClick={() => handleBrowse(searchQuery)} disabled={browsing} className="gap-2 shrink-0">
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Search
               </Button>
             </div>
 
             {catalogResults.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {catalogResults.map((style) => {
-                  const isImported = importedStyleIds.has(style.styleID);
-                  return (
-                    <Card key={style.styleID} className="overflow-hidden">
-                      <div className="aspect-square bg-muted relative">
-                        {style.styleImage ? (
-                          <img src={style.styleImage} alt={style.styleName} className="w-full h-full object-contain p-2" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
-                          </div>
-                        )}
-                        {isImported && (
-                          <Badge variant="secondary" className="absolute top-2 left-2">Imported</Badge>
-                        )}
-                      </div>
-                      <CardContent className="p-3 space-y-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">{style.brandName}</p>
-                          <h4 className="font-semibold text-sm truncate">{style.styleName}</h4>
-                          {style.title && <p className="text-xs text-muted-foreground truncate">{style.title}</p>}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>${Number(style.customerPrice || 0).toFixed(2)}</span>
-                            {style.colorCount > 0 && <span>· {style.colorCount} colors</span>}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant={isImported ? "outline" : "default"}
-                            className="gap-1.5 h-8 text-xs"
-                            disabled={importing === style.styleID}
-                            onClick={() => handleImportStyle(style.styleID)}
-                          >
-                            {importing === style.styleID ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : isImported ? (
-                              <RefreshCw className="h-3.5 w-3.5" />
-                            ) : (
-                              <Download className="h-3.5 w-3.5" />
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStyleIds.size === catalogResults.length && catalogResults.length > 0}
+                        onChange={toggleSelectAll}
+                        className="rounded border-input"
+                      />
+                      Select all ({catalogResults.length})
+                    </label>
+                    {selectedStyleIds.size > 0 && (
+                      <span className="text-sm text-muted-foreground">{selectedStyleIds.size} selected</span>
+                    )}
+                  </div>
+                  {selectedStyleIds.size > 0 && (
+                    <Button onClick={handleBulkImport} disabled={bulkImporting} className="gap-2">
+                      {bulkImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      Import {selectedStyleIds.size} Selected
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {catalogResults.map((style) => {
+                    const isImported = importedStyleIds.has(style.styleID);
+                    const isSelected = selectedStyleIds.has(style.styleID);
+                    return (
+                      <Card
+                        key={style.styleID}
+                        className={`overflow-hidden cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : ""}`}
+                        onClick={() => toggleSelect(style.styleID)}
+                      >
+                        <div className="aspect-square bg-muted relative">
+                          {style.styleImage ? (
+                            <img src={style.styleImage} alt={style.styleName} className="w-full h-full object-contain p-2" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+                            </div>
+                          )}
+                          <div className="absolute top-2 left-2 flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => { e.stopPropagation(); toggleSelect(style.styleID); }}
+                              className="rounded border-input h-4 w-4"
+                            />
+                            {isImported && (
+                              <Badge variant="secondary">Imported</Badge>
                             )}
-                            {isImported ? "Re-import" : "Import"}
-                          </Button>
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        <CardContent className="p-3 space-y-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">{style.brandName}</p>
+                            <h4 className="font-semibold text-sm truncate">{style.styleName}</h4>
+                            {style.title && <p className="text-xs text-muted-foreground truncate">{style.title}</p>}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>${Number(style.customerPrice || 0).toFixed(2)}</span>
+                              {style.colorCount > 0 && <span>· {style.colorCount} colors</span>}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={isImported ? "outline" : "default"}
+                              className="gap-1.5 h-8 text-xs"
+                              disabled={importing === style.styleID}
+                              onClick={(e) => { e.stopPropagation(); handleImportStyle(style.styleID); }}
+                            >
+                              {importing === style.styleID ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : isImported ? (
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              ) : (
+                                <Download className="h-3.5 w-3.5" />
+                              )}
+                              {isImported ? "Re-import" : "Import"}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {!browsing && hasLoadedCatalog && catalogResults.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">No products found. Try a different search term.</p>
               </div>
             )}
           </CardContent>
