@@ -842,15 +842,23 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const handleBrowse = async (query?: string, page = 1) => {
+  const handleBrowse = async (query?: string, page = 1, cat?: string) => {
     const creds = getCredentials();
     if (!creds.account_number || !creds.api_key) return;
     setBrowsing(true);
     if (page === 1) setSelectedStyleIds(new Set());
     try {
       const searchTerm = query !== undefined ? query : searchQuery;
+      const activeCat = cat !== undefined ? cat : categoryFilter;
       const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
-        body: { action: "browse", ...creds, search: searchTerm || undefined, page, per_page: 50 },
+        body: {
+          action: "browse",
+          ...creds,
+          search: searchTerm || undefined,
+          category: activeCat !== "all" ? activeCat : undefined,
+          page,
+          per_page: 50,
+        },
       });
       if (error) throw error;
       const styles = data.styles || [];
@@ -863,17 +871,6 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
       setTotalPages(data.total_pages || 1);
       setTotalResults(data.total || 0);
       setHasLoadedCatalog(true);
-      // Extract unique categories (merge with existing for appended pages)
-      if (page === 1) {
-        const cats = Array.from(new Set(styles.map((s: any) => s.baseCategory).filter(Boolean))) as string[];
-        setCategories(cats.sort());
-        setCategoryFilter("all");
-      } else {
-        setCategories((prev) => {
-          const merged = new Set([...prev, ...styles.map((s: any) => s.baseCategory).filter(Boolean)]);
-          return Array.from(merged).sort() as string[];
-        });
-      }
       if (!styles.length && searchTerm && page === 1) {
         toast({ title: "No results found", description: "Try a different search term." });
       }
@@ -882,6 +879,27 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     } finally {
       setBrowsing(false);
     }
+  };
+
+  const fetchCategories = async () => {
+    const creds = getCredentials();
+    if (!creds.account_number || !creds.api_key) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: { action: "categories", ...creds },
+      });
+      if (error) return;
+      const cats = (data.categories || [])
+        .map((c: any) => c.name || c.categoryName || c)
+        .filter(Boolean)
+        .sort();
+      setCategories(cats);
+    } catch {}
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setCategoryFilter(cat);
+    handleBrowse(searchQuery, 1, cat);
   };
 
   // Auto-load catalog when connected
