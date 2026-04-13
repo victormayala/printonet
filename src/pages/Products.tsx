@@ -1748,7 +1748,8 @@ export default function Products() {
                           )}
                         </CardContent>
                       </Card>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="rounded-lg border overflow-hidden overflow-x-auto">
