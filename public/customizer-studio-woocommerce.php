@@ -2045,7 +2045,14 @@ add_filter( 'woocommerce_get_item_data', function ( $item_data, $cart_item ) {
 			}
 			$value .= ' <a href="' . esc_attr( $preview_href ) . '" target="_blank" rel="noopener" style="margin-left:0;margin-top:6px;display:inline-block;color:#2563eb;">View full size →</a>';
 		} elseif ( ! empty( $cart_item['customizer_session_id'] ) ) {
-			$value .= '<br/><small style="color:#666;">Preview unavailable (no image URL in cart). Re-add the product after updating the plugin, or ensure your customizer posts <code>customizer_design_url</code> / <code>customizer_sides</code> as an HTTPS link or PNG data URL.</small>';
+			$cs_base = untrailingslashit( get_option( 'cs_base_url', '' ) );
+			$sid     = sanitize_text_field( $cart_item['customizer_session_id'] );
+			if ( $cs_base !== '' ) {
+				$review_url = $cs_base . '/review/' . rawurlencode( $sid ) . '?returnUrl=' . rawurlencode( home_url( $_SERVER['REQUEST_URI'] ?? '/' ) );
+				$value .= '<br/><a href="' . esc_url( $review_url ) . '" target="_blank" rel="noopener" style="margin-top:6px;display:inline-block;color:#2563eb;">View your design →</a>';
+			} else {
+				$value .= '<br/><small style="color:#666;">Preview unavailable. <a href="' . esc_url( admin_url( 'admin.php?page=customizer-studio' ) ) . '">Configure your Base URL</a> in Customizer Studio settings to enable design previews.</small>';
+			}
 		}
 		$item_data[] = [
 			'key'   => 'Design',
