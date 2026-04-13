@@ -134,6 +134,7 @@
         : ('/review/' + sid);
       var storeReturnUrl = encodeURIComponent(window.location.href);
       var reviewUrl = reviewBase + '?returnUrl=' + storeReturnUrl;
+      if (_wcProductId) reviewUrl += '&wcProductId=' + encodeURIComponent(_wcProductId);
       window.open(reviewUrl, '_blank');
       _callbacks.onComplete(data.payload);
     } else if (data.type === 'cart-updated') {
@@ -429,6 +430,10 @@
       var d = e.data;
       if (d && d.source === 'customizer-studio' && d.type === 'cart-updated') {
         _updateCartWidget(d.payload && d.payload.totalItems || 0);
+        // Sync new item to WooCommerce if applicable
+        if (d.payload && d.payload.newItem) {
+          _syncToWooCommerce(d.payload.newItem);
+        }
       }
     });
 
@@ -437,6 +442,57 @@
       var c = _getCartCount();
       _updateCartWidget(c);
     }, 2000);
+  }
+
+  // --- Sync to WooCommerce (duplicate-safe) ---
+  var SYNCED_KEY = 'customizer_synced_sessions';
+
+  function _getSyncedSessions() {
+    try {
+      var raw = localStorage.getItem(SYNCED_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) { return []; }
+  }
+
+  function _markSynced(sessionId) {
+    var synced = _getSyncedSessions();
+    if (synced.indexOf(sessionId) === -1) {
+      synced.push(sessionId);
+      localStorage.setItem(SYNCED_KEY, JSON.stringify(synced));
+    }
+  }
+
+  function _syncToWooCommerce(newItem) {
+    if (!newItem || !newItem.wcProductId || !newItem.sessionId) return;
+
+    var synced = _getSyncedSessions();
+    if (synced.indexOf(newItem.sessionId) !== -1) return; // already synced
+
+    var formData = new FormData();
+    formData.append('product_id', newItem.wcProductId);
+    formData.append('quantity', String(newItem.quantity || 1));
+    formData.append('customizer_session_id', newItem.sessionId);
+
+    fetch('/?wc-ajax=add_to_cart', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin',
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        _markSynced(newItem.sessionId);
+        if (data.error) {
+          console.log('[CustomizerStudio] WC sync: variable product, may need variation selection');
+          return;
+        }
+        // Trigger WC mini-cart refresh
+        if (typeof jQuery !== 'undefined') {
+          jQuery(document.body).trigger('added_to_cart', [data.fragments, data.cart_hash]);
+        }
+      })
+      .catch(function (err) {
+        console.error('[CustomizerStudio] WC cart sync failed:', err);
+      });
   }
 
   root.CustomizerStudio = {

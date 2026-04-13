@@ -39,6 +39,7 @@ export default function ReviewDesign() {
   const [resolvedPrice, setResolvedPrice] = useState<number>(0);
 
   const returnUrl = searchParams.get("returnUrl") || "";
+  const wcProductId = searchParams.get("wcProductId") || "";
 
   useEffect(() => {
     if (!sessionId) return;
@@ -110,6 +111,7 @@ export default function ReviewDesign() {
       quantity,
       priceInCents,
       variant: variantLabel || undefined,
+      wcProductId: wcProductId || undefined,
     });
 
     if (isEmbedded) {
