@@ -1806,7 +1806,10 @@ export default function Products() {
                             {p.is_active ? "Active" : "Inactive"}
                           </span>
                         </span>
-                        <div className="w-24 flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <div className="w-28 flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handlePushSingleProduct(p.id)} title="Push to Store">
+                            <Send className="h-3.5 w-3.5" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
