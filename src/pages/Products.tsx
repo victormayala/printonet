@@ -1678,16 +1678,11 @@ export default function Products() {
                   </Card>
                 ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {filteredAndSortedProducts.map((p) => (
+                    {filteredAndSortedProducts.map((p) => {
+                      const hasVariantImages = Array.isArray(p.variants) && p.variants.some((v: any) => v.image);
+                      return (
                       <Card key={p.id} className={`overflow-hidden group cursor-pointer transition-all ${selectedProductIds.has(p.id) ? "ring-2 ring-primary" : ""}`} onClick={() => toggleProductSelect(p.id)}>
-                        <div className="aspect-square bg-muted relative">
-                          {p.image_front ? (
-                            <img src={p.image_front} alt={p.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
-                            </div>
-                          )}
+                        <ProductCardImage product={p} hasVariantImages={hasVariantImages}>
                           <div className="absolute top-2 left-2">
                             <input
                               type="checkbox"
@@ -1713,7 +1708,7 @@ export default function Products() {
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
-                        </div>
+                        </ProductCardImage>
                         <CardContent className="p-4">
                           <h3 className="font-semibold truncate">{p.name}</h3>
                           <div className="flex items-center justify-between mt-1">
