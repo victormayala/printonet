@@ -359,6 +359,8 @@ interface ProductVariant {
   color: string;
   colorName: string;
   hex: string;
+  image?: string;
+  sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }>;
 }
 
 interface InventoryProduct {
@@ -372,6 +374,7 @@ interface InventoryProduct {
   image_side1: string | null;
   image_side2: string | null;
   print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
+  variants?: ProductVariant[];
 }
 
 interface EmbedProductData {
@@ -382,7 +385,7 @@ interface EmbedProductData {
   image_back?: string;
   image_side1?: string;
   image_side2?: string;
-  variants?: Array<{ color: string; colorName: string; hex: string }>;
+  variants?: Array<{ color: string; colorName: string; hex: string; image?: string; sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }> }>;
   print_areas?: Record<string, { x: number; y: number; width: number; height: number }>;
 }
 
@@ -654,6 +657,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       image_side1: embedProductData.image_side1 || null,
       image_side2: embedProductData.image_side2 || null,
       print_areas: embedProductData.print_areas || null,
+      variants: embedProductData.variants || [],
     };
     setInvProduct(ep);
     const views: ViewSide[] = [];
@@ -671,6 +675,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   // Get current background image URL
   function getCurrentImageUrl(): string | null {
     if (!invProduct) return null;
+    // If a variant with an image is selected and we're on the front view, use variant image
+    if (selectedVariant?.image && activeView === "front") {
+      return selectedVariant.image;
+    }
     const map: Record<ViewSide, string | null> = {
       front: invProduct.image_front,
       back: invProduct.image_back,
@@ -2458,6 +2466,33 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                     {VIEW_LABELS[view]}
                   </button>
                 ))}
+              </div>
+            </>
+          )}
+          {/* Variant color picker */}
+          {invProduct?.variants && invProduct.variants.length > 0 && (
+            <>
+              <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-sidebar-foreground/60 mr-0.5">Color:</span>
+                {invProduct.variants.slice(0, 12).map((v, i) => (
+                  <button
+                    key={i}
+                    className={`w-5 h-5 rounded-full border-2 shadow-sm transition-all hover:scale-110 ${
+                      selectedVariant?.hex === v.hex
+                        ? "border-primary ring-1 ring-primary scale-110"
+                        : "border-sidebar-border"
+                    }`}
+                    style={{ backgroundColor: v.hex || '#ccc' }}
+                    title={`${v.color || v.colorName}${v.sizes?.length ? ` (${v.sizes.length} sizes)` : ''}`}
+                    onClick={() => setSelectedVariant(
+                      selectedVariant?.hex === v.hex ? null : { color: v.color || v.colorName, colorName: v.colorName || v.color, hex: v.hex, image: v.image, sizes: v.sizes }
+                    )}
+                  />
+                ))}
+                {invProduct.variants.length > 12 && (
+                  <span className="text-[10px] text-sidebar-foreground/50">+{invProduct.variants.length - 12}</span>
+                )}
               </div>
             </>
           )}
