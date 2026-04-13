@@ -848,7 +848,10 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
       new Set(styles.map((style: any) => style.baseCategory).filter(Boolean)),
     ) as string[];
 
-    setCategories((prev) => Array.from(new Set([...prev, ...styleCategories])).sort());
+    setCategories((prev) => {
+      if (prev.length > 0) return prev;
+      return styleCategories.sort();
+    });
   };
 
   const handleBrowse = async (query?: string, page = 1, cat?: string) => {
@@ -1193,7 +1196,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                   <div className="flex justify-center pt-2">
                     <Button
                       variant="outline"
-                      onClick={() => handleBrowse(searchQuery, currentPage + 1, categoryFilter)}
+                      onClick={() => handleBrowse(appliedSearchQuery, currentPage + 1, categoryFilter)}
                       disabled={browsing}
                       className="gap-2"
                     >
