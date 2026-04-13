@@ -1342,6 +1342,10 @@ export default function Products() {
           <TabsContent value="woocommerce">
             <WooCommerceImport onDone={fetchProducts} />
           </TabsContent>
+
+          <TabsContent value="suppliers">
+            <SSActivewearImport onDone={fetchProducts} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
