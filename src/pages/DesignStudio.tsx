@@ -359,6 +359,8 @@ interface ProductVariant {
   color: string;
   colorName: string;
   hex: string;
+  image?: string;
+  sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }>;
 }
 
 interface InventoryProduct {
@@ -372,6 +374,7 @@ interface InventoryProduct {
   image_side1: string | null;
   image_side2: string | null;
   print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
+  variants?: ProductVariant[];
 }
 
 interface EmbedProductData {
