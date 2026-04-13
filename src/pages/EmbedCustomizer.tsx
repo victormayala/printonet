@@ -12,7 +12,7 @@ interface SessionProductData {
   image_back?: string;
   image_side1?: string;
   image_side2?: string;
-  variants?: Array<{ color: string; colorName: string; hex: string }>;
+  variants?: Array<{ color: string; colorName: string; hex: string; image?: string; sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }> }>;
 }
 
 export default function EmbedCustomizer() {
