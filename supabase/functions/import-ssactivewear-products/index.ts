@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
           status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
+      const styles = await res.json()
       const allStyles = Array.isArray(styles) ? styles : []
       const pageSize = per_page || 50
       const currentPage = page || 1
