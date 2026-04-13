@@ -32,6 +32,7 @@ export default function ReviewDesign() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [addedToCart, setAddedToCart] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -81,12 +82,19 @@ export default function ReviewDesign() {
     navigate(`/checkout/${sessionId}?qty=${quantity}&price=${priceInCents}`);
   };
 
+  const isEmbedded = window !== window.parent;
+
   const handleAddToCart = () => {
+    const payload = { ...designOutput, quantity, sessionId };
     // Post message for SDK consumers (WooCommerce, Shopify, etc.)
     window.parent.postMessage(
-      { source: "customizer-studio", type: "review-add-to-cart", payload: { ...designOutput, quantity } },
+      { source: "customizer-studio", type: "review-add-to-cart", payload },
       "*"
     );
+    // Dispatch a custom event for same-window listeners
+    document.dispatchEvent(new CustomEvent("customizer:addtocart", { detail: payload }));
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2500);
   };
 
   return (
@@ -168,8 +176,17 @@ export default function ReviewDesign() {
               <ShoppingCart className="h-4 w-4 mr-2" /> Checkout · ${(basePrice * quantity).toFixed(2)}
             </Button>
           ) : (
-            <Button className="flex-[2]" onClick={handleAddToCart}>
-              <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+            <Button
+              className="flex-[2]"
+              onClick={handleAddToCart}
+              disabled={addedToCart}
+              variant={addedToCart ? "outline" : "default"}
+            >
+              {addedToCart ? (
+                <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
+              ) : (
+                <><ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart</>
+              )}
             </Button>
           )}
         </div>
