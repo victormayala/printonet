@@ -877,11 +877,57 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
       if (error) throw error;
       toast({ title: `Imported! ${data.imported} new, ${data.updated} updated` });
       setImportedStyleIds((prev) => new Set(prev).add(styleID));
+      setSelectedStyleIds((prev) => { const n = new Set(prev); n.delete(styleID); return n; });
       onDone();
     } catch (err: any) {
       toast({ title: "Import failed", description: err.message, variant: "destructive" });
     } finally {
       setImporting(null);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (selectedStyleIds.size === 0) return;
+    const creds = getCredentials();
+    setBulkImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: {
+          action: "sync",
+          ...creds,
+          style_ids: Array.from(selectedStyleIds),
+          user_id: user?.id,
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Imported ${data.imported} new, ${data.updated} updated products` });
+      setImportedStyleIds((prev) => {
+        const n = new Set(prev);
+        selectedStyleIds.forEach((id) => n.add(id));
+        return n;
+      });
+      setSelectedStyleIds(new Set());
+      onDone();
+    } catch (err: any) {
+      toast({ title: "Bulk import failed", description: err.message, variant: "destructive" });
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
+  const toggleSelect = (styleID: number) => {
+    setSelectedStyleIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(styleID)) n.delete(styleID); else n.add(styleID);
+      return n;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedStyleIds.size === catalogResults.length) {
+      setSelectedStyleIds(new Set());
+    } else {
+      setSelectedStyleIds(new Set(catalogResults.map((s) => s.styleID)));
     }
   };
 
