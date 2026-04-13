@@ -1367,7 +1367,44 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   );
 }
 
-export default function Products() {
+function ProductCardImage({ product, hasVariantImages, children }: { product: Product; hasVariantImages: boolean; children: React.ReactNode }) {
+  const [activeVariantIdx, setActiveVariantIdx] = useState<number | null>(null);
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const activeImage = activeVariantIdx !== null && variants[activeVariantIdx]?.image
+    ? variants[activeVariantIdx].image
+    : product.image_front;
+
+  return (
+    <div className="aspect-square bg-muted relative">
+      {activeImage ? (
+        <img src={activeImage} alt={product.name} className="w-full h-full object-contain p-1 transition-all" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+        </div>
+      )}
+      {hasVariantImages && variants.length > 1 && (
+        <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1 flex-wrap justify-center">
+          {variants.slice(0, 10).map((v: any, i: number) => (
+            <button
+              key={i}
+              className={`w-5 h-5 rounded-full border-2 shadow-sm shrink-0 transition-all ${activeVariantIdx === i ? "border-primary scale-110" : "border-background/80"}`}
+              style={{ backgroundColor: v.hex || '#ccc' }}
+              title={v.color}
+              onClick={(e) => { e.stopPropagation(); setActiveVariantIdx(activeVariantIdx === i ? null : i); }}
+            />
+          ))}
+          {variants.length > 10 && (
+            <span className="text-[10px] text-muted-foreground bg-background/80 px-1 rounded">+{variants.length - 10}</span>
+          )}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
