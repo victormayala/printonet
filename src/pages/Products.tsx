@@ -730,6 +730,344 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
   );
 }
 
+function SSActivewearImport({ onDone }: { onDone: () => void }) {
+  const { user } = useAuth();
+  const [accountNumber, setAccountNumber] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [integration, setIntegration] = useState<any>(null);
+  const [loadingIntegration, setLoadingIntegration] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  // Catalog browser state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [catalogResults, setCatalogResults] = useState<any[]>([]);
+  const [browsing, setBrowsing] = useState(false);
+  const [importing, setImporting] = useState<number | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [importedStyleIds, setImportedStyleIds] = useState<Set<number>>(new Set());
+
+  const fetchIntegration = async () => {
+    if (!user) return;
+    setLoadingIntegration(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("platform", "ssactivewear")
+      .maybeSingle();
+    setIntegration(data);
+    if (data) {
+      setAccountNumber((data.credentials as any)?.account_number || "");
+      setApiKey((data.credentials as any)?.api_key || "");
+    }
+    setLoadingIntegration(false);
+  };
+
+  const fetchImportedStyleIds = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("inventory_products")
+      .select("supplier_source")
+      .eq("user_id", user.id)
+      .not("supplier_source", "is", null);
+    if (data) {
+      const ids = new Set<number>();
+      data.forEach((p: any) => {
+        if (p.supplier_source?.provider === "ssactivewear" && p.supplier_source?.style_id) {
+          ids.add(Number(p.supplier_source.style_id));
+        }
+      });
+      setImportedStyleIds(ids);
+    }
+  };
+
+  useEffect(() => {
+    fetchIntegration();
+    fetchImportedStyleIds();
+  }, [user]);
+
+  const getCredentials = () => {
+    if (integration) {
+      const creds = integration.credentials as any;
+      return { account_number: creds.account_number, api_key: creds.api_key };
+    }
+    return { account_number: accountNumber.trim(), api_key: apiKey.trim() };
+  };
+
+  const handleConnect = async () => {
+    if (!accountNumber.trim() || !apiKey.trim()) {
+      toast({ title: "Enter both Account Number and API Key", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      // Test credentials by browsing
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: {
+          action: "browse",
+          account_number: accountNumber.trim(),
+          api_key: apiKey.trim(),
+          search: "t-shirt",
+        },
+      });
+      if (error) throw error;
+
+      // Save credentials
+      const payload = {
+        user_id: user?.id,
+        platform: "ssactivewear" as const,
+        store_url: "api.ssactivewear.com",
+        credentials: { account_number: accountNumber.trim(), api_key: apiKey.trim() },
+      };
+      if (integration) {
+        await supabase.from("store_integrations").update(payload).eq("id", integration.id);
+      } else {
+        await supabase.from("store_integrations").insert(payload);
+      }
+      toast({ title: "S&S Activewear connected successfully!" });
+      await fetchIntegration();
+    } catch (err: any) {
+      toast({ title: "Connection failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBrowse = async () => {
+    const creds = getCredentials();
+    if (!creds.account_number || !creds.api_key) return;
+    setBrowsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: { action: "browse", ...creds, search: searchQuery || undefined },
+      });
+      if (error) throw error;
+      setCatalogResults(data.styles || []);
+      if (!data.styles?.length) {
+        toast({ title: "No results found", description: "Try a different search term." });
+      }
+    } catch (err: any) {
+      toast({ title: "Browse failed", description: err.message, variant: "destructive" });
+    } finally {
+      setBrowsing(false);
+    }
+  };
+
+  const handleImportStyle = async (styleID: number) => {
+    const creds = getCredentials();
+    setImporting(styleID);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: { action: "import", ...creds, style_id: styleID, user_id: user?.id },
+      });
+      if (error) throw error;
+      toast({ title: `Imported! ${data.imported} new, ${data.updated} updated` });
+      setImportedStyleIds((prev) => new Set(prev).add(styleID));
+      onDone();
+    } catch (err: any) {
+      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+    } finally {
+      setImporting(null);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    const creds = getCredentials();
+    if (importedStyleIds.size === 0) {
+      toast({ title: "No supplier products to sync" });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: {
+          action: "sync",
+          ...creds,
+          style_ids: Array.from(importedStyleIds),
+          user_id: user?.id,
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Synced! ${data.imported} new, ${data.updated} updated` });
+      await fetchIntegration();
+      // Update last_synced_at
+      if (integration) {
+        await supabase.from("store_integrations").update({ last_synced_at: new Date().toISOString() }).eq("id", integration.id);
+      }
+      onDone();
+    } catch (err: any) {
+      toast({ title: "Sync failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!integration) return;
+    setDisconnecting(true);
+    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    setIntegration(null);
+    setAccountNumber("");
+    setApiKey("");
+    setCatalogResults([]);
+    setDisconnecting(false);
+    toast({ title: "S&S Activewear disconnected" });
+  };
+
+  if (loadingIntegration) {
+    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (integration) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Truck className="h-5 w-5" /> S&S Activewear Connected
+            </CardTitle>
+            <CardDescription>
+              Account: <strong>{(integration.credentials as any)?.account_number}</strong>
+              {integration.last_synced_at && (
+                <> · Last synced {new Date(integration.last_synced_at).toLocaleDateString()} at {new Date(integration.last_synced_at).toLocaleTimeString()}</>
+              )}
+              {importedStyleIds.size > 0 && (
+                <> · <strong>{importedStyleIds.size}</strong> products imported</>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3 flex-wrap">
+            <Button onClick={handleSyncAll} disabled={syncing || importedStyleIds.size === 0} className="gap-2">
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync All Prices
+            </Button>
+            <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="gap-2 text-destructive hover:text-destructive">
+              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
+              Disconnect
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Catalog Browser */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Browse S&S Catalog</CardTitle>
+            <CardDescription>Search and import blank products from S&S Activewear</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search styles (e.g. 't-shirt', 'hoodie', 'Gildan 2000')"
+                onKeyDown={(e) => e.key === "Enter" && handleBrowse()}
+              />
+              <Button onClick={handleBrowse} disabled={browsing} className="gap-2 shrink-0">
+                {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                Search
+              </Button>
+            </div>
+
+            {catalogResults.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {catalogResults.map((style) => {
+                  const isImported = importedStyleIds.has(style.styleID);
+                  return (
+                    <Card key={style.styleID} className="overflow-hidden">
+                      <div className="aspect-square bg-muted relative">
+                        {style.styleImage ? (
+                          <img src={style.styleImage} alt={style.styleName} className="w-full h-full object-contain p-2" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        {isImported && (
+                          <Badge className="absolute top-2 left-2 bg-emerald-500/90">Imported</Badge>
+                        )}
+                      </div>
+                      <CardContent className="p-3 space-y-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{style.brandName}</p>
+                          <h4 className="font-semibold text-sm truncate">{style.styleName}</h4>
+                          {style.title && <p className="text-xs text-muted-foreground truncate">{style.title}</p>}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>${Number(style.customerPrice || 0).toFixed(2)}</span>
+                            {style.colorCount > 0 && <span>· {style.colorCount} colors</span>}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={isImported ? "outline" : "default"}
+                            className="gap-1.5 h-8 text-xs"
+                            disabled={importing === style.styleID}
+                            onClick={() => handleImportStyle(style.styleID)}
+                          >
+                            {importing === style.styleID ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : isImported ? (
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            ) : (
+                              <Download className="h-3.5 w-3.5" />
+                            )}
+                            {isImported ? "Re-import" : "Import"}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-dashed">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">How to get your S&S Activewear credentials</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Log in to your <strong className="text-foreground">S&S Activewear</strong> account at <code className="text-xs bg-muted px-1.5 py-0.5 rounded">ssactivewear.com</code></li>
+            <li>Go to <strong className="text-foreground">My Account → API Access</strong></li>
+            <li>Your <strong className="text-foreground">Account Number</strong> is shown at the top of your account page</li>
+            <li>Generate or copy your <strong className="text-foreground">API Key</strong> from the API Access section</li>
+          </ol>
+          <p className="text-xs text-muted-foreground/70">Need an account? Visit <a href="https://www.ssactivewear.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ssactivewear.com</a> to register as a distributor.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Truck className="h-5 w-5" /> Connect S&S Activewear</CardTitle>
+          <CardDescription>Enter your S&S Activewear account number and API key to browse and import products.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Account Number</Label>
+            <Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="Your S&S account number" />
+          </div>
+          <div className="space-y-2">
+            <Label>API Key</Label>
+            <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type="password" placeholder="Your API key" />
+          </div>
+          <Button onClick={handleConnect} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+            Connect
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Products() {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
