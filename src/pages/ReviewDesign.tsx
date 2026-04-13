@@ -81,12 +81,21 @@ export default function ReviewDesign() {
     navigate(`/checkout/${sessionId}?qty=${quantity}&price=${priceInCents}`);
   };
 
+  const [addedToCart, setAddedToCart] = useState(false);
+
+  const isEmbedded = window !== window.parent;
+
   const handleAddToCart = () => {
+    const payload = { ...designOutput, quantity, sessionId };
     // Post message for SDK consumers (WooCommerce, Shopify, etc.)
     window.parent.postMessage(
-      { source: "customizer-studio", type: "review-add-to-cart", payload: { ...designOutput, quantity } },
+      { source: "customizer-studio", type: "review-add-to-cart", payload },
       "*"
     );
+    // Dispatch a custom event for same-window listeners
+    document.dispatchEvent(new CustomEvent("customizer:addtocart", { detail: payload }));
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2500);
   };
 
   return (
