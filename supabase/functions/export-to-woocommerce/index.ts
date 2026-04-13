@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
         const supplierSource = product.supplier_source || {};
         const existingWcId = supplierSource?.external_ids?.woocommerce;
 
+        // Main product images (front, back, sides)
         const images: { src: string }[] = [];
         if (product.image_front) images.push({ src: product.image_front });
         if (product.image_back) images.push({ src: product.image_back });
@@ -58,6 +59,15 @@ Deno.serve(async (req) => {
 
         const variants = Array.isArray(product.variants) ? product.variants : [];
         const hasVariants = variants.length > 0;
+
+        // Add variant color images to the product-level images gallery
+        // WooCommerce variations reference images by ID from the parent product's gallery
+        for (const variant of variants) {
+          const varImg = variant.image || variant.colorFrontImage;
+          if (varImg && !images.some((img) => img.src === varImg)) {
+            images.push({ src: varImg });
+          }
+        }
 
         // Build attributes from variants
         const colorNames = [...new Set(variants.map((v: any) => v.color || v.colorName).filter(Boolean))];
@@ -82,6 +92,7 @@ Deno.serve(async (req) => {
         };
 
         let wcProductId: number;
+        let wcProductImages: { id: number; src: string }[] = [];
 
         if (existingWcId) {
           // Update existing
@@ -94,7 +105,9 @@ Deno.serve(async (req) => {
             const errText = await res.text();
             throw new Error(`Update failed (${res.status}): ${errText}`);
           }
+          const wcData = await res.json();
           wcProductId = existingWcId;
+          wcProductImages = wcData.images || [];
           updated++;
         } else {
           // Create new
@@ -109,14 +122,36 @@ Deno.serve(async (req) => {
           }
           const wcData = await res.json();
           wcProductId = wcData.id;
+          wcProductImages = wcData.images || [];
           created++;
+        }
+
+        // Build a map of image URL → WC image ID for variation image assignment
+        const imageUrlToId: Record<string, number> = {};
+        for (const img of wcProductImages) {
+          if (img.src && img.id) {
+            // WC may modify the URL (add host, resize suffix), so match by the last path segment
+            const srcKey = img.src.split("/").pop()?.split("?")[0] || img.src;
+            imageUrlToId[srcKey] = img.id;
+            // Also store the full src for exact matching
+            imageUrlToId[img.src] = img.id;
+          }
+        }
+
+        // Helper to find the WC image ID for a variant image URL
+        function findImageId(url: string): number | undefined {
+          if (imageUrlToId[url]) return imageUrlToId[url];
+          const key = url.split("/").pop()?.split("?")[0] || url;
+          return imageUrlToId[key];
         }
 
         // Create variations for variable products
         if (hasVariants && attributes.length > 0 && !existingWcId) {
           for (const variant of variants) {
             const colorName = variant.color || variant.colorName || "";
+            const variantImg = variant.image || variant.colorFrontImage;
             const sizes = variant.sizes || [];
+
             for (const size of sizes) {
               const variation: any = {
                 regular_price: String(size.price || product.base_price),
@@ -124,6 +159,17 @@ Deno.serve(async (req) => {
               };
               if (colorName) variation.attributes.push({ name: "Color", option: colorName });
               if (size.size) variation.attributes.push({ name: "Size", option: size.size });
+
+              // Attach color-specific image to the variation
+              if (variantImg) {
+                const wcImgId = findImageId(variantImg);
+                if (wcImgId) {
+                  variation.image = { id: wcImgId };
+                } else {
+                  // Fallback: provide the image src directly
+                  variation.image = { src: variantImg };
+                }
+              }
 
               await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations`, {
                 method: "POST",
