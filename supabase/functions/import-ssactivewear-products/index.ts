@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { action, account_number, api_key, search, category, style_id, user_id } = body
+    const { action, account_number, api_key, search, category, style_id, user_id, page, per_page } = body
 
     if (!account_number || !api_key) {
       return new Response(JSON.stringify({ error: 'account_number and api_key are required' }), {
@@ -62,10 +62,15 @@ Deno.serve(async (req) => {
           status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      const styles = await res.json()
+      const allStyles = Array.isArray(styles) ? styles : []
+      const pageSize = per_page || 50
+      const currentPage = page || 1
+      const totalCount = allStyles.length
+      const totalPages = Math.ceil(totalCount / pageSize)
+      const startIdx = (currentPage - 1) * pageSize
+      const paged = allStyles.slice(startIdx, startIdx + pageSize)
 
-      // Map to simplified catalog items (limit to 50 for browsing)
-      const items = (Array.isArray(styles) ? styles : []).slice(0, 50).map((s: any) => ({
+      const items = paged.map((s: any) => ({
         styleID: s.styleID,
         styleName: s.styleName,
         brandName: s.brandName,
@@ -76,7 +81,7 @@ Deno.serve(async (req) => {
         colorCount: s.colorCount || 0,
       }))
 
-      return new Response(JSON.stringify({ styles: items }), {
+      return new Response(JSON.stringify({ styles: items, page: currentPage, per_page: pageSize, total: totalCount, total_pages: totalPages }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
