@@ -2028,6 +2028,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         return publicUrl;
       };
 
+      const FIXED_RENDER_SIZE = 1200;
+
       const generateCompositePreview = async (
         productImg: HTMLImageElement | null,
         fullCanvasDataUrl: string,
@@ -2040,9 +2042,9 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         try {
           const canvasImg = await loadImageForComposite(fullCanvasDataUrl);
 
-          // Use 2x the canvas dimensions for crisp output
-          const outW = canvasWidth * 2;
-          const outH = canvasHeight * 2;
+          // Always render at a fixed size so the output is identical regardless of viewport
+          const outW = FIXED_RENDER_SIZE;
+          const outH = FIXED_RENDER_SIZE;
 
           const previewCanvas = document.createElement("canvas");
           previewCanvas.width = outW;
@@ -2052,7 +2054,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
           ctx.clearRect(0, 0, outW, outH);
 
-          // Draw product image with object-contain — exactly as CSS does it
+          // Draw product image with object-contain
           const natW = productImg.naturalWidth || productImg.width;
           const natH = productImg.naturalHeight || productImg.height;
           const scale = Math.min(outW / natW, outH / natH);
@@ -2062,8 +2064,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           const prodY = (outH - prodH) / 2;
           ctx.drawImage(productImg, prodX, prodY, prodW, prodH);
 
-          // Draw the full fabric canvas on top at the same output size
-          // This works because both share the same coordinate space in the DOM
+          // Draw design overlay scaled to the same fixed size
           ctx.drawImage(canvasImg, 0, 0, outW, outH);
 
           return previewCanvas.toDataURL("image/png");
@@ -2185,10 +2186,19 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           console.warn("Session completion API call failed:", sessionErr);
         }
 
+        // Post message for SDK consumers
         window.parent.postMessage(
           { source: "customizer-studio", type: "design-complete", payload: result },
           "*"
         );
+
+        // If we're the top window (not in iframe), navigate directly to review
+        if (window === window.parent) {
+          navigate(`/review/${sessionId}`);
+        }
+      } else if (sessionId) {
+        // Non-embed mode with session — navigate to review
+        navigate(`/review/${sessionId}`);
       }
 
       setExportComplete(true);

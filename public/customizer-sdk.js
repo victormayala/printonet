@@ -127,7 +127,19 @@
 
     if (data.type === 'design-complete') {
       _closeIframe();
-      _showSummary(data.payload);
+      // Redirect the iframe (or open) the hosted review page
+      var reviewUrl = _config.baseUrl
+        ? (_config.baseUrl + '/review/' + (data.payload && data.payload.sessionId))
+        : ('/review/' + (data.payload && data.payload.sessionId));
+      window.open(reviewUrl, '_blank');
+      _callbacks.onComplete(data.payload);
+    } else if (data.type === 'review-add-to-cart') {
+      // Fired from the hosted review page
+      _addToCart(data.payload, function (success) {
+        var evt = new CustomEvent('customizer:addtocart', { detail: data.payload });
+        document.dispatchEvent(evt);
+        _callbacks.onComplete(data.payload);
+      });
     } else if (data.type === 'design-cancel') {
       _callbacks.onCancel();
       _closeIframe();
