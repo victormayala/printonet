@@ -127,12 +127,18 @@
 
     if (data.type === 'design-complete') {
       _closeIframe();
-      // Redirect the iframe (or open) the hosted review page
-      var reviewUrl = _config.baseUrl
-        ? (_config.baseUrl + '/review/' + (data.payload && data.payload.sessionId))
-        : ('/review/' + (data.payload && data.payload.sessionId));
+      // Redirect the iframe (or open) the hosted review page with returnUrl
+      var sid = data.payload && data.payload.sessionId;
+      var reviewBase = _config.baseUrl
+        ? (_config.baseUrl + '/review/' + sid)
+        : ('/review/' + sid);
+      var storeReturnUrl = encodeURIComponent(window.location.href);
+      var reviewUrl = reviewBase + '?returnUrl=' + storeReturnUrl;
       window.open(reviewUrl, '_blank');
       _callbacks.onComplete(data.payload);
+    } else if (data.type === 'cart-updated') {
+      // Update floating cart widget count
+      _updateCartWidget(data.payload && data.payload.totalItems || 0);
     } else if (data.type === 'review-add-to-cart') {
       // Fired from the hosted review page
       _addToCart(data.payload, function (success) {
