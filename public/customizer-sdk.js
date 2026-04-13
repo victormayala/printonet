@@ -474,6 +474,11 @@
     formData.append('product_id', newItem.wcProductId);
     formData.append('quantity', String(newItem.quantity || 1));
     formData.append('customizer_session_id', newItem.sessionId);
+    if (newItem.previewImage) {
+      formData.append('customizer_design_url', newItem.previewImage);
+      // Also send as sides array so the plugin picks it up
+      formData.append('customizer_sides', JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]));
+    }
 
     fetch('/?wc-ajax=add_to_cart', {
       method: 'POST',
