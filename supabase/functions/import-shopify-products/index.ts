@@ -40,12 +40,25 @@ Deno.serve(async (req) => {
 
     const { products } = await shopifyRes.json();
 
-    // On sync, delete ALL existing products for this user first, then re-import
+    // On sync, only delete Shopify-sourced products (not all user products)
     if (is_sync && user_id) {
-      await supabase
+      const { data: existing } = await supabase
         .from("inventory_products")
-        .delete()
+        .select("id, supplier_source")
         .eq("user_id", user_id);
+      
+      if (existing) {
+        const shopifyProductIds = existing
+          .filter((p: any) => p.supplier_source?.provider === "shopify")
+          .map((p: any) => p.id);
+        
+        if (shopifyProductIds.length > 0) {
+          await supabase
+            .from("inventory_products")
+            .delete()
+            .in("id", shopifyProductIds);
+        }
+      }
     }
 
     let importedCount = 0;
@@ -70,6 +83,11 @@ Deno.serve(async (req) => {
         variants,
         is_active: product.status === "active",
         user_id: user_id || null,
+        supplier_source: {
+          provider: "shopify",
+          shopify_product_id: String(product.id),
+          external_ids: { shopify: String(product.id) },
+        },
       };
 
       const { error } = await supabase.from("inventory_products").insert(row);
