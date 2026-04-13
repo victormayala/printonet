@@ -1,65 +1,69 @@
 
 
-## Plan: Keep Hosted Cart, Sync to Store's Native Cart
+## Plan: S&S Activewear Supplier Integration
 
-### Problem
-The customizer maintains its own cart (localStorage-based, hosted checkout via Stripe), while the store (e.g. WooCommerce) has its own cart. When a customer adds a customized product, it only appears in the customizer's cart -- the store's cart count and contents stay unchanged, causing confusion.
+### What this adds
+A new "Suppliers" integration in the Products page that lets store owners connect their S&S Activewear account and browse/import blank products directly into their inventory, with periodic pricing and stock sync.
 
-### Approach
+### How it works
 
-Sync customized items into the store's native cart automatically while keeping the hosted cart as the source of truth for design data and checkout.
+1. **Store S&S credentials** — The user enters their S&S Account Number and API Key. These are saved to the existing `store_integrations` table with `platform = 'ssactivewear'`.
 
-**1. Auto-add to WooCommerce cart on "Add to Cart"**
+2. **Edge function: `import-ssactivewear-products`** — A new backend function that:
+   - Authenticates with the S&S REST API (Basic Auth: Account Number + API Key)
+   - Fetches styles via `GET /v2/styles/` (with optional category/search filter)
+   - For each style, fetches products via `GET /v2/products/?style={styleID}` to get color variants, images, and pricing
+   - Maps the data to `inventory_products` rows:
+     - `name` = brandName + styleName + title (e.g. "Gildan 2000 — Ultra Cotton T-Shirt")
+     - `category` = baseCategory
+     - `description` = style description
+     - `base_price` = customerPrice (or piecePrice)
+     - `image_front/back/side1/side2` = colorFrontImage, colorBackImage, colorSideImage (prefixed with `https://www.ssactivewear.com/`)
+     - `variants` = array of `{ color, colorName, hex, size, sku, price, qty }` grouped by color
+   - Upserts into `inventory_products` keyed on a supplier reference stored in the product's metadata
 
-When the Review page fires `review-add-to-cart` via postMessage, the SDK already calls `_addToCart()` which posts to `/?wc-ajax=add_to_cart`. This works for simple products. The issue is that when using the hosted review page (opened in a new tab), the postMessage doesn't reach the store page.
+3. **Browsing UI** — A new tab/dialog on the Products page:
+   - "Suppliers" tab alongside the existing product list
+   - Connect form for S&S credentials (Account Number + API Key)
+   - Once connected, show a searchable catalog browser fetching styles from S&S via the edge function
+   - Each style shows brand, name, image, available colors count, and base price
+   - "Import" button per style imports it as an inventory product
+   - "Sync All" button re-imports all previously imported supplier products to refresh pricing/stock
 
-Fix: After adding to the hosted cart, also call back to the store's WooCommerce REST endpoint to add the item to the WC cart. The SDK will do this from the store's origin page when it receives the `cart-updated` message.
+4. **Pricing sync** — A `sync-supplier-products` edge function that can be called manually (or later via cron) to update pricing and inventory quantities for all S&S-sourced products.
 
-**2. SDK listens for cart changes and syncs to WooCommerce**
+### Files to create/change
 
-- When the SDK's floating cart widget receives a `cart-updated` message (from the review/cart page opened in a new tab via `window.opener.postMessage`), it will also trigger WooCommerce add-to-cart for any new items.
-- Store the last-synced session IDs in localStorage to avoid duplicate adds.
-
-**3. Pass WC product ID through the flow**
-
-- The loader already knows the `data-wc-product-id`. Pass it through to the review page as a query param so the hosted cart item knows which WC product to sync.
-- Store `wcProductId` in the CartItem so the SDK can use it when syncing back.
-
-**4. Update the floating cart widget**
-
-- Instead of showing its own count, the widget will show the combined count (or just link to the store's cart page if WC is detected).
-- Add a `cartUrl` config option so store owners can point the widget to their native cart page instead of the hosted one.
-
-### Files to change
-
-| File | Change |
+| File | Action |
 |------|--------|
-| `public/customizer-sdk.js` | On `cart-updated` message from opener, call `_addToCart()` with the WC product ID to sync to WooCommerce. Track synced sessions to avoid duplicates. Add `cartUrl` config for widget link target. |
-| `public/customizer-loader.js` | Pass `wcProductId` as query param when opening review page. Add `data-cart-url` attribute support. |
-| `src/pages/ReviewDesign.tsx` | Read `wcProductId` from query params, include it in the cart item and in the `review-add-to-cart` postMessage payload. |
-| `src/hooks/useCart.ts` | Add `wcProductId` to CartItem interface. Include it in broadcast messages so the SDK can sync. |
-| `public/customizer-studio-woocommerce.php` | Pass WC product ID through to the customizer session flow so it's available on the review page. |
+| `supabase/functions/import-ssactivewear-products/index.ts` | **Create** — Edge function to browse styles and import products from S&S API |
+| `src/pages/Products.tsx` | **Edit** — Add "Suppliers" tab with S&S connection form and catalog browser UI |
+| Database migration | **Create** — Add `supplier_source` jsonb column to `inventory_products` to track origin (supplier, style ID, last synced) |
 
-### How syncing works (sequence)
+### S&S API mapping
 
 ```text
-Customer clicks "Add to Cart" on Review page (new tab)
-  ├─ Item saved to localStorage (customizer_cart)
-  ├─ postMessage({ type: "cart-updated", payload: { totalItems, newItem: { wcProductId, sessionId } } })
-  │     sent to window.opener (store page)
-  └─ Navigate to /cart
-
-Store page (SDK running):
-  ├─ Receives "cart-updated" message
-  ├─ Checks if sessionId already synced (localStorage: customizer_synced_sessions)
-  ├─ If not synced & wcProductId exists:
-  │     POST /?wc-ajax=add_to_cart with product_id + customizer metadata
-  │     jQuery(document.body).trigger('added_to_cart') to update WC mini-cart
-  └─ Updates floating widget count
+S&S Style  →  inventory_products row
+─────────────────────────────────────
+brandName + styleName  →  name
+baseCategory           →  category
+title + description    →  description
+styleImage             →  image_front (default)
+colorFrontImage        →  image_front (per variant)
+colorBackImage         →  image_back
+colorSideImage         →  image_side1
+customerPrice          →  base_price
+color variants         →  variants[] (color, hex, sizes, SKUs)
 ```
 
-### Edge cases handled
-- **No WC product ID**: Items without a `wcProductId` (non-WooCommerce stores) skip the sync -- hosted cart/checkout works standalone.
-- **Duplicate prevention**: Synced session IDs are tracked in localStorage so refreshing the store page doesn't re-add items.
-- **Variable products**: If WC returns an error (variable product needs variation), redirect to product page with session param (existing behavior).
+### Security
+- S&S credentials are stored encrypted in `store_integrations` (existing RLS: user can only access their own)
+- The edge function validates the JWT and only fetches credentials for the authenticated user
+- API calls to S&S happen server-side only — credentials never reach the browser
+
+### Technical details
+- S&S API uses Basic Auth: `Authorization: Basic base64(accountNumber:apiKey)`
+- Images use the pattern `https://www.ssactivewear.com/{imagePath}`; replace `_fm` with `_fl` for large images
+- Products endpoint returns SKU-level data (one row per size/color combo); the edge function groups these by color to create variant arrays
+- The `supplier_source` column enables filtering supplier-imported vs manually-added products and powers the sync feature
 
