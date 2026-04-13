@@ -82,15 +82,27 @@ Deno.serve(async (req) => {
         if (colorNames.length > 0) options.push({ name: "Color", values: colorNames });
         if (allSizes.length > 0) options.push({ name: "Size", values: allSizes });
 
+        // Build color hex map for metafields
+        const colorHexMap: Record<string, string> = {};
+        for (const v of variants) {
+          const cName = v.color || v.colorName || "";
+          const hex = v.hexColor || v.hex || v.colorHex || "";
+          if (cName && hex) colorHexMap[cName] = hex;
+        }
+
         // Build flat variant list for Shopify
         const shopifyVariants: any[] = [];
         if (variants.length > 0 && options.length > 0) {
           for (const variant of variants) {
             const colorName = variant.color || variant.colorName || "";
+            const hexColor = variant.hexColor || variant.hex || variant.colorHex || "";
             const sizes = variant.sizes || [];
             if (sizes.length > 0) {
               for (const size of sizes) {
-                const sv: any = { price: String(size.price || product.base_price) };
+                const sv: any = {
+                  price: String(size.price || product.base_price),
+                  sku: size.sku || undefined,
+                };
                 if (colorNames.length > 0) sv.option1 = colorName;
                 if (allSizes.length > 0) sv.option2 = size.size;
                 shopifyVariants.push(sv);
@@ -107,6 +119,17 @@ Deno.serve(async (req) => {
           shopifyVariants.push({ price: String(product.base_price) });
         }
 
+        // Build metafields for color swatches
+        const metafields: any[] = [];
+        if (Object.keys(colorHexMap).length > 0) {
+          metafields.push({
+            namespace: "customizer_studio",
+            key: "color_hex_map",
+            value: JSON.stringify(colorHexMap),
+            type: "json",
+          });
+        }
+
         const shopifyProduct: any = {
           product: {
             title: product.name,
@@ -115,6 +138,7 @@ Deno.serve(async (req) => {
             images,
             options: options.length > 0 ? options : undefined,
             variants: shopifyVariants,
+            metafields: metafields.length > 0 ? metafields : undefined,
           },
         };
 

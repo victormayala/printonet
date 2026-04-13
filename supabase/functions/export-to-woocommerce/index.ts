@@ -73,12 +73,30 @@ Deno.serve(async (req) => {
         const colorNames = [...new Set(variants.map((v: any) => v.color || v.colorName).filter(Boolean))];
         const allSizes = [...new Set(variants.flatMap((v: any) => (v.sizes || []).map((s: any) => s.size)).filter(Boolean))];
 
+        // Build a color-to-hex map for the product-level default_attributes metadata
+        const colorHexMap: Record<string, string> = {};
+        for (const v of variants) {
+          const cName = v.color || v.colorName || "";
+          const hex = v.hexColor || v.hex || v.colorHex || "";
+          if (cName && hex) colorHexMap[cName] = hex;
+        }
+
         const attributes: any[] = [];
         if (colorNames.length > 0) {
           attributes.push({ name: "Color", visible: true, variation: true, options: colorNames });
         }
         if (allSizes.length > 0) {
           attributes.push({ name: "Size", visible: true, variation: true, options: allSizes });
+        }
+
+        // Store color hex map as product-level metadata for swatch plugins
+        const productMeta: any[] = [];
+        if (Object.keys(colorHexMap).length > 0) {
+          productMeta.push({ key: "_color_hex_map", value: JSON.stringify(colorHexMap) });
+          // Common swatch plugin format: individual entries per color
+          for (const [name, hex] of Object.entries(colorHexMap)) {
+            productMeta.push({ key: `_color_${name.toLowerCase().replace(/\s+/g, '_')}`, value: hex });
+          }
         }
 
         const wcProduct: any = {
@@ -89,6 +107,7 @@ Deno.serve(async (req) => {
           images,
           categories: [{ name: product.category }],
           attributes,
+          meta_data: productMeta.length > 0 ? productMeta : undefined,
         };
 
         let wcProductId: number;
@@ -156,9 +175,20 @@ Deno.serve(async (req) => {
               const variation: any = {
                 regular_price: String(size.price || product.base_price),
                 attributes: [],
+                meta_data: [],
               };
               if (colorName) variation.attributes.push({ name: "Color", option: colorName });
               if (size.size) variation.attributes.push({ name: "Size", option: size.size });
+
+              // Push hex color code as metadata for color swatch plugins
+              const hexColor = variant.hexColor || variant.hex || variant.colorHex || "";
+              if (hexColor) {
+                variation.meta_data.push(
+                  { key: "_color_hex", value: hexColor },
+                  { key: "attribute_pa_color", value: hexColor },
+                  { key: "_variation_color", value: hexColor }
+                );
+              }
 
               // Attach color-specific image to the variation
               if (variantImg) {
@@ -166,9 +196,13 @@ Deno.serve(async (req) => {
                 if (wcImgId) {
                   variation.image = { id: wcImgId };
                 } else {
-                  // Fallback: provide the image src directly
                   variation.image = { src: variantImg };
                 }
+              }
+
+              // Add SKU from size data if available
+              if (size.sku) {
+                variation.sku = size.sku;
               }
 
               await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations`, {
