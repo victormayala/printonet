@@ -35,6 +35,7 @@ function broadcastCartCount(items: CartItem[]) {
     sessionId: _lastAddedItem.sessionId,
     wcProductId: _lastAddedItem.wcProductId || null,
     quantity: _lastAddedItem.quantity,
+    previewImage: _lastAddedItem.previewImage || null,
   } : null;
   _lastAddedItem = null;
   const message = {
