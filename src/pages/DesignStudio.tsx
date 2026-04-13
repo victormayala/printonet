@@ -2186,10 +2186,19 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           console.warn("Session completion API call failed:", sessionErr);
         }
 
+        // Post message for SDK consumers
         window.parent.postMessage(
           { source: "customizer-studio", type: "design-complete", payload: result },
           "*"
         );
+
+        // If we're the top window (not in iframe), navigate directly to review
+        if (window === window.parent) {
+          navigate(`/review/${sessionId}`);
+        }
+      } else if (sessionId) {
+        // Non-embed mode with session — navigate to review
+        navigate(`/review/${sessionId}`);
       }
 
       setExportComplete(true);
