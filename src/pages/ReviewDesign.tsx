@@ -82,8 +82,6 @@ export default function ReviewDesign() {
     navigate(`/checkout/${sessionId}?qty=${quantity}&price=${priceInCents}`);
   };
 
-  const [addedToCart, setAddedToCart] = useState(false);
-
   const isEmbedded = window !== window.parent;
 
   const handleAddToCart = () => {
