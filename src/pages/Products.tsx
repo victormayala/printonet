@@ -751,6 +751,9 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   const [hasLoadedCatalog, setHasLoadedCatalog] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [categories, setCategories] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
 
   const fetchIntegration = async () => {
     if (!user) return;
