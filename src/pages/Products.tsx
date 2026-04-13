@@ -1394,6 +1394,28 @@ export default function Products() {
     });
   };
 
+  const handlePushSingleProduct = async (productId: string) => {
+    setSelectedProductIds(new Set([productId]));
+    setPushResults(null);
+    setPushDialogOpen(true);
+    setLoadingIntegrations(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user?.id || "")
+      .in("platform", ["shopify", "woocommerce"]);
+    setIntegrations(data || []);
+    setLoadingIntegrations(false);
+  };
+
+  const getPushedPlatforms = (product: Product): string[] => {
+    const platforms: string[] = [];
+    const src = (product as any).supplier_source;
+    if (src?.external_ids?.woocommerce) platforms.push("WooCommerce");
+    if (src?.external_ids?.shopify) platforms.push("Shopify");
+    return platforms;
+  };
+
   const toggleSelectAllProducts = () => {
     if (selectedProductIds.size === filteredAndSortedProducts.length) {
       setSelectedProductIds(new Set());
