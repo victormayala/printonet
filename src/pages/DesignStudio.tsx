@@ -1977,34 +1977,47 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         side2: invProduct?.image_side2 || null,
       };
 
-      const loadImageForComposite = async (src: string) => {
-        let resolvedSrc = src;
-        let objectUrl: string | null = null;
+      const loadImageForComposite = async (src: string): Promise<HTMLImageElement> => {
+        const loadFromUrl = (url: string, useCors: boolean) =>
+          new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            if (useCors) img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error("img load failed"));
+            img.src = url;
+          });
 
-        if (src && !src.startsWith("data:")) {
-          try {
-            const response = await fetch(src);
+        // Data URLs load directly
+        if (src.startsWith("data:")) return loadFromUrl(src, false);
+
+        // Strategy 1: fetch as blob (avoids CORS taint)
+        try {
+          const response = await fetch(src);
+          if (response.ok) {
             const blob = await response.blob();
-            objectUrl = URL.createObjectURL(blob);
-            resolvedSrc = objectUrl;
-          } catch (err) {
-            console.warn("Falling back to direct image load for composite:", err);
+            const objectUrl = URL.createObjectURL(blob);
+            try {
+              const img = await loadFromUrl(objectUrl, false);
+              URL.revokeObjectURL(objectUrl);
+              return img;
+            } catch {
+              URL.revokeObjectURL(objectUrl);
+            }
           }
-        }
+        } catch (_e) { /* CORS blocked fetch, fall through */ }
 
-        return await new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => {
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-            resolve(img);
-          };
-          img.onerror = () => {
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-            reject(new Error(`Failed to load image: ${src}`));
-          };
-          img.src = resolvedSrc;
-        });
+        // Strategy 2: proxy through edge function to get a data URL
+        try {
+          const { data } = await supabase.functions.invoke("proxy-image", {
+            body: { url: src },
+          });
+          if (data?.dataUrl) {
+            return await loadFromUrl(data.dataUrl, false);
+          }
+        } catch (_e) { /* proxy failed, fall through */ }
+
+        // Strategy 3: direct load with crossOrigin
+        return loadFromUrl(src, true);
       };
 
       const uploadPng = async (pngUrl: string, suffix: string) => {
@@ -2042,7 +2055,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         try {
           const canvasImg = await loadImageForComposite(fullCanvasDataUrl);
 
-          // Always render at a fixed size so the output is identical regardless of viewport
           const outW = FIXED_RENDER_SIZE;
           const outH = FIXED_RENDER_SIZE;
 
@@ -2067,7 +2079,15 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           // Draw design overlay scaled to the same fixed size
           ctx.drawImage(canvasImg, 0, 0, outW, outH);
 
-          return previewCanvas.toDataURL("image/png");
+          try {
+            return previewCanvas.toDataURL("image/png");
+          } catch (taintErr) {
+            // Canvas was tainted by the product image (CORS). 
+            // Workaround: convert product image to base64 via a fresh fetch through our proxy,
+            // or just return the design-only overlay
+            console.warn("Canvas tainted, returning design-only preview:", taintErr);
+            return fullCanvasDataUrl;
+          }
         } catch (err) {
           console.warn("Composite preview generation failed:", err);
           return fullCanvasDataUrl;
