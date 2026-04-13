@@ -974,9 +974,9 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search styles (e.g. 't-shirt', 'hoodie', 'Gildan 2000')"
-                onKeyDown={(e) => e.key === "Enter" && handleBrowse()}
+                onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery)}
               />
-              <Button onClick={handleBrowse} disabled={browsing} className="gap-2 shrink-0">
+              <Button onClick={() => handleBrowse(searchQuery)} disabled={browsing} className="gap-2 shrink-0">
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Search
               </Button>
