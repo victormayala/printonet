@@ -1091,6 +1091,21 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Search
               </Button>
+              {(searchQuery || categoryFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCategoryFilter("all");
+                    handleBrowse("", 1, "all");
+                  }}
+                  title="Clear filters"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {hasLoadedCatalog && totalResults > 0 && (
