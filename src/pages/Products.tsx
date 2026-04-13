@@ -1207,22 +1207,33 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                               <span>${Number(style.customerPrice || 0).toFixed(2)}</span>
                               {style.colorCount > 0 && <span>· {style.colorCount} colors</span>}
                             </div>
-                            <Button
-                              size="sm"
-                              variant={isImported ? "outline" : "default"}
-                              className="gap-1.5 h-8 text-xs"
-                              disabled={importing === style.styleID}
-                              onClick={(e) => { e.stopPropagation(); handleImportStyle(style.styleID); }}
-                            >
-                              {importing === style.styleID ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : isImported ? (
-                                <RefreshCw className="h-3.5 w-3.5" />
-                              ) : (
-                                <Download className="h-3.5 w-3.5" />
-                              )}
-                              {isImported ? "Re-import" : "Import"}
-                            </Button>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 h-8 text-xs"
+                                onClick={(e) => { e.stopPropagation(); handleViewDetails(style.styleID); }}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={isImported ? "outline" : "default"}
+                                className="gap-1.5 h-8 text-xs"
+                                disabled={importing === style.styleID}
+                                onClick={(e) => { e.stopPropagation(); handleImportStyle(style.styleID); }}
+                              >
+                                {importing === style.styleID ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : isImported ? (
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Download className="h-3.5 w-3.5" />
+                                )}
+                                {isImported ? "Re-import" : "Import"}
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
