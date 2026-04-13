@@ -1,8 +1,9 @@
-import { Package, Paintbrush, Code, User, LogOut, Home, ShoppingBag, LayoutTemplate } from "lucide-react";
+import { Package, Paintbrush, Code, User, LogOut, Home, ShoppingBag, ShoppingCart, LayoutTemplate } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
+import { useCart } from "@/hooks/useCart";
+import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/customizer-studio-short-logo-2.svg";
 
 import {
@@ -31,6 +32,7 @@ export function DashboardSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { signOut } = useAuth();
+  const { totalItems } = useCart();
 
   return (
     <Sidebar collapsible="icon">
@@ -70,6 +72,21 @@ export function DashboardSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavLink to="/cart" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+                <div className="relative">
+                  <ShoppingCart className="h-4 w-4 shrink-0" />
+                  {totalItems > 0 && (
+                    <Badge className="absolute -top-2 -right-3 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center">
+                      {totalItems}
+                    </Badge>
+                  )}
+                </div>
+                {!collapsed && <span>Cart</span>}
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink to="/" className="hover:bg-sidebar-accent" activeClassName="">
