@@ -49,13 +49,30 @@ Deno.serve(async (req) => {
         const supplierSource = product.supplier_source || {};
         const existingShopifyId = supplierSource?.external_ids?.shopify;
 
-        const images: { src: string }[] = [];
-        if (product.image_front) images.push({ src: product.image_front });
-        if (product.image_back) images.push({ src: product.image_back });
-        if (product.image_side1) images.push({ src: product.image_side1 });
-        if (product.image_side2) images.push({ src: product.image_side2 });
+        // Main product images (front, back, sides) + variant color images
+        const images: { src: string; alt?: string }[] = [];
+        if (product.image_front) images.push({ src: product.image_front, alt: `${product.name} - Front` });
+        if (product.image_back) images.push({ src: product.image_back, alt: `${product.name} - Back` });
+        if (product.image_side1) images.push({ src: product.image_side1, alt: `${product.name} - Side` });
+        if (product.image_side2) images.push({ src: product.image_side2, alt: `${product.name} - Side 2` });
 
         const variants = Array.isArray(product.variants) ? product.variants : [];
+
+        // Add variant color images to the product images list
+        // Track position index for each variant image so we can link variants to images
+        const variantImagePositions: Map<string, number> = new Map();
+        for (const variant of variants) {
+          const varImg = variant.image || variant.colorFrontImage;
+          if (varImg && !images.some((img) => img.src === varImg)) {
+            const colorName = variant.color || variant.colorName || "";
+            variantImagePositions.set(varImg, images.length + 1); // Shopify positions are 1-based
+            images.push({ src: varImg, alt: `${product.name} - ${colorName}` });
+          } else if (varImg) {
+            // Image already exists, just record its position
+            const idx = images.findIndex((img) => img.src === varImg);
+            if (idx >= 0) variantImagePositions.set(varImg, idx + 1);
+          }
+        }
 
         // Build Shopify options and variants
         const colorNames = [...new Set(variants.map((v: any) => v.color || v.colorName).filter(Boolean))];
@@ -116,8 +133,12 @@ Deno.serve(async (req) => {
             const errText = await res.text();
             throw new Error(`Update failed (${res.status}): ${errText}`);
           }
+          const shopData = await res.json();
           shopifyProductId = existingShopifyId;
           updated++;
+
+          // After update, assign variant images by matching color → image
+          await assignShopifyVariantImages(baseUrl, access_token, shopifyProductId, shopData.product, variants);
         } else {
           const res = await fetch(`${baseUrl}/admin/api/2024-01/products.json`, {
             method: "POST",
@@ -134,6 +155,9 @@ Deno.serve(async (req) => {
           const shopData = await res.json();
           shopifyProductId = String(shopData.product.id);
           created++;
+
+          // After creation, assign variant images by matching color → image
+          await assignShopifyVariantImages(baseUrl, access_token, shopifyProductId, shopData.product, variants);
         }
 
         // Store the Shopify product ID back
@@ -162,3 +186,63 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+/**
+ * After creating/updating a Shopify product, match each variant to its color image
+ * and update the variant's image_id so Shopify shows the right image per colorway.
+ */
+async function assignShopifyVariantImages(
+  baseUrl: string,
+  accessToken: string,
+  productId: string,
+  shopProduct: any,
+  localVariants: any[]
+) {
+  const shopImages: { id: number; src: string; alt?: string }[] = shopProduct?.images || [];
+  const shopVariants: { id: number; option1?: string; option2?: string; image_id?: number }[] = shopProduct?.variants || [];
+
+  if (!shopImages.length || !shopVariants.length || !localVariants.length) return;
+
+  // Build a map: color image URL filename → Shopify image ID
+  const imgFileToId: Record<string, number> = {};
+  for (const img of shopImages) {
+    if (img.src && img.id) {
+      const filename = img.src.split("/").pop()?.split("?")[0] || "";
+      if (filename) imgFileToId[filename] = img.id;
+      imgFileToId[img.src] = img.id;
+    }
+  }
+
+  // Build a map: colorName → variant image URL
+  const colorToImgUrl: Record<string, string> = {};
+  for (const v of localVariants) {
+    const color = (v.color || v.colorName || "").toLowerCase();
+    const img = v.image || v.colorFrontImage;
+    if (color && img) colorToImgUrl[color] = img;
+  }
+
+  // For each Shopify variant, if its color has a matching image, update image_id
+  for (const sv of shopVariants) {
+    const color = (sv.option1 || "").toLowerCase();
+    const imgUrl = colorToImgUrl[color];
+    if (!imgUrl) continue;
+
+    const filename = imgUrl.split("/").pop()?.split("?")[0] || "";
+    const imageId = imgFileToId[filename] || imgFileToId[imgUrl];
+    if (!imageId || sv.image_id === imageId) continue;
+
+    // Update variant with the correct image_id
+    try {
+      await fetch(`${baseUrl}/admin/api/2024-01/variants/${sv.id}.json`, {
+        method: "PUT",
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ variant: { id: sv.id, image_id: imageId } }),
+      });
+    } catch {
+      // Non-critical, skip silently
+    }
+  }
+}
