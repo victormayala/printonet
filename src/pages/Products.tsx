@@ -1187,6 +1187,19 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                     </div>
                   </div>
                 ))}
+              {currentPage < totalPages && (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleBrowse(searchQuery, currentPage + 1)}
+                    disabled={browsing}
+                    className="gap-2"
+                  >
+                    {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+                    Load More (Page {currentPage + 1} of {totalPages})
+                  </Button>
+                </div>
+              )}
               </>
               );
             })()}
