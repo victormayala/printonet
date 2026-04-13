@@ -902,10 +902,11 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
     handleBrowse(searchQuery, 1, cat);
   };
 
-  // Auto-load catalog when connected
+  // Auto-load catalog and categories when connected
   useEffect(() => {
     if (integration && !hasLoadedCatalog) {
-      handleBrowse("");
+      handleBrowse("", 1, "all");
+      fetchCategories();
     }
   }, [integration]);
 
