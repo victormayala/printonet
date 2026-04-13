@@ -755,6 +755,28 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
+  const [detailStyle, setDetailStyle] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const handleViewDetails = async (styleID: number) => {
+    const creds = getCredentials();
+    setDetailsOpen(true);
+    setLoadingDetails(true);
+    setDetailStyle(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-ssactivewear-products", {
+        body: { action: "details", ...creds, style_id: styleID },
+      });
+      if (error) throw error;
+      setDetailStyle(data);
+    } catch (err: any) {
+      toast({ title: "Failed to load details", description: err.message, variant: "destructive" });
+      setDetailsOpen(false);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   const fetchIntegration = async () => {
     if (!user) return;
@@ -1185,22 +1207,33 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                               <span>${Number(style.customerPrice || 0).toFixed(2)}</span>
                               {style.colorCount > 0 && <span>· {style.colorCount} colors</span>}
                             </div>
-                            <Button
-                              size="sm"
-                              variant={isImported ? "outline" : "default"}
-                              className="gap-1.5 h-8 text-xs"
-                              disabled={importing === style.styleID}
-                              onClick={(e) => { e.stopPropagation(); handleImportStyle(style.styleID); }}
-                            >
-                              {importing === style.styleID ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : isImported ? (
-                                <RefreshCw className="h-3.5 w-3.5" />
-                              ) : (
-                                <Download className="h-3.5 w-3.5" />
-                              )}
-                              {isImported ? "Re-import" : "Import"}
-                            </Button>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 h-8 text-xs"
+                                onClick={(e) => { e.stopPropagation(); handleViewDetails(style.styleID); }}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={isImported ? "outline" : "default"}
+                                className="gap-1.5 h-8 text-xs"
+                                disabled={importing === style.styleID}
+                                onClick={(e) => { e.stopPropagation(); handleImportStyle(style.styleID); }}
+                              >
+                                {importing === style.styleID ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : isImported ? (
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Download className="h-3.5 w-3.5" />
+                                )}
+                                {isImported ? "Re-import" : "Import"}
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -1231,6 +1264,64 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
             )}
           </CardContent>
         </Card>
+
+        {/* Variant Details Dialog */}
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {loadingDetails ? "Loading..." : detailStyle ? `${detailStyle.brandName} ${detailStyle.styleName}` : "Style Details"}
+              </DialogTitle>
+              {detailStyle?.title && (
+                <DialogDescription>{detailStyle.title}</DialogDescription>
+              )}
+            </DialogHeader>
+            {loadingDetails ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : detailStyle ? (
+              <div className="space-y-4">
+                {detailStyle.description && (
+                  <p className="text-sm text-muted-foreground">{detailStyle.description}</p>
+                )}
+                <div className="text-sm">
+                  <span className="font-medium">{detailStyle.variants?.length || 0}</span> colors available
+                </div>
+                <div className="space-y-3">
+                  {detailStyle.variants?.map((variant: any, idx: number) => (
+                    <div key={idx} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center gap-3">
+                        {variant.hex && (
+                          <div
+                            className="w-6 h-6 rounded-full border shadow-sm shrink-0"
+                            style={{ backgroundColor: variant.hex }}
+                            title={variant.hex}
+                          />
+                        )}
+                        {variant.colorFrontImage && (
+                          <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{variant.color}</p>
+                          <p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {variant.sizes?.map((s: any, sIdx: number) => (
+                          <Badge key={sIdx} variant="secondary" className="text-[11px] font-normal gap-1">
+                            {s.size}
+                            <span className="text-muted-foreground">— ${Number(s.price).toFixed(2)}</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
