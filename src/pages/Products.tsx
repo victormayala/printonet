@@ -741,6 +741,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
 
   // Catalog browser state
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
   const [catalogResults, setCatalogResults] = useState<any[]>([]);
   const [browsing, setBrowsing] = useState(false);
   const [importing, setImporting] = useState<number | null>(null);
