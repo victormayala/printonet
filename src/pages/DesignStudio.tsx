@@ -2043,18 +2043,56 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
       const FIXED_RENDER_SIZE = 1200;
 
-      const generateCompositePreview = async (
-        productImg: HTMLImageElement | null,
-        fullCanvasDataUrl: string,
-        canvasWidth: number,
-        canvasHeight: number,
+      const renderCanonicalOverlay = async (
+        canvasJson: string,
+        sourceImageBounds: { x: number; y: number; w: number; h: number } | null,
+        productSize: { width: number; height: number } | null,
       ) => {
-        if (!fullCanvasDataUrl) return "";
-        if (!productImg) return fullCanvasDataUrl;
+        const renderCanvasEl = document.createElement("canvas");
+        renderCanvasEl.width = FIXED_RENDER_SIZE;
+        renderCanvasEl.height = FIXED_RENDER_SIZE;
+
+        const renderCanvas = new FabricCanvas(renderCanvasEl, {
+          width: FIXED_RENDER_SIZE,
+          height: FIXED_RENDER_SIZE,
+          backgroundColor: "rgba(0,0,0,0)",
+          selection: false,
+        });
 
         try {
-          const canvasImg = await loadImageForComposite(fullCanvasDataUrl);
+          await renderCanvas.loadFromJSON(canvasJson);
+          renderCanvas.backgroundColor = "rgba(0,0,0,0)";
+          renderCanvas.backgroundImage = undefined;
 
+          const renderPaRects = renderCanvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
+          renderPaRects.forEach((o) => renderCanvas.remove(o));
+
+          if (sourceImageBounds && productSize) {
+            const targetImageBounds = computeImageBounds(
+              FIXED_RENDER_SIZE,
+              FIXED_RENDER_SIZE,
+              productSize.width,
+              productSize.height,
+            );
+            remapCanvasObjectsToImageBounds(renderCanvas, sourceImageBounds, targetImageBounds);
+          }
+
+          renderCanvas.renderAll();
+          return renderCanvas.toDataURL({ format: "png", multiplier: 1 });
+        } finally {
+          renderCanvas.dispose();
+        }
+      };
+
+      const generateCompositePreview = async (
+        productImg: HTMLImageElement | null,
+        overlayDataUrl: string,
+      ) => {
+        if (!overlayDataUrl) return "";
+        if (!productImg) return overlayDataUrl;
+
+        try {
+          const overlayImg = await loadImageForComposite(overlayDataUrl);
           const outW = FIXED_RENDER_SIZE;
           const outH = FIXED_RENDER_SIZE;
 
@@ -2062,11 +2100,10 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           previewCanvas.width = outW;
           previewCanvas.height = outH;
           const ctx = previewCanvas.getContext("2d");
-          if (!ctx) return fullCanvasDataUrl;
+          if (!ctx) return overlayDataUrl;
 
           ctx.clearRect(0, 0, outW, outH);
 
-          // Draw product image with object-contain
           const natW = productImg.naturalWidth || productImg.width;
           const natH = productImg.naturalHeight || productImg.height;
           const scale = Math.min(outW / natW, outH / natH);
@@ -2074,23 +2111,13 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           const prodH = natH * scale;
           const prodX = (outW - prodW) / 2;
           const prodY = (outH - prodH) / 2;
+
           ctx.drawImage(productImg, prodX, prodY, prodW, prodH);
-
-          // Draw design overlay scaled to the same fixed size
-          ctx.drawImage(canvasImg, 0, 0, outW, outH);
-
-          try {
-            return previewCanvas.toDataURL("image/png");
-          } catch (taintErr) {
-            // Canvas was tainted by the product image (CORS). 
-            // Workaround: convert product image to base64 via a fresh fetch through our proxy,
-            // or just return the design-only overlay
-            console.warn("Canvas tainted, returning design-only preview:", taintErr);
-            return fullCanvasDataUrl;
-          }
+          ctx.drawImage(overlayImg, 0, 0, outW, outH);
+          return previewCanvas.toDataURL("image/png");
         } catch (err) {
           console.warn("Composite preview generation failed:", err);
-          return fullCanvasDataUrl;
+          return overlayDataUrl;
         }
       };
 
@@ -2140,12 +2167,14 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         let productImg: HTMLImageElement | null = null;
         let viewImageBounds: { x: number; y: number; w: number; h: number } | null = null;
+        let productSize: { width: number; height: number } | null = null;
 
         if (productImageUrl) {
           try {
             productImg = await loadImageForComposite(productImageUrl);
             const naturalWidth = productImg.naturalWidth || productImg.width || cw;
             const naturalHeight = productImg.naturalHeight || productImg.height || ch;
+            productSize = { width: naturalWidth, height: naturalHeight };
             viewImageBounds = computeImageBounds(cw, ch, naturalWidth, naturalHeight);
           } catch (productErr) {
             console.warn(`Failed to load product image for ${view} preview:`, productErr);
