@@ -2198,8 +2198,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
         const dataUrl = canvas.toDataURL(exportOptions);
         const publicUrl = await uploadPng(dataUrl, view);
-        const fullCanvasDataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
-        const previewDataUrl = await generateCompositePreview(productImg, fullCanvasDataUrl, cw, ch);
+        const canonicalOverlayDataUrl = await renderCanonicalOverlay(cleanedJson, viewImageBounds, productSize);
+        const previewDataUrl = await generateCompositePreview(productImg, canonicalOverlayDataUrl);
         const previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
 
         sides.push({
