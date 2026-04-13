@@ -33,6 +33,7 @@ export default function ReviewDesign() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [resolvedPrice, setResolvedPrice] = useState<number>(0);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -41,12 +42,28 @@ export default function ReviewDesign() {
       .select("*")
       .eq("id", sessionId)
       .single()
-      .then(({ data, error: err }) => {
+      .then(async ({ data, error: err }) => {
         if (err || !data) {
           setError("Design not found.");
-        } else {
-          setSession(data as unknown as SessionRow);
+          setLoading(false);
+          return;
         }
+        setSession(data as unknown as SessionRow);
+
+        // Resolve base_price: check product_data first, then look up from inventory
+        const pd = data.product_data as any;
+        let price = pd?.base_price || 0;
+        if (!price && pd?.name) {
+          const { data: products } = await supabase
+            .from("inventory_products")
+            .select("base_price")
+            .eq("name", pd.name)
+            .limit(1);
+          if (products && products.length > 0) {
+            price = products[0].base_price || 0;
+          }
+        }
+        setResolvedPrice(price);
         setLoading(false);
       });
   }, [sessionId]);
