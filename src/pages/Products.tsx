@@ -1473,6 +1473,193 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   const [detailStyle, setDetailStyle] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvProgress, setCsvProgress] = useState<{ total: number; imported: number; updated: number } | null>(null);
+
+  const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    e.target.value = "";
+    setCsvImporting(true);
+    setCsvProgress(null);
+
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length < 2) { toast({ title: "Empty or invalid CSV file", variant: "destructive" }); setCsvImporting(false); return; }
+
+      // Detect delimiter (tab for .txt files like sanmar_dip.txt, comma for .csv)
+      const firstLine = lines[0];
+      const delimiter = firstLine.includes("\t") ? "\t" : ",";
+
+      // Parse header to find column indices
+      const headers = firstLine.split(delimiter).map((h) => h.trim().replace(/^"|"$/g, "").toUpperCase());
+
+      // Map known SanMar column names to indices
+      const col = (name: string) => {
+        const idx = headers.indexOf(name);
+        return idx;
+      };
+
+      const iStyle = col("STYLE#") !== -1 ? col("STYLE#") : col("STYLE");
+      const iUniqueKey = col("UNIQUE_KEY");
+      const iTitle = col("PRODUCT_TITLE");
+      const iDesc = col("PRODUCT_DESCRIPTION");
+      const iBrand = col("BRAND_NAME");
+      const iColor = col("COLOR_NAME");
+      const iCatalogColor = col("CATALOG_COLOR");
+      const iSize = col("SIZE");
+      const iPiecePrice = col("PIECE_PRICE");
+      const iCasePrice = col("CASE_PRICE");
+      const iPieceSalePrice = col("PIECE_SALE_PRICE");
+      const iCaseSalePrice = col("CASE_SALE_PRICE");
+      const iCategory = col("CATEGORY");
+      const iProductImage = col("PRODUCT_IMAGE");
+      const iColorProductImage = col("COLOR_PRODUCT_IMAGE");
+      const iFrontModel = col("FRONT_MODEL");
+      const iBackModel = col("BACK_MODEL");
+      const iSideModel = col("SIDE_MODEL");
+      const iFrontFlat = col("FRONT_FLAT");
+      const iBackFlat = col("BACK_FLAT");
+      const iColorSwatchImage = col("COLOR_SWATCH_IMAGE");
+      const iColorSquareImage = col("COLOR_SQUARE_IMAGE");
+      const iProductStatus = col("PRODUCT_STATUS");
+      const iInventoryKey = col("INVENTORY_KEY");
+
+      if (iStyle === -1) {
+        toast({ title: "Could not find STYLE# column", description: "Make sure this is a SanMar product data CSV (SDL, EPDD, or BulkInfo format).", variant: "destructive" });
+        setCsvImporting(false);
+        return;
+      }
+
+      // Parse CSV values (handles quoted fields)
+      const parseRow = (line: string): string[] => {
+        const vals: string[] = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') { inQuotes = !inQuotes; continue; }
+          if (ch === delimiter.charAt(0) && !inQuotes) { vals.push(current.trim()); current = ""; continue; }
+          current += ch;
+        }
+        vals.push(current.trim());
+        return vals;
+      };
+
+      const getVal = (row: string[], idx: number) => (idx >= 0 && idx < row.length ? row[idx] : "");
+
+      // Group rows by style
+      const styleMap = new Map<string, any[]>();
+      for (let i = 1; i < lines.length; i++) {
+        const row = parseRow(lines[i]);
+        const style = getVal(row, iStyle);
+        if (!style) continue;
+        // Skip discontinued unless they have inventory
+        const status = getVal(row, iProductStatus);
+        if (status === "Discontinued") continue;
+        if (!styleMap.has(style)) styleMap.set(style, []);
+        styleMap.get(style)!.push(row);
+      }
+
+      const totalStyles = styleMap.size;
+      let imported = 0;
+      let updated = 0;
+
+      setCsvProgress({ total: totalStyles, imported: 0, updated: 0 });
+
+      // Process in batches
+      const entries = Array.from(styleMap.entries());
+      for (let batch = 0; batch < entries.length; batch += 10) {
+        const chunk = entries.slice(batch, batch + 10);
+        await Promise.all(chunk.map(async ([styleId, rows]) => {
+          const firstRow = rows[0];
+          const brandName = getVal(firstRow, iBrand) || "SanMar";
+          const productTitle = getVal(firstRow, iTitle) || "";
+          const description = getVal(firstRow, iDesc) || "";
+          const category = getVal(firstRow, iCategory) || "Apparel";
+
+          // Group by color
+          const colorMap = new Map<string, any[]>();
+          for (const row of rows) {
+            const colorName = getVal(row, iColor) || getVal(row, iCatalogColor) || "Default";
+            if (!colorMap.has(colorName)) colorMap.set(colorName, []);
+            colorMap.get(colorName)!.push(row);
+          }
+
+          const variants = Array.from(colorMap.entries()).map(([colorName, skus]) => {
+            const first = skus[0];
+            return {
+              color: colorName,
+              hex: null,
+              image: getVal(first, iColorProductImage) || getVal(first, iFrontModel) || null,
+              sizes: skus.map((s) => ({
+                size: getVal(s, iSize) || "OS",
+                sku: getVal(s, iUniqueKey) || getVal(s, iInventoryKey) || `${styleId}-${colorName}-${getVal(s, iSize) || "OS"}`,
+                price: parseFloat(getVal(s, iPiecePrice) || "0"),
+                casePrice: parseFloat(getVal(s, iCasePrice) || "0"),
+                salePrice: parseFloat(getVal(s, iPieceSalePrice) || "0"),
+                qty: 0,
+              })),
+            };
+          });
+
+          const imageFront = getVal(firstRow, iColorProductImage) || getVal(firstRow, iFrontModel) || getVal(firstRow, iProductImage) || null;
+          const imageBack = getVal(firstRow, iBackModel) || getVal(firstRow, iBackFlat) || null;
+
+          const supplierSource = {
+            provider: "sanmar",
+            style_id: styleId,
+            style_name: styleId,
+            brand: brandName,
+            last_synced: new Date().toISOString(),
+            import_method: "csv",
+          };
+
+          const { data: existing } = await supabase
+            .from("inventory_products")
+            .select("id")
+            .eq("user_id", user.id)
+            .filter("supplier_source->>provider", "eq", "sanmar")
+            .filter("supplier_source->>style_id", "eq", styleId)
+            .maybeSingle();
+
+          const payload = {
+            name: `${brandName} ${styleId}`.trim(),
+            category: category.toLowerCase() || "apparel",
+            description: productTitle || description || null,
+            base_price: parseFloat(getVal(firstRow, iPiecePrice) || "0"),
+            image_front: imageFront,
+            image_back: imageBack,
+            image_side1: getVal(firstRow, iSideModel) || null,
+            image_side2: null as string | null,
+            variants,
+            is_active: true,
+            supplier_source: supplierSource,
+            user_id: user.id,
+          };
+
+          if (existing) {
+            await supabase.from("inventory_products").update(payload).eq("id", existing.id);
+            updated++;
+          } else {
+            await supabase.from("inventory_products").insert(payload);
+            imported++;
+          }
+          setCsvProgress({ total: totalStyles, imported, updated });
+        }));
+      }
+
+      toast({ title: `CSV Import Complete`, description: `${imported} new products imported, ${updated} updated out of ${totalStyles} styles.` });
+      setCsvProgress(null);
+      onDone();
+      fetchImportedStyleIds();
+    } catch (err: any) {
+      toast({ title: "CSV import failed", description: err.message, variant: "destructive" });
+    } finally {
+      setCsvImporting(false);
+    }
+  };
 
   const handleViewDetails = async (styleID: string) => {
     const creds = getCredentials();
@@ -1634,6 +1821,37 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Upload className="h-4 w-4" /> Import from CSV / SFTP File</CardTitle>
+            <CardDescription>Upload a SanMar product data file (SDL, EPDD, BulkInfo CSV, or sanmar_dip.txt) downloaded from SanMar's SFTP server.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer">
+                <input type="file" accept=".csv,.txt,.tsv" onChange={handleCsvUpload} className="hidden" disabled={csvImporting} />
+                <Button variant="outline" className="gap-2 pointer-events-none" disabled={csvImporting}>
+                  {csvImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {csvImporting ? "Importing..." : "Choose CSV File"}
+                </Button>
+              </label>
+              <span className="text-xs text-muted-foreground">Supports .csv, .txt, .tsv formats</span>
+            </div>
+            {csvProgress && (
+              <div className="space-y-1.5">
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${Math.round(((csvProgress.imported + csvProgress.updated) / Math.max(csvProgress.total, 1)) * 100)}%` }} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Processing {csvProgress.imported + csvProgress.updated} of {csvProgress.total} styles ({csvProgress.imported} new, {csvProgress.updated} updated)
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              <strong>SFTP access:</strong> Host: ftp.sanmar.com · Port: 2200 · Protocol: SFTP. Use an SFTP client (like FileZilla or WinSCP) to download the product data files, then upload them here.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Browse SanMar Catalog</CardTitle>
             <CardDescription>Search and import blank products from SanMar</CardDescription>
           </CardHeader>
@@ -1773,8 +1991,39 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> Connect SanMar</CardTitle>
-          <CardDescription>Enter your SanMar credentials to browse and import products.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Upload className="h-4 w-4" /> Import from CSV / SFTP File</CardTitle>
+          <CardDescription>Already have product data files from SanMar's SFTP? Upload them directly — no API connection needed.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="cursor-pointer">
+              <input type="file" accept=".csv,.txt,.tsv" onChange={handleCsvUpload} className="hidden" disabled={csvImporting} />
+              <Button variant="outline" className="gap-2 pointer-events-none" disabled={csvImporting}>
+                {csvImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {csvImporting ? "Importing..." : "Choose CSV File"}
+              </Button>
+            </label>
+            <span className="text-xs text-muted-foreground">Supports .csv, .txt, .tsv (SDL, EPDD, BulkInfo, sanmar_dip.txt)</span>
+          </div>
+          {csvProgress && (
+            <div className="space-y-1.5">
+              <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${Math.round(((csvProgress.imported + csvProgress.updated) / Math.max(csvProgress.total, 1)) * 100)}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Processing {csvProgress.imported + csvProgress.updated} of {csvProgress.total} styles ({csvProgress.imported} new, {csvProgress.updated} updated)
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            <strong>SFTP access:</strong> Host: ftp.sanmar.com · Port: 2200 · Protocol: SFTP. Download files using an SFTP client (FileZilla, WinSCP), then upload here.
+          </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> Connect SanMar API</CardTitle>
+          <CardDescription>Or connect via API to browse and import products directly (requires Web Services access).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2"><Label>Customer Number</Label><Input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="Your SanMar customer number" /></div>
