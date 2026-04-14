@@ -1708,9 +1708,9 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   const getCredentials = () => {
     if (integration) {
       const creds = integration.credentials as any;
-      return { customer_number: creds.customer_number, username: creds.username, password: creds.password };
+      return { username: creds.username, password: creds.password };
     }
-    return { customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim() };
+    return { username: sanmarUsername.trim(), password: sanmarPassword.trim() };
   };
 
   const handleConnect = async () => {
