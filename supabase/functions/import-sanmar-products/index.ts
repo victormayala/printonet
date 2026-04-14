@@ -187,23 +187,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ACTION: browse — search or list sellable products
+    // ACTION: browse — search by style/product ID
     if (action === 'browse') {
       try {
-        let xmlBody: string
-        let sellableProducts: Array<{productId: string}> = []
-
-        if (search && search.trim()) {
-          // Search by specific product/style ID
-          xmlBody = buildGetProductSellable(search.trim())
-          const xml = await soapCall(xmlBody)
-          sellableProducts = parseProductSellable(xml)
-        } else {
-          // Get all sellable products
-          xmlBody = buildGetProductSellable()
-          const xml = await soapCall(xmlBody)
-          sellableProducts = parseProductSellable(xml)
+        if (!search || !search.trim()) {
+          return jsonResponse({
+            styles: [],
+            page: 1,
+            per_page: per_page || 50,
+            total: 0,
+            total_pages: 0,
+            message: 'Enter a style number (e.g. PC61, DT6000, ST350) to search the SanMar catalog.',
+          })
         }
+
+        // Search by specific product/style ID
+        const xmlBody = buildGetProductSellable(search.trim())
+        const xml = await soapCall(xmlBody)
+        const sellableProducts = parseProductSellable(xml)
 
         // Deduplicate by productId
         const uniqueIds = [...new Set(sellableProducts.map(p => p.productId))]
@@ -215,35 +216,28 @@ Deno.serve(async (req) => {
         const startIdx = (currentPage - 1) * pageSize
         const paged = uniqueIds.slice(startIdx, startIdx + pageSize)
 
-        // For the current page, try to fetch basic info for each product
-        const styles = paged.map(id => ({
-          styleID: id,
-          styleName: id,
-          brandName: 'SanMar',
-          title: '',
-          baseCategory: 'Apparel',
-          styleImage: null,
-          customerPrice: 0,
-          colorCount: 0,
-        }))
-
-        // Try to enrich first few results with actual product data
-        const enrichLimit = Math.min(paged.length, 10)
-        const enrichPromises = paged.slice(0, enrichLimit).map(async (id, idx) => {
+        // Enrich results with product details (since we're searching specific styles, count is small)
+        const styles: any[] = []
+        const enrichPromises = paged.map(async (id) => {
           try {
             const detailXml = await soapCall(buildGetProduct(id))
             const detail = parseGetProduct(detailXml)
-            styles[idx].brandName = detail.brand
-            styles[idx].title = detail.productName
-            styles[idx].baseCategory = detail.category
-            if (detail.parts.length > 0) {
-              styles[idx].styleImage = detail.parts[0].frontImage || null
-              styles[idx].customerPrice = detail.parts[0].price
-              const uniqueColors = new Set(detail.parts.map(p => p.color).filter(Boolean))
-              styles[idx].colorCount = uniqueColors.size
-            }
+            const uniqueColors = new Set(detail.parts.map(p => p.color).filter(Boolean))
+            styles.push({
+              styleID: id,
+              styleName: id,
+              brandName: detail.brand,
+              title: detail.productName,
+              baseCategory: detail.category,
+              styleImage: detail.parts[0]?.frontImage || null,
+              customerPrice: detail.parts[0]?.price || 0,
+              colorCount: uniqueColors.size,
+            })
           } catch {
-            // Skip enrichment on error
+            styles.push({
+              styleID: id, styleName: id, brandName: 'SanMar', title: '',
+              baseCategory: 'Apparel', styleImage: null, customerPrice: 0, colorCount: 0,
+            })
           }
         })
         await Promise.all(enrichPromises)
