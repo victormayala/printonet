@@ -59,7 +59,23 @@
   }
 
   // --- Open customizer for a specific product ---
-  function openForProduct(product, wcProductId) {
+  // --- Get the currently selected Shopify variant ID ---
+  function getShopifyVariantId() {
+    if (!window.Shopify || !window.Shopify.product) return null;
+    // Try to get selected variant from URL param
+    var urlParams = new URLSearchParams(window.location.search);
+    var variantParam = urlParams.get('variant');
+    if (variantParam) return variantParam;
+    // Try to get from the product form's hidden input
+    var variantInput = document.querySelector('form[action="/cart/add"] input[name="id"]');
+    if (variantInput) return variantInput.value;
+    // Fallback: first available variant
+    var variants = window.Shopify.product.variants;
+    if (variants && variants.length > 0) return String(variants[0].id);
+    return null;
+  }
+
+  function openForProduct(product, wcProductId, shopifyVariantId) {
     if (!window.CustomizerStudio) {
       console.error('[CustomizerLoader] SDK not loaded');
       return;
@@ -78,6 +94,7 @@
       },
       userId: product.user_id || USER_ID || null,
       wcProductId: wcProductId || null,
+      shopifyVariantId: shopifyVariantId || null,
       onComplete: function (result) {
         var evt = new CustomEvent('customizer:complete', { detail: result });
         document.dispatchEvent(evt);
