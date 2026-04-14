@@ -110,9 +110,9 @@ export default function Index() {
           <div className="max-w-2xl w-full rounded-2xl border bg-card overflow-hidden text-left shadow-sm">
             <div className="px-5 py-3 border-b bg-muted/50 flex items-center gap-2">
               <div className="flex gap-1.5">
-                <div className="h-3 w-3 rounded-full bg-red-400" />
-                <div className="h-3 w-3 rounded-full bg-yellow-400" />
-                <div className="h-3 w-3 rounded-full bg-green-400" />
+                <div className="h-3 w-3 rounded-full bg-destructive/60" />
+                <div className="h-3 w-3 rounded-full bg-accent/60" />
+                <div className="h-3 w-3 rounded-full bg-primary/60" />
               </div>
               <span className="text-xs text-muted-foreground font-mono ml-2">your-store.html</span>
             </div>
