@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
 
     // Make a SOAP call and return raw XML text
     const soapCall = async (xmlBody: string): Promise<string> => {
+      console.log('Making SOAP call to SanMar...')
       const res = await fetch(SANMAR_STANDARD_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -111,10 +112,20 @@ Deno.serve(async (req) => {
         body: xmlBody,
       })
       const text = await res.text()
-      if (!res.ok) {
-        // Check for auth errors
-        if (text.includes('authentication failed') || text.includes('Authentication')) {
-          throw new Error('Authentication failed. Please check your customer number, username, and password.')
+      console.log('SanMar response status:', res.status, 'body length:', text.length)
+      console.log('SanMar response preview:', text.substring(0, 500))
+      
+      // SanMar may return HTTP 500 for SOAP faults (including auth errors)
+      // or HTTP 200 with errorOccured=true in the body
+      const lowerText = text.toLowerCase()
+      if (lowerText.includes('authentication failed') || lowerText.includes('user authenticating')) {
+        throw new Error('Authentication failed. Please verify your SanMar customer number, sanmar.com username, and sanmar.com password. Also ensure your account has been onboarded for Web Services access by emailing sanmarintegrations@sanmar.com.')
+      }
+      if (!res.ok && !text.includes('<listResponse>')) {
+        // Check for SOAP fault
+        if (lowerText.includes('fault')) {
+          const faultMsg = extractTag(text, 'faultstring') || text.substring(0, 200)
+          throw new Error(`SanMar error: ${faultMsg}`)
         }
         throw new Error(`SanMar API error ${res.status}: ${text.substring(0, 200)}`)
       }
