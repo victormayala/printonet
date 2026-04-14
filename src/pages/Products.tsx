@@ -1401,8 +1401,8 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                         {variant.hex && (
                           <div
                             className="w-6 h-6 rounded-full border shadow-sm shrink-0"
-                            style={{ backgroundColor: variant.hex }}
-                            title={variant.hex}
+                            style={{ backgroundColor: resolveVariantHex(variant) }}
+                            title={resolveVariantHex(variant)}
                           />
                         )}
                         {variant.colorFrontImage && (
@@ -1985,7 +1985,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
                   {detailStyle.variants?.map((variant: any, idx: number) => (
                     <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center gap-3">
-                        {variant.hex && <div className="w-6 h-6 rounded-full border shadow-sm shrink-0" style={{ backgroundColor: variant.hex }} title={variant.hex} />}
+                        {<div className="w-6 h-6 rounded-full border shadow-sm shrink-0" style={{ backgroundColor: resolveVariantHex(variant) }} title={resolveVariantHex(variant)} />}
                         {variant.colorFrontImage && <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />}
                         <div className="flex-1 min-w-0"><p className="font-medium text-sm">{variant.color}</p><p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p></div>
                       </div>
@@ -2085,7 +2085,7 @@ function ProductCardImage({ product, hasVariantImages, children }: { product: Pr
             <button
               key={i}
               className={`w-5 h-5 rounded-full border-2 shadow-sm shrink-0 transition-all ${activeVariantIdx === i ? "border-primary scale-110" : "border-background/80"}`}
-              style={{ backgroundColor: v.hex || '#ccc' }}
+              style={{ backgroundColor: resolveVariantHex(v) }}
               title={v.color}
               onClick={(e) => { e.stopPropagation(); setActiveVariantIdx(activeVariantIdx === i ? null : i); }}
             />
@@ -2475,7 +2475,7 @@ export default function Products() {
                                   <div
                                     key={i}
                                     className="w-4 h-4 rounded-full border shadow-sm shrink-0"
-                                    style={{ backgroundColor: v.hex || '#ccc' }}
+                                    style={{ backgroundColor: resolveVariantHex(v) }}
                                     title={v.color}
                                   />
                                 ))}
@@ -2529,7 +2529,7 @@ export default function Products() {
                                   <div
                                     key={i}
                                     className="w-3 h-3 rounded-full border shadow-sm"
-                                    style={{ backgroundColor: v.hex || '#ccc' }}
+                                    style={{ backgroundColor: resolveVariantHex(v) }}
                                     title={v.color}
                                   />
                                 ))}
@@ -2617,8 +2617,8 @@ export default function Products() {
                         {variant.hex && (
                           <div
                             className="w-6 h-6 rounded-full border shadow-sm shrink-0"
-                            style={{ backgroundColor: variant.hex }}
-                            title={variant.hex}
+                            style={{ backgroundColor: resolveVariantHex(variant) }}
+                            title={resolveVariantHex(variant)}
                           />
                         )}
                         {variant.image && (
