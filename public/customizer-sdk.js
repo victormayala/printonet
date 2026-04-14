@@ -499,6 +499,52 @@
     }, 2000);
   }
 
+  // --- Sync to Shopify (duplicate-safe) ---
+  function _syncToShopify(newItem) {
+    if (!newItem || !newItem.shopifyVariantId || !newItem.sessionId) return;
+    if (!window.Shopify) return;
+
+    var synced = _getSyncedSessions();
+    if (synced.indexOf(newItem.sessionId) !== -1) return; // already synced
+
+    var properties = {};
+    properties['_customizer_session_id'] = newItem.sessionId;
+    if (newItem.previewImage) {
+      properties['_customizer_design_url'] = newItem.previewImage;
+      properties['_customizer_sides'] = JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]);
+    }
+
+    fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newItem.shopifyVariantId,
+        quantity: newItem.quantity || 1,
+        properties: properties,
+      }),
+      credentials: 'same-origin',
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        _markSynced(newItem.sessionId);
+        if (data.status && data.status >= 400) {
+          console.log('[CustomizerStudio] Shopify sync error:', data.description || data.message);
+          return;
+        }
+        // Trigger Shopify cart refresh events
+        document.dispatchEvent(new CustomEvent('cart:refresh'));
+        if (window.Shopify && window.Shopify.onCartUpdate) {
+          fetch('/cart.js', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (cart) { window.Shopify.onCartUpdate(cart); })
+            .catch(function () {});
+        }
+      })
+      .catch(function (err) {
+        console.error('[CustomizerStudio] Shopify cart sync failed:', err);
+      });
+  }
+
   // --- Sync to WooCommerce (duplicate-safe) ---
   var SYNCED_KEY = 'customizer_synced_sessions';
 
