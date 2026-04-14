@@ -569,7 +569,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
         throw new Error("No authorization URL returned");
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to start Shopify connection");
+      toast({ variant: "destructive", title: err.message || "Failed to start Shopify connection" });
       setLoading(false);
     }
   };
