@@ -214,13 +214,29 @@ Deno.serve(async (req) => {
         }
 
         // Search by specific product/style ID
-        const xmlBody = buildGetProductSellable(search.trim())
+        const styleQuery = search.trim().toUpperCase()
+        const xmlBody = buildGetProductSellable(styleQuery)
         const xml = await soapCall(xmlBody)
         const sellableProducts = parseProductSellable(xml)
 
-        // Deduplicate by productId
-        const uniqueIds = [...new Set(sellableProducts.map(p => p.productId))]
-        
+        // Deduplicate by productId and fall back to direct product lookup for valid styles
+        // that may not be returned by GetProductSellable.
+        let uniqueIds = [...new Set(sellableProducts.map(p => p.productId))]
+        const detailCache = new Map<string, any>()
+
+        if (!uniqueIds.length) {
+          try {
+            const detailXml = await soapCall(buildGetProduct(styleQuery))
+            const detail = parseGetProduct(detailXml)
+            if (detail.productName || detail.parts.length) {
+              uniqueIds = [styleQuery]
+              detailCache.set(styleQuery, detail)
+            }
+          } catch {
+            // Leave empty and return a graceful no-results response
+          }
+        }
+
         const pageSize = per_page || 50
         const currentPage = page || 1
         const totalCount = uniqueIds.length
@@ -232,8 +248,7 @@ Deno.serve(async (req) => {
         const styles: any[] = []
         const enrichPromises = paged.map(async (id) => {
           try {
-            const detailXml = await soapCall(buildGetProduct(id))
-            const detail = parseGetProduct(detailXml)
+            const detail = detailCache.get(id) ?? parseGetProduct(await soapCall(buildGetProduct(id)))
             const uniqueColors = new Set(detail.parts.map(p => p.color).filter(Boolean))
             styles.push({
               styleID: id,
