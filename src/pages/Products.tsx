@@ -1685,7 +1685,6 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     const { data } = await supabase.from("store_integrations").select("*").eq("user_id", user.id).eq("platform", "sanmar").maybeSingle();
     setIntegration(data);
     if (data) {
-      setCustomerNumber((data.credentials as any)?.customer_number || "");
       setSanmarUsername((data.credentials as any)?.username || "");
       setSanmarPassword((data.credentials as any)?.password || "");
     }
