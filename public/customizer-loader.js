@@ -279,7 +279,7 @@
     btn.type = 'button';
     btn.textContent = '🎨 Customize This Product';
     btn.style.cssText =
-      'display:block;width:100%;margin-top:12px;padding:14px 24px;' +
+      'display:block;width:100%;margin-top:12px;margin-bottom:16px;padding:14px 24px;' +
       'font-size:15px;font-weight:600;font-family:inherit;' +
       'background:#7c3aed;color:#fff;border:none;border-radius:8px;' +
       'cursor:pointer;transition:background .15s,transform .1s;' +
