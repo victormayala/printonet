@@ -1,46 +1,37 @@
 
 
-## Push Products to WooCommerce & Shopify
+## Plan: Add SanMar Supplier Integration
 
-Currently, the platform only **imports** products from WooCommerce and Shopify into Customizer Studio. There is no functionality to **push** products (especially those sourced from S&S Activewear or created manually) back out to a connected store. This plan adds that capability.
+SanMar will follow the exact same pattern as the existing S&S Activewear integration — users enter their own SanMar account credentials, browse the catalog, and import products into their inventory.
 
-### What gets pushed
-For each selected product in "My Products", the system will create (or update) a corresponding product in the connected WooCommerce or Shopify store, including:
-- Name, description, category
-- Images (front, back, side views)
-- Variants (colors and sizes from S&S data)
-- Base pricing
+### SanMar API Details
+SanMar uses a SOAP/REST API. Their product data API provides styles, colors, sizes, pricing, and product images. Users need their **SanMar Customer Number** and **API Key** (or username/password depending on the API version).
 
-### Implementation
+### Changes
 
-**1. New edge function: `export-to-woocommerce`**
-- Accepts a list of `inventory_products` IDs plus WooCommerce credentials
-- For each product, calls the WooCommerce REST API `POST /wp-json/wc/v3/products` to create a product with:
-  - Title, description, images array
-  - Variable product type with color/size attributes
-  - Variant creation via `POST /wp-json/wc/v3/products/{id}/variations`
-- Returns success/failure counts
+**1. New Edge Function: `supabase/functions/import-sanmar-products/index.ts`**
+- Mirror the structure of `import-ssactivewear-products`
+- Support actions: `browse`, `import`, `sync`, `details`, `categories`
+- Use SanMar's product data API (REST/JSON endpoints) with the user's credentials
+- Authenticate via the user's SanMar account number and API key
+- Normalize product data into the same `inventory_products` format (name, variants with color/size/price, images)
+- Set `supplier_source.provider = 'sanmar'` for tracking
 
-**2. New edge function: `export-to-shopify`**
-- Accepts product IDs plus Shopify credentials (store URL + access token)
-- Calls Shopify Admin API `POST /admin/api/2024-01/products.json` to create products with:
-  - Title, body_html, images
-  - Options (Color, Size) and variants
-- Returns success/failure counts
+**2. Update `src/pages/Products.tsx`**
+- Add a new `SanMarImport` component, modeled after `SSActivewearImport`
+- Credential form: SanMar Customer Number + API Key, with instructions on where to find them
+- Catalog browser with search, category filtering, pagination
+- Style detail dialog showing colors, sizes, pricing
+- Single and bulk import with sync support
+- Store credentials in `store_integrations` with `platform: 'sanmar'`
+- Add a new "SanMar" tab in the suppliers section (or convert the suppliers tab to show both S&S and SanMar)
 
-**3. Frontend: "Push to Store" action in Products page**
-- Add a "Push to Store" button that appears when products are selected and a store integration exists
-- Shows a dialog letting the user choose which connected store to push to
-- Displays progress and results (created/failed counts)
-- Tracks which products have been pushed via a `external_ids` field in `supplier_source` JSONB to avoid duplicates on re-push
+**3. Update the Suppliers tab layout**
+- Replace the single `SSActivewearImport` with a sub-tabbed or accordion layout showing both **S&S Activewear** and **SanMar** as supplier options
 
-**4. Database: No schema changes needed**
-- The existing `supplier_source` JSONB column on `inventory_products` can store the remote product ID after push (e.g., `{ "wc_product_id": 123 }`)
-- The existing `store_integrations` table already has credentials for both platforms
-
-### Technical details
-- WooCommerce variable products require creating the parent product first, then POSTing each variation separately
-- Shopify handles variants inline in the product create call (up to 100 variants per product)
-- Image URLs from S&S or uploaded images are passed as-is; both APIs accept external URLs
-- Re-pushing an already-exported product will update it (PUT) instead of creating a duplicate
+### Technical Notes
+- SanMar's API base URL: `https://ws.sanmar.com/promostandards/` (PromoStandards) or their proprietary endpoints
+- The edge function handles all API communication server-side — user credentials never touch the frontend beyond the initial form
+- No database migration needed — reuses existing `inventory_products` and `store_integrations` tables
+- The `supplier_source` JSONB column already supports multiple providers
 
