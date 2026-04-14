@@ -125,9 +125,11 @@ Deno.serve(async (req) => {
 
     // Parse GetProductSellable response — returns array of {productId, partId}
     const parseProductSellable = (xml: string): Array<{productId: string, partId?: string}> => {
-      // Check for error
+      // Code 130 / "not found" are handled upstream — just return empty
+      const errorCode = extractTag(xml, 'code')
+      if (errorCode === '130') return []
       const errorMsg = extractTag(xml, 'errorMessage')
-      if (errorMsg) throw new Error(errorMsg)
+      if (errorMsg && !errorMsg.toLowerCase().includes('not found')) throw new Error(errorMsg)
 
       const products: Array<{productId: string, partId?: string}> = []
       const productBlocks = extractAllBlocks(xml, 'ProductSellable')
