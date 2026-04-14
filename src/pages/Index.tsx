@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Code, Layers, Zap, ArrowRight, Globe, Paintbrush, Package, LogIn } from "lucide-react";
-import logo from "@/assets/customizer-studio-logo.png";
-import { useAuth } from "@/contexts/AuthContext";
+import { Code, Layers, Zap, ArrowRight, Globe, Paintbrush, Package } from "lucide-react";
+import MarketingLayout from "@/components/MarketingLayout";
 
 const features = [
   {
@@ -29,34 +28,8 @@ const steps = [
 ];
 
 export default function Index() {
-  const { user } = useAuth();
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="Customizer Studio" className="h-8" />
-          </Link>
-          <div className="flex items-center gap-4">
-            {user ? (
-              <Link to="/products">
-                <Button className="gap-2">
-                  Dashboard <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/auth">
-                <Button className="gap-2">
-                  <LogIn className="h-4 w-4" /> Sign In
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </nav>
-
+    <MarketingLayout>
       {/* Hero */}
       <section className="relative overflow-hidden py-24 md:py-36">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
@@ -74,9 +47,14 @@ export default function Index() {
             you get back print-ready PNGs and design data.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <Link to="/developers">
+            <Link to="/auth">
               <Button size="lg" className="gap-2 text-base px-8 h-12">
-                View Integration Docs <ArrowRight className="h-5 w-5" />
+                Get Started Free <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/features">
+              <Button size="lg" variant="outline" className="gap-2 text-base px-8 h-12">
+                View Features
               </Button>
             </Link>
           </div>
@@ -136,8 +114,8 @@ export default function Index() {
             <div className="px-4 py-2 border-b bg-muted flex items-center gap-2">
               <div className="flex gap-1.5">
                 <div className="h-3 w-3 rounded-full bg-destructive/60" />
-                <div className="h-3 w-3 rounded-full bg-yellow-400/60" />
-                <div className="h-3 w-3 rounded-full bg-green-400/60" />
+                <div className="h-3 w-3 rounded-full bg-accent/60" />
+                <div className="h-3 w-3 rounded-full bg-primary/60" />
               </div>
               <span className="text-xs text-muted-foreground font-mono ml-2">your-store.html</span>
             </div>
@@ -165,15 +143,27 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="Customizer Studio" className="h-6" />
+      {/* CTA */}
+      <section className="py-24 border-t">
+        <div className="container text-center">
+          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Ready to get started?</h2>
+          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+            Create your free account and start adding product customization to your store today.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/auth">
+              <Button size="lg" className="gap-2 px-8">
+                Create Free Account <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/pricing">
+              <Button size="lg" variant="outline" className="gap-2 px-8">
+                View Pricing
+              </Button>
+            </Link>
           </div>
-          <p>© {new Date().getFullYear()} All rights reserved.</p>
         </div>
-      </footer>
-    </div>
+      </section>
+    </MarketingLayout>
   );
 }

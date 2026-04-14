@@ -7,6 +7,14 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import Index from "./pages/Index";
+import Features from "./pages/Features";
+import Pricing from "./pages/Pricing";
+import Faq from "./pages/Faq";
+import About from "./pages/About";
+import Integrations from "./pages/Integrations";
+import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import DesignStudio from "./pages/DesignStudio";
 import EmbedCustomizer from "./pages/EmbedCustomizer";
 import Developers from "./pages/Developers";
@@ -44,9 +52,22 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Marketing pages */}
             <Route path="/" element={<Index />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/faq" element={<Faq />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/integrations" element={<Integrations />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+
+            {/* Auth */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Public */}
             <Route path="/demo" element={<Demo />} />
             <Route path="/embed/:sessionId" element={<EmbedCustomizer />} />
             <Route path="/preview/:productId" element={<ProductPreview />} />
@@ -55,6 +76,8 @@ const App = () => (
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout/return" element={<CheckoutReturn />} />
             <Route path="/checkout/:sessionId" element={<Checkout />} />
+
+            {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
             <Route path="/templates" element={<DashboardRoute><Templates /></DashboardRoute>} />
