@@ -230,15 +230,19 @@ Deno.serve(async (req) => {
       let partBlocks = extractAllBlocks(xml, 'ProductPart')
       if (!partBlocks.length) partBlocks = extractAllBlocks(xml, 'Part')
       const parts: Array<{partId: string, color: string, size: string}> = []
+      const colorSet = new Set<string>()
       for (const block of partBlocks) {
         const partId = extractTag(block, 'partId')
+        // Color is in ColorArray > Color > colorName
         const colorArrayBlock = extractAllBlocks(block, 'ColorArray')[0] || ''
         const colorBlock = colorArrayBlock ? extractAllBlocks(colorArrayBlock, 'Color')[0] || '' : ''
         let color = colorBlock ? extractTag(colorBlock, 'colorName') : ''
         if (!color) color = extractTag(block, 'colorName') || extractTag(block, 'standardColorName')
         const size = extractTag(block, 'labelSize') || extractTag(block, 'apparelSize')
         parts.push({ partId, color, size })
+        if (color) colorSet.add(color)
       }
+      console.log(`parseProductParts: ${partBlocks.length} parts, ${colorSet.size} unique colors, sample colors:`, JSON.stringify([...colorSet].slice(0, 5)))
       return parts
     }
 
