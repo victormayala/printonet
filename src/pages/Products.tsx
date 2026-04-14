@@ -392,37 +392,80 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
 
   useEffect(() => { fetchIntegration(); }, [user]);
 
+  const normalizeStoreUrl = (value: string) => value.trim().replace(/\/$/, "");
+
+  const getEdgeFunctionErrorMessage = async (error: any) => {
+    const fallback = error?.message || "Shopify connection failed";
+    const response = error?.context;
+
+    if (!(response instanceof Response)) return fallback;
+
+    try {
+      const body = await response.clone().json();
+      if (typeof body?.error === "string" && body.error.trim()) {
+        return body.error;
+      }
+    } catch {}
+
+    try {
+      const text = await response.clone().text();
+      if (text.trim()) return text;
+    } catch {}
+
+    return fallback;
+  };
+
+  const getFriendlyShopifyErrorMessage = (message: string) => {
+    if (/read_products scope/i.test(message)) {
+      return "This token is missing Shopify Admin API product access. Enable read_products and write_products in your custom app, update or reinstall the app, then paste the new Admin API access token.";
+    }
+
+    if (/invalid api key or access token|unauthorized|401/i.test(message)) {
+      return "Shopify rejected this token. Use the Admin API access token from your custom app, not the Storefront token.";
+    }
+
+    return message;
+  };
+
   const handleConnect = async () => {
-    if (!storeUrl.trim() || !token.trim()) {
+    const normalizedStoreUrl = normalizeStoreUrl(storeUrl);
+    const accessToken = token.trim();
+
+    if (!normalizedStoreUrl || !accessToken) {
       toast({ title: "Enter both store URL and access token", variant: "destructive" });
       return;
     }
+
     setLoading(true);
     try {
-      // Save credentials
+      const { data, error } = await supabase.functions.invoke("import-shopify-products", {
+        body: { store_url: normalizedStoreUrl, access_token: accessToken, user_id: user?.id },
+      });
+
+      if (error) {
+        const rawMessage = await getEdgeFunctionErrorMessage(error);
+        throw new Error(getFriendlyShopifyErrorMessage(rawMessage));
+      }
+
       const integrationPayload = {
         user_id: user?.id,
         platform: "shopify" as const,
-        store_url: storeUrl.trim().replace(/\/$/, ""),
-        credentials: { access_token: token.trim() },
+        store_url: normalizedStoreUrl,
+        credentials: { access_token: accessToken },
+        last_synced_at: new Date().toISOString(),
       };
 
-      if (integration) {
-        await supabase.from("store_integrations").update(integrationPayload).eq("id", integration.id);
-      } else {
-        await supabase.from("store_integrations").insert(integrationPayload);
-      }
+      const { error: saveError } = integration
+        ? await supabase.from("store_integrations").update(integrationPayload).eq("id", integration.id)
+        : await supabase.from("store_integrations").insert(integrationPayload);
 
-      // Import products
-      const { data, error } = await supabase.functions.invoke("import-shopify-products", {
-        body: { store_url: storeUrl.trim().replace(/\/$/, ""), access_token: token.trim(), user_id: user?.id },
-      });
-      if (error) throw error;
+      if (saveError) throw saveError;
+
       toast({ title: `Connected! Imported ${data.imported_count} products from Shopify` });
       await fetchIntegration();
       onDone();
     } catch (err: any) {
-      toast({ title: "Shopify import failed", description: err.message, variant: "destructive" });
+      toast({ title: "Shopify connection failed", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -441,12 +484,17 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
           is_sync: true,
         },
       });
-      if (error) throw error;
-      toast({ title: `Synced! ${data.imported_count} new, ${data.updated_count} updated out of ${data.total} products` });
+
+      if (error) {
+        const rawMessage = await getEdgeFunctionErrorMessage(error);
+        throw new Error(getFriendlyShopifyErrorMessage(rawMessage));
+      }
+
+      toast({ title: `Synced! Imported ${data.imported_count} of ${data.total} products from Shopify` });
       await fetchIntegration();
       onDone();
     } catch (err: any) {
-      toast({ title: "Sync failed", description: err.message, variant: "destructive" });
+      toast({ title: "Shopify sync failed", description: err.message, variant: "destructive" });
     } finally {
       setSyncing(false);
     }
@@ -508,8 +556,8 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
             <li>Log in to your <strong className="text-foreground">Shopify Admin</strong> at <code className="text-xs bg-muted px-1.5 py-0.5 rounded">your-store.myshopify.com/admin</code></li>
             <li>Go to <strong className="text-foreground">Settings → Apps and sales channels → Develop apps</strong></li>
             <li>Click <strong className="text-foreground">Create an app</strong> and give it a name (e.g. "Customizer Studio")</li>
-            <li>Under <strong className="text-foreground">Configuration → Storefront API</strong>, select the scopes: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">unauthenticated_read_product_listings</code></li>
-            <li>Click <strong className="text-foreground">Install app</strong>, then copy the <strong className="text-foreground">Storefront API access token</strong></li>
+            <li>Under <strong className="text-foreground">Configuration → Admin API integration</strong>, enable <code className="text-xs bg-muted px-1.5 py-0.5 rounded">read_products</code> and <code className="text-xs bg-muted px-1.5 py-0.5 rounded">write_products</code>, then save</li>
+            <li>Click <strong className="text-foreground">Install app</strong> (or update it if scopes changed), then copy the <strong className="text-foreground">Admin API access token</strong></li>
           </ol>
           <p>Your <strong className="text-foreground">Store URL</strong> is your Shopify domain, e.g. <code className="text-xs bg-muted px-1.5 py-0.5 rounded">https://your-store.myshopify.com</code></p>
         </CardContent>
@@ -518,7 +566,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg"><ShoppingBag className="h-5 w-5" /> Connect Shopify</CardTitle>
-          <CardDescription>Enter your Shopify store URL and a Storefront API access token. Credentials will be saved for future syncs.</CardDescription>
+          <CardDescription>Enter your Shopify store URL and an Admin API access token with product scopes enabled. Credentials will be saved for future syncs.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -526,8 +574,9 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
             <Input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://your-store.myshopify.com" />
           </div>
           <div className="space-y-2">
-            <Label>Storefront Access Token</Label>
+            <Label>Admin API Access Token</Label>
             <Input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="shpat_..." />
+            <p className="text-xs text-muted-foreground">Use the Admin API token from your custom app — not the Storefront token.</p>
           </div>
           <Button onClick={handleConnect} disabled={loading} className="gap-2">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
