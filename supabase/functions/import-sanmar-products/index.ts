@@ -185,6 +185,10 @@ Deno.serve(async (req) => {
       }
 
       const parts: any[] = []
+      if (partBlocks.length > 0) {
+        console.log('First ProductPart sample (500 chars):', partBlocks[0].substring(0, 500))
+        console.log('PriceMap size:', priceMap.size, 'sample entries:', JSON.stringify([...priceMap.entries()].slice(0, 3)))
+      }
       for (const block of partBlocks) {
         const partId = extractTag(block, 'partId')
         const colorName = extractTag(block, 'colorName') || extractTag(block, 'standardColorName')
