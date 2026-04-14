@@ -4,10 +4,18 @@ const corsHeaders = {
 }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// SanMar PromoStandards Product Data Service V2.0.0
-const PS_ENDPOINT = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2'
-const PS_NS = 'http://www.promostandards.org/WSDL/ProductDataService/2.0.0/'
-const PS_SHARED = 'http://www.promostandards.org/WSDL/ProductDataService/2.0.0/SharedObjects/'
+// SanMar PromoStandards Endpoints
+const PS_PRODUCT_V2 = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2'
+const PS_MEDIA = 'https://ws.sanmar.com:8080/promostandards/MediaContentServiceBinding'
+const PS_PRICING = 'https://ws.sanmar.com:8080/promostandards/PricingAndConfigurationServiceBinding'
+
+// Namespaces
+const NS_PRODUCT = 'http://www.promostandards.org/WSDL/ProductDataService/2.0.0/'
+const NS_PRODUCT_SHARED = 'http://www.promostandards.org/WSDL/ProductDataService/2.0.0/SharedObjects/'
+const NS_MEDIA = 'http://www.promostandards.org/WSDL/MediaService/1.0.0/'
+const NS_MEDIA_SHARED = 'http://www.promostandards.org/WSDL/MediaService/1.0.0/SharedObjects/'
+const NS_PRICING = 'http://www.promostandards.org/WSDL/PricingAndConfiguration/1.0.0/'
+const NS_PRICING_SHARED = 'http://www.promostandards.org/WSDL/PricingAndConfiguration/1.0.0/SharedObjects/'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -20,83 +28,51 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return jsonResponse({ error: 'Missing authorization' }, 401)
-    }
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
-    if (authError || !user) {
-      return jsonResponse({ error: 'Unauthorized' }, 401)
-    }
+    if (!authHeader) return jsonResponse({ error: 'Missing authorization' }, 401)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (authError || !user) return jsonResponse({ error: 'Unauthorized' }, 401)
 
     const body = await req.json()
     const { action, username, password, search, category, style_id, user_id, page, per_page } = body
 
-    if (!username || !password) {
-      return jsonResponse({ error: 'username and password are required' }, 400)
+    if (!username || !password) return jsonResponse({ error: 'username and password are required' }, 400)
+
+    // ============ XML Helpers ============
+
+    const escXml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+    const decodeXml = (s: string) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+
+    const extractTag = (xml: string, tag: string): string => {
+      const m = xml.match(new RegExp(`<(?:[^:]+:)?${tag}(?:\\s[^>]*)?>([^<]*)</(?:[^:]+:)?${tag}>`, 'i'))
+      return m ? m[1].trim() : ''
     }
 
-    // ---- PromoStandards SOAP builders ----
+    const extractAllBlocks = (xml: string, tag: string): string[] => {
+      const regex = new RegExp(`<(?:[^:]+:)?${tag}(?=[\\s>/])([^>]*)>([\\s\\S]*?)</(?:[^:]+:)?${tag}>`, 'gi')
+      const results: string[] = []
+      let m
+      while ((m = regex.exec(xml)) !== null) results.push(m[2])
+      return results
+    }
 
-    const buildGetProductSellable = (productId?: string) => `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${PS_NS}" xmlns:shar="${PS_SHARED}">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <ns:GetProductSellableRequest>
-      <shar:wsVersion>2.0.0</shar:wsVersion>
-      <shar:id>${escapeXml(username)}</shar:id>
-      <shar:password>${escapeXml(password)}</shar:password>
-      ${productId ? `<shar:productId>${escapeXml(productId)}</shar:productId>` : ''}
-      <shar:isSellable>true</shar:isSellable>
-    </ns:GetProductSellableRequest>
-  </soapenv:Body>
-</soapenv:Envelope>`
+    // ============ SOAP Callers ============
 
-    const buildGetProduct = (productId: string) => `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${PS_NS}" xmlns:shar="${PS_SHARED}">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <ns:GetProductRequest>
-      <shar:wsVersion>2.0.0</shar:wsVersion>
-      <shar:id>${escapeXml(username)}</shar:id>
-      <shar:password>${escapeXml(password)}</shar:password>
-      <shar:localizationCountry>US</shar:localizationCountry>
-      <shar:localizationLanguage>en</shar:localizationLanguage>
-      <shar:productId>${escapeXml(productId)}</shar:productId>
-    </ns:GetProductRequest>
-  </soapenv:Body>
-</soapenv:Envelope>`
-
-    // Make a SOAP call
-    const soapCall = async (xmlBody: string): Promise<string> => {
-      console.log('Making PromoStandards SOAP call...')
-      const res = await fetch(PS_ENDPOINT, {
+    const soapCall = async (endpoint: string, xmlBody: string): Promise<string> => {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': '' },
         body: xmlBody,
       })
       const text = await res.text()
-      console.log('SanMar response status:', res.status, 'body length:', text.length)
-      // Log presence of key sections
-      const hasMedia = text.includes('MediaContent')
-      const hasPrice = text.includes('ProductPriceGroup')
-      const hasPart = text.includes('ProductPart')
-      console.log('XML sections: MediaContent=', hasMedia, 'ProductPriceGroup=', hasPrice, 'ProductPart=', hasPart)
 
       const lowerText = text.toLowerCase()
-      // PromoStandards returns auth errors as ServiceMessage with severity=Error
       if (lowerText.includes('authentication') && (lowerText.includes('failed') || lowerText.includes('credentials'))) {
-        throw new Error('Authentication failed. Please verify your SanMar.com username and password. Ensure your account has Web Services access by emailing sanmarintegrations@sanmar.com.')
+        throw new Error('Authentication failed. Please verify your SanMar.com username and password.')
       }
-      // Check for ServiceMessage errors (PromoStandards error pattern)
       const severity = extractTag(text, 'severity')
       const errorCode = extractTag(text, 'code')
       if (severity?.toLowerCase() === 'error') {
-        // Code 130 = "Product Id not found" — not a real error, just no results
-        if (errorCode === '130') {
-          return text // let caller handle empty results
-        }
+        if (errorCode === '130' || errorCode === '160') return text // not found / no results
         const desc = extractTag(text, 'description') || 'Unknown error'
         throw new Error(`SanMar error: ${desc}`)
       }
@@ -104,237 +80,284 @@ Deno.serve(async (req) => {
         const faultMsg = extractTag(text, 'faultstring') || extractTag(text, 'faultString') || text.substring(0, 300)
         throw new Error(`SanMar error: ${faultMsg}`)
       }
-      if (!res.ok) {
-        throw new Error(`SanMar API error ${res.status}: ${text.substring(0, 300)}`)
-      }
+      if (!res.ok) throw new Error(`SanMar API error ${res.status}: ${text.substring(0, 300)}`)
       return text
     }
 
-    // XML helpers
-    const extractTag = (xml: string, tag: string): string => {
-      const regex = new RegExp(`<(?:[^:]+:)?${tag}(?:\\s[^>]*)?>([^<]*)</(?:[^:]+:)?${tag}>`, 'i')
-      const match = xml.match(regex)
-      return match ? match[1].trim() : ''
-    }
+    // ============ SOAP Builders ============
 
-    const extractAllBlocks = (xml: string, tag: string): string[] => {
-      // Use (?=[\\s>/]) to prevent 'Part' from matching 'PartArray'
-      const regex = new RegExp(`<(?:[^:]+:)?${tag}(?=[\\s>/])([^>]*)>([\\s\\S]*?)</(?:[^:]+:)?${tag}>`, 'gi')
-      const results: string[] = []
-      let match
-      while ((match = regex.exec(xml)) !== null) {
-        results.push(match[2])
-      }
-      return results
-    }
+    const buildGetProductSellable = (productId?: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${NS_PRODUCT}" xmlns:shar="${NS_PRODUCT_SHARED}">
+  <soapenv:Header/><soapenv:Body>
+    <ns:GetProductSellableRequest>
+      <shar:wsVersion>2.0.0</shar:wsVersion>
+      <shar:id>${escXml(username)}</shar:id>
+      <shar:password>${escXml(password)}</shar:password>
+      ${productId ? `<shar:productId>${escXml(productId)}</shar:productId>` : ''}
+      <shar:isSellable>true</shar:isSellable>
+    </ns:GetProductSellableRequest>
+  </soapenv:Body>
+</soapenv:Envelope>`
 
-    // Parse GetProductSellable response — returns array of {productId, partId}
-    const parseProductSellable = (xml: string): Array<{productId: string, partId?: string}> => {
-      // Code 130 / "not found" are handled upstream — just return empty
+    const buildGetProduct = (productId: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${NS_PRODUCT}" xmlns:shar="${NS_PRODUCT_SHARED}">
+  <soapenv:Header/><soapenv:Body>
+    <ns:GetProductRequest>
+      <shar:wsVersion>2.0.0</shar:wsVersion>
+      <shar:id>${escXml(username)}</shar:id>
+      <shar:password>${escXml(password)}</shar:password>
+      <shar:localizationCountry>US</shar:localizationCountry>
+      <shar:localizationLanguage>en</shar:localizationLanguage>
+      <shar:productId>${escXml(productId)}</shar:productId>
+    </ns:GetProductRequest>
+  </soapenv:Body>
+</soapenv:Envelope>`
+
+    const buildGetMediaContent = (productId: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${NS_MEDIA}" xmlns:shar="${NS_MEDIA_SHARED}">
+  <soapenv:Header/><soapenv:Body>
+    <ns:GetMediaContentRequest>
+      <shar:wsVersion>1.1.0</shar:wsVersion>
+      <shar:id>${escXml(username)}</shar:id>
+      <shar:password>${escXml(password)}</shar:password>
+      <shar:mediaType>Image</shar:mediaType>
+      <shar:productId>${escXml(productId)}</shar:productId>
+    </ns:GetMediaContentRequest>
+  </soapenv:Body>
+</soapenv:Envelope>`
+
+    const buildGetPricing = (productId: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${NS_PRICING}" xmlns:shar="${NS_PRICING_SHARED}">
+  <soapenv:Header/><soapenv:Body>
+    <ns:GetConfigurationAndPricingRequest>
+      <shar:wsVersion>1.0.0</shar:wsVersion>
+      <shar:id>${escXml(username)}</shar:id>
+      <shar:password>${escXml(password)}</shar:password>
+      <shar:productId>${escXml(productId)}</shar:productId>
+      <shar:currency>USD</shar:currency>
+      <shar:priceType>Net</shar:priceType>
+      <shar:localizationCountry>US</shar:localizationCountry>
+      <shar:localizationLanguage>en</shar:localizationLanguage>
+      <shar:configurationType>Blank</shar:configurationType>
+    </ns:GetConfigurationAndPricingRequest>
+  </soapenv:Body>
+</soapenv:Envelope>`
+
+    // ============ Parsers ============
+
+    const parseProductSellable = (xml: string): Array<{productId: string}> => {
       const errorCode = extractTag(xml, 'code')
-      if (errorCode === '130') return []
+      if (errorCode === '130' || errorCode === '160') return []
       const errorMsg = extractTag(xml, 'errorMessage')
       if (errorMsg && !errorMsg.toLowerCase().includes('not found')) throw new Error(errorMsg)
-
-      const products: Array<{productId: string, partId?: string}> = []
-      const productBlocks = extractAllBlocks(xml, 'ProductSellable')
-      
-      for (const block of productBlocks) {
-        const productId = extractTag(block, 'productId')
-        const partId = extractTag(block, 'partId')
-        if (productId) {
-          products.push({ productId, partId: partId || undefined })
-        }
+      const products: Array<{productId: string}> = []
+      for (const block of extractAllBlocks(xml, 'ProductSellable')) {
+        const pid = extractTag(block, 'productId')
+        if (pid) products.push({ productId: pid })
       }
       return products
     }
 
-    // Decode XML entities
-    const decodeXmlEntities = (s: string): string =>
-      s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    // Parse Media Content response — returns map of color → { front, back, swatch }
+    const parseMediaContent = (xml: string): Map<string, { front: string, back: string, swatch: string }> => {
+      const mediaMap = new Map<string, { front: string, back: string, swatch: string }>()
+      let firstFront = ''
+      for (const block of extractAllBlocks(xml, 'MediaContent')) {
+        const url = extractTag(block, 'url')
+        if (!url) continue
+        const color = extractTag(block, 'color') || '_default'
+        // classTypeId: 1006=Primary, 1007=Front, 1008=Rear, 1004=Swatch, 1001=Blank
+        const classTypeId = extractTag(block, 'classTypeId')
+        const entry = mediaMap.get(color) || { front: '', back: '', swatch: '' }
+        if (classTypeId === '1007' || classTypeId === '1006' || classTypeId === '1001') {
+          entry.front = entry.front || url
+        } else if (classTypeId === '1008') {
+          entry.back = entry.back || url
+        } else if (classTypeId === '1004') {
+          entry.swatch = entry.swatch || url
+        } else if (!entry.front) {
+          entry.front = url
+        }
+        mediaMap.set(color, entry)
+        if (!firstFront && entry.front) firstFront = entry.front
+      }
+      // Ensure _default has at least one front image
+      if (!mediaMap.has('_default') && firstFront) {
+        mediaMap.set('_default', { front: firstFront, back: '', swatch: '' })
+      }
+      return mediaMap
+    }
 
-    // Parse GetProduct response — returns detailed product data
+    // Parse Pricing response — returns map of partId → price
+    const parsePricing = (xml: string): Map<string, number> => {
+      const priceMap = new Map<string, number>()
+      if (!xml) return priceMap
+      // Log first 500 chars of pricing response for debugging
+      console.log('Pricing XML sample:', xml.substring(0, 500))
+      // PPC response: Configuration > PartArray > Part (each has partId, PartPriceArray > PartPrice > price)
+      const partBlocks = extractAllBlocks(xml, 'Part')
+      console.log('Pricing Part blocks found:', partBlocks.length)
+      if (partBlocks.length > 0) {
+        console.log('First pricing Part (300 chars):', partBlocks[0].substring(0, 300))
+      }
+      for (const partBlock of partBlocks) {
+        const partId = extractTag(partBlock, 'partId')
+        if (!partId) continue
+        const priceBlocks = extractAllBlocks(partBlock, 'PartPrice')
+        for (const pb of priceBlocks) {
+          const price = parseFloat(extractTag(pb, 'price') || '0')
+          if (price > 0) { priceMap.set(partId, price); break }
+        }
+      }
+      return priceMap
+    }
+
+    // Parse GetProduct response — returns product metadata and parts
     const parseGetProduct = (xml: string) => {
       const errorMsg = extractTag(xml, 'errorMessage')
-      if (errorMsg && !xml.toLowerCase().includes('product')) throw new Error(errorMsg)
-
-      const productName = decodeXmlEntities(extractTag(xml, 'productName'))
-      const description = decodeXmlEntities(extractTag(xml, 'description'))
-      const productBrand = decodeXmlEntities(extractTag(xml, 'productBrand'))
-      const productCat = extractTag(xml, 'ProductCategory') || extractTag(xml, 'productCategory')
-      const productId = extractTag(xml, 'productId')
-
-      // PromoStandards V2: Prices are in ProductPriceGroupArray > ProductPriceGroup
-      // Each has a groupName and price, plus partIdArray with partId entries
-      const priceMap = new Map<string, number>()
-      const priceGroups = extractAllBlocks(xml, 'ProductPriceGroup')
-      for (const pg of priceGroups) {
-        const price = parseFloat(extractTag(pg, 'price') || '0')
-        if (!price) continue
-        // Extract all partId values within this price group
-        const partIdRegex = /<(?:[^:]+:)?partId[^>]*>([^<]+)<\/(?:[^:]+:)?partId>/gi
-        let pm
-        while ((pm = partIdRegex.exec(pg)) !== null) {
-          priceMap.set(pm[1].trim(), price)
-        }
-      }
-
-      // PromoStandards V2: Parts are in ProductPartArray > ProductPart
-      // Each ProductPart has: partId, primaryColor > Color > colorName, ColorArray, ApparelSize > labelSize
-      let partBlocks = extractAllBlocks(xml, 'ProductPart')
-      if (partBlocks.length === 0) partBlocks = extractAllBlocks(xml, 'Part')
-
-      const parts: any[] = []
-      for (const block of partBlocks) {
-        const partId = extractTag(block, 'partId')
-        
-        // Color: Use ColorArray > Color > colorName (the actual color), fall back to primaryColor
-        const colorArrayBlock = extractAllBlocks(block, 'ColorArray')[0] || ''
-        const colorBlock = colorArrayBlock ? extractAllBlocks(colorArrayBlock, 'Color')[0] || '' : ''
-        let colorName = colorBlock ? extractTag(colorBlock, 'colorName') : ''
-        if (!colorName) colorName = extractTag(block, 'colorName') || extractTag(block, 'standardColorName')
-        
-        const sizeName = extractTag(block, 'labelSize') || extractTag(block, 'apparelSize')
-        const partPrice = priceMap.get(partId) || 0
-
-        // Images from MediaContent within the part
-        const mediaBlocks = extractAllBlocks(block, 'MediaContent')
-        let frontImage = ''
-        let backImage = ''
-        let swatchImage = ''
-        for (const media of mediaBlocks) {
-          const url = extractTag(media, 'url')
-          const classType = (extractTag(media, 'classType') || '').toLowerCase()
-          if (!url) continue
-          if (classType.includes('front')) frontImage = frontImage || url
-          else if (classType.includes('back')) backImage = backImage || url
-          else if (classType.includes('swatch')) swatchImage = swatchImage || url
-          else if (!frontImage) frontImage = url
-        }
-
-        // SanMar CDN fallback: construct image URL from productId + colorName
-        if (!frontImage && productId && colorName) {
-          const cleanColor = colorName.replace(/\s+/g, '%20')
-          frontImage = `https://cdnm.sanmar.com/imglib/mresjpg/2024/${productId}_${cleanColor}_model_front.jpg`
-        }
-
-        parts.push({
-          partId,
-          color: colorName,
-          size: sizeName,
-          price: partPrice,
-          frontImage,
-          backImage,
-          swatchImage,
-        })
-      }
-
+      if (errorMsg && !xml.toLowerCase().includes('productname')) throw new Error(errorMsg)
       return {
-        productName: productName || '',
-        description: description || '',
-        brand: productBrand || 'SanMar',
-        category: productCat || 'Apparel',
-        parts,
+        productName: decodeXml(extractTag(xml, 'productName')),
+        description: decodeXml(extractTag(xml, 'description')),
+        brand: decodeXml(extractTag(xml, 'productBrand')) || 'SanMar',
+        category: extractTag(xml, 'ProductCategory') || extractTag(xml, 'productCategory') || 'Apparel',
+        productId: extractTag(xml, 'productId'),
+        parts: parseProductParts(xml),
       }
     }
 
-    // ACTION: browse — search by style/product ID
+    const parseProductParts = (xml: string) => {
+      let partBlocks = extractAllBlocks(xml, 'ProductPart')
+      if (!partBlocks.length) partBlocks = extractAllBlocks(xml, 'Part')
+      const parts: Array<{partId: string, color: string, size: string}> = []
+      for (const block of partBlocks) {
+        const partId = extractTag(block, 'partId')
+        // Extract ALL colorName occurrences — first is from primaryColor, second from ColorArray
+        const colorNameRegex = /<(?:[^:]+:)?colorName[^>]*>([^<]+)<\/(?:[^:]+:)?colorName>/gi
+        const colorNames: string[] = []
+        let cm
+        while ((cm = colorNameRegex.exec(block)) !== null) colorNames.push(cm[1].trim())
+        // Prefer the ColorArray colorName (2nd occurrence) over primaryColor (1st)
+        const color = colorNames.length > 1 ? colorNames[1] : (colorNames[0] || '')
+        const size = extractTag(block, 'labelSize') || extractTag(block, 'apparelSize')
+        parts.push({ partId, color, size })
+      }
+      return parts
+    }
+
+    // ============ Enrichment: fetch media + pricing in parallel ============
+
+    const enrichProduct = async (productId: string, product: ReturnType<typeof parseGetProduct>) => {
+      // Fetch media and pricing in parallel
+      const [mediaXml, pricingXml] = await Promise.all([
+        soapCall(PS_MEDIA, buildGetMediaContent(productId)).catch(() => ''),
+        soapCall(PS_PRICING, buildGetPricing(productId)).catch(() => ''),
+      ])
+
+      const mediaMap = mediaXml ? parseMediaContent(mediaXml) : new Map()
+      const priceMap = pricingXml ? parsePricing(pricingXml) : new Map()
+
+      console.log(`Enriched ${productId}: ${mediaMap.size} media colors, ${priceMap.size} prices, ${product.parts.length} parts`)
+
+      // Build enriched parts
+      const parts = product.parts.map(p => {
+        const colorMedia = mediaMap.get(p.color) || mediaMap.get('_default') || { front: '', back: '', swatch: '' }
+        return {
+          partId: p.partId,
+          color: p.color,
+          size: p.size,
+          price: priceMap.get(p.partId) || 0,
+          frontImage: colorMedia.front,
+          backImage: colorMedia.back,
+          swatchImage: colorMedia.swatch,
+        }
+      })
+
+      return { ...product, parts }
+    }
+
+    // ============ ACTION: browse ============
+
     if (action === 'browse') {
       try {
-        if (!search || !search.trim()) {
+        if (!search?.trim()) {
           return jsonResponse({
-            styles: [],
-            page: 1,
-            per_page: per_page || 50,
-            total: 0,
-            total_pages: 0,
+            styles: [], page: 1, per_page: per_page || 50, total: 0, total_pages: 0,
             message: 'Enter a style number (e.g. PC61, DT6000, ST350) to search the SanMar catalog.',
           })
         }
 
-        // Search by specific product/style ID
         const styleQuery = search.trim().toUpperCase()
-        const xmlBody = buildGetProductSellable(styleQuery)
-        const xml = await soapCall(xmlBody)
+        const xml = await soapCall(PS_PRODUCT_V2, buildGetProductSellable(styleQuery))
         const sellableProducts = parseProductSellable(xml)
-
-        // Deduplicate by productId and fall back to direct product lookup for valid styles
-        // that may not be returned by GetProductSellable.
         let uniqueIds = [...new Set(sellableProducts.map(p => p.productId))]
-        const detailCache = new Map<string, any>()
 
+        // Fallback: try direct GetProduct if sellable returned nothing
         if (!uniqueIds.length) {
           try {
-            const detailXml = await soapCall(buildGetProduct(styleQuery))
+            const detailXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(styleQuery))
             const detail = parseGetProduct(detailXml)
-            if (detail.productName || detail.parts.length) {
-              uniqueIds = [styleQuery]
-              detailCache.set(styleQuery, detail)
-            }
-          } catch {
-            // Leave empty and return a graceful no-results response
-          }
+            if (detail.productName || detail.parts.length) uniqueIds = [styleQuery]
+          } catch { /* no results */ }
         }
 
         const pageSize = per_page || 50
         const currentPage = page || 1
         const totalCount = uniqueIds.length
         const totalPages = Math.ceil(totalCount / pageSize)
-        const startIdx = (currentPage - 1) * pageSize
-        const paged = uniqueIds.slice(startIdx, startIdx + pageSize)
+        const paged = uniqueIds.slice((currentPage - 1) * pageSize, (currentPage - 1) * pageSize + pageSize)
 
-        // Enrich results with product details (since we're searching specific styles, count is small)
-        const styles: any[] = []
-        const enrichPromises = paged.map(async (id) => {
+        // Enrich each style with product data + media + pricing in parallel
+        const stylePromises = paged.map(async (id) => {
           try {
-            const detail = detailCache.get(id) ?? parseGetProduct(await soapCall(buildGetProduct(id)))
-            const uniqueColors = new Set(detail.parts.map(p => p.color).filter(Boolean))
-            styles.push({
+            const prodXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(id))
+            const product = parseGetProduct(prodXml)
+            const enriched = await enrichProduct(id, product)
+            const uniqueColors = new Set(enriched.parts.map(p => p.color).filter(Boolean))
+            const firstPartWithImage = enriched.parts.find(p => p.frontImage) || enriched.parts[0]
+            return {
               styleID: id,
               styleName: id,
-              brandName: detail.brand,
-              title: detail.productName,
-              baseCategory: detail.category,
-              styleImage: detail.parts[0]?.frontImage || null,
-              customerPrice: detail.parts[0]?.price || 0,
+              brandName: enriched.brand,
+              title: enriched.productName,
+              baseCategory: enriched.category,
+              styleImage: firstPartWithImage?.frontImage || null,
+              customerPrice: firstPartWithImage?.price || 0,
               colorCount: uniqueColors.size,
-            })
+            }
           } catch {
-            styles.push({
+            return {
               styleID: id, styleName: id, brandName: 'SanMar', title: '',
               baseCategory: 'Apparel', styleImage: null, customerPrice: 0, colorCount: 0,
-            })
+            }
           }
         })
-        await Promise.all(enrichPromises)
+        const styles = await Promise.all(stylePromises)
 
-        return jsonResponse({
-          styles,
-          page: currentPage,
-          per_page: pageSize,
-          total: totalCount,
-          total_pages: totalPages,
-        })
+        if (!styles.length && currentPage === 1) {
+          return jsonResponse({ styles: [], page: 1, per_page: pageSize, total: 0, total_pages: 0 })
+        }
+        return jsonResponse({ styles, page: currentPage, per_page: pageSize, total: totalCount, total_pages: totalPages })
       } catch (err: any) {
         return jsonResponse({ error: err.message }, err.message.includes('uthenticat') ? 401 : 500)
       }
     }
 
-    // ACTION: details — fetch full product info for a style
+    // ============ ACTION: details ============
+
     if (action === 'details') {
-      if (!style_id) {
-        return jsonResponse({ error: 'style_id is required' }, 400)
-      }
+      if (!style_id) return jsonResponse({ error: 'style_id is required' }, 400)
       try {
-        const xml = await soapCall(buildGetProduct(style_id))
-        const product = parseGetProduct(xml)
+        const prodXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(style_id))
+        const product = parseGetProduct(prodXml)
+        const enriched = await enrichProduct(style_id, product)
 
         // Group parts by color
-        const colorMap = new Map<string, any[]>()
-        for (const part of product.parts) {
-          const colorName = part.color || 'Default'
-          if (!colorMap.has(colorName)) colorMap.set(colorName, [])
-          colorMap.get(colorName)!.push(part)
+        const colorMap = new Map<string, typeof enriched.parts>()
+        for (const part of enriched.parts) {
+          const c = part.color || 'Default'
+          if (!colorMap.has(c)) colorMap.set(c, [])
+          colorMap.get(c)!.push(part)
         }
 
         const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
@@ -353,86 +376,71 @@ Deno.serve(async (req) => {
         }))
 
         return jsonResponse({
-          styleID: style_id,
-          styleName: style_id,
-          brandName: product.brand,
-          title: product.productName,
-          description: product.description,
-          baseCategory: product.category,
-          variants,
+          styleID: style_id, styleName: style_id,
+          brandName: enriched.brand, title: enriched.productName,
+          description: enriched.description, baseCategory: enriched.category, variants,
         })
       } catch (err: any) {
         return jsonResponse({ error: err.message }, 500)
       }
     }
 
-    // ACTION: import / sync
+    // ============ ACTION: import / sync ============
+
     if (action === 'import' || action === 'sync') {
       const styleIds = action === 'sync' ? body.style_ids : [style_id]
-      if (!styleIds || !styleIds.length) {
-        return jsonResponse({ error: 'style_id or style_ids required' }, 400)
-      }
+      if (!styleIds?.length) return jsonResponse({ error: 'style_id or style_ids required' }, 400)
 
       const targetUserId = user_id || user.id
-      let imported = 0
-      let updated = 0
+      let imported = 0, updated = 0
 
       for (const sid of styleIds) {
         try {
-          const xml = await soapCall(buildGetProduct(sid))
-          const product = parseGetProduct(xml)
-
+          const prodXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(sid))
+          const product = parseGetProduct(prodXml)
           if (!product.parts.length) continue
+          const enriched = await enrichProduct(sid, product)
 
-          const colorMap = new Map<string, any[]>()
-          for (const part of product.parts) {
-            const colorName = part.color || 'Default'
-            if (!colorMap.has(colorName)) colorMap.set(colorName, [])
-            colorMap.get(colorName)!.push(part)
+          const colorMap = new Map<string, typeof enriched.parts>()
+          for (const part of enriched.parts) {
+            const c = part.color || 'Default'
+            if (!colorMap.has(c)) colorMap.set(c, [])
+            colorMap.get(c)!.push(part)
           }
 
           const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
-            color: colorName,
-            hex: null,
+            color: colorName, hex: null,
             image: parts[0].frontImage || null,
             sizes: parts.map(p => ({
               size: p.size || 'OS',
               sku: p.partId || `${sid}-${colorName}-${p.size || 'OS'}`,
-              price: p.price,
-              qty: 0,
+              price: p.price, qty: 0,
             })),
           }))
 
-          const firstPart = product.parts[0]
-          const productName = `${product.brand} ${sid}`.trim()
+          const firstPart = enriched.parts.find(p => p.frontImage) || enriched.parts[0]
+          const backPart = enriched.parts.find(p => p.backImage)
           const supplierSource = {
-            provider: 'sanmar',
-            style_id: sid,
-            style_name: sid,
-            brand: product.brand,
-            last_synced: new Date().toISOString(),
+            provider: 'sanmar', style_id: sid, style_name: sid,
+            brand: enriched.brand, last_synced: new Date().toISOString(),
           }
 
           const { data: existing } = await supabase
-            .from('inventory_products')
-            .select('id')
+            .from('inventory_products').select('id')
             .eq('user_id', targetUserId)
             .filter('supplier_source->>provider', 'eq', 'sanmar')
             .filter('supplier_source->>style_id', 'eq', String(sid))
             .maybeSingle()
 
           const payload = {
-            name: productName,
-            category: product.category || 'apparel',
-            description: product.description || null,
-            base_price: firstPart.price,
-            image_front: firstPart.frontImage || null,
-            image_back: firstPart.backImage || null,
-            image_side1: null,
-            image_side2: null,
-            variants,
-            is_active: true,
-            supplier_source: supplierSource,
+            name: `${enriched.brand} ${sid}`.trim(),
+            category: enriched.category?.toLowerCase() || 'apparel',
+            description: enriched.description || null,
+            base_price: firstPart?.price || 0,
+            image_front: firstPart?.frontImage || null,
+            image_back: backPart?.backImage || null,
+            image_side1: null, image_side2: null,
+            variants, is_active: true, supplier_source: supplierSource,
             user_id: targetUserId,
           }
 
@@ -443,23 +451,23 @@ Deno.serve(async (req) => {
             await supabase.from('inventory_products').insert(payload)
             imported++
           }
-        } catch {
-          continue
-        }
+        } catch { continue }
       }
 
       return jsonResponse({ imported, updated, total: styleIds.length })
     }
 
-    // ACTION: categories — SanMar doesn't expose categories via PromoStandards, return common ones
+    // ============ ACTION: categories ============
+
     if (action === 'categories') {
-      const categories = [
-        'T-Shirts', 'Polos/Knits', 'Sweatshirts/Fleece', 'Woven Shirts',
-        'Caps', 'Bags', 'Outerwear', 'Activewear', 'Youth',
-        'Women\'s', 'Tall', 'Accessories', 'Bottoms',
-        'Infant & Toddler', 'Workwear', 'Personal Protection'
-      ]
-      return jsonResponse({ categories })
+      return jsonResponse({
+        categories: [
+          'T-Shirts', 'Polos/Knits', 'Sweatshirts/Fleece', 'Woven Shirts',
+          'Caps', 'Bags', 'Outerwear', 'Activewear', 'Youth',
+          "Women's", 'Tall', 'Accessories', 'Bottoms',
+          'Infant & Toddler', 'Workwear', 'Personal Protection'
+        ]
+      })
     }
 
     return jsonResponse({ error: 'Invalid action. Use: browse, import, sync, details, categories' }, 400)
@@ -470,13 +478,9 @@ Deno.serve(async (req) => {
   }
 })
 
-function escapeXml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
-}
-
 function jsonResponse(data: any, status = 200) {
-  return new Response(
-    JSON.stringify(data),
-    { status, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Content-Type': 'application/json' } }
-  )
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Content-Type': 'application/json' }
+  })
 }
