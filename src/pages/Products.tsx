@@ -1960,7 +1960,18 @@ export default function Products() {
           </TabsContent>
 
           <TabsContent value="suppliers">
-            <SSActivewearImport onDone={fetchProducts} />
+            <Tabs defaultValue="ssactivewear" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
+                <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
+              </TabsList>
+              <TabsContent value="ssactivewear">
+                <SSActivewearImport onDone={fetchProducts} />
+              </TabsContent>
+              <TabsContent value="sanmar">
+                <SanMarImport onDone={fetchProducts} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
 
