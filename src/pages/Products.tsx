@@ -1717,12 +1717,10 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     if (!sanmarUsername.trim() || !sanmarPassword.trim()) { toast({ title: "Enter Username and Password", variant: "destructive" }); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Save credentials — validation happens when the user searches the catalog
       const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
       if (integration) { await supabase.from("store_integrations").update(payload).eq("id", integration.id); } else { await supabase.from("store_integrations").insert(payload); }
-      toast({ title: "SanMar connected successfully!" });
+      toast({ title: "SanMar credentials saved!", description: "Search the catalog below to browse products." });
       await fetchIntegration();
     } catch (err: any) { toast({ title: "Connection failed", description: err.message, variant: "destructive" }); } finally { setLoading(false); }
   };
