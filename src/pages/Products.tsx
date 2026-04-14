@@ -1500,7 +1500,8 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     setIntegration(data);
     if (data) {
       setCustomerNumber((data.credentials as any)?.customer_number || "");
-      setApiKey((data.credentials as any)?.api_key || "");
+      setSanmarUsername((data.credentials as any)?.username || "");
+      setSanmarPassword((data.credentials as any)?.password || "");
     }
     setLoadingIntegration(false);
   };
@@ -1522,18 +1523,18 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   const getCredentials = () => {
     if (integration) {
       const creds = integration.credentials as any;
-      return { customer_number: creds.customer_number, api_key: creds.api_key };
+      return { customer_number: creds.customer_number, username: creds.username, password: creds.password };
     }
-    return { customer_number: customerNumber.trim(), api_key: apiKey.trim() };
+    return { customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim() };
   };
 
   const handleConnect = async () => {
-    if (!customerNumber.trim() || !apiKey.trim()) { toast({ title: "Enter both Customer Number and API Key", variant: "destructive" }); return; }
+    if (!customerNumber.trim() || !sanmarUsername.trim() || !sanmarPassword.trim()) { toast({ title: "Enter Customer Number, Username, and Password", variant: "destructive" }); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", customer_number: customerNumber.trim(), api_key: apiKey.trim(), search: "t-shirt" } });
+      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
       if (error) throw error;
-      const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { customer_number: customerNumber.trim(), api_key: apiKey.trim() } };
+      const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
       if (integration) { await supabase.from("store_integrations").update(payload).eq("id", integration.id); } else { await supabase.from("store_integrations").insert(payload); }
       toast({ title: "SanMar connected successfully!" });
       await fetchIntegration();
