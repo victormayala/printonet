@@ -1821,6 +1821,37 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Upload className="h-4 w-4" /> Import from CSV / SFTP File</CardTitle>
+            <CardDescription>Upload a SanMar product data file (SDL, EPDD, BulkInfo CSV, or sanmar_dip.txt) downloaded from SanMar's SFTP server.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer">
+                <input type="file" accept=".csv,.txt,.tsv" onChange={handleCsvUpload} className="hidden" disabled={csvImporting} />
+                <Button variant="outline" className="gap-2 pointer-events-none" disabled={csvImporting}>
+                  {csvImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {csvImporting ? "Importing..." : "Choose CSV File"}
+                </Button>
+              </label>
+              <span className="text-xs text-muted-foreground">Supports .csv, .txt, .tsv formats</span>
+            </div>
+            {csvProgress && (
+              <div className="space-y-1.5">
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${Math.round(((csvProgress.imported + csvProgress.updated) / Math.max(csvProgress.total, 1)) * 100)}%` }} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Processing {csvProgress.imported + csvProgress.updated} of {csvProgress.total} styles ({csvProgress.imported} new, {csvProgress.updated} updated)
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              <strong>SFTP access:</strong> Host: ftp.sanmar.com · Port: 2200 · Protocol: SFTP. Use an SFTP client (like FileZilla or WinSCP) to download the product data files, then upload them here.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Browse SanMar Catalog</CardTitle>
             <CardDescription>Search and import blank products from SanMar</CardDescription>
           </CardHeader>
