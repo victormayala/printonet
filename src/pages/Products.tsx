@@ -564,7 +564,8 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
       if (data?.error) throw new Error(data.error);
 
       if (data?.authorization_url) {
-        window.location.href = data.authorization_url;
+        // Open in new tab — Shopify blocks iframe embedding (X-Frame-Options)
+        window.open(data.authorization_url, "_blank");
       } else {
         throw new Error("No authorization URL returned");
       }
