@@ -209,6 +209,61 @@
     document.head.appendChild(s);
   }
 
+  // --- Auto-inject "Customize" button on Shopify product pages ---
+  function autoInjectButton() {
+    // Only run on Shopify product pages
+    if (!window.Shopify || !window.Shopify.product) return;
+
+    // Don't inject if there's already a data-customizer element
+    if (document.querySelector('[data-customizer]')) return;
+
+    var shopifyProduct = window.Shopify.product;
+    var productName = shopifyProduct.title || shopifyProduct.handle || '';
+    if (!productName) return;
+
+    // Find the best place to inject — after the add-to-cart form or buy buttons
+    var targets = [
+      'form[action="/cart/add"] [type="submit"]',       // Add to cart button
+      'form[action="/cart/add"]',                         // Cart form
+      '.product-form__submit',                            // Dawn theme
+      '.shopify-payment-button',                          // Dynamic checkout
+      '.product-form',                                    // Generic product form
+      '.product__info-wrapper',                           // Dawn product info
+      '.product-single__meta',                            // Debut theme
+    ];
+
+    var anchor = null;
+    for (var i = 0; i < targets.length; i++) {
+      anchor = document.querySelector(targets[i]);
+      if (anchor) break;
+    }
+
+    if (!anchor) return;
+
+    var btn = document.createElement('button');
+    btn.setAttribute('data-customizer', '');
+    btn.setAttribute('data-product-name', productName);
+    btn.type = 'button';
+    btn.textContent = '🎨 Customize This Product';
+    btn.style.cssText =
+      'display:block;width:100%;margin-top:12px;padding:14px 24px;' +
+      'font-size:15px;font-weight:600;font-family:inherit;' +
+      'background:#7c3aed;color:#fff;border:none;border-radius:8px;' +
+      'cursor:pointer;transition:background .15s,transform .1s;' +
+      'text-align:center;letter-spacing:0.02em;';
+    btn.onmouseover = function () { btn.style.background = '#6d28d9'; };
+    btn.onmouseout = function () { btn.style.background = '#7c3aed'; };
+    btn.onmousedown = function () { btn.style.transform = 'scale(0.98)'; };
+    btn.onmouseup = function () { btn.style.transform = 'scale(1)'; };
+
+    // Insert after the anchor element
+    if (anchor.parentNode) {
+      anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+    }
+
+    console.log('[CustomizerLoader] Auto-injected Customize button for:', productName);
+  }
+
   // --- Initialize ---
   function init() {
     loadSDK(function () {
@@ -216,6 +271,8 @@
       document.addEventListener('click', handleClick);
       // Auto-show floating cart widget on store pages
       window.CustomizerStudio.showCartWidget();
+      // Auto-inject button on Shopify product pages
+      autoInjectButton();
     });
   }
 
