@@ -38,6 +38,7 @@
   var _callbacks = {};
   var _productInfo = null;
   var _wcProductId = null;
+  var _shopifyVariantId = null;
   var _summaryOverlay = null;
 
   function init(options) {
