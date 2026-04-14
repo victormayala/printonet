@@ -78,7 +78,11 @@ Deno.serve(async (req) => {
       })
       const text = await res.text()
       console.log('SanMar response status:', res.status, 'body length:', text.length)
-      console.log('SanMar response preview:', text.substring(0, 800))
+      // Log presence of key sections
+      const hasMedia = text.includes('MediaContent')
+      const hasPrice = text.includes('ProductPriceGroup')
+      const hasPart = text.includes('ProductPart')
+      console.log('XML sections: MediaContent=', hasMedia, 'ProductPriceGroup=', hasPrice, 'ProductPart=', hasPart)
 
       const lowerText = text.toLowerCase()
       // PromoStandards returns auth errors as ServiceMessage with severity=Error
@@ -108,17 +112,18 @@ Deno.serve(async (req) => {
 
     // XML helpers
     const extractTag = (xml: string, tag: string): string => {
-      const regex = new RegExp(`<(?:[^:]+:)?${tag}[^>]*>([^<]*)</(?:[^:]+:)?${tag}>`, 'i')
+      const regex = new RegExp(`<(?:[^:]+:)?${tag}(?:\\s[^>]*)?>([^<]*)</(?:[^:]+:)?${tag}>`, 'i')
       const match = xml.match(regex)
       return match ? match[1].trim() : ''
     }
 
     const extractAllBlocks = (xml: string, tag: string): string[] => {
-      const regex = new RegExp(`<(?:[^:]+:)?${tag}[^>]*>([\\s\\S]*?)</(?:[^:]+:)?${tag}>`, 'gi')
+      // Use (?=[\\s>/]) to prevent 'Part' from matching 'PartArray'
+      const regex = new RegExp(`<(?:[^:]+:)?${tag}(?=[\\s>/])([^>]*)>([\\s\\S]*?)</(?:[^:]+:)?${tag}>`, 'gi')
       const results: string[] = []
       let match
       while ((match = regex.exec(xml)) !== null) {
-        results.push(match[1])
+        results.push(match[2])
       }
       return results
     }
@@ -144,49 +149,81 @@ Deno.serve(async (req) => {
       return products
     }
 
+    // Decode XML entities
+    const decodeXmlEntities = (s: string): string =>
+      s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+
     // Parse GetProduct response — returns detailed product data
     const parseGetProduct = (xml: string) => {
       const errorMsg = extractTag(xml, 'errorMessage')
       if (errorMsg && !xml.toLowerCase().includes('product')) throw new Error(errorMsg)
 
-      const productName = extractTag(xml, 'productName')
-      const description = extractTag(xml, 'description')
-      const productBrand = extractTag(xml, 'productBrand')
+      const productName = decodeXmlEntities(extractTag(xml, 'productName'))
+      const description = decodeXmlEntities(extractTag(xml, 'description'))
+      const productBrand = decodeXmlEntities(extractTag(xml, 'productBrand'))
       const productCat = extractTag(xml, 'ProductCategory') || extractTag(xml, 'productCategory')
+      const productId = extractTag(xml, 'productId')
 
-      // Parse parts (each part = a color/size variant)
-      const partBlocks = extractAllBlocks(xml, 'Part')
+      // PromoStandards V2: Prices are in ProductPriceGroupArray > ProductPriceGroup
+      // Each has a groupName and price, plus partIdArray with partId entries
+      const priceMap = new Map<string, number>()
+      const priceGroups = extractAllBlocks(xml, 'ProductPriceGroup')
+      for (const pg of priceGroups) {
+        const price = parseFloat(extractTag(pg, 'price') || '0')
+        if (!price) continue
+        // Extract all partId values within this price group
+        const partIdRegex = /<(?:[^:]+:)?partId[^>]*>([^<]+)<\/(?:[^:]+:)?partId>/gi
+        let pm
+        while ((pm = partIdRegex.exec(pg)) !== null) {
+          priceMap.set(pm[1].trim(), price)
+        }
+      }
+
+      // PromoStandards V2: Parts are in ProductPartArray > ProductPart
+      // Each ProductPart has: partId, primaryColor > Color > colorName, ColorArray, ApparelSize > labelSize
+      let partBlocks = extractAllBlocks(xml, 'ProductPart')
+      if (partBlocks.length === 0) partBlocks = extractAllBlocks(xml, 'Part')
+
       const parts: any[] = []
-
       for (const block of partBlocks) {
         const partId = extractTag(block, 'partId')
-        const colorName = extractTag(block, 'colorName') || extractTag(block, 'Color')
-        const sizeName = extractTag(block, 'apparelSize') || extractTag(block, 'labelSize') || extractTag(block, 'Size')
-        const partPrice = extractTag(block, 'partPrice') || extractTag(block, 'price')
-        const primaryImage = extractTag(block, 'url') // first image URL in part
+        
+        // Color: Use ColorArray > Color > colorName (the actual color), fall back to primaryColor
+        const colorArrayBlock = extractAllBlocks(block, 'ColorArray')[0] || ''
+        const colorBlock = colorArrayBlock ? extractAllBlocks(colorArrayBlock, 'Color')[0] || '' : ''
+        let colorName = colorBlock ? extractTag(colorBlock, 'colorName') : ''
+        if (!colorName) colorName = extractTag(block, 'colorName') || extractTag(block, 'standardColorName')
+        
+        const sizeName = extractTag(block, 'labelSize') || extractTag(block, 'apparelSize')
+        const partPrice = priceMap.get(partId) || 0
 
-        // Try to get images from MediaContent blocks within the part
+        // Images from MediaContent within the part
         const mediaBlocks = extractAllBlocks(block, 'MediaContent')
         let frontImage = ''
         let backImage = ''
         let swatchImage = ''
         for (const media of mediaBlocks) {
           const url = extractTag(media, 'url')
-          const mediaType = extractTag(media, 'mediaType')?.toLowerCase()
-          const classType = extractTag(media, 'classType')?.toLowerCase()
+          const classType = (extractTag(media, 'classType') || '').toLowerCase()
           if (!url) continue
-          if (classType?.includes('front') || mediaType?.includes('front')) frontImage = frontImage || url
-          else if (classType?.includes('back') || mediaType?.includes('back')) backImage = backImage || url
-          else if (classType?.includes('swatch') || mediaType?.includes('swatch')) swatchImage = swatchImage || url
+          if (classType.includes('front')) frontImage = frontImage || url
+          else if (classType.includes('back')) backImage = backImage || url
+          else if (classType.includes('swatch')) swatchImage = swatchImage || url
           else if (!frontImage) frontImage = url
+        }
+
+        // SanMar CDN fallback: construct image URL from productId + colorName
+        if (!frontImage && productId && colorName) {
+          const cleanColor = colorName.replace(/\s+/g, '%20')
+          frontImage = `https://cdnm.sanmar.com/imglib/mresjpg/2024/${productId}_${cleanColor}_model_front.jpg`
         }
 
         parts.push({
           partId,
           color: colorName,
           size: sizeName,
-          price: parseFloat(partPrice || '0'),
-          frontImage: frontImage || primaryImage,
+          price: partPrice,
+          frontImage,
           backImage,
           swatchImage,
         })
