@@ -295,8 +295,60 @@
     document.dispatchEvent(completeEvt);
   }
 
-  // --- Add to cart (WooCommerce or generic) ---
+  // --- Add to cart (Shopify, WooCommerce, or generic) ---
   function _addToCart(payload, callback) {
+    // Shopify native cart
+    if (_shopifyVariantId && window.Shopify) {
+      var properties = {};
+      if (payload.sessionId) properties['_customizer_session_id'] = payload.sessionId;
+      if (payload.sides && payload.sides.length > 0) {
+        var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
+        if (frontSide && (frontSide.previewPNG || frontSide.designPNG)) {
+          properties['_customizer_design_url'] = frontSide.previewPNG || frontSide.designPNG;
+        }
+        properties['_customizer_sides'] = JSON.stringify(payload.sides.map(function (s) {
+          var side = { view: s.view, url: s.designPNG };
+          if (s.previewPNG) side.preview_url = s.previewPNG;
+          return side;
+        }));
+      }
+
+      fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: _shopifyVariantId,
+          quantity: 1,
+          properties: properties,
+        }),
+        credentials: 'same-origin',
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.status && data.status >= 400) {
+            console.error('[CustomizerStudio] Shopify add to cart error:', data.description || data.message);
+            callback(false);
+            return;
+          }
+          // Dispatch Shopify cart update event for themes that listen
+          document.dispatchEvent(new CustomEvent('cart:refresh'));
+          // Some themes use this
+          if (typeof window.Shopify !== 'undefined' && window.Shopify.onCartUpdate) {
+            fetch('/cart.js', { credentials: 'same-origin' })
+              .then(function (r) { return r.json(); })
+              .then(function (cart) { window.Shopify.onCartUpdate(cart); })
+              .catch(function () {});
+          }
+          callback(true);
+        })
+        .catch(function (err) {
+          console.error('[CustomizerStudio] Shopify add to cart failed:', err);
+          callback(false);
+        });
+      return;
+    }
+
+    // WooCommerce native cart
     if (_wcProductId) {
       var formData = new FormData();
       formData.append('product_id', _wcProductId);
@@ -323,7 +375,6 @@
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (data.error) {
-            // Variable product — needs variation selection on product page
             console.log('[CustomizerStudio] Variable product detected, redirecting to product page');
             var productUrl = data.product_url || '';
             if (productUrl) {
@@ -334,7 +385,6 @@
             callback(true);
             return;
           }
-          // Simple product — added successfully
           if (typeof jQuery !== 'undefined') {
             jQuery(document.body).trigger('added_to_cart', [data.fragments, data.cart_hash]);
           }
@@ -347,7 +397,7 @@
       return;
     }
 
-    // No WooCommerce product ID — just complete
+    // No store integration — just complete
     callback(true);
   }
 
