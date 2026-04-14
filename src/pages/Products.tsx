@@ -1398,11 +1398,11 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                   {detailStyle.variants?.map((variant: any, idx: number) => (
                     <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center gap-3">
-                        {variant.hex && (
+                        {(variant.hex || variant.color) && (
                           <div
                             className="w-6 h-6 rounded-full border shadow-sm shrink-0"
                             style={{ backgroundColor: resolveVariantHex(variant) }}
-                            title={resolveVariantHex(variant)}
+                            title={variant.color || resolveVariantHex(variant)}
                           />
                         )}
                         {variant.colorFrontImage && (
@@ -2614,11 +2614,11 @@ export default function Products() {
                   {variantDetailProduct.variants.map((variant: any, idx: number) => (
                     <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center gap-3">
-                        {variant.hex && (
+                        {(variant.hex || variant.color) && (
                           <div
                             className="w-6 h-6 rounded-full border shadow-sm shrink-0"
                             style={{ backgroundColor: resolveVariantHex(variant) }}
-                            title={resolveVariantHex(variant)}
+                            title={variant.color || resolveVariantHex(variant)}
                           />
                         )}
                         {variant.image && (
