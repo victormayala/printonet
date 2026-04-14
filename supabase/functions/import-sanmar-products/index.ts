@@ -191,11 +191,18 @@ Deno.serve(async (req) => {
     // Parse Pricing response — returns map of partId → price
     const parsePricing = (xml: string): Map<string, number> => {
       const priceMap = new Map<string, number>()
+      if (!xml) return priceMap
+      // Log first 500 chars of pricing response for debugging
+      console.log('Pricing XML sample:', xml.substring(0, 500))
       // PPC response: Configuration > PartArray > Part (each has partId, PartPriceArray > PartPrice > price)
-      for (const partBlock of extractAllBlocks(xml, 'Part')) {
+      const partBlocks = extractAllBlocks(xml, 'Part')
+      console.log('Pricing Part blocks found:', partBlocks.length)
+      if (partBlocks.length > 0) {
+        console.log('First pricing Part (300 chars):', partBlocks[0].substring(0, 300))
+      }
+      for (const partBlock of partBlocks) {
         const partId = extractTag(partBlock, 'partId')
         if (!partId) continue
-        // Get the first price from PartPriceArray
         const priceBlocks = extractAllBlocks(partBlock, 'PartPrice')
         for (const pb of priceBlocks) {
           const price = parseFloat(extractTag(pb, 'price') || '0')
