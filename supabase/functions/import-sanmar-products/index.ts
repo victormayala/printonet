@@ -81,8 +81,15 @@ Deno.serve(async (req) => {
       console.log('SanMar response preview:', text.substring(0, 800))
 
       const lowerText = text.toLowerCase()
-      if (lowerText.includes('authentication failed') || lowerText.includes('user authenticating') || lowerText.includes('invalid credentials')) {
+      // PromoStandards returns auth errors as ServiceMessage with severity=Error
+      if (lowerText.includes('authentication') && (lowerText.includes('failed') || lowerText.includes('credentials'))) {
         throw new Error('Authentication failed. Please verify your SanMar.com username and password. Ensure your account has Web Services access by emailing sanmarintegrations@sanmar.com.')
+      }
+      // Check for ServiceMessage errors (PromoStandards error pattern)
+      const severity = extractTag(text, 'severity')
+      if (severity?.toLowerCase() === 'error') {
+        const desc = extractTag(text, 'description') || 'Unknown error'
+        throw new Error(`SanMar error: ${desc}`)
       }
       if (lowerText.includes('fault')) {
         const faultMsg = extractTag(text, 'faultstring') || extractTag(text, 'faultString') || text.substring(0, 300)

@@ -1717,8 +1717,10 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     if (!sanmarUsername.trim() || !sanmarPassword.trim()) { toast({ title: "Enter Username and Password", variant: "destructive" }); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
+      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.styles?.length && data?.total === 0) throw new Error("Could not verify credentials — no products returned. Check your username and password.");
       const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
       if (integration) { await supabase.from("store_integrations").update(payload).eq("id", integration.id); } else { await supabase.from("store_integrations").insert(payload); }
       toast({ title: "SanMar connected successfully!" });
