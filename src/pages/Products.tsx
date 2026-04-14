@@ -1543,7 +1543,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
 
   const handleBrowse = async (query?: string, page = 1, cat?: string) => {
     const creds = getCredentials();
-    if (!creds.customer_number || !creds.api_key) return;
+    if (!creds.customer_number || !creds.username || !creds.password) return;
     const nextSearch = query !== undefined ? query : appliedSearchQuery;
     const activeCat = cat !== undefined ? cat : categoryFilter;
     setBrowsing(true);
@@ -1605,7 +1605,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   const handleDisconnect = async () => {
     if (!integration) return; setDisconnecting(true);
     await supabase.from("store_integrations").delete().eq("id", integration.id);
-    setIntegration(null); setCustomerNumber(""); setApiKey(""); setCatalogResults([]); setDisconnecting(false);
+    setIntegration(null); setCustomerNumber(""); setSanmarUsername(""); setSanmarPassword(""); setCatalogResults([]); setDisconnecting(false);
     toast({ title: "SanMar disconnected" });
   };
 
@@ -1763,22 +1763,23 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
         <CardHeader className="pb-3"><CardTitle className="text-base">How to get your SanMar credentials</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <ol className="list-decimal list-inside space-y-2">
-            <li>Log in to your <strong className="text-foreground">SanMar</strong> account at <code className="text-xs bg-muted px-1.5 py-0.5 rounded">sanmar.com</code></li>
-            <li>Go to <strong className="text-foreground">My Account → API Settings</strong></li>
+            <li>You need a <strong className="text-foreground">SanMar distributor account</strong>. If you don't have one, register at <a href="https://www.sanmar.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">sanmar.com</a></li>
             <li>Your <strong className="text-foreground">Customer Number</strong> is your SanMar account number</li>
-            <li>Generate or copy your <strong className="text-foreground">API Key</strong> from the API settings</li>
+            <li>Your <strong className="text-foreground">Username</strong> and <strong className="text-foreground">Password</strong> are your SanMar.com login credentials</li>
+            <li>To enable API access, email <strong className="text-foreground">sanmarintegrations@sanmar.com</strong> with your customer number</li>
           </ol>
-          <p className="text-xs text-muted-foreground/70">Need an account? Visit <a href="https://www.sanmar.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">sanmar.com</a> to register as a distributor.</p>
+          <p className="text-xs text-muted-foreground/70">SanMar will send an integration agreement for e-signature. Access is typically enabled within 1-2 business days.</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> Connect SanMar</CardTitle>
-          <CardDescription>Enter your SanMar customer number and API key to browse and import products.</CardDescription>
+          <CardDescription>Enter your SanMar credentials to browse and import products.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2"><Label>Customer Number</Label><Input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="Your SanMar customer number" /></div>
-          <div className="space-y-2"><Label>API Key</Label><Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type="password" placeholder="Your API key" /></div>
+          <div className="space-y-2"><Label>SanMar.com Username</Label><Input value={sanmarUsername} onChange={(e) => setSanmarUsername(e.target.value)} placeholder="Your SanMar.com username" /></div>
+          <div className="space-y-2"><Label>SanMar.com Password</Label><Input value={sanmarPassword} onChange={(e) => setSanmarPassword(e.target.value)} type="password" placeholder="Your SanMar.com password" /></div>
           <Button onClick={handleConnect} disabled={loading} className="gap-2">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Connect</Button>
         </CardContent>
       </Card>
