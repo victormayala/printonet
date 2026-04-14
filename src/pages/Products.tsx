@@ -1738,6 +1738,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     try {
       const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", ...creds, search: nextSearch.trim() || undefined, category: activeCat !== "all" ? activeCat : undefined, page, per_page: 50 } });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       const styles = data.styles || [];
       if (page === 1) setCatalogResults(styles); else setCatalogResults((prev) => [...prev, ...styles]);
       setAppliedSearchQuery(nextSearch); setCurrentPage(data.page || page); setTotalPages(data.total_pages || 1); setTotalResults(data.total || 0); setHasLoadedCatalog(true);
