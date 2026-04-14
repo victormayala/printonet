@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
           total_pages: totalPages,
         })
       } catch (err: any) {
-        return jsonResponse({ error: err.message }, err.message.includes('Authentication') ? 401 : 500)
+        return jsonResponse({ error: err.message }, err.message.includes('Authentication') || err.message.includes('authentication') ? 401 : 500)
       }
     }
 
