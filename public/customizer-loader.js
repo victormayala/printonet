@@ -152,7 +152,7 @@
 
       item.onclick = function () {
         closePicker();
-        openForProduct(p);
+        openForProduct(p, null, getShopifyVariantId());
       };
       list.appendChild(item);
     });
@@ -189,6 +189,7 @@
     var productId = (el.getAttribute('data-product-id') || '').trim();
     var productName = (el.getAttribute('data-product-name') || '').trim();
     var wcProductId = (el.getAttribute('data-wc-product-id') || '').trim();
+    var shopifyVariantId = (el.getAttribute('data-shopify-variant-id') || '').trim() || getShopifyVariantId();
 
     fetchProducts(function (err, products) {
       if (err || !products) {
@@ -205,7 +206,7 @@
       }
 
       if (match) {
-        openForProduct(match, wcProductId);
+        openForProduct(match, wcProductId, shopifyVariantId);
       } else if (!productId && !productName) {
         showPicker(products);
       } else {
