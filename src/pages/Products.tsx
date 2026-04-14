@@ -1936,8 +1936,8 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
                 )}
               </>
             )}
-            {!browsing && hasLoadedCatalog && catalogResults.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No products found. Try a different search term.</p></div>
+            {!browsing && catalogResults.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground"><Search className="h-10 w-10 mx-auto mb-2 opacity-40" /><p className="text-sm">Search by style number to browse the SanMar catalog.</p><p className="text-xs mt-1">Try: PC61, DT6000, ST350, J317, LPC54V</p></div>
             )}
           </CardContent>
         </Card>
