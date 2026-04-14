@@ -87,7 +87,12 @@ Deno.serve(async (req) => {
       }
       // Check for ServiceMessage errors (PromoStandards error pattern)
       const severity = extractTag(text, 'severity')
+      const errorCode = extractTag(text, 'code')
       if (severity?.toLowerCase() === 'error') {
+        // Code 130 = "Product Id not found" — not a real error, just no results
+        if (errorCode === '130') {
+          return text // let caller handle empty results
+        }
         const desc = extractTag(text, 'description') || 'Unknown error'
         throw new Error(`SanMar error: ${desc}`)
       }
