@@ -372,6 +372,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
   const [integration, setIntegration] = useState<any>(null);
   const [loadingIntegration, setLoadingIntegration] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
 
   const fetchIntegration = async () => {
     if (!user) return;
@@ -545,7 +546,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     );
   }
 
-  const [authUrl, setAuthUrl] = useState<string | null>(null);
+
 
   const handleOAuthConnect = async () => {
     if (!storeUrl.trim()) {
