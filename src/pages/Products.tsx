@@ -1858,7 +1858,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
-              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search styles (e.g. 'PC61', 'polo', 'Port Authority')" onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery, 1, categoryFilter)} className="flex-1" />
+              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Enter a style number (e.g. PC61, DT6000, ST350)" onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery, 1, categoryFilter)} className="flex-1" />
               {categories.length > 0 && (
                 <Select value={categoryFilter} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="w-[200px] shrink-0"><SelectValue placeholder="Category" /></SelectTrigger>
@@ -1940,7 +1940,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
               </>
             )}
             {!browsing && catalogResults.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground"><Search className="h-10 w-10 mx-auto mb-2 opacity-40" /><p className="text-sm">Search by style number to browse the SanMar catalog.</p><p className="text-xs mt-1">Try: PC61, DT6000, ST350, J317, LPC54V</p></div>
+              <div className="text-center py-8 text-muted-foreground"><Search className="h-10 w-10 mx-auto mb-2 opacity-40" /><p className="text-sm">Enter a style number to search the SanMar catalog.</p><p className="text-xs mt-1">Examples: PC61, DT6000, ST350, J317, LPC54V, BC4810GD</p><p className="text-xs mt-1 text-muted-foreground/60">Note: SanMar's API only supports exact style number lookups, not keyword search.</p></div>
             )}
           </CardContent>
         </Card>
