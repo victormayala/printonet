@@ -1,0 +1,2 @@
+ALTER TABLE public.store_integrations DROP CONSTRAINT store_integrations_platform_check;
+ALTER TABLE public.store_integrations ADD CONSTRAINT store_integrations_platform_check CHECK (platform IN ('shopify', 'woocommerce', 'ssactivewear', 'sanmar'));

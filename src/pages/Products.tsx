@@ -1719,7 +1719,10 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     try {
       // Save credentials — validation happens when the user searches the catalog
       const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
-      if (integration) { await supabase.from("store_integrations").update(payload).eq("id", integration.id); } else { await supabase.from("store_integrations").insert(payload); }
+      const { error: insertError } = integration
+        ? await supabase.from("store_integrations").update(payload).eq("id", integration.id)
+        : await supabase.from("store_integrations").insert(payload);
+      if (insertError) throw new Error(insertError.message);
       toast({ title: "SanMar credentials saved!", description: "Search the catalog below to browse products." });
       await fetchIntegration();
     } catch (err: any) { toast({ title: "Connection failed", description: err.message, variant: "destructive" }); } finally { setLoading(false); }
