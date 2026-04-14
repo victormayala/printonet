@@ -145,38 +145,51 @@ Deno.serve(async (req) => {
       return products
     }
 
+    // Decode XML entities
+    const decodeXmlEntities = (s: string): string =>
+      s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+
     // Parse GetProduct response — returns detailed product data
     const parseGetProduct = (xml: string) => {
       const errorMsg = extractTag(xml, 'errorMessage')
       if (errorMsg && !xml.toLowerCase().includes('product')) throw new Error(errorMsg)
 
-      const productName = extractTag(xml, 'productName')
-      const description = extractTag(xml, 'description')
-      const productBrand = extractTag(xml, 'productBrand')
+      const productName = decodeXmlEntities(extractTag(xml, 'productName'))
+      const description = decodeXmlEntities(extractTag(xml, 'description'))
+      const productBrand = decodeXmlEntities(extractTag(xml, 'productBrand'))
       const productCat = extractTag(xml, 'ProductCategory') || extractTag(xml, 'productCategory')
+
+      // Build price lookup from ProductPriceGroup
+      const priceMap = new Map<string, number>()
+      const priceGroups = extractAllBlocks(xml, 'ProductPriceGroup')
+      for (const pg of priceGroups) {
+        const groupName = extractTag(pg, 'groupName')
+        const price = parseFloat(extractTag(pg, 'price') || '0')
+        // Map the group to partIds
+        const partIdBlocks = extractAllBlocks(pg, 'partId')
+        // partId here is inline text content
+        const partIdRegex = /<(?:[^:]+:)?partId[^>]*>([^<]*)<\/(?:[^:]+:)?partId>/gi
+        let pm
+        while ((pm = partIdRegex.exec(pg)) !== null) {
+          if (pm[1].trim()) priceMap.set(pm[1].trim(), price)
+        }
+        // Also check for partPrice directly
+        const partPrice = parseFloat(extractTag(pg, 'partPrice') || '0')
+        if (partPrice && groupName) priceMap.set(groupName, partPrice)
+      }
 
       // Parse parts — PromoStandards V2 uses <ns2:ProductPart> inside <ProductPartArray>
       let partBlocks = extractAllBlocks(xml, 'ProductPart')
-      
-      console.log(`parseGetProduct: found ${partBlocks.length} ProductPart blocks for ${productName}`)
       if (partBlocks.length === 0) {
-        // Fallback: try just Part
         partBlocks = extractAllBlocks(xml, 'Part')
-        console.log(`parseGetProduct: fallback found ${partBlocks.length} Part blocks`)
-      }
-      if (partBlocks.length === 0) {
-        const idx = xml.toLowerCase().indexOf('partid')
-        if (idx > -1) {
-          console.log('parseGetProduct: XML near partId:', xml.substring(Math.max(0, idx - 200), idx + 300))
-        }
       }
 
       const parts: any[] = []
       for (const block of partBlocks) {
         const partId = extractTag(block, 'partId')
-        const colorName = extractTag(block, 'colorName') || extractTag(block, 'Color')
-        const sizeName = extractTag(block, 'apparelSize') || extractTag(block, 'labelSize') || extractTag(block, 'Size')
-        const partPrice = extractTag(block, 'partPrice') || extractTag(block, 'price')
+        const colorName = extractTag(block, 'colorName') || extractTag(block, 'standardColorName')
+        const sizeName = extractTag(block, 'apparelSize') || extractTag(block, 'labelSize')
+        const partPrice = priceMap.get(partId) || parseFloat(extractTag(block, 'partPrice') || extractTag(block, 'price') || '0')
         const primaryImage = extractTag(block, 'url')
 
         const mediaBlocks = extractAllBlocks(block, 'MediaContent')
@@ -198,7 +211,7 @@ Deno.serve(async (req) => {
           partId,
           color: colorName,
           size: sizeName,
-          price: parseFloat(partPrice || '0'),
+          price: partPrice,
           frontImage: frontImage || primaryImage,
           backImage,
           swatchImage,
