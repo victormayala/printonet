@@ -5,11 +5,9 @@ const corsHeaders = {
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // SanMar PromoStandards Product Data Service V2.0.0
-const SANMAR_PS_WSDL = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2?WSDL'
-const SANMAR_PS_ENDPOINT = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2'
-
-// Legacy Standard API (kept as fallback)
-const SANMAR_STANDARD_ENDPOINT = 'https://ws.sanmar.com:8080/SanMarWebService/SanMarProductInfoServicePort'
+const PS_ENDPOINT = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2'
+const PS_NS = 'http://www.promostandards.org/WSDL/ProductDataService/2.0.0/'
+const PS_SHARED = 'http://www.promostandards.org/WSDL/ProductDataService/2.0.0/SharedObjects/'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -34,8 +32,6 @@ Deno.serve(async (req) => {
 
     const body = await req.json()
     const { action, username, password, search, category, style_id, user_id, page, per_page } = body
-    // Accept customer_number for backward compat but don't require it
-    const customerNumber = body.customer_number || ''
 
     if (!username || !password) {
       return jsonResponse({ error: 'username and password are required' }, 400)
@@ -43,10 +39,8 @@ Deno.serve(async (req) => {
 
     // ---- PromoStandards SOAP builders ----
 
-    // GetProductSellable — returns list of sellable product/part IDs
-    const buildGetProductSellable = (productId?: string) => {
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.promostandards.org/WSDL/ProductDataService/2.0.0/" xmlns:shar="http://www.promostandards.org/WSDL/ProductDataService/2.0.0/SharedObjects/">
+    const buildGetProductSellable = (productId?: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${PS_NS}" xmlns:shar="${PS_SHARED}">
   <soapenv:Header/>
   <soapenv:Body>
     <ns:GetProductSellableRequest>
@@ -58,226 +52,204 @@ Deno.serve(async (req) => {
     </ns:GetProductSellableRequest>
   </soapenv:Body>
 </soapenv:Envelope>`
-    }
 
-    // Legacy Standard API builders (for detailed product info)
-    const buildProductInfoRequest = (style: string, color?: string, size?: string) => {
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:impl="http://impl.webservice.integration.sanmar.com/">
+    const buildGetProduct = (productId: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${PS_NS}" xmlns:shar="${PS_SHARED}">
   <soapenv:Header/>
   <soapenv:Body>
-    <impl:getProductInfoByStyleColorSize>
-      <arg0>
-        ${color ? `<color>${escapeXml(color)}</color>` : '<color></color>'}
-        ${size ? `<size>${escapeXml(size)}</size>` : '<size></size>'}
-        <style>${escapeXml(style)}</style>
-      </arg0>
-      <arg1>
-        ${customerNumber ? `<sanMarCustomerNumber>${escapeXml(customerNumber)}</sanMarCustomerNumber>` : ''}
-        <sanMarUserName>${escapeXml(username)}</sanMarUserName>
-        <sanMarUserPassword>${escapeXml(password)}</sanMarUserPassword>
-      </arg1>
-    </impl:getProductInfoByStyleColorSize>
+    <ns:GetProductRequest>
+      <shar:wsVersion>2.0.0</shar:wsVersion>
+      <shar:id>${escapeXml(username)}</shar:id>
+      <shar:password>${escapeXml(password)}</shar:password>
+      <shar:localizationCountry>US</shar:localizationCountry>
+      <shar:localizationLanguage>en</shar:localizationLanguage>
+      <shar:productId>${escapeXml(productId)}</shar:productId>
+    </ns:GetProductRequest>
   </soapenv:Body>
 </soapenv:Envelope>`
-    }
 
-    const buildCategoryRequest = (cat: string) => {
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:impl="http://impl.webservice.integration.sanmar.com/">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <impl:getProductInfoByCategory>
-      <arg0>
-        <category>${escapeXml(cat)}</category>
-      </arg0>
-      <arg1>
-        ${customerNumber ? `<sanMarCustomerNumber>${escapeXml(customerNumber)}</sanMarCustomerNumber>` : ''}
-        <sanMarUserName>${escapeXml(username)}</sanMarUserName>
-        <sanMarUserPassword>${escapeXml(password)}</sanMarUserPassword>
-      </arg1>
-    </impl:getProductInfoByCategory>
-  </soapenv:Body>
-</soapenv:Envelope>`
-    }
-
-    const buildBrandRequest = (brand: string) => {
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:impl="http://impl.webservice.integration.sanmar.com/">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <impl:getProductInfoByBrand>
-      <arg0>
-        <brand>${escapeXml(brand)}</brand>
-      </arg0>
-      <arg1>
-        ${customerNumber ? `<sanMarCustomerNumber>${escapeXml(customerNumber)}</sanMarCustomerNumber>` : ''}
-        <sanMarUserName>${escapeXml(username)}</sanMarUserName>
-        <sanMarUserPassword>${escapeXml(password)}</sanMarUserPassword>
-      </arg1>
-    </impl:getProductInfoByBrand>
-  </soapenv:Body>
-</soapenv:Envelope>`
-    }
-
-    // Make a SOAP call to either endpoint
-    const soapCall = async (xmlBody: string, endpoint = SANMAR_STANDARD_ENDPOINT): Promise<string> => {
-      console.log('Making SOAP call to', endpoint)
-      const res = await fetch(endpoint, {
+    // Make a SOAP call
+    const soapCall = async (xmlBody: string): Promise<string> => {
+      console.log('Making PromoStandards SOAP call...')
+      const res = await fetch(PS_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/xml; charset=utf-8',
-          'SOAPAction': '',
-        },
+        headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': '' },
         body: xmlBody,
       })
       const text = await res.text()
       console.log('SanMar response status:', res.status, 'body length:', text.length)
-      console.log('SanMar response preview:', text.substring(0, 500))
-      
+      console.log('SanMar response preview:', text.substring(0, 800))
+
       const lowerText = text.toLowerCase()
-      if (lowerText.includes('authentication failed') || lowerText.includes('user authenticating')) {
+      if (lowerText.includes('authentication failed') || lowerText.includes('user authenticating') || lowerText.includes('invalid credentials')) {
         throw new Error('Authentication failed. Please verify your SanMar.com username and password. Ensure your account has Web Services access by emailing sanmarintegrations@sanmar.com.')
       }
-      if (!res.ok && !text.includes('<listResponse>')) {
-        if (lowerText.includes('fault')) {
-          const faultMsg = extractTag(text, 'faultstring') || text.substring(0, 200)
-          throw new Error(`SanMar error: ${faultMsg}`)
-        }
-        throw new Error(`SanMar API error ${res.status}: ${text.substring(0, 200)}`)
+      if (lowerText.includes('fault')) {
+        const faultMsg = extractTag(text, 'faultstring') || extractTag(text, 'faultString') || text.substring(0, 300)
+        throw new Error(`SanMar error: ${faultMsg}`)
+      }
+      if (!res.ok) {
+        throw new Error(`SanMar API error ${res.status}: ${text.substring(0, 300)}`)
       }
       return text
     }
 
+    // XML helpers
     const extractTag = (xml: string, tag: string): string => {
-      const regex = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'i')
+      const regex = new RegExp(`<(?:[^:]+:)?${tag}[^>]*>([^<]*)</(?:[^:]+:)?${tag}>`, 'i')
       const match = xml.match(regex)
       return match ? match[1].trim() : ''
     }
 
-    const extractAllTags = (xml: string, tag: string): string[] => {
-      const regex = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'gi')
+    const extractAllBlocks = (xml: string, tag: string): string[] => {
+      const regex = new RegExp(`<(?:[^:]+:)?${tag}[^>]*>([\\s\\S]*?)</(?:[^:]+:)?${tag}>`, 'gi')
       const results: string[] = []
       let match
       while ((match = regex.exec(xml)) !== null) {
-        results.push(match[1].trim())
+        results.push(match[1])
       }
       return results
     }
 
-    const parseProductListResponse = (xml: string) => {
-      const errorOccurred = extractTag(xml, 'errorOccured') === 'true' || extractTag(xml, 'errorOccurred') === 'true'
-      if (errorOccurred) {
-        const msg = extractTag(xml, 'message')
-        throw new Error(msg || 'SanMar returned an error')
-      }
+    // Parse GetProductSellable response — returns array of {productId, partId}
+    const parseProductSellable = (xml: string): Array<{productId: string, partId?: string}> => {
+      // Check for error
+      const errorMsg = extractTag(xml, 'errorMessage')
+      if (errorMsg) throw new Error(errorMsg)
 
-      const blocks = xml.split(/<listResponse>/i).slice(1)
-      const products: any[] = []
-
-      for (const block of blocks) {
-        const p: any = {
-          style: extractTag(block, 'style'),
-          brandName: extractTag(block, 'brandName'),
-          productTitle: extractTag(block, 'productTitle'),
-          productDescription: extractTag(block, 'productDescription'),
-          productStatus: extractTag(block, 'productStatus'),
-          color: extractTag(block, 'color'),
-          catalogColor: extractTag(block, 'catalogColor'),
-          size: extractTag(block, 'size'),
-          uniqueKey: extractTag(block, 'uniqueKey'),
-          inventoryKey: extractTag(block, 'inventoryKey'),
-          piecePrice: extractTag(block, 'piecePrice'),
-          casePrice: extractTag(block, 'casePrice'),
-          pieceSalePrice: extractTag(block, 'pieceSalePrice'),
-          caseSalePrice: extractTag(block, 'caseSalePrice'),
-          category: extractTag(block, 'category'),
-          colorProductImage: extractTag(block, 'colorProductImage'),
-          colorSquareImage: extractTag(block, 'colorSquareImage'),
-          colorSwatchImage: extractTag(block, 'colorSwatchImage'),
-          thumbnailImage: extractTag(block, 'thumbnailImage'),
-          productImage: extractTag(block, 'productImage'),
-          frontModel: extractTag(block, 'frontModel'),
-          backModel: extractTag(block, 'backModel'),
-          sideModel: extractTag(block, 'sideModel'),
-          frontFlat: extractTag(block, 'frontFlat'),
-          backFlat: extractTag(block, 'backFlat'),
+      const products: Array<{productId: string, partId?: string}> = []
+      const productBlocks = extractAllBlocks(xml, 'ProductSellable')
+      
+      for (const block of productBlocks) {
+        const productId = extractTag(block, 'productId')
+        const partId = extractTag(block, 'partId')
+        if (productId) {
+          products.push({ productId, partId: partId || undefined })
         }
-        if (p.style) products.push(p)
       }
-
       return products
     }
 
-    // ACTION: browse
+    // Parse GetProduct response — returns detailed product data
+    const parseGetProduct = (xml: string) => {
+      const errorMsg = extractTag(xml, 'errorMessage')
+      if (errorMsg && !xml.toLowerCase().includes('product')) throw new Error(errorMsg)
+
+      const productName = extractTag(xml, 'productName')
+      const description = extractTag(xml, 'description')
+      const productBrand = extractTag(xml, 'productBrand')
+      const productCat = extractTag(xml, 'ProductCategory') || extractTag(xml, 'productCategory')
+
+      // Parse parts (each part = a color/size variant)
+      const partBlocks = extractAllBlocks(xml, 'Part')
+      const parts: any[] = []
+
+      for (const block of partBlocks) {
+        const partId = extractTag(block, 'partId')
+        const colorName = extractTag(block, 'colorName') || extractTag(block, 'Color')
+        const sizeName = extractTag(block, 'apparelSize') || extractTag(block, 'labelSize') || extractTag(block, 'Size')
+        const partPrice = extractTag(block, 'partPrice') || extractTag(block, 'price')
+        const primaryImage = extractTag(block, 'url') // first image URL in part
+
+        // Try to get images from MediaContent blocks within the part
+        const mediaBlocks = extractAllBlocks(block, 'MediaContent')
+        let frontImage = ''
+        let backImage = ''
+        let swatchImage = ''
+        for (const media of mediaBlocks) {
+          const url = extractTag(media, 'url')
+          const mediaType = extractTag(media, 'mediaType')?.toLowerCase()
+          const classType = extractTag(media, 'classType')?.toLowerCase()
+          if (!url) continue
+          if (classType?.includes('front') || mediaType?.includes('front')) frontImage = frontImage || url
+          else if (classType?.includes('back') || mediaType?.includes('back')) backImage = backImage || url
+          else if (classType?.includes('swatch') || mediaType?.includes('swatch')) swatchImage = swatchImage || url
+          else if (!frontImage) frontImage = url
+        }
+
+        parts.push({
+          partId,
+          color: colorName,
+          size: sizeName,
+          price: parseFloat(partPrice || '0'),
+          frontImage: frontImage || primaryImage,
+          backImage,
+          swatchImage,
+        })
+      }
+
+      return {
+        productName: productName || '',
+        description: description || '',
+        brand: productBrand || 'SanMar',
+        category: productCat || 'Apparel',
+        parts,
+      }
+    }
+
+    // ACTION: browse — search or list sellable products
     if (action === 'browse') {
       try {
         let xmlBody: string
-        let products: any[] = []
+        let sellableProducts: Array<{productId: string}> = []
 
         if (search && search.trim()) {
-          xmlBody = buildProductInfoRequest(search.trim())
-          try {
-            const xml = await soapCall(xmlBody)
-            products = parseProductListResponse(xml)
-          } catch (e: any) {
-            if (e.message.includes('Invalid Style') || e.message.includes('not found')) {
-              try {
-                xmlBody = buildBrandRequest(search.trim())
-                const xml = await soapCall(xmlBody)
-                products = parseProductListResponse(xml)
-              } catch {
-                products = []
-              }
-            } else {
-              throw e
-            }
-          }
-        } else if (category && category !== 'all') {
-          xmlBody = buildCategoryRequest(category)
+          // Search by specific product/style ID
+          xmlBody = buildGetProductSellable(search.trim())
           const xml = await soapCall(xmlBody)
-          products = parseProductListResponse(xml)
+          sellableProducts = parseProductSellable(xml)
         } else {
-          xmlBody = buildCategoryRequest('T-Shirts')
+          // Get all sellable products
+          xmlBody = buildGetProductSellable()
           const xml = await soapCall(xmlBody)
-          products = parseProductListResponse(xml)
+          sellableProducts = parseProductSellable(xml)
         }
 
-        const styleMap = new Map<string, any>()
-        for (const p of products) {
-          const styleNo = p.style
-          if (!styleNo) continue
-          if (!styleMap.has(styleNo)) {
-            styleMap.set(styleNo, {
-              styleID: styleNo,
-              styleName: styleNo,
-              brandName: p.brandName || 'SanMar',
-              title: p.productTitle || '',
-              baseCategory: p.category || 'Apparel',
-              styleImage: p.colorProductImage || p.productImage || p.frontModel || null,
-              customerPrice: parseFloat(p.piecePrice || '0'),
-              colorCount: 0,
-              colors: [],
-            })
-          }
-          const style = styleMap.get(styleNo)!
-          if (p.color && !style.colors.includes(p.color)) {
-            style.colors.push(p.color)
-            style.colorCount = style.colors.length
-          }
-        }
-
-        const allStyles = Array.from(styleMap.values())
+        // Deduplicate by productId
+        const uniqueIds = [...new Set(sellableProducts.map(p => p.productId))]
+        
         const pageSize = per_page || 50
         const currentPage = page || 1
-        const totalCount = allStyles.length
+        const totalCount = uniqueIds.length
         const totalPages = Math.ceil(totalCount / pageSize)
         const startIdx = (currentPage - 1) * pageSize
-        const paged = allStyles.slice(startIdx, startIdx + pageSize)
-        const items = paged.map(({ colors, ...rest }: any) => rest)
+        const paged = uniqueIds.slice(startIdx, startIdx + pageSize)
+
+        // For the current page, try to fetch basic info for each product
+        const styles = paged.map(id => ({
+          styleID: id,
+          styleName: id,
+          brandName: 'SanMar',
+          title: '',
+          baseCategory: 'Apparel',
+          styleImage: null,
+          customerPrice: 0,
+          colorCount: 0,
+        }))
+
+        // Try to enrich first few results with actual product data
+        const enrichLimit = Math.min(paged.length, 10)
+        const enrichPromises = paged.slice(0, enrichLimit).map(async (id, idx) => {
+          try {
+            const detailXml = await soapCall(buildGetProduct(id))
+            const detail = parseGetProduct(detailXml)
+            styles[idx].brandName = detail.brand
+            styles[idx].title = detail.productName
+            styles[idx].baseCategory = detail.category
+            if (detail.parts.length > 0) {
+              styles[idx].styleImage = detail.parts[0].frontImage || null
+              styles[idx].customerPrice = detail.parts[0].price
+              const uniqueColors = new Set(detail.parts.map(p => p.color).filter(Boolean))
+              styles[idx].colorCount = uniqueColors.size
+            }
+          } catch {
+            // Skip enrichment on error
+          }
+        })
+        await Promise.all(enrichPromises)
 
         return jsonResponse({
-          styles: items,
+          styles,
           page: currentPage,
           per_page: pageSize,
           total: totalCount,
@@ -288,57 +260,45 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ACTION: details
+    // ACTION: details — fetch full product info for a style
     if (action === 'details') {
       if (!style_id) {
         return jsonResponse({ error: 'style_id is required' }, 400)
       }
       try {
-        const xmlBody = buildProductInfoRequest(style_id)
-        const xml = await soapCall(xmlBody)
-        const products = parseProductListResponse(xml)
+        const xml = await soapCall(buildGetProduct(style_id))
+        const product = parseGetProduct(xml)
 
+        // Group parts by color
         const colorMap = new Map<string, any[]>()
-        let brandName = 'SanMar'
-        let title = ''
-        let description = ''
-        let baseCategory = 'Apparel'
-
-        for (const p of products) {
-          brandName = p.brandName || brandName
-          title = p.productTitle || title
-          description = p.productDescription || description
-          baseCategory = p.category || baseCategory
-          const colorName = p.color || 'Default'
+        for (const part of product.parts) {
+          const colorName = part.color || 'Default'
           if (!colorMap.has(colorName)) colorMap.set(colorName, [])
-          colorMap.get(colorName)!.push(p)
+          colorMap.get(colorName)!.push(part)
         }
 
-        const variants = Array.from(colorMap.entries()).map(([colorName, skus]) => {
-          const first = skus[0]
-          return {
-            color: colorName,
-            hex: null,
-            colorFrontImage: first.colorProductImage || first.frontModel || null,
-            colorSwatchImage: first.colorSwatchImage || first.colorSquareImage || null,
-            sizes: skus.map((s: any) => ({
-              size: s.size || 'OS',
-              sku: s.uniqueKey || `${style_id}-${colorName}-${s.size || 'OS'}`,
-              price: parseFloat(s.piecePrice || '0'),
-              casePrice: parseFloat(s.casePrice || '0'),
-              salePrice: parseFloat(s.pieceSalePrice || '0'),
-              qty: 0,
-            })),
-          }
-        })
+        const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
+          color: colorName,
+          hex: null,
+          colorFrontImage: parts[0].frontImage || null,
+          colorSwatchImage: parts[0].swatchImage || null,
+          sizes: parts.map(p => ({
+            size: p.size || 'OS',
+            sku: p.partId || `${style_id}-${colorName}-${p.size || 'OS'}`,
+            price: p.price,
+            casePrice: 0,
+            salePrice: 0,
+            qty: 0,
+          })),
+        }))
 
         return jsonResponse({
           styleID: style_id,
           styleName: style_id,
-          brandName,
-          title,
-          description,
-          baseCategory,
+          brandName: product.brand,
+          title: product.productName,
+          description: product.description,
+          baseCategory: product.category,
           variants,
         })
       } catch (err: any) {
@@ -359,47 +319,37 @@ Deno.serve(async (req) => {
 
       for (const sid of styleIds) {
         try {
-          const xmlBody = buildProductInfoRequest(sid)
-          const xml = await soapCall(xmlBody)
-          const products = parseProductListResponse(xml)
+          const xml = await soapCall(buildGetProduct(sid))
+          const product = parseGetProduct(xml)
 
-          if (!products.length) continue
-
-          const firstProd = products[0]
-          const brandName = firstProd.brandName || 'SanMar'
-          const productTitle = firstProd.productTitle || ''
+          if (!product.parts.length) continue
 
           const colorMap = new Map<string, any[]>()
-          for (const p of products) {
-            const colorName = p.color || 'Default'
+          for (const part of product.parts) {
+            const colorName = part.color || 'Default'
             if (!colorMap.has(colorName)) colorMap.set(colorName, [])
-            colorMap.get(colorName)!.push(p)
+            colorMap.get(colorName)!.push(part)
           }
 
-          const variants = Array.from(colorMap.entries()).map(([colorName, skus]) => {
-            const first = skus[0]
-            return {
-              color: colorName,
-              hex: null,
-              image: first.colorProductImage || first.frontModel || null,
-              sizes: skus.map((s: any) => ({
-                size: s.size || 'OS',
-                sku: s.uniqueKey || `${sid}-${colorName}-${s.size || 'OS'}`,
-                price: parseFloat(s.piecePrice || '0'),
-                qty: 0,
-              })),
-            }
-          })
+          const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
+            color: colorName,
+            hex: null,
+            image: parts[0].frontImage || null,
+            sizes: parts.map(p => ({
+              size: p.size || 'OS',
+              sku: p.partId || `${sid}-${colorName}-${p.size || 'OS'}`,
+              price: p.price,
+              qty: 0,
+            })),
+          }))
 
-          const imageFront = firstProd.colorProductImage || firstProd.frontModel || firstProd.productImage || null
-          const imageBack = firstProd.backModel || firstProd.backFlat || null
-
-          const productName = `${brandName} ${sid}`.trim()
+          const firstPart = product.parts[0]
+          const productName = `${product.brand} ${sid}`.trim()
           const supplierSource = {
             provider: 'sanmar',
             style_id: sid,
             style_name: sid,
-            brand: brandName,
+            brand: product.brand,
             last_synced: new Date().toISOString(),
           }
 
@@ -413,12 +363,12 @@ Deno.serve(async (req) => {
 
           const payload = {
             name: productName,
-            category: firstProd.category || 'apparel',
-            description: productTitle || firstProd.productDescription || null,
-            base_price: parseFloat(firstProd.piecePrice || '0'),
-            image_front: imageFront,
-            image_back: imageBack,
-            image_side1: firstProd.sideModel || null,
+            category: product.category || 'apparel',
+            description: product.description || null,
+            base_price: firstPart.price,
+            image_front: firstPart.frontImage || null,
+            image_back: firstPart.backImage || null,
+            image_side1: null,
             image_side2: null,
             variants,
             is_active: true,
@@ -441,7 +391,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ imported, updated, total: styleIds.length })
     }
 
-    // ACTION: categories
+    // ACTION: categories — SanMar doesn't expose categories via PromoStandards, return common ones
     if (action === 'categories') {
       const categories = [
         'T-Shirts', 'Polos/Knits', 'Sweatshirts/Fleece', 'Woven Shirts',
