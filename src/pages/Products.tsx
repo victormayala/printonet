@@ -1448,7 +1448,6 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
 
 function SanMarImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
-  const [customerNumber, setCustomerNumber] = useState("");
   const [sanmarUsername, setSanmarUsername] = useState("");
   const [sanmarPassword, setSanmarPassword] = useState("");
   const [loading, setLoading] = useState(false);
