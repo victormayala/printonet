@@ -545,41 +545,51 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     );
   }
 
+  const handleOAuthConnect = async () => {
+    if (!storeUrl.trim()) {
+      toast.error("Please enter your Shopify store URL or name");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("shopify-oauth-init", {
+        body: {
+          shop: storeUrl.trim(),
+          user_id: user?.id,
+          redirect_url: window.location.origin + "/products",
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        throw new Error("No authorization URL returned");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start Shopify connection");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <Card className="border-dashed">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">How to get your Shopify credentials</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <ol className="list-decimal list-inside space-y-2">
-            <li>Go to the <a href="https://partners.shopify.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">Shopify Dev Dashboard</a> (or Shopify CLI) and create a new custom app for your store</li>
-            <li>Under <strong className="text-foreground">API access scopes</strong>, enable <code className="text-xs bg-muted px-1.5 py-0.5 rounded">read_products</code> and <code className="text-xs bg-muted px-1.5 py-0.5 rounded">write_products</code></li>
-            <li>Install the app on your store, then copy the <strong className="text-foreground">Admin API access token</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">shpat_</code>)</li>
-          </ol>
-          <p className="text-xs mt-2 italic">Note: Since Jan 2026, new custom apps must be created via the Dev Dashboard or CLI — the legacy "Develop apps" section in Shopify Admin only works for existing apps.</p>
-          <p>Your <strong className="text-foreground">Store URL</strong> is your Shopify domain, e.g. <code className="text-xs bg-muted px-1.5 py-0.5 rounded">https://your-store.myshopify.com</code></p>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg"><ShoppingBag className="h-5 w-5" /> Connect Shopify</CardTitle>
-          <CardDescription>Enter your Shopify store URL and an Admin API access token with product scopes enabled. Credentials will be saved for future syncs.</CardDescription>
+          <CardDescription>Enter your store name or URL, then authorize with Shopify. We'll request only the product permissions needed.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Store URL</Label>
-            <Input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://your-store.myshopify.com" />
+            <Label>Store URL or Name</Label>
+            <Input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="your-store or your-store.myshopify.com" />
+            <p className="text-xs text-muted-foreground">You'll be redirected to Shopify to authorize access — no manual tokens needed.</p>
           </div>
-          <div className="space-y-2">
-            <Label>Admin API Access Token</Label>
-            <Input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="shpat_..." />
-            <p className="text-xs text-muted-foreground">Use the Admin API token from your custom app — not the Storefront token.</p>
-          </div>
-          <Button onClick={handleConnect} disabled={loading} className="gap-2">
+          <Button onClick={handleOAuthConnect} disabled={loading} className="gap-2">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-            Connect & Import
+            Connect with Shopify
           </Button>
         </CardContent>
       </Card>
