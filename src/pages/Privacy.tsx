@@ -3,15 +3,15 @@ import MarketingLayout from "@/components/MarketingLayout";
 export default function Privacy() {
   return (
     <MarketingLayout>
-      <section className="py-24 md:py-32">
+      <section className="py-28 md:py-36">
         <div className="container">
           <div className="max-w-3xl mx-auto">
-            <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight mb-8">
+            <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight mb-4">
               Privacy Policy
             </h1>
-            <p className="text-sm text-muted-foreground mb-12">Last updated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+            <p className="text-sm text-muted-foreground mb-16">Last updated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
 
-            <div className="prose prose-neutral max-w-none space-y-8 text-muted-foreground">
+            <div className="space-y-10 text-muted-foreground">
               <section>
                 <h2 className="font-display text-xl font-semibold text-foreground mb-3">1. Information We Collect</h2>
                 <p className="leading-relaxed">We collect information you provide directly to us, including your name, email address, store name, and payment information when you create an account or make a purchase. We also collect usage data such as pages visited, features used, and design sessions created.</p>

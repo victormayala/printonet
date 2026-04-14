@@ -24,28 +24,24 @@ const capabilities = [
 export default function Features() {
   return (
     <MarketingLayout>
-      <section className="py-24 md:py-32">
+      <section className="py-28 md:py-36">
         <div className="container">
           <div className="text-center max-w-3xl mx-auto mb-20">
-            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.1]">
-              Everything you need to sell{" "}
-              <span className="text-gradient">custom products</span>
+            <h1 className="font-display text-5xl md:text-[4.5rem] font-bold tracking-tight leading-[1.05]">
+              Everything you need to sell custom products.
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-              A full-featured design studio that embeds directly into your store. No separate app, no redirects — just a seamless customization experience.
+            <p className="mt-8 text-lg md:text-xl text-muted-foreground leading-relaxed">
+              A full-featured design studio that embeds directly into your store. No separate app, no redirects.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-14 max-w-5xl mx-auto">
             {capabilities.map((f) => (
-              <div
-                key={f.title}
-                className="group rounded-xl border bg-card p-7 transition-all hover:shadow-lg hover:border-primary/30"
-              >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <div key={f.title} className="text-center">
+                <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-foreground">
                   <f.icon className="h-5 w-5" />
                 </div>
-                <h3 className="font-display text-base font-semibold mb-2">{f.title}</h3>
+                <h3 className="font-display text-lg font-semibold mb-2">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             ))}

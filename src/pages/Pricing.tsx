@@ -55,14 +55,13 @@ const plans = [
 export default function Pricing() {
   return (
     <MarketingLayout>
-      <section className="py-24 md:py-32">
+      <section className="py-28 md:py-36">
         <div className="container">
           <div className="text-center max-w-3xl mx-auto mb-20">
-            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.1]">
-              Simple, transparent{" "}
-              <span className="text-gradient">pricing</span>
+            <h1 className="font-display text-5xl md:text-[4.5rem] font-bold tracking-tight leading-[1.05]">
+              Simple, transparent pricing.
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
+            <p className="mt-8 text-lg md:text-xl text-muted-foreground leading-relaxed">
               Start free, upgrade when you're ready. No hidden fees.
             </p>
           </div>
@@ -73,18 +72,18 @@ export default function Pricing() {
                 key={plan.name}
                 className={`rounded-2xl border p-8 flex flex-col transition-all ${
                   plan.highlighted
-                    ? "border-primary bg-primary/[0.02] shadow-xl shadow-primary/10 ring-1 ring-primary/20 scale-[1.02]"
-                    : "bg-card hover:shadow-lg"
+                    ? "border-foreground shadow-xl scale-[1.02]"
+                    : "hover:shadow-lg"
                 }`}
               >
                 {plan.highlighted && (
-                  <div className="text-xs font-semibold text-primary uppercase tracking-wider mb-4">
+                  <div className="text-xs font-bold uppercase tracking-wider mb-4 text-foreground">
                     Most Popular
                   </div>
                 )}
                 <h3 className="font-display text-xl font-bold">{plan.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="font-display text-4xl font-bold">{plan.price}</span>
+                  <span className="font-display text-5xl font-bold">{plan.price}</span>
                   {plan.period && (
                     <span className="text-muted-foreground text-sm">{plan.period}</span>
                   )}
@@ -94,7 +93,7 @@ export default function Pricing() {
                 <ul className="mt-8 space-y-3 flex-1">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-3 text-sm">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <Check className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -102,7 +101,11 @@ export default function Pricing() {
 
                 <Link to={plan.name === "Enterprise" ? "/contact" : "/auth"} className="mt-8">
                   <Button
-                    className="w-full gap-2"
+                    className={`w-full rounded-full h-12 font-semibold gap-2 ${
+                      plan.highlighted
+                        ? "bg-foreground text-background hover:bg-foreground/90"
+                        : ""
+                    }`}
                     variant={plan.highlighted ? "default" : "outline"}
                     size="lg"
                   >
