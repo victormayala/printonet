@@ -210,26 +210,51 @@
   }
 
   // --- Auto-inject "Customize" button on Shopify product pages ---
-  function autoInjectButton() {
-    // Only run on Shopify product pages
-    if (!window.Shopify || !window.Shopify.product) return;
+  function autoInjectButton(attempt) {
+    attempt = attempt || 0;
 
     // Don't inject if there's already a data-customizer element
     if (document.querySelector('[data-customizer]')) return;
 
-    var shopifyProduct = window.Shopify.product;
-    var productName = shopifyProduct.title || shopifyProduct.handle || '';
-    if (!productName) return;
+    // Detect Shopify: check window.Shopify or URL pattern
+    var isShopify = !!(window.Shopify);
+    var isProductPage = isShopify && (
+      (window.Shopify.product) ||
+      /\/products\/[^/]+/.test(window.location.pathname)
+    );
 
-    // Find the best place to inject — after the add-to-cart form or buy buttons
+    if (!isProductPage) return;
+
+    // Get product name from Shopify object, meta tag, or page title
+    var productName = '';
+    if (window.Shopify && window.Shopify.product) {
+      productName = window.Shopify.product.title || window.Shopify.product.handle || '';
+    }
+    if (!productName) {
+      var metaTag = document.querySelector('meta[property="og:title"]');
+      if (metaTag) productName = metaTag.getAttribute('content') || '';
+    }
+    if (!productName) {
+      // Extract from URL: /products/my-product -> my product
+      var match = window.location.pathname.match(/\/products\/([^/?#]+)/);
+      if (match) productName = match[1].replace(/-/g, ' ');
+    }
+    if (!productName) {
+      productName = document.title.split('–')[0].split('|')[0].trim();
+    }
+
+    // Find the best place to inject
     var targets = [
-      'form[action="/cart/add"] [type="submit"]',       // Add to cart button
-      'form[action="/cart/add"]',                         // Cart form
       '.product-form__submit',                            // Dawn theme
+      'form[action="/cart/add"] [type="submit"]',         // Add to cart button
       '.shopify-payment-button',                          // Dynamic checkout
+      'form[action="/cart/add"]',                         // Cart form
       '.product-form',                                    // Generic product form
       '.product__info-wrapper',                           // Dawn product info
       '.product-single__meta',                            // Debut theme
+      '.product-single__description',                     // Debut description
+      '#product-price',                                   // Some themes
+      '.product__title',                                  // Fallback
     ];
 
     var anchor = null;
@@ -238,7 +263,15 @@
       if (anchor) break;
     }
 
-    if (!anchor) return;
+    // If no anchor found yet and we haven't retried too much, wait and retry
+    if (!anchor) {
+      if (attempt < 10) {
+        setTimeout(function () { autoInjectButton(attempt + 1); }, 500);
+      } else {
+        console.warn('[CustomizerLoader] Could not find a place to inject the Customize button');
+      }
+      return;
+    }
 
     var btn = document.createElement('button');
     btn.setAttribute('data-customizer', '');
