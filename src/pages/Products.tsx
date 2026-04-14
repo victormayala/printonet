@@ -2025,7 +2025,6 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2"><Label>SanMar.com Username</Label><Input value={sanmarUsername} onChange={(e) => setSanmarUsername(e.target.value)} placeholder="Your SanMar.com username" /></div>
-          <div className="space-y-2"><Label>SanMar.com Username</Label><Input value={sanmarUsername} onChange={(e) => setSanmarUsername(e.target.value)} placeholder="Your SanMar.com username" /></div>
           <div className="space-y-2"><Label>SanMar.com Password</Label><Input value={sanmarPassword} onChange={(e) => setSanmarPassword(e.target.value)} type="password" placeholder="Your SanMar.com password" /></div>
           <Button onClick={handleConnect} disabled={loading} className="gap-2">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Connect</Button>
         </CardContent>
