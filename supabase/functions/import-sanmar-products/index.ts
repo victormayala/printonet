@@ -4,10 +4,11 @@ const corsHeaders = {
 }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// SanMar uses SOAP/XML APIs
-// Standard API: https://ws.sanmar.com:8080/SanMarWebService/SanMarProductInfoServicePort?wsdl
-// Auth: customerNumber + sanmar.com username + sanmar.com password
-const SANMAR_STANDARD_WSDL = 'https://ws.sanmar.com:8080/SanMarWebService/SanMarProductInfoServicePort?wsdl'
+// SanMar PromoStandards Product Data Service V2.0.0
+const SANMAR_PS_WSDL = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2?WSDL'
+const SANMAR_PS_ENDPOINT = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2'
+
+// Legacy Standard API (kept as fallback)
 const SANMAR_STANDARD_ENDPOINT = 'https://ws.sanmar.com:8080/SanMarWebService/SanMarProductInfoServicePort'
 
 Deno.serve(async (req) => {
@@ -32,13 +33,34 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { action, customer_number, username, password, search, category, style_id, user_id, page, per_page } = body
+    const { action, username, password, search, category, style_id, user_id, page, per_page } = body
+    // Accept customer_number for backward compat but don't require it
+    const customerNumber = body.customer_number || ''
 
-    if (!customer_number || !username || !password) {
-      return jsonResponse({ error: 'customer_number, username, and password are required' }, 400)
+    if (!username || !password) {
+      return jsonResponse({ error: 'username and password are required' }, 400)
     }
 
-    // Build SOAP XML for getProductInfoByStyleColorSize
+    // ---- PromoStandards SOAP builders ----
+
+    // GetProductSellable — returns list of sellable product/part IDs
+    const buildGetProductSellable = (productId?: string) => {
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.promostandards.org/WSDL/ProductDataService/2.0.0/" xmlns:shar="http://www.promostandards.org/WSDL/ProductDataService/2.0.0/SharedObjects/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ns:GetProductSellableRequest>
+      <shar:wsVersion>2.0.0</shar:wsVersion>
+      <shar:id>${escapeXml(username)}</shar:id>
+      <shar:password>${escapeXml(password)}</shar:password>
+      ${productId ? `<shar:productId>${escapeXml(productId)}</shar:productId>` : ''}
+      <shar:isSellable>true</shar:isSellable>
+    </ns:GetProductSellableRequest>
+  </soapenv:Body>
+</soapenv:Envelope>`
+    }
+
+    // Legacy Standard API builders (for detailed product info)
     const buildProductInfoRequest = (style: string, color?: string, size?: string) => {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:impl="http://impl.webservice.integration.sanmar.com/">
@@ -51,7 +73,7 @@ Deno.serve(async (req) => {
         <style>${escapeXml(style)}</style>
       </arg0>
       <arg1>
-        <sanMarCustomerNumber>${escapeXml(customer_number)}</sanMarCustomerNumber>
+        ${customerNumber ? `<sanMarCustomerNumber>${escapeXml(customerNumber)}</sanMarCustomerNumber>` : ''}
         <sanMarUserName>${escapeXml(username)}</sanMarUserName>
         <sanMarUserPassword>${escapeXml(password)}</sanMarUserPassword>
       </arg1>
@@ -60,7 +82,6 @@ Deno.serve(async (req) => {
 </soapenv:Envelope>`
     }
 
-    // Build SOAP XML for getProductInfoByCategory
     const buildCategoryRequest = (cat: string) => {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:impl="http://impl.webservice.integration.sanmar.com/">
@@ -71,7 +92,7 @@ Deno.serve(async (req) => {
         <category>${escapeXml(cat)}</category>
       </arg0>
       <arg1>
-        <sanMarCustomerNumber>${escapeXml(customer_number)}</sanMarCustomerNumber>
+        ${customerNumber ? `<sanMarCustomerNumber>${escapeXml(customerNumber)}</sanMarCustomerNumber>` : ''}
         <sanMarUserName>${escapeXml(username)}</sanMarUserName>
         <sanMarUserPassword>${escapeXml(password)}</sanMarUserPassword>
       </arg1>
@@ -80,7 +101,6 @@ Deno.serve(async (req) => {
 </soapenv:Envelope>`
     }
 
-    // Build SOAP XML for getProductInfoByBrand
     const buildBrandRequest = (brand: string) => {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:impl="http://impl.webservice.integration.sanmar.com/">
@@ -91,7 +111,7 @@ Deno.serve(async (req) => {
         <brand>${escapeXml(brand)}</brand>
       </arg0>
       <arg1>
-        <sanMarCustomerNumber>${escapeXml(customer_number)}</sanMarCustomerNumber>
+        ${customerNumber ? `<sanMarCustomerNumber>${escapeXml(customerNumber)}</sanMarCustomerNumber>` : ''}
         <sanMarUserName>${escapeXml(username)}</sanMarUserName>
         <sanMarUserPassword>${escapeXml(password)}</sanMarUserPassword>
       </arg1>
@@ -100,10 +120,10 @@ Deno.serve(async (req) => {
 </soapenv:Envelope>`
     }
 
-    // Make a SOAP call and return raw XML text
-    const soapCall = async (xmlBody: string): Promise<string> => {
-      console.log('Making SOAP call to SanMar...')
-      const res = await fetch(SANMAR_STANDARD_ENDPOINT, {
+    // Make a SOAP call to either endpoint
+    const soapCall = async (xmlBody: string, endpoint = SANMAR_STANDARD_ENDPOINT): Promise<string> => {
+      console.log('Making SOAP call to', endpoint)
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/xml; charset=utf-8',
@@ -115,14 +135,11 @@ Deno.serve(async (req) => {
       console.log('SanMar response status:', res.status, 'body length:', text.length)
       console.log('SanMar response preview:', text.substring(0, 500))
       
-      // SanMar may return HTTP 500 for SOAP faults (including auth errors)
-      // or HTTP 200 with errorOccured=true in the body
       const lowerText = text.toLowerCase()
       if (lowerText.includes('authentication failed') || lowerText.includes('user authenticating')) {
-        throw new Error('Authentication failed. Please verify your SanMar customer number, sanmar.com username, and sanmar.com password. Also ensure your account has been onboarded for Web Services access by emailing sanmarintegrations@sanmar.com.')
+        throw new Error('Authentication failed. Please verify your SanMar.com username and password. Ensure your account has Web Services access by emailing sanmarintegrations@sanmar.com.')
       }
       if (!res.ok && !text.includes('<listResponse>')) {
-        // Check for SOAP fault
         if (lowerText.includes('fault')) {
           const faultMsg = extractTag(text, 'faultstring') || text.substring(0, 200)
           throw new Error(`SanMar error: ${faultMsg}`)
@@ -132,7 +149,6 @@ Deno.serve(async (req) => {
       return text
     }
 
-    // Simple XML value extractor (no XML parser needed for well-structured SOAP responses)
     const extractTag = (xml: string, tag: string): string => {
       const regex = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'i')
       const match = xml.match(regex)
@@ -149,8 +165,6 @@ Deno.serve(async (req) => {
       return results
     }
 
-    // Parse product list from SanMar's getProductInfoByStyleColorSize response
-    // Each <listResponse> block is one SKU (style+color+size)
     const parseProductListResponse = (xml: string) => {
       const errorOccurred = extractTag(xml, 'errorOccured') === 'true' || extractTag(xml, 'errorOccurred') === 'true'
       if (errorOccurred) {
@@ -158,7 +172,6 @@ Deno.serve(async (req) => {
         throw new Error(msg || 'SanMar returned an error')
       }
 
-      // Split by listResponse blocks
       const blocks = xml.split(/<listResponse>/i).slice(1)
       const products: any[] = []
 
@@ -196,27 +209,24 @@ Deno.serve(async (req) => {
       return products
     }
 
-    // ACTION: browse — search styles
+    // ACTION: browse
     if (action === 'browse') {
       try {
         let xmlBody: string
         let products: any[] = []
 
         if (search && search.trim()) {
-          // Search by style number first
           xmlBody = buildProductInfoRequest(search.trim())
           try {
             const xml = await soapCall(xmlBody)
             products = parseProductListResponse(xml)
           } catch (e: any) {
-            // If style not found, it might be a brand search
             if (e.message.includes('Invalid Style') || e.message.includes('not found')) {
               try {
                 xmlBody = buildBrandRequest(search.trim())
                 const xml = await soapCall(xmlBody)
                 products = parseProductListResponse(xml)
               } catch {
-                // No results
                 products = []
               }
             } else {
@@ -228,13 +238,11 @@ Deno.serve(async (req) => {
           const xml = await soapCall(xmlBody)
           products = parseProductListResponse(xml)
         } else {
-          // Default: fetch T-Shirts category
           xmlBody = buildCategoryRequest('T-Shirts')
           const xml = await soapCall(xmlBody)
           products = parseProductListResponse(xml)
         }
 
-        // Group by style number
         const styleMap = new Map<string, any>()
         for (const p of products) {
           const styleNo = p.style
@@ -266,7 +274,6 @@ Deno.serve(async (req) => {
         const totalPages = Math.ceil(totalCount / pageSize)
         const startIdx = (currentPage - 1) * pageSize
         const paged = allStyles.slice(startIdx, startIdx + pageSize)
-
         const items = paged.map(({ colors, ...rest }: any) => rest)
 
         return jsonResponse({
@@ -277,22 +284,20 @@ Deno.serve(async (req) => {
           total_pages: totalPages,
         })
       } catch (err: any) {
-        return jsonResponse({ error: err.message }, err.message.includes('Authentication') || err.message.includes('authentication') ? 401 : 500)
+        return jsonResponse({ error: err.message }, err.message.includes('uthenticat') ? 401 : 500)
       }
     }
 
-    // ACTION: details — fetch variants for a specific style
+    // ACTION: details
     if (action === 'details') {
       if (!style_id) {
         return jsonResponse({ error: 'style_id is required' }, 400)
       }
-
       try {
         const xmlBody = buildProductInfoRequest(style_id)
         const xml = await soapCall(xmlBody)
         const products = parseProductListResponse(xml)
 
-        // Group by color
         const colorMap = new Map<string, any[]>()
         let brandName = 'SanMar'
         let title = ''
@@ -304,7 +309,6 @@ Deno.serve(async (req) => {
           title = p.productTitle || title
           description = p.productDescription || description
           baseCategory = p.category || baseCategory
-
           const colorName = p.color || 'Default'
           if (!colorMap.has(colorName)) colorMap.set(colorName, [])
           colorMap.get(colorName)!.push(p)
@@ -365,7 +369,6 @@ Deno.serve(async (req) => {
           const brandName = firstProd.brandName || 'SanMar'
           const productTitle = firstProd.productTitle || ''
 
-          // Group by color
           const colorMap = new Map<string, any[]>()
           for (const p of products) {
             const colorName = p.color || 'Default'
@@ -440,7 +443,6 @@ Deno.serve(async (req) => {
 
     // ACTION: categories
     if (action === 'categories') {
-      // SanMar's documented categories
       const categories = [
         'T-Shirts', 'Polos/Knits', 'Sweatshirts/Fleece', 'Woven Shirts',
         'Caps', 'Bags', 'Outerwear', 'Activewear', 'Youth',

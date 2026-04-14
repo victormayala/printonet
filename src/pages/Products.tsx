@@ -1448,7 +1448,6 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
 
 function SanMarImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
-  const [customerNumber, setCustomerNumber] = useState("");
   const [sanmarUsername, setSanmarUsername] = useState("");
   const [sanmarPassword, setSanmarPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1686,7 +1685,6 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     const { data } = await supabase.from("store_integrations").select("*").eq("user_id", user.id).eq("platform", "sanmar").maybeSingle();
     setIntegration(data);
     if (data) {
-      setCustomerNumber((data.credentials as any)?.customer_number || "");
       setSanmarUsername((data.credentials as any)?.username || "");
       setSanmarPassword((data.credentials as any)?.password || "");
     }
@@ -1710,18 +1708,18 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   const getCredentials = () => {
     if (integration) {
       const creds = integration.credentials as any;
-      return { customer_number: creds.customer_number, username: creds.username, password: creds.password };
+      return { username: creds.username, password: creds.password };
     }
-    return { customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim() };
+    return { username: sanmarUsername.trim(), password: sanmarPassword.trim() };
   };
 
   const handleConnect = async () => {
-    if (!customerNumber.trim() || !sanmarUsername.trim() || !sanmarPassword.trim()) { toast({ title: "Enter Customer Number, Username, and Password", variant: "destructive" }); return; }
+    if (!sanmarUsername.trim() || !sanmarPassword.trim()) { toast({ title: "Enter Username and Password", variant: "destructive" }); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
+      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
       if (error) throw error;
-      const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
+      const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
       if (integration) { await supabase.from("store_integrations").update(payload).eq("id", integration.id); } else { await supabase.from("store_integrations").insert(payload); }
       toast({ title: "SanMar connected successfully!" });
       await fetchIntegration();
@@ -1730,7 +1728,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
 
   const handleBrowse = async (query?: string, page = 1, cat?: string) => {
     const creds = getCredentials();
-    if (!creds.customer_number || !creds.username || !creds.password) return;
+    if (!creds.username || !creds.password) return;
     const nextSearch = query !== undefined ? query : appliedSearchQuery;
     const activeCat = cat !== undefined ? cat : categoryFilter;
     setBrowsing(true);
@@ -1792,7 +1790,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   const handleDisconnect = async () => {
     if (!integration) return; setDisconnecting(true);
     await supabase.from("store_integrations").delete().eq("id", integration.id);
-    setIntegration(null); setCustomerNumber(""); setSanmarUsername(""); setSanmarPassword(""); setCatalogResults([]); setDisconnecting(false);
+    setIntegration(null); setSanmarUsername(""); setSanmarPassword(""); setCatalogResults([]); setDisconnecting(false);
     toast({ title: "SanMar disconnected" });
   };
 
@@ -1805,7 +1803,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> SanMar Connected</CardTitle>
             <CardDescription>
-              Account: <strong>{(integration.credentials as any)?.customer_number}</strong>
+              Account: <strong>{(integration.credentials as any)?.username}</strong>
               {integration.last_synced_at && <> · Last synced {new Date(integration.last_synced_at).toLocaleDateString()} at {new Date(integration.last_synced_at).toLocaleTimeString()}</>}
               {importedStyleIds.size > 0 && <> · <strong>{importedStyleIds.size}</strong> products imported</>}
             </CardDescription>
@@ -2026,7 +2024,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
           <CardDescription>Or connect via API to browse and import products directly (requires Web Services access).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2"><Label>Customer Number</Label><Input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="Your SanMar customer number" /></div>
+          <div className="space-y-2"><Label>SanMar.com Username</Label><Input value={sanmarUsername} onChange={(e) => setSanmarUsername(e.target.value)} placeholder="Your SanMar.com username" /></div>
           <div className="space-y-2"><Label>SanMar.com Username</Label><Input value={sanmarUsername} onChange={(e) => setSanmarUsername(e.target.value)} placeholder="Your SanMar.com username" /></div>
           <div className="space-y-2"><Label>SanMar.com Password</Label><Input value={sanmarPassword} onChange={(e) => setSanmarPassword(e.target.value)} type="password" placeholder="Your SanMar.com password" /></div>
           <Button onClick={handleConnect} disabled={loading} className="gap-2">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Connect</Button>
