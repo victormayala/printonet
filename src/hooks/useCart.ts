@@ -8,6 +8,7 @@ export interface CartItem {
   priceInCents: number; // unit price
   variant?: string;
   wcProductId?: string;
+  shopifyVariantId?: string;
 }
 
 const CART_KEY = "customizer_cart";
@@ -34,6 +35,7 @@ function broadcastCartCount(items: CartItem[]) {
   const newItem = _lastAddedItem ? {
     sessionId: _lastAddedItem.sessionId,
     wcProductId: _lastAddedItem.wcProductId || null,
+    shopifyVariantId: _lastAddedItem.shopifyVariantId || null,
     quantity: _lastAddedItem.quantity,
     previewImage: _lastAddedItem.previewImage || null,
   } : null;
