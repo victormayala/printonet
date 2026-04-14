@@ -155,17 +155,14 @@ Deno.serve(async (req) => {
       const productBrand = extractTag(xml, 'productBrand')
       const productCat = extractTag(xml, 'ProductCategory') || extractTag(xml, 'productCategory')
 
-      // Parse parts — extract from ProductPartArray > PartArray > Part
-      let partBlocks = extractAllBlocks(xml, 'Part')
+      // Parse parts — PromoStandards V2 uses <ns2:ProductPart> inside <ProductPartArray>
+      let partBlocks = extractAllBlocks(xml, 'ProductPart')
       
-      console.log(`parseGetProduct: found ${partBlocks.length} Part blocks for ${productName}`)
+      console.log(`parseGetProduct: found ${partBlocks.length} ProductPart blocks for ${productName}`)
       if (partBlocks.length === 0) {
-        // Fallback: try extracting from ProductPartArray or PartArray
-        const partArrayContent = extractAllBlocks(xml, 'ProductPartArray').join('') || extractAllBlocks(xml, 'PartArray').join('')
-        if (partArrayContent) {
-          partBlocks = extractAllBlocks(partArrayContent, 'Part')
-          console.log(`parseGetProduct: fallback found ${partBlocks.length} Part blocks from PartArray`)
-        }
+        // Fallback: try just Part
+        partBlocks = extractAllBlocks(xml, 'Part')
+        console.log(`parseGetProduct: fallback found ${partBlocks.length} Part blocks`)
       }
       if (partBlocks.length === 0) {
         const idx = xml.toLowerCase().indexOf('partid')
