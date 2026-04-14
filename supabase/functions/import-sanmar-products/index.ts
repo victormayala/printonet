@@ -108,17 +108,18 @@ Deno.serve(async (req) => {
 
     // XML helpers
     const extractTag = (xml: string, tag: string): string => {
-      const regex = new RegExp(`<(?:[^:]+:)?${tag}[^>]*>([^<]*)</(?:[^:]+:)?${tag}>`, 'i')
+      const regex = new RegExp(`<(?:[^:]+:)?${tag}(?:\\s[^>]*)?>([^<]*)</(?:[^:]+:)?${tag}>`, 'i')
       const match = xml.match(regex)
       return match ? match[1].trim() : ''
     }
 
     const extractAllBlocks = (xml: string, tag: string): string[] => {
-      const regex = new RegExp(`<(?:[^:]+:)?${tag}[^>]*>([\\s\\S]*?)</(?:[^:]+:)?${tag}>`, 'gi')
+      // Use (?=[\\s>/]) to prevent 'Part' from matching 'PartArray'
+      const regex = new RegExp(`<(?:[^:]+:)?${tag}(?=[\\s>/])([^>]*)>([\\s\\S]*?)</(?:[^:]+:)?${tag}>`, 'gi')
       const results: string[] = []
       let match
       while ((match = regex.exec(xml)) !== null) {
-        results.push(match[1])
+        results.push(match[2])
       }
       return results
     }
