@@ -155,18 +155,9 @@ Deno.serve(async (req) => {
       const productBrand = extractTag(xml, 'productBrand')
       const productCat = extractTag(xml, 'ProductCategory') || extractTag(xml, 'productCategory')
 
-      // Parse parts — PromoStandards uses <ns2:Part> or <Part> inside <PartArray>
-      // The Part tag can conflict with other tags, so try PartArray first
+      // Parse parts — extract from ProductPartArray > PartArray > Part
       let partBlocks = extractAllBlocks(xml, 'Part')
       
-      // Filter out PartArray wrapper blocks — we want individual Part elements only
-      // Each Part should contain partId
-      partBlocks = partBlocks.filter(b => {
-        const hasPartId = b.toLowerCase().includes('partid')
-        const isWrapper = b.includes('<Part>') || b.includes(':Part>')
-        return hasPartId && !isWrapper
-      })
-
       console.log(`parseGetProduct: found ${partBlocks.length} Part blocks for ${productName}`)
       if (partBlocks.length === 0) {
         // Fallback: try extracting from ProductPartArray or PartArray
@@ -177,12 +168,9 @@ Deno.serve(async (req) => {
         }
       }
       if (partBlocks.length === 0) {
-        // Last resort: log a sample of XML around "partId" to diagnose
         const idx = xml.toLowerCase().indexOf('partid')
         if (idx > -1) {
           console.log('parseGetProduct: XML near partId:', xml.substring(Math.max(0, idx - 200), idx + 300))
-        } else {
-          console.log('parseGetProduct: no partId found in XML at all. XML length:', xml.length)
         }
       }
 
