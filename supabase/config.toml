@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.export-to-shopify]
 verify_jwt = false
+
+[functions.import-sanmar-products]
+verify_jwt = false

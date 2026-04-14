@@ -547,7 +547,6 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
   }
 
 
-
   const handleOAuthConnect = async () => {
     if (!storeUrl.trim()) {
       toast({ variant: "destructive", title: "Please enter your Shopify store URL or name" });
@@ -1447,6 +1446,344 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   );
 }
 
+function SanMarImport({ onDone }: { onDone: () => void }) {
+  const { user } = useAuth();
+  const [customerNumber, setCustomerNumber] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [integration, setIntegration] = useState<any>(null);
+  const [loadingIntegration, setLoadingIntegration] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
+  const [catalogResults, setCatalogResults] = useState<any[]>([]);
+  const [browsing, setBrowsing] = useState(false);
+  const [importing, setImporting] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [importedStyleIds, setImportedStyleIds] = useState<Set<string>>(new Set());
+  const [selectedStyleIds, setSelectedStyleIds] = useState<Set<string>>(new Set());
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [hasLoadedCatalog, setHasLoadedCatalog] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [detailStyle, setDetailStyle] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const handleViewDetails = async (styleID: string) => {
+    const creds = getCredentials();
+    setDetailsOpen(true);
+    setLoadingDetails(true);
+    setDetailStyle(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-sanmar-products", {
+        body: { action: "details", ...creds, style_id: styleID },
+      });
+      if (error) throw error;
+      setDetailStyle(data);
+    } catch (err: any) {
+      toast({ title: "Failed to load details", description: err.message, variant: "destructive" });
+      setDetailsOpen(false);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const fetchIntegration = async () => {
+    if (!user) return;
+    setLoadingIntegration(true);
+    const { data } = await supabase.from("store_integrations").select("*").eq("user_id", user.id).eq("platform", "sanmar").maybeSingle();
+    setIntegration(data);
+    if (data) {
+      setCustomerNumber((data.credentials as any)?.customer_number || "");
+      setApiKey((data.credentials as any)?.api_key || "");
+    }
+    setLoadingIntegration(false);
+  };
+
+  const fetchImportedStyleIds = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("inventory_products").select("supplier_source").eq("user_id", user.id).not("supplier_source", "is", null);
+    if (data) {
+      const ids = new Set<string>();
+      data.forEach((p: any) => {
+        if (p.supplier_source?.provider === "sanmar" && p.supplier_source?.style_id) ids.add(String(p.supplier_source.style_id));
+      });
+      setImportedStyleIds(ids);
+    }
+  };
+
+  useEffect(() => { fetchIntegration(); fetchImportedStyleIds(); }, [user]);
+
+  const getCredentials = () => {
+    if (integration) {
+      const creds = integration.credentials as any;
+      return { customer_number: creds.customer_number, api_key: creds.api_key };
+    }
+    return { customer_number: customerNumber.trim(), api_key: apiKey.trim() };
+  };
+
+  const handleConnect = async () => {
+    if (!customerNumber.trim() || !apiKey.trim()) { toast({ title: "Enter both Customer Number and API Key", variant: "destructive" }); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", customer_number: customerNumber.trim(), api_key: apiKey.trim(), search: "t-shirt" } });
+      if (error) throw error;
+      const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { customer_number: customerNumber.trim(), api_key: apiKey.trim() } };
+      if (integration) { await supabase.from("store_integrations").update(payload).eq("id", integration.id); } else { await supabase.from("store_integrations").insert(payload); }
+      toast({ title: "SanMar connected successfully!" });
+      await fetchIntegration();
+    } catch (err: any) { toast({ title: "Connection failed", description: err.message, variant: "destructive" }); } finally { setLoading(false); }
+  };
+
+  const handleBrowse = async (query?: string, page = 1, cat?: string) => {
+    const creds = getCredentials();
+    if (!creds.customer_number || !creds.api_key) return;
+    const nextSearch = query !== undefined ? query : appliedSearchQuery;
+    const activeCat = cat !== undefined ? cat : categoryFilter;
+    setBrowsing(true);
+    if (page === 1) setSelectedStyleIds(new Set());
+    try {
+      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", ...creds, search: nextSearch.trim() || undefined, category: activeCat !== "all" ? activeCat : undefined, page, per_page: 50 } });
+      if (error) throw error;
+      const styles = data.styles || [];
+      if (page === 1) setCatalogResults(styles); else setCatalogResults((prev) => [...prev, ...styles]);
+      setAppliedSearchQuery(nextSearch); setCurrentPage(data.page || page); setTotalPages(data.total_pages || 1); setTotalResults(data.total || 0); setHasLoadedCatalog(true);
+      if (!styles.length && page === 1) toast({ title: "No results found", description: nextSearch.trim() ? "Try a different search term or category." : "Try a different category." });
+    } catch (err: any) { toast({ title: "Browse failed", description: err.message, variant: "destructive" }); } finally { setBrowsing(false); }
+  };
+
+  const handleCategoryChange = (cat: string) => { setCategoryFilter(cat); handleBrowse(appliedSearchQuery, 1, cat); };
+  useEffect(() => { if (integration && !hasLoadedCatalog) handleBrowse("", 1, "all"); }, [integration]);
+  useEffect(() => { if (!integration) return; supabase.functions.invoke("import-sanmar-products", { body: { action: "categories", ...getCredentials() } }).then(({ data }) => { if (data?.categories) setCategories(data.categories); }); }, [integration]);
+
+  const handleImportStyle = async (styleID: string) => {
+    const creds = getCredentials(); setImporting(styleID);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "import", ...creds, style_id: styleID, user_id: user?.id } });
+      if (error) throw error;
+      toast({ title: `Imported! ${data.imported} new, ${data.updated} updated` });
+      setImportedStyleIds((prev) => new Set(prev).add(styleID));
+      setSelectedStyleIds((prev) => { const n = new Set(prev); n.delete(styleID); return n; });
+      onDone();
+    } catch (err: any) { toast({ title: "Import failed", description: err.message, variant: "destructive" }); } finally { setImporting(null); }
+  };
+
+  const handleBulkImport = async () => {
+    if (selectedStyleIds.size === 0) return;
+    const creds = getCredentials(); setBulkImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: Array.from(selectedStyleIds), user_id: user?.id } });
+      if (error) throw error;
+      toast({ title: `Imported ${data.imported} new, ${data.updated} updated products` });
+      setImportedStyleIds((prev) => { const n = new Set(prev); selectedStyleIds.forEach((id) => n.add(id)); return n; });
+      setSelectedStyleIds(new Set()); onDone();
+    } catch (err: any) { toast({ title: "Bulk import failed", description: err.message, variant: "destructive" }); } finally { setBulkImporting(false); }
+  };
+
+  const toggleSelect = (styleID: string) => { setSelectedStyleIds((prev) => { const n = new Set(prev); if (n.has(styleID)) n.delete(styleID); else n.add(styleID); return n; }); };
+  const toggleSelectAll = () => { if (selectedStyleIds.size === catalogResults.length) setSelectedStyleIds(new Set()); else setSelectedStyleIds(new Set(catalogResults.map((s) => s.styleID))); };
+
+  const handleSyncAll = async () => {
+    const creds = getCredentials();
+    if (importedStyleIds.size === 0) { toast({ title: "No supplier products to sync" }); return; }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: Array.from(importedStyleIds), user_id: user?.id } });
+      if (error) throw error;
+      toast({ title: `Synced! ${data.imported} new, ${data.updated} updated` });
+      if (integration) await supabase.from("store_integrations").update({ last_synced_at: new Date().toISOString() }).eq("id", integration.id);
+      onDone();
+    } catch (err: any) { toast({ title: "Sync failed", description: err.message, variant: "destructive" }); } finally { setSyncing(false); }
+  };
+
+  const handleDisconnect = async () => {
+    if (!integration) return; setDisconnecting(true);
+    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    setIntegration(null); setCustomerNumber(""); setApiKey(""); setCatalogResults([]); setDisconnecting(false);
+    toast({ title: "SanMar disconnected" });
+  };
+
+  if (loadingIntegration) return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+
+  if (integration) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> SanMar Connected</CardTitle>
+            <CardDescription>
+              Account: <strong>{(integration.credentials as any)?.customer_number}</strong>
+              {integration.last_synced_at && <> · Last synced {new Date(integration.last_synced_at).toLocaleDateString()} at {new Date(integration.last_synced_at).toLocaleTimeString()}</>}
+              {importedStyleIds.size > 0 && <> · <strong>{importedStyleIds.size}</strong> products imported</>}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3 flex-wrap">
+            <Button onClick={handleSyncAll} disabled={syncing || importedStyleIds.size === 0} className="gap-2">
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Sync All Prices
+            </Button>
+            <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="gap-2 text-destructive hover:text-destructive">
+              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />} Disconnect
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Browse SanMar Catalog</CardTitle>
+            <CardDescription>Search and import blank products from SanMar</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search styles (e.g. 'PC61', 'polo', 'Port Authority')" onKeyDown={(e) => e.key === "Enter" && handleBrowse(searchQuery, 1, categoryFilter)} className="flex-1" />
+              {categories.length > 0 && (
+                <Select value={categoryFilter} onValueChange={handleCategoryChange}>
+                  <SelectTrigger className="w-[200px] shrink-0"><SelectValue placeholder="Category" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button onClick={() => handleBrowse(searchQuery, 1, categoryFilter)} disabled={browsing} className="gap-2 shrink-0">
+                {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Search
+              </Button>
+              {(searchQuery || categoryFilter !== "all") && (
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setSearchQuery(""); setCategoryFilter("all"); handleBrowse("", 1, "all"); }} title="Clear filters"><Trash2 className="h-4 w-4" /></Button>
+              )}
+            </div>
+            {hasLoadedCatalog && totalResults > 0 && <p className="text-xs text-muted-foreground">Showing {catalogResults.length} of {totalResults} results{currentPage < totalPages && " — load more below"}</p>}
+            {catalogResults.length > 0 && (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={selectedStyleIds.size === catalogResults.length && catalogResults.length > 0} onChange={toggleSelectAll} className="rounded border-input" />
+                      Select all ({catalogResults.length})
+                    </label>
+                    {selectedStyleIds.size > 0 && <span className="text-sm text-muted-foreground">{selectedStyleIds.size} selected</span>}
+                  </div>
+                  {selectedStyleIds.size > 0 && (
+                    <Button onClick={handleBulkImport} disabled={bulkImporting} className="gap-2">
+                      {bulkImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Import {selectedStyleIds.size} Selected
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {catalogResults.map((style) => {
+                    const isImported = importedStyleIds.has(style.styleID);
+                    const isSelected = selectedStyleIds.has(style.styleID);
+                    return (
+                      <Card key={style.styleID} className={`overflow-hidden cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : ""}`} onClick={() => toggleSelect(style.styleID)}>
+                        <div className="aspect-square bg-muted relative">
+                          {style.styleImage ? <img src={style.styleImage} alt={style.styleName} className="w-full h-full object-contain p-2" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="h-12 w-12 text-muted-foreground/40" /></div>}
+                          <div className="absolute top-2 left-2 flex items-center gap-2">
+                            <input type="checkbox" checked={isSelected} onChange={(e) => { e.stopPropagation(); toggleSelect(style.styleID); }} className="rounded border-input h-4 w-4" />
+                            {isImported && <Badge variant="secondary">Imported</Badge>}
+                          </div>
+                          {style.baseCategory && <Badge variant="outline" className="absolute top-2 right-2 text-[10px] bg-background/80">{style.baseCategory}</Badge>}
+                        </div>
+                        <CardContent className="p-3 space-y-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">{style.brandName}</p>
+                            <h4 className="font-semibold text-sm truncate">{style.styleName}</h4>
+                            {style.title && <p className="text-xs text-muted-foreground truncate">{style.title}</p>}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>${Number(style.customerPrice || 0).toFixed(2)}</span>
+                              {style.colorCount > 0 && <span>· {style.colorCount} colors</span>}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleViewDetails(style.styleID); }}><Eye className="h-3.5 w-3.5" /> Details</Button>
+                              <Button size="sm" variant={isImported ? "outline" : "default"} className="gap-1.5 h-8 text-xs" disabled={importing === style.styleID} onClick={(e) => { e.stopPropagation(); handleImportStyle(style.styleID); }}>
+                                {importing === style.styleID ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isImported ? <RefreshCw className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+                                {isImported ? "Re-import" : "Import"}
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+                {currentPage < totalPages && (
+                  <div className="flex justify-center pt-2">
+                    <Button variant="outline" onClick={() => handleBrowse(appliedSearchQuery, currentPage + 1, categoryFilter)} disabled={browsing} className="gap-2">
+                      {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />} Load More (Page {currentPage + 1} of {totalPages})
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+            {!browsing && hasLoadedCatalog && catalogResults.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No products found. Try a different search term.</p></div>
+            )}
+          </CardContent>
+        </Card>
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{loadingDetails ? "Loading..." : detailStyle ? `${detailStyle.brandName} ${detailStyle.styleName}` : "Style Details"}</DialogTitle>
+              {detailStyle?.title && <DialogDescription>{detailStyle.title}</DialogDescription>}
+            </DialogHeader>
+            {loadingDetails ? <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> : detailStyle ? (
+              <div className="space-y-4">
+                {detailStyle.description && <p className="text-sm text-muted-foreground">{detailStyle.description}</p>}
+                <div className="text-sm"><span className="font-medium">{detailStyle.variants?.length || 0}</span> colors available</div>
+                <div className="space-y-3">
+                  {detailStyle.variants?.map((variant: any, idx: number) => (
+                    <div key={idx} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center gap-3">
+                        {variant.hex && <div className="w-6 h-6 rounded-full border shadow-sm shrink-0" style={{ backgroundColor: variant.hex }} title={variant.hex} />}
+                        {variant.colorFrontImage && <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />}
+                        <div className="flex-1 min-w-0"><p className="font-medium text-sm">{variant.color}</p><p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p></div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {variant.sizes?.map((s: any, sIdx: number) => <Badge key={sIdx} variant="secondary" className="text-[11px] font-normal gap-1">{s.size} <span className="text-muted-foreground">— ${Number(s.price).toFixed(2)}</span></Badge>)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-dashed">
+        <CardHeader className="pb-3"><CardTitle className="text-base">How to get your SanMar credentials</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Log in to your <strong className="text-foreground">SanMar</strong> account at <code className="text-xs bg-muted px-1.5 py-0.5 rounded">sanmar.com</code></li>
+            <li>Go to <strong className="text-foreground">My Account → API Settings</strong></li>
+            <li>Your <strong className="text-foreground">Customer Number</strong> is your SanMar account number</li>
+            <li>Generate or copy your <strong className="text-foreground">API Key</strong> from the API settings</li>
+          </ol>
+          <p className="text-xs text-muted-foreground/70">Need an account? Visit <a href="https://www.sanmar.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">sanmar.com</a> to register as a distributor.</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> Connect SanMar</CardTitle>
+          <CardDescription>Enter your SanMar customer number and API key to browse and import products.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2"><Label>Customer Number</Label><Input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="Your SanMar customer number" /></div>
+          <div className="space-y-2"><Label>API Key</Label><Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type="password" placeholder="Your API key" /></div>
+          <Button onClick={handleConnect} disabled={loading} className="gap-2">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Connect</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function ProductCardImage({ product, hasVariantImages, children }: { product: Product; hasVariantImages: boolean; children: React.ReactNode }) {
   const [activeVariantIdx, setActiveVariantIdx] = useState<number | null>(null);
   const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -1960,7 +2297,18 @@ export default function Products() {
           </TabsContent>
 
           <TabsContent value="suppliers">
-            <SSActivewearImport onDone={fetchProducts} />
+            <Tabs defaultValue="ssactivewear" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
+                <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
+              </TabsList>
+              <TabsContent value="ssactivewear">
+                <SSActivewearImport onDone={fetchProducts} />
+              </TabsContent>
+              <TabsContent value="sanmar">
+                <SanMarImport onDone={fetchProducts} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
 
