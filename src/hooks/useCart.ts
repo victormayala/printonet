@@ -8,6 +8,7 @@ export interface CartItem {
   priceInCents: number; // unit price
   variant?: string;
   wcProductId?: string;
+  shopifyVariantId?: string;
 }
 
 const CART_KEY = "customizer_cart";
