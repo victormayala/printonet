@@ -78,7 +78,11 @@ Deno.serve(async (req) => {
       })
       const text = await res.text()
       console.log('SanMar response status:', res.status, 'body length:', text.length)
-      console.log('SanMar response preview:', text.substring(0, 800))
+      // Log presence of key sections
+      const hasMedia = text.includes('MediaContent')
+      const hasPrice = text.includes('ProductPriceGroup')
+      const hasPart = text.includes('ProductPart')
+      console.log('XML sections: MediaContent=', hasMedia, 'ProductPriceGroup=', hasPrice, 'ProductPart=', hasPart)
 
       const lowerText = text.toLowerCase()
       // PromoStandards returns auth errors as ServiceMessage with severity=Error
