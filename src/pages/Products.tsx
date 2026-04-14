@@ -547,7 +547,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
 
   const handleOAuthConnect = async () => {
     if (!storeUrl.trim()) {
-      toast.error("Please enter your Shopify store URL or name");
+      toast({ variant: "destructive", title: "Please enter your Shopify store URL or name" });
       return;
     }
     setLoading(true);
