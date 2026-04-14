@@ -1803,7 +1803,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> SanMar Connected</CardTitle>
             <CardDescription>
-              Account: <strong>{(integration.credentials as any)?.customer_number}</strong>
+              Account: <strong>{(integration.credentials as any)?.username}</strong>
               {integration.last_synced_at && <> · Last synced {new Date(integration.last_synced_at).toLocaleDateString()} at {new Date(integration.last_synced_at).toLocaleTimeString()}</>}
               {importedStyleIds.size > 0 && <> · <strong>{importedStyleIds.size}</strong> products imported</>}
             </CardDescription>
