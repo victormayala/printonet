@@ -2249,7 +2249,12 @@ export default function Products() {
             {showAddForm || editingProduct !== undefined ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>{editingProduct ? "Edit Product" : "Add Product"}</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowAddForm(false); setEditingProduct(undefined); }}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <CardTitle>{editingProduct ? "Edit Product" : "Add Product"}</CardTitle>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <ProductForm
