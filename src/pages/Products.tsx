@@ -553,12 +553,11 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <ol className="list-decimal list-inside space-y-2">
-            <li>Log in to your <strong className="text-foreground">Shopify Admin</strong> at <code className="text-xs bg-muted px-1.5 py-0.5 rounded">your-store.myshopify.com/admin</code></li>
-            <li>Go to <strong className="text-foreground">Settings → Apps and sales channels → Develop apps</strong></li>
-            <li>Click <strong className="text-foreground">Create an app</strong> and give it a name (e.g. "Customizer Studio")</li>
-            <li>Under <strong className="text-foreground">Configuration → Admin API integration</strong>, enable <code className="text-xs bg-muted px-1.5 py-0.5 rounded">read_products</code> and <code className="text-xs bg-muted px-1.5 py-0.5 rounded">write_products</code>, then save</li>
-            <li>Click <strong className="text-foreground">Install app</strong> (or update it if scopes changed), then copy the <strong className="text-foreground">Admin API access token</strong></li>
+            <li>Go to the <a href="https://partners.shopify.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">Shopify Dev Dashboard</a> (or Shopify CLI) and create a new custom app for your store</li>
+            <li>Under <strong className="text-foreground">API access scopes</strong>, enable <code className="text-xs bg-muted px-1.5 py-0.5 rounded">read_products</code> and <code className="text-xs bg-muted px-1.5 py-0.5 rounded">write_products</code></li>
+            <li>Install the app on your store, then copy the <strong className="text-foreground">Admin API access token</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">shpat_</code>)</li>
           </ol>
+          <p className="text-xs mt-2 italic">Note: Since Jan 2026, new custom apps must be created via the Dev Dashboard or CLI — the legacy "Develop apps" section in Shopify Admin only works for existing apps.</p>
           <p>Your <strong className="text-foreground">Store URL</strong> is your Shopify domain, e.g. <code className="text-xs bg-muted px-1.5 py-0.5 rounded">https://your-store.myshopify.com</code></p>
         </CardContent>
       </Card>
