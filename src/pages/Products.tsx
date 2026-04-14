@@ -1991,8 +1991,39 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> Connect SanMar</CardTitle>
-          <CardDescription>Enter your SanMar credentials to browse and import products.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Upload className="h-4 w-4" /> Import from CSV / SFTP File</CardTitle>
+          <CardDescription>Already have product data files from SanMar's SFTP? Upload them directly — no API connection needed.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="cursor-pointer">
+              <input type="file" accept=".csv,.txt,.tsv" onChange={handleCsvUpload} className="hidden" disabled={csvImporting} />
+              <Button variant="outline" className="gap-2 pointer-events-none" disabled={csvImporting}>
+                {csvImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {csvImporting ? "Importing..." : "Choose CSV File"}
+              </Button>
+            </label>
+            <span className="text-xs text-muted-foreground">Supports .csv, .txt, .tsv (SDL, EPDD, BulkInfo, sanmar_dip.txt)</span>
+          </div>
+          {csvProgress && (
+            <div className="space-y-1.5">
+              <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${Math.round(((csvProgress.imported + csvProgress.updated) / Math.max(csvProgress.total, 1)) * 100)}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Processing {csvProgress.imported + csvProgress.updated} of {csvProgress.total} styles ({csvProgress.imported} new, {csvProgress.updated} updated)
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            <strong>SFTP access:</strong> Host: ftp.sanmar.com · Port: 2200 · Protocol: SFTP. Download files using an SFTP client (FileZilla, WinSCP), then upload here.
+          </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> Connect SanMar API</CardTitle>
+          <CardDescription>Or connect via API to browse and import products directly (requires Web Services access).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2"><Label>Customer Number</Label><Input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="Your SanMar customer number" /></div>
