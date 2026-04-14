@@ -1714,12 +1714,12 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   };
 
   const handleConnect = async () => {
-    if (!customerNumber.trim() || !sanmarUsername.trim() || !sanmarPassword.trim()) { toast({ title: "Enter Customer Number, Username, and Password", variant: "destructive" }); return; }
+    if (!sanmarUsername.trim() || !sanmarPassword.trim()) { toast({ title: "Enter Username and Password", variant: "destructive" }); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
+      const { error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "browse", username: sanmarUsername.trim(), password: sanmarPassword.trim(), search: "PC61" } });
       if (error) throw error;
-      const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { customer_number: customerNumber.trim(), username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
+      const payload = { user_id: user?.id, platform: "sanmar" as const, store_url: "ws.sanmar.com", credentials: { username: sanmarUsername.trim(), password: sanmarPassword.trim() } };
       if (integration) { await supabase.from("store_integrations").update(payload).eq("id", integration.id); } else { await supabase.from("store_integrations").insert(payload); }
       toast({ title: "SanMar connected successfully!" });
       await fetchIntegration();
@@ -1728,7 +1728,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
 
   const handleBrowse = async (query?: string, page = 1, cat?: string) => {
     const creds = getCredentials();
-    if (!creds.customer_number || !creds.username || !creds.password) return;
+    if (!creds.username || !creds.password) return;
     const nextSearch = query !== undefined ? query : appliedSearchQuery;
     const activeCat = cat !== undefined ? cat : categoryFilter;
     setBrowsing(true);
@@ -1790,7 +1790,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   const handleDisconnect = async () => {
     if (!integration) return; setDisconnecting(true);
     await supabase.from("store_integrations").delete().eq("id", integration.id);
-    setIntegration(null); setCustomerNumber(""); setSanmarUsername(""); setSanmarPassword(""); setCatalogResults([]); setDisconnecting(false);
+    setIntegration(null); setSanmarUsername(""); setSanmarPassword(""); setCatalogResults([]); setDisconnecting(false);
     toast({ title: "SanMar disconnected" });
   };
 
@@ -2024,7 +2024,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
           <CardDescription>Or connect via API to browse and import products directly (requires Web Services access).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2"><Label>Customer Number</Label><Input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="Your SanMar customer number" /></div>
+          <div className="space-y-2"><Label>SanMar.com Username</Label><Input value={sanmarUsername} onChange={(e) => setSanmarUsername(e.target.value)} placeholder="Your SanMar.com username" /></div>
           <div className="space-y-2"><Label>SanMar.com Username</Label><Input value={sanmarUsername} onChange={(e) => setSanmarUsername(e.target.value)} placeholder="Your SanMar.com username" /></div>
           <div className="space-y-2"><Label>SanMar.com Password</Label><Input value={sanmarPassword} onChange={(e) => setSanmarPassword(e.target.value)} type="password" placeholder="Your SanMar.com password" /></div>
           <Button onClick={handleConnect} disabled={loading} className="gap-2">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Connect</Button>
