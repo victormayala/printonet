@@ -484,8 +484,9 @@
       var d = e.data;
       if (d && d.source === 'customizer-studio' && d.type === 'cart-updated') {
         _updateCartWidget(d.payload && d.payload.totalItems || 0);
-        // Sync new item to WooCommerce if applicable
+        // Sync new item to native store cart if applicable
         if (d.payload && d.payload.newItem) {
+          _syncToShopify(d.payload.newItem);
           _syncToWooCommerce(d.payload.newItem);
         }
       }
