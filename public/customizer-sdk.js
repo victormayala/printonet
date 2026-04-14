@@ -57,6 +57,7 @@
     _callbacks.onCancel = options.onCancel || function () {};
     _productInfo = options.product;
     _wcProductId = options.wcProductId || null;
+    _shopifyVariantId = options.shopifyVariantId || null;
 
     var url = _config.apiUrl + '/create-session';
     fetch(url, {
