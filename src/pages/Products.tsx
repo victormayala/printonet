@@ -2309,7 +2309,7 @@ export default function Products() {
                 <SSActivewearImport onDone={fetchProducts} />
               </TabsContent>
               <TabsContent value="sanmar">
-                <SanMarImport onDone={fetchProducts} />
+                <div><SanMarImport onDone={fetchProducts} /></div>
               </TabsContent>
             </Tabs>
           </TabsContent>
