@@ -41,6 +41,33 @@ type Product = {
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
 
+const COLOR_NAME_MAP: Record<string, string> = {
+  black: '#000000', white: '#ffffff', red: '#e53e3e', blue: '#3b82f6', navy: '#1e3a5f',
+  green: '#38a169', forest: '#228b22', gray: '#6b7280', grey: '#6b7280', charcoal: '#36454f',
+  heather: '#b0b0b0', maroon: '#800000', burgundy: '#800020', purple: '#7c3aed', pink: '#ec4899',
+  orange: '#f97316', yellow: '#eab308', gold: '#d4a017', brown: '#8b4513', tan: '#d2b48c',
+  beige: '#f5f5dc', cream: '#fffdd0', ivory: '#fffff0', coral: '#ff7f50', teal: '#0d9488',
+  cyan: '#06b6d4', aqua: '#00ffff', lime: '#84cc16', olive: '#808000', khaki: '#c3b091',
+  silver: '#c0c0c0', sand: '#c2b280', stone: '#928e85', slate: '#708090', steel: '#71797e',
+  indigo: '#4f46e5', violet: '#8b5cf6', lavender: '#e6e6fa', mint: '#98fb98', sage: '#9caf88',
+  rust: '#b7410e', wine: '#722f37', plum: '#8e4585', mauve: '#e0b0ff', rose: '#f43f5e',
+  peach: '#ffcba4', apricot: '#fbceb1', cardinal: '#c41e3a', scarlet: '#ff2400', royal: '#4169e1',
+  'royal blue': '#4169e1', 'dark green': '#006400', 'light blue': '#add8e6', 'light grey': '#d3d3d3',
+  'dark grey': '#555555', 'dark gray': '#555555', 'light gray': '#d3d3d3', 'ash': '#b2beb5',
+  'athletic heather': '#b8b8b8', 'athlhthr': '#b8b8b8', 'heather grey': '#9e9e9e', 'dust': '#c4b7a6',
+  'natural': '#f5f0e1', 'oatmeal': '#d8c8a8', 'coyote': '#a0785a', 'denim': '#6f8faf',
+  'carolina blue': '#56a0d3', 'kelly green': '#4cbb17', 'safety green': '#6eff00', 'safety orange': '#ff6700',
+  'neon': '#39ff14', 'hot pink': '#ff69b4', 'fuchsia': '#ff00ff', 'magenta': '#ff00ff',
+  'turquoise': '#40e0d0', 'charcoal heather': '#555555', 'oxford': '#6e7c7c',
+};
+
+function resolveVariantHex(variant: any): string {
+  if (variant.hex) return variant.hex;
+  if (!variant.color) return '#ccc';
+  const key = variant.color.toLowerCase().trim();
+  return COLOR_NAME_MAP[key] || '#ccc';
+}
+
 function UniversalSnippetDialog() {
   const [copied, setCopied] = useState(false);
   const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -1371,11 +1398,11 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                   {detailStyle.variants?.map((variant: any, idx: number) => (
                     <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center gap-3">
-                        {variant.hex && (
+                        {(variant.hex || variant.color) && (
                           <div
                             className="w-6 h-6 rounded-full border shadow-sm shrink-0"
-                            style={{ backgroundColor: variant.hex }}
-                            title={variant.hex}
+                            style={{ backgroundColor: resolveVariantHex(variant) }}
+                            title={variant.color || resolveVariantHex(variant)}
                           />
                         )}
                         {variant.colorFrontImage && (
@@ -1958,7 +1985,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
                   {detailStyle.variants?.map((variant: any, idx: number) => (
                     <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center gap-3">
-                        {variant.hex && <div className="w-6 h-6 rounded-full border shadow-sm shrink-0" style={{ backgroundColor: variant.hex }} title={variant.hex} />}
+                        {<div className="w-6 h-6 rounded-full border shadow-sm shrink-0" style={{ backgroundColor: resolveVariantHex(variant) }} title={resolveVariantHex(variant)} />}
                         {variant.colorFrontImage && <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />}
                         <div className="flex-1 min-w-0"><p className="font-medium text-sm">{variant.color}</p><p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p></div>
                       </div>
@@ -2058,7 +2085,7 @@ function ProductCardImage({ product, hasVariantImages, children }: { product: Pr
             <button
               key={i}
               className={`w-5 h-5 rounded-full border-2 shadow-sm shrink-0 transition-all ${activeVariantIdx === i ? "border-primary scale-110" : "border-background/80"}`}
-              style={{ backgroundColor: v.hex || '#ccc' }}
+              style={{ backgroundColor: resolveVariantHex(v) }}
               title={v.color}
               onClick={(e) => { e.stopPropagation(); setActiveVariantIdx(activeVariantIdx === i ? null : i); }}
             />
@@ -2448,7 +2475,7 @@ export default function Products() {
                                   <div
                                     key={i}
                                     className="w-4 h-4 rounded-full border shadow-sm shrink-0"
-                                    style={{ backgroundColor: v.hex || '#ccc' }}
+                                    style={{ backgroundColor: resolveVariantHex(v) }}
                                     title={v.color}
                                   />
                                 ))}
@@ -2502,7 +2529,7 @@ export default function Products() {
                                   <div
                                     key={i}
                                     className="w-3 h-3 rounded-full border shadow-sm"
-                                    style={{ backgroundColor: v.hex || '#ccc' }}
+                                    style={{ backgroundColor: resolveVariantHex(v) }}
                                     title={v.color}
                                   />
                                 ))}
@@ -2587,11 +2614,11 @@ export default function Products() {
                   {variantDetailProduct.variants.map((variant: any, idx: number) => (
                     <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center gap-3">
-                        {variant.hex && (
+                        {(variant.hex || variant.color) && (
                           <div
                             className="w-6 h-6 rounded-full border shadow-sm shrink-0"
-                            style={{ backgroundColor: variant.hex }}
-                            title={variant.hex}
+                            style={{ backgroundColor: resolveVariantHex(variant) }}
+                            title={variant.color || resolveVariantHex(variant)}
                           />
                         )}
                         {variant.image && (
