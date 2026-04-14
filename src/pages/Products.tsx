@@ -1744,7 +1744,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
   };
 
   const handleCategoryChange = (cat: string) => { setCategoryFilter(cat); handleBrowse(appliedSearchQuery, 1, cat); };
-  useEffect(() => { if (integration && !hasLoadedCatalog) handleBrowse("", 1, "all"); }, [integration]);
+  useEffect(() => { if (integration && !hasLoadedCatalog) { setHasLoadedCatalog(true); } }, [integration]);
   useEffect(() => { if (!integration) return; supabase.functions.invoke("import-sanmar-products", { body: { action: "categories", ...getCredentials() } }).then(({ data }) => { if (data?.categories) setCategories(data.categories); }); }, [integration]);
 
   const handleImportStyle = async (styleID: string) => {
