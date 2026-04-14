@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Code, Layers, Zap, ArrowRight, Globe, Paintbrush, Package } from "lucide-react";
+import { ArrowRight, Layers, Globe, Zap, Paintbrush, Code2, Printer } from "lucide-react";
 import MarketingLayout from "@/components/MarketingLayout";
 
 const features = [
@@ -31,53 +31,50 @@ export default function Index() {
   return (
     <MarketingLayout>
       {/* Hero */}
-      <section className="relative overflow-hidden py-24 md:py-36">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-        <div className="container relative flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-1.5 text-sm text-muted-foreground mb-6">
-            Embeddable Product Customizer
-          </div>
-          <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-[1.1]">
-            Add product{" "}
-            <span className="text-gradient">customization</span>{" "}
-            to any store
+      <section className="py-28 md:py-44">
+        <div className="container flex flex-col items-center text-center">
+          <h1 className="font-display text-5xl sm:text-6xl md:text-[5.5rem] font-bold tracking-tight max-w-5xl leading-[1.05]">
+            Add product customization to any store.
           </h1>
-          <p className="mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
+          <p className="mt-8 max-w-2xl text-lg md:text-xl text-muted-foreground leading-relaxed">
             Drop our JavaScript SDK into your e-commerce platform. Customers design custom products in a rich canvas editor —
             you get back print-ready PNGs and design data.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4">
+          <div className="mt-12 flex flex-col sm:flex-row gap-4">
             <Link to="/auth">
-              <Button size="lg" className="gap-2 text-base px-8 h-12">
+              <Button className="rounded-full px-8 h-14 text-base font-semibold bg-foreground text-background hover:bg-foreground/90 gap-2">
                 Get Started Free <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
             <Link to="/features">
-              <Button size="lg" variant="outline" className="gap-2 text-base px-8 h-12">
+              <Button variant="outline" className="rounded-full px-8 h-14 text-base font-semibold gap-2">
                 View Features
               </Button>
             </Link>
           </div>
+          <p className="mt-5 text-sm text-muted-foreground flex items-center gap-1.5">
+            🔓 No credit card required
+          </p>
         </div>
       </section>
 
       {/* How it works */}
-      <section className="py-24 border-t bg-muted/30">
+      <section className="py-28 border-t">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="font-display text-3xl md:text-4xl font-bold">How it works</h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight">How it works</h2>
+            <p className="mt-5 text-muted-foreground text-lg max-w-xl mx-auto">
               Three API calls. That's all it takes.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-10 max-w-5xl mx-auto">
             {steps.map((item) => (
-              <div key={item.step} className="group rounded-xl border bg-card p-8 transition-all hover:shadow-lg hover:border-primary/30">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+              <div key={item.step} className="text-center">
+                <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-foreground text-background text-xl font-bold">
                   {item.step}
                 </div>
-                <h3 className="font-display text-lg font-semibold mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                <h3 className="font-display text-xl font-semibold mb-3">{item.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -85,19 +82,19 @@ export default function Index() {
       </section>
 
       {/* Features */}
-      <section className="py-24 border-t">
+      <section className="py-28 border-t">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="font-display text-3xl md:text-4xl font-bold">Built for developers & store owners</h2>
+          <div className="text-center mb-20">
+            <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight">Built for developers & store owners</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-10 max-w-5xl mx-auto">
             {features.map((f) => (
-              <div key={f.title} className="group rounded-xl border bg-card p-8 transition-all hover:shadow-lg hover:border-primary/30">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <div key={f.title} className="text-center">
+                <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground">
                   <f.icon className="h-6 w-6" />
                 </div>
-                <h3 className="font-display text-lg font-semibold mb-2">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                <h3 className="font-display text-xl font-semibold mb-3">{f.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>
@@ -105,13 +102,13 @@ export default function Index() {
       </section>
 
       {/* Code snippet preview */}
-      <section className="py-24 border-t bg-muted/30">
+      <section className="py-28 border-t">
         <div className="container flex flex-col items-center text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold max-w-2xl mb-8">
+          <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight max-w-2xl mb-10">
             Integrate in minutes
           </h2>
-          <div className="max-w-2xl w-full rounded-xl border bg-card overflow-hidden text-left">
-            <div className="px-4 py-2 border-b bg-muted flex items-center gap-2">
+          <div className="max-w-2xl w-full rounded-2xl border bg-card overflow-hidden text-left shadow-sm">
+            <div className="px-5 py-3 border-b bg-muted/50 flex items-center gap-2">
               <div className="flex gap-1.5">
                 <div className="h-3 w-3 rounded-full bg-destructive/60" />
                 <div className="h-3 w-3 rounded-full bg-accent/60" />
@@ -135,29 +132,29 @@ export default function Index() {
 </script>`}
             </pre>
           </div>
-          <Link to="/developers" className="mt-8">
-            <Button size="lg" variant="outline" className="gap-2">
-              <Code className="h-4 w-4" /> Full Documentation
+          <Link to="/developers" className="mt-10">
+            <Button variant="outline" className="rounded-full px-6 h-11 gap-2 font-semibold">
+              <Code2 className="h-4 w-4" /> Full Documentation
             </Button>
           </Link>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-24 border-t">
+      <section className="py-28 border-t">
         <div className="container text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Ready to get started?</h2>
-          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+          <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight mb-6">Ready to get started?</h2>
+          <p className="text-muted-foreground text-lg mb-10 max-w-xl mx-auto">
             Create your free account and start adding product customization to your store today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth">
-              <Button size="lg" className="gap-2 px-8">
+              <Button className="rounded-full px-8 h-14 text-base font-semibold bg-foreground text-background hover:bg-foreground/90 gap-2">
                 Create Free Account <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link to="/pricing">
-              <Button size="lg" variant="outline" className="gap-2 px-8">
+              <Button variant="outline" className="rounded-full px-8 h-14 text-base font-semibold gap-2">
                 View Pricing
               </Button>
             </Link>

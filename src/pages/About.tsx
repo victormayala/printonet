@@ -12,20 +12,19 @@ const values = [
 export default function About() {
   return (
     <MarketingLayout>
-      <section className="py-24 md:py-32">
+      <section className="py-28 md:py-36">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center mb-20">
-            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.1]">
-              About{" "}
-              <span className="text-gradient">Customizer Studio</span>
+            <h1 className="font-display text-5xl md:text-[4.5rem] font-bold tracking-tight leading-[1.05]">
+              About Customizer Studio.
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
+            <p className="mt-8 text-lg md:text-xl text-muted-foreground leading-relaxed">
               We're building the easiest way to add product customization to any online store — from t-shirts and mugs to phone cases and tote bags.
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto space-y-8 mb-20">
-            <div className="rounded-2xl border bg-card p-10">
+          <div className="max-w-3xl mx-auto mb-20">
+            <div className="rounded-2xl border p-10">
               <h2 className="font-display text-2xl font-bold mb-4">Our Mission</h2>
               <p className="text-muted-foreground leading-relaxed">
                 Product personalization drives 20-30% higher conversion rates and significantly reduces returns. Yet most customization tools are clunky, expensive, or locked to a single platform. Customizer Studio changes that. We provide a rich, embeddable design editor that works with any e-commerce setup — letting store owners offer custom products in minutes, not months.
@@ -33,10 +32,10 @@ export default function About() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-20">
+          <div className="grid md:grid-cols-3 gap-10 max-w-5xl mx-auto mb-20">
             {values.map((v) => (
-              <div key={v.title} className="rounded-xl border bg-card p-8 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div key={v.title} className="text-center">
+                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground">
                   <v.icon className="h-6 w-6" />
                 </div>
                 <h3 className="font-display text-lg font-semibold mb-2">{v.title}</h3>
@@ -47,7 +46,7 @@ export default function About() {
 
           <div className="text-center">
             <Link to="/contact">
-              <Button size="lg" className="gap-2">
+              <Button className="rounded-full px-8 h-12 font-semibold bg-foreground text-background hover:bg-foreground/90 gap-2">
                 Get in Touch <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

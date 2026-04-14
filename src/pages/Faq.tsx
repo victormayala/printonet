@@ -52,14 +52,13 @@ const faqs = [
 export default function Faq() {
   return (
     <MarketingLayout>
-      <section className="py-24 md:py-32">
+      <section className="py-28 md:py-36">
         <div className="container">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.1]">
-              Frequently asked{" "}
-              <span className="text-gradient">questions</span>
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <h1 className="font-display text-5xl md:text-[4.5rem] font-bold tracking-tight leading-[1.05]">
+              Frequently asked questions.
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
+            <p className="mt-8 text-lg md:text-xl text-muted-foreground leading-relaxed">
               Everything you need to know about Customizer Studio.
             </p>
           </div>
@@ -70,12 +69,12 @@ export default function Faq() {
                 <AccordionItem
                   key={i}
                   value={`faq-${i}`}
-                  className="rounded-xl border bg-card px-6 data-[state=open]:shadow-md transition-shadow"
+                  className="rounded-2xl border px-7 data-[state=open]:shadow-sm transition-shadow"
                 >
-                  <AccordionTrigger className="text-left font-display font-semibold text-[15px] hover:no-underline py-5">
+                  <AccordionTrigger className="text-left font-display font-semibold text-[15px] hover:no-underline py-6">
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-5">
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-6">
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
