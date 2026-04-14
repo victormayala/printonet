@@ -545,12 +545,15 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     );
   }
 
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
+
   const handleOAuthConnect = async () => {
     if (!storeUrl.trim()) {
       toast({ variant: "destructive", title: "Please enter your Shopify store URL or name" });
       return;
     }
     setLoading(true);
+    setAuthUrl(null);
     try {
       const { data, error } = await supabase.functions.invoke("shopify-oauth-init", {
         body: {
@@ -564,13 +567,13 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
       if (data?.error) throw new Error(data.error);
 
       if (data?.authorization_url) {
-        // Open in new tab — Shopify blocks iframe embedding (X-Frame-Options)
-        window.open(data.authorization_url, "_blank");
+        setAuthUrl(data.authorization_url);
       } else {
         throw new Error("No authorization URL returned");
       }
     } catch (err: any) {
       toast({ variant: "destructive", title: err.message || "Failed to start Shopify connection" });
+    } finally {
       setLoading(false);
     }
   };
@@ -585,13 +588,30 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Store URL or Name</Label>
-            <Input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="your-store or your-store.myshopify.com" />
+            <Input value={storeUrl} onChange={(e) => { setStoreUrl(e.target.value); setAuthUrl(null); }} placeholder="your-store or your-store.myshopify.com" />
             <p className="text-xs text-muted-foreground">You'll be redirected to Shopify to authorize access — no manual tokens needed.</p>
           </div>
-          <Button onClick={handleOAuthConnect} disabled={loading} className="gap-2">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-            Connect with Shopify
-          </Button>
+          {!authUrl ? (
+            <Button onClick={handleOAuthConnect} disabled={loading} className="gap-2">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              Connect with Shopify
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <a
+                href={authUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Shopify to Authorize
+              </a>
+              <p className="text-xs text-muted-foreground">
+                Click the link above to open Shopify in a new tab and authorize access. Once done, you'll be redirected back automatically.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
