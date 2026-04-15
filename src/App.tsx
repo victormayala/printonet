@@ -1,20 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import Index from "./pages/Index";
-import Features from "./pages/Features";
-import Pricing from "./pages/Pricing";
-import Faq from "./pages/Faq";
-import About from "./pages/About";
-import Integrations from "./pages/Integrations";
-import Contact from "./pages/Contact";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
 import DesignStudio from "./pages/DesignStudio";
 import EmbedCustomizer from "./pages/EmbedCustomizer";
 import Developers from "./pages/Developers";
@@ -52,16 +43,8 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
-            {/* Marketing pages */}
-            <Route path="/" element={<Index />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/faq" element={<Faq />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/integrations" element={<Integrations />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
+            {/* Redirect root to auth */}
+            <Route path="/" element={<Navigate to="/auth" replace />} />
 
             {/* Auth */}
             <Route path="/auth" element={<Auth />} />
