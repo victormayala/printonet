@@ -2123,6 +2123,10 @@ export default function Products() {
   const [savingVariantPrices, setSavingVariantPrices] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [markupDialogOpen, setMarkupDialogOpen] = useState(false);
+  const [markupType, setMarkupType] = useState<"flat" | "percent">("flat");
+  const [markupValue, setMarkupValue] = useState("");
+  const [applyingMarkup, setApplyingMarkup] = useState(false);
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
