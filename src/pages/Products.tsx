@@ -2120,6 +2120,9 @@ export default function Products() {
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
   const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState("products");
+  const [savingVariantPrices, setSavingVariantPrices] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
@@ -2605,7 +2608,7 @@ export default function Products() {
             <DialogHeader>
               <DialogTitle>{variantDetailProduct?.name}</DialogTitle>
               <DialogDescription>
-                {variantDetailProduct?.category} · ${variantDetailProduct?.base_price.toFixed(2)}
+                {variantDetailProduct?.category} · ${variantDetailProduct?.base_price.toFixed(2)} · Edit variant prices below
               </DialogDescription>
             </DialogHeader>
             {variantDetailProduct && Array.isArray(variantDetailProduct.variants) && (
@@ -2636,17 +2639,60 @@ export default function Products() {
                         </div>
                       </div>
                       {variant.sizes?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                           {variant.sizes.map((s: any, sIdx: number) => (
-                            <Badge key={sIdx} variant="secondary" className="text-[11px] font-normal gap-1">
-                              {s.size}
-                              {s.price && <span className="text-muted-foreground">— ${Number(s.price).toFixed(2)}</span>}
-                            </Badge>
+                            <div key={sIdx} className="flex items-center gap-1 rounded-md border px-2 py-1 bg-muted/30">
+                              <span className="text-xs font-medium">{s.size}</span>
+                              <span className="text-xs text-muted-foreground">$</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="h-6 w-16 text-xs px-1 py-0"
+                                value={s.price ?? ""}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const newPrice = parseFloat(e.target.value) || 0;
+                                  setVariantDetailProduct((prev) => {
+                                    if (!prev) return prev;
+                                    const newVariants = [...prev.variants];
+                                    const newSizes = [...newVariants[idx].sizes];
+                                    newSizes[sIdx] = { ...newSizes[sIdx], price: newPrice };
+                                    newVariants[idx] = { ...newVariants[idx], sizes: newSizes };
+                                    return { ...prev, variants: newVariants };
+                                  });
+                                }}
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
                     </div>
                   ))}
+                </div>
+                <div className="flex gap-3 pt-2 border-t">
+                  <Button
+                    className="gap-2"
+                    disabled={savingVariantPrices}
+                    onClick={async () => {
+                      if (!variantDetailProduct) return;
+                      setSavingVariantPrices(true);
+                      const { error } = await supabase
+                        .from("inventory_products")
+                        .update({ variants: variantDetailProduct.variants })
+                        .eq("id", variantDetailProduct.id);
+                      setSavingVariantPrices(false);
+                      if (error) {
+                        toast({ title: "Save failed", description: error.message, variant: "destructive" });
+                      } else {
+                        toast({ title: "Variant prices updated" });
+                        fetchProducts();
+                      }
+                    }}
+                  >
+                    {savingVariantPrices && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Save Prices
+                  </Button>
+                  <Button variant="outline" onClick={() => setVariantDetailProduct(null)}>Cancel</Button>
                 </div>
               </div>
             )}
