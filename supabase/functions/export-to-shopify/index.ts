@@ -7,6 +7,60 @@ const corsHeaders = {
 
 const SHOPIFY_API_VERSION = "2025-01";
 
+// Query to find the Online Store publication
+const GET_PUBLICATIONS_QUERY = `
+  query {
+    publications(first: 20) {
+      edges {
+        node {
+          id
+          name
+          supportsFuturePublishing
+        }
+      }
+    }
+  }
+`;
+
+// Mutation to publish a product to sales channels
+const PUBLISHABLE_PUBLISH_MUTATION = `
+  mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+    publishablePublish(id: $id, input: $input) {
+      publishable { ... on Product { id title } }
+      userErrors { field message }
+    }
+  }
+`;
+
+// Mutation to update inventory item (disable tracking = infinite inventory)
+const INVENTORY_ITEM_UPDATE_MUTATION = `
+  mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+    inventoryItemUpdate(id: $id, input: $input) {
+      inventoryItem { id tracked }
+      userErrors { field message }
+    }
+  }
+`;
+
+// Query to get variant inventory items for a product
+const GET_PRODUCT_VARIANTS_INVENTORY_QUERY = `
+  query getProductVariants($id: ID!) {
+    product(id: $id) {
+      variants(first: 100) {
+        edges {
+          node {
+            id
+            inventoryItem {
+              id
+              tracked
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 // GraphQL mutation to create a product (uses ProductCreateInput in 2025-01+)
 const CREATE_PRODUCT_MUTATION = `
   mutation productCreate($product: ProductCreateInput!, $media: [CreateMediaInput!]) {
@@ -344,6 +398,51 @@ Deno.serve(async (req) => {
           }
 
           created++;
+        }
+
+        // --- Publish to Online Store sales channel ---
+        try {
+          const pubData = await shopifyGraphQL(store_url, access_token, GET_PUBLICATIONS_QUERY, {});
+          const publications = pubData.publications?.edges || [];
+          const onlineStore = publications.find((e: any) =>
+            e.node.name === "Online Store"
+          );
+          if (onlineStore) {
+            const pubResult = await shopifyGraphQL(store_url, access_token, PUBLISHABLE_PUBLISH_MUTATION, {
+              id: shopifyProductGid,
+              input: [{ publicationId: onlineStore.node.id }],
+            });
+            const pubErrors = pubResult.publishablePublish?.userErrors || [];
+            if (pubErrors.length > 0) {
+              console.warn(`Publish warnings for ${product.name}: ${JSON.stringify(pubErrors)}`);
+            } else {
+              console.log(`[${product.name}] Published to Online Store`);
+            }
+          } else {
+            console.warn(`[${product.name}] Online Store publication not found`);
+          }
+        } catch (pubErr: any) {
+          console.warn(`[${product.name}] Failed to publish: ${pubErr.message}`);
+        }
+
+        // --- Disable inventory tracking (infinite inventory) ---
+        try {
+          const invData = await shopifyGraphQL(store_url, access_token, GET_PRODUCT_VARIANTS_INVENTORY_QUERY, {
+            id: shopifyProductGid,
+          });
+          const variantEdges = invData.product?.variants?.edges || [];
+          for (const edge of variantEdges) {
+            const invItemId = edge.node.inventoryItem?.id;
+            if (invItemId && edge.node.inventoryItem?.tracked !== false) {
+              await shopifyGraphQL(store_url, access_token, INVENTORY_ITEM_UPDATE_MUTATION, {
+                id: invItemId,
+                input: { tracked: false },
+              });
+            }
+          }
+          console.log(`[${product.name}] Disabled inventory tracking on ${variantEdges.length} variants`);
+        } catch (invErr: any) {
+          console.warn(`[${product.name}] Failed to update inventory: ${invErr.message}`);
         }
 
         // Store the Shopify product ID back
