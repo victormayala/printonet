@@ -2120,6 +2120,9 @@ export default function Products() {
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
   const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState("products");
+  const [savingVariantPrices, setSavingVariantPrices] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
@@ -2258,8 +2261,28 @@ export default function Products() {
       toast({ title: "Delete failed", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Product deleted" });
+      setDeleteConfirmId(null);
       fetchProducts();
     }
+  };
+
+  const bulkDeleteProducts = async () => {
+    if (selectedProductIds.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selectedProductIds);
+    let failed = 0;
+    for (const id of ids) {
+      const { error } = await supabase.from("inventory_products").delete().eq("id", id);
+      if (error) failed++;
+    }
+    setBulkDeleting(false);
+    if (failed > 0) {
+      toast({ title: `Deleted ${ids.length - failed} products, ${failed} failed`, variant: "destructive" });
+    } else {
+      toast({ title: `Deleted ${ids.length} product${ids.length !== 1 ? "s" : ""}` });
+    }
+    setSelectedProductIds(new Set());
+    fetchProducts();
   };
 
   return (
@@ -2324,6 +2347,10 @@ export default function Products() {
                         <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={openPushDialog}>
                           <Send className="h-3.5 w-3.5" />
                           Push to Store
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1.5 h-8 text-destructive hover:text-destructive" disabled={bulkDeleting} onClick={() => setDeleteConfirmId("bulk")}>
+                          {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          Delete ({selectedProductIds.size})
                         </Button>
                       </>
                     )}
@@ -2444,7 +2471,7 @@ export default function Products() {
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); deleteProduct(p.id); }}>
+                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(p.id); }}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -2560,7 +2587,7 @@ export default function Products() {
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteProduct(p.id)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(p.id)}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -2605,7 +2632,7 @@ export default function Products() {
             <DialogHeader>
               <DialogTitle>{variantDetailProduct?.name}</DialogTitle>
               <DialogDescription>
-                {variantDetailProduct?.category} · ${variantDetailProduct?.base_price.toFixed(2)}
+                {variantDetailProduct?.category} · ${variantDetailProduct?.base_price.toFixed(2)} · Edit variant prices below
               </DialogDescription>
             </DialogHeader>
             {variantDetailProduct && Array.isArray(variantDetailProduct.variants) && (
@@ -2636,17 +2663,60 @@ export default function Products() {
                         </div>
                       </div>
                       {variant.sizes?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                           {variant.sizes.map((s: any, sIdx: number) => (
-                            <Badge key={sIdx} variant="secondary" className="text-[11px] font-normal gap-1">
-                              {s.size}
-                              {s.price && <span className="text-muted-foreground">— ${Number(s.price).toFixed(2)}</span>}
-                            </Badge>
+                            <div key={sIdx} className="flex items-center gap-1 rounded-md border px-2 py-1 bg-muted/30">
+                              <span className="text-xs font-medium">{s.size}</span>
+                              <span className="text-xs text-muted-foreground">$</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="h-6 w-16 text-xs px-1 py-0"
+                                value={s.price ?? ""}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const newPrice = parseFloat(e.target.value) || 0;
+                                  setVariantDetailProduct((prev) => {
+                                    if (!prev) return prev;
+                                    const newVariants = [...prev.variants];
+                                    const newSizes = [...newVariants[idx].sizes];
+                                    newSizes[sIdx] = { ...newSizes[sIdx], price: newPrice };
+                                    newVariants[idx] = { ...newVariants[idx], sizes: newSizes };
+                                    return { ...prev, variants: newVariants };
+                                  });
+                                }}
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
                     </div>
                   ))}
+                </div>
+                <div className="flex gap-3 pt-2 border-t">
+                  <Button
+                    className="gap-2"
+                    disabled={savingVariantPrices}
+                    onClick={async () => {
+                      if (!variantDetailProduct) return;
+                      setSavingVariantPrices(true);
+                      const { error } = await supabase
+                        .from("inventory_products")
+                        .update({ variants: variantDetailProduct.variants })
+                        .eq("id", variantDetailProduct.id);
+                      setSavingVariantPrices(false);
+                      if (error) {
+                        toast({ title: "Save failed", description: error.message, variant: "destructive" });
+                      } else {
+                        toast({ title: "Variant prices updated" });
+                        fetchProducts();
+                      }
+                    }}
+                  >
+                    {savingVariantPrices && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Save Prices
+                  </Button>
+                  <Button variant="outline" onClick={() => setVariantDetailProduct(null)}>Cancel</Button>
                 </div>
               </div>
             )}
@@ -2718,6 +2788,38 @@ export default function Products() {
                 ))}
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete {deleteConfirmId === "bulk" ? `${selectedProductIds.size} Products` : "Product"}?</DialogTitle>
+              <DialogDescription>
+                {deleteConfirmId === "bulk"
+                  ? `This will permanently remove ${selectedProductIds.size} selected product${selectedProductIds.size !== 1 ? "s" : ""} from your inventory. This action cannot be undone.`
+                  : "This will permanently remove this product from your inventory. This action cannot be undone."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 justify-end pt-2">
+              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                className="gap-2"
+                disabled={bulkDeleting}
+                onClick={() => {
+                  if (deleteConfirmId === "bulk") {
+                    bulkDeleteProducts();
+                  } else if (deleteConfirmId) {
+                    deleteProduct(deleteConfirmId);
+                  }
+                }}
+              >
+                {bulkDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Delete
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
