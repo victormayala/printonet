@@ -2119,6 +2119,7 @@ export default function Products() {
   const [pushing, setPushing] = useState(false);
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
   const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
+  const [activeTab, setActiveTab] = useState("products");
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
@@ -2264,7 +2265,7 @@ export default function Products() {
   return (
     <div className="bg-background">
       <div className="p-4 sm:p-6 lg:p-8">
-        <Tabs defaultValue="products">
+        <Tabs defaultValue="products" onValueChange={(v) => setActiveTab(v)}>
           <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
             <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Store className="h-4 w-4" /> <span className="hidden xs:inline">My </span>Products</TabsTrigger>
             <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
@@ -2573,26 +2574,28 @@ export default function Products() {
           </TabsContent>
 
           <TabsContent value="shopify">
-            <ShopifyImport onDone={fetchProducts} />
+            {activeTab === "shopify" && <ShopifyImport onDone={fetchProducts} />}
           </TabsContent>
 
           <TabsContent value="woocommerce">
-            <WooCommerceImport onDone={fetchProducts} />
+            {activeTab === "woocommerce" && <WooCommerceImport onDone={fetchProducts} />}
           </TabsContent>
 
           <TabsContent value="suppliers">
-            <Tabs defaultValue="ssactivewear" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
-                <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
-              </TabsList>
-              <TabsContent value="ssactivewear">
-                <SSActivewearImport onDone={fetchProducts} />
-              </TabsContent>
-              <TabsContent value="sanmar">
-                <div><SanMarImport onDone={fetchProducts} /></div>
-              </TabsContent>
-            </Tabs>
+            {activeTab === "suppliers" && (
+              <Tabs defaultValue="ssactivewear" className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
+                  <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
+                </TabsList>
+                <TabsContent value="ssactivewear">
+                  <SSActivewearImport onDone={fetchProducts} />
+                </TabsContent>
+                <TabsContent value="sanmar">
+                  <div><SanMarImport onDone={fetchProducts} /></div>
+                </TabsContent>
+              </Tabs>
+            )}
           </TabsContent>
         </Tabs>
 

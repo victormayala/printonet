@@ -7,10 +7,10 @@ const corsHeaders = {
 
 const SHOPIFY_API_VERSION = "2025-01";
 
-// GraphQL mutation to create a product
+// GraphQL mutation to create a product (uses ProductCreateInput in 2025-01+)
 const CREATE_PRODUCT_MUTATION = `
-  mutation productCreate($input: ProductInput!, $media: [CreateMediaInput!]) {
-    productCreate(input: $input, media: $media) {
+  mutation productCreate($product: ProductCreateInput!, $media: [CreateMediaInput!]) {
+    productCreate(product: $product, media: $media) {
       product {
         id
         title
@@ -66,6 +66,42 @@ const UPDATE_PRODUCT_MUTATION = `
             }
           }
         }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+// GraphQL mutation to bulk create variants with pricing
+const VARIANTS_BULK_CREATE_MUTATION = `
+  mutation productVariantsBulkCreate($productId: ID!, $strategy: ProductVariantsBulkCreateStrategy, $variants: [ProductVariantsBulkInput!]!) {
+    productVariantsBulkCreate(productId: $productId, strategy: $strategy, variants: $variants) {
+      product { id }
+      productVariants {
+        id
+        title
+        price
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+// GraphQL mutation to bulk update existing variants (for price updates on existing products)
+const VARIANTS_BULK_UPDATE_MUTATION = `
+  mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+    productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+      product { id }
+      productVariants {
+        id
+        title
+        price
       }
       userErrors {
         field
@@ -152,13 +188,13 @@ Deno.serve(async (req) => {
 
         const variants = Array.isArray(product.variants) ? product.variants : [];
 
-        // Build options
+        // Build options with values
         const colorNames = [...new Set(variants.map((v: any) => v.color || v.colorName).filter(Boolean))];
         const allSizes = [...new Set(variants.flatMap((v: any) => (v.sizes || []).map((s: any) => s.size)).filter(Boolean))];
 
-        const options: { name: string; values: { name: string }[] }[] = [];
-        if (colorNames.length > 0) options.push({ name: "Color", values: colorNames.map(n => ({ name: n })) });
-        if (allSizes.length > 0) options.push({ name: "Size", values: allSizes.map(n => ({ name: n })) });
+        const productOptions: { name: string; values: { name: string }[] }[] = [];
+        if (colorNames.length > 0) productOptions.push({ name: "Color", values: colorNames.map(n => ({ name: n })) });
+        if (allSizes.length > 0) productOptions.push({ name: "Size", values: allSizes.map(n => ({ name: n })) });
 
         // Build media (images) for product creation
         const mediaInputs: { originalSource: string; alt: string; mediaContentType: string }[] = [];
@@ -176,22 +212,17 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Build product input
-        const productInput: any = {
-          title: product.name,
-          descriptionHtml: product.description || "",
-          productType: product.category,
-        };
-
-        if (options.length > 0) {
-          productInput.productOptions = options;
-        }
-
         let shopifyProductId: string;
+        let shopifyProductGid: string;
 
         if (existingGid) {
           // Update existing product
-          productInput.id = existingGid;
+          const productInput: any = {
+            id: existingGid,
+            title: product.name,
+            descriptionHtml: product.description || "",
+            productType: product.category,
+          };
 
           const data = await shopifyGraphQL(store_url, access_token, UPDATE_PRODUCT_MUTATION, {
             input: productInput,
@@ -203,11 +234,39 @@ Deno.serve(async (req) => {
           }
 
           shopifyProductId = existingShopifyId;
+          shopifyProductGid = existingGid;
+
+          // Update variant prices on existing products
+          const existingVariants = data.productUpdate?.product?.variants?.edges || [];
+          if (existingVariants.length > 0 && variants.length > 0) {
+            const variantUpdates = buildVariantPriceUpdates(existingVariants, variants, product.base_price);
+            if (variantUpdates.length > 0) {
+              const varData = await shopifyGraphQL(store_url, access_token, VARIANTS_BULK_UPDATE_MUTATION, {
+                productId: shopifyProductGid,
+                variants: variantUpdates,
+              });
+              const varErrors = varData.productVariantsBulkUpdate?.userErrors || [];
+              if (varErrors.length > 0) {
+                console.warn(`Variant update warnings for ${product.name}: ${varErrors.map((e: any) => e.message).join(", ")}`);
+              }
+            }
+          }
+
           updated++;
         } else {
           // Create new product
+          const productInput: any = {
+            title: product.name,
+            descriptionHtml: product.description || "",
+            productType: product.category,
+          };
+
+          if (productOptions.length > 0) {
+            productInput.productOptions = productOptions;
+          }
+
           const data = await shopifyGraphQL(store_url, access_token, CREATE_PRODUCT_MUTATION, {
-            input: productInput,
+            product: productInput,
             media: mediaInputs.length > 0 ? mediaInputs : undefined,
           });
 
@@ -217,6 +276,34 @@ Deno.serve(async (req) => {
           }
 
           shopifyProductId = extractGid(data.productCreate.product.id);
+          shopifyProductGid = data.productCreate.product.id;
+
+          // Create variants with pricing using productVariantsBulkCreate
+          if (variants.length > 0 && productOptions.length > 0) {
+            const bulkVariants = buildBulkVariants(variants, product.base_price);
+            if (bulkVariants.length > 0) {
+              const varData = await shopifyGraphQL(store_url, access_token, VARIANTS_BULK_CREATE_MUTATION, {
+                productId: shopifyProductGid,
+                strategy: "REMOVE_STANDALONE_VARIANT",
+                variants: bulkVariants,
+              });
+              const varErrors = varData.productVariantsBulkCreate?.userErrors || [];
+              if (varErrors.length > 0) {
+                console.warn(`Variant creation warnings for ${product.name}: ${varErrors.map((e: any) => e.message).join(", ")}`);
+              }
+            }
+          } else if (product.base_price > 0) {
+            // Simple product with no option variants - update the default variant price
+            const defaultVariants = data.productCreate?.product?.variants?.edges || [];
+            if (defaultVariants.length > 0) {
+              const defaultVariantId = defaultVariants[0].node.id;
+              await shopifyGraphQL(store_url, access_token, VARIANTS_BULK_UPDATE_MUTATION, {
+                productId: shopifyProductGid,
+                variants: [{ id: defaultVariantId, price: String(product.base_price) }],
+              });
+            }
+          }
+
           created++;
         }
 
@@ -246,3 +333,74 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+/**
+ * Build variant inputs for productVariantsBulkCreate.
+ * Each color+size combo becomes a variant with pricing.
+ */
+function buildBulkVariants(variants: any[], basePrice: number): any[] {
+  const bulkVariants: any[] = [];
+
+  for (const variant of variants) {
+    const colorName = variant.color || variant.colorName || "";
+    const sizes = variant.sizes || [];
+
+    if (sizes.length > 0) {
+      for (const size of sizes) {
+        const optionValues: { optionName: string; name: string }[] = [];
+        if (colorName) optionValues.push({ optionName: "Color", name: colorName });
+        if (size.size) optionValues.push({ optionName: "Size", name: size.size });
+
+        bulkVariants.push({
+          price: String(size.price || basePrice),
+          optionValues,
+          inventoryItem: size.sku ? { sku: size.sku } : undefined,
+        });
+      }
+    } else if (colorName) {
+      // Color-only variant, no sizes
+      bulkVariants.push({
+        price: String(variant.price || basePrice),
+        optionValues: [{ optionName: "Color", name: colorName }],
+      });
+    }
+  }
+
+  return bulkVariants;
+}
+
+/**
+ * Build variant price updates for existing Shopify variants.
+ * Matches by option values (Color/Size) and updates prices.
+ */
+function buildVariantPriceUpdates(existingVariants: any[], localVariants: any[], basePrice: number): any[] {
+  // Build a lookup: "Color:Size" → price
+  const priceLookup: Record<string, number> = {};
+  for (const v of localVariants) {
+    const colorName = v.color || v.colorName || "";
+    const sizes = v.sizes || [];
+    if (sizes.length > 0) {
+      for (const s of sizes) {
+        const key = [colorName, s.size].filter(Boolean).join(":");
+        priceLookup[key] = s.price || basePrice;
+      }
+    } else if (colorName) {
+      priceLookup[colorName] = v.price || basePrice;
+    }
+  }
+
+  const updates: any[] = [];
+  for (const edge of existingVariants) {
+    const node = edge.node;
+    const opts = node.selectedOptions || [];
+    const colorOpt = opts.find((o: any) => o.name === "Color")?.value || "";
+    const sizeOpt = opts.find((o: any) => o.name === "Size")?.value || "";
+    const key = [colorOpt, sizeOpt].filter(Boolean).join(":");
+
+    if (key && priceLookup[key] !== undefined) {
+      updates.push({ id: node.id, price: String(priceLookup[key]) });
+    }
+  }
+
+  return updates;
+}
