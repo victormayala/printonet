@@ -2116,7 +2116,7 @@ export default function Products() {
   const [pushDialogOpen, setPushDialogOpen] = useState(false);
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [loadingIntegrations, setLoadingIntegrations] = useState(false);
-  const [pushing, setPushing] = useState(false);
+  const [pushingIntegrationId, setPushingIntegrationId] = useState<string | null>(null);
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
   const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState("products");
@@ -2173,7 +2173,7 @@ export default function Products() {
   };
 
   const handlePushToStore = async (integration: any) => {
-    setPushing(true);
+    setPushingIntegrationId(integration.id);
     setPushResults(null);
     try {
       const ids = Array.from(selectedProductIds);
@@ -2215,7 +2215,7 @@ export default function Products() {
     } catch (err: any) {
       toast({ title: "Push failed", description: err.message, variant: "destructive" });
     } finally {
-      setPushing(false);
+      setPushingIntegrationId(null);
     }
   };
 
@@ -2700,10 +2700,10 @@ export default function Products() {
                     key={integ.id}
                     variant="outline"
                     className="w-full justify-start gap-3 h-auto py-3"
-                    disabled={pushing}
+                    disabled={pushingIntegrationId !== null}
                     onClick={() => handlePushToStore(integ)}
                   >
-                    {pushing ? (
+                    {pushingIntegrationId === integ.id ? (
                       <Loader2 className="h-5 w-5 animate-spin shrink-0" />
                     ) : integ.platform === "shopify" ? (
                       <ShoppingBag className="h-5 w-5 shrink-0" />

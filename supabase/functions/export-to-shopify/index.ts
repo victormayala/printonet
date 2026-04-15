@@ -236,10 +236,30 @@ Deno.serve(async (req) => {
           shopifyProductId = existingShopifyId;
           shopifyProductGid = existingGid;
 
-          // Update variant prices on existing products
+          // Sync variants: update existing prices + create any missing variants
           const existingVariants = data.productUpdate?.product?.variants?.edges || [];
-          if (existingVariants.length > 0 && variants.length > 0) {
+          console.log(`[${product.name}] Existing Shopify variants: ${existingVariants.length}, local variants: ${variants.length}`);
+
+          if (variants.length > 0) {
+            // Build full set of expected variants
+            const bulkVariants = buildBulkVariants(variants, product.base_price);
+            
+            // Build lookup of existing variant option keys
+            const existingKeys = new Set(existingVariants.map((edge: any) => {
+              const opts = edge.node.selectedOptions || [];
+              return opts.map((o: any) => `${o.name}:${o.value}`).sort().join("|");
+            }));
+
+            // Split into updates (existing) and creates (missing)
             const variantUpdates = buildVariantPriceUpdates(existingVariants, variants, product.base_price);
+            const missingVariants = bulkVariants.filter((bv: any) => {
+              const key = (bv.optionValues || []).map((ov: any) => `${ov.optionName}:${ov.name}`).sort().join("|");
+              return !existingKeys.has(key);
+            });
+
+            console.log(`[${product.name}] Variant updates: ${variantUpdates.length}, missing to create: ${missingVariants.length}`);
+
+            // Update existing variant prices
             if (variantUpdates.length > 0) {
               const varData = await shopifyGraphQL(store_url, access_token, VARIANTS_BULK_UPDATE_MUTATION, {
                 productId: shopifyProductGid,
@@ -247,8 +267,22 @@ Deno.serve(async (req) => {
               });
               const varErrors = varData.productVariantsBulkUpdate?.userErrors || [];
               if (varErrors.length > 0) {
-                console.warn(`Variant update warnings for ${product.name}: ${varErrors.map((e: any) => e.message).join(", ")}`);
+                console.warn(`Variant update warnings for ${product.name}: ${JSON.stringify(varErrors)}`);
               }
+            }
+
+            // Create missing variants
+            if (missingVariants.length > 0) {
+              const varData = await shopifyGraphQL(store_url, access_token, VARIANTS_BULK_CREATE_MUTATION, {
+                productId: shopifyProductGid,
+                strategy: "REMOVE_STANDALONE_VARIANT",
+                variants: missingVariants,
+              });
+              const varErrors = varData.productVariantsBulkCreate?.userErrors || [];
+              if (varErrors.length > 0) {
+                console.warn(`Variant creation warnings for ${product.name}: ${JSON.stringify(varErrors)}`);
+              }
+              console.log(`[${product.name}] Created ${varData.productVariantsBulkCreate?.productVariants?.length || 0} missing variants`);
             }
           }
 
@@ -281,6 +315,10 @@ Deno.serve(async (req) => {
           // Create variants with pricing using productVariantsBulkCreate
           if (variants.length > 0 && productOptions.length > 0) {
             const bulkVariants = buildBulkVariants(variants, product.base_price);
+            console.log(`[${product.name}] productOptions:`, JSON.stringify(productOptions));
+            console.log(`[${product.name}] variants input count: ${variants.length}`);
+            console.log(`[${product.name}] bulkVariants count: ${bulkVariants.length}`);
+            console.log(`[${product.name}] sample bulkVariants:`, JSON.stringify(bulkVariants.slice(0, 3)));
             if (bulkVariants.length > 0) {
               const varData = await shopifyGraphQL(store_url, access_token, VARIANTS_BULK_CREATE_MUTATION, {
                 productId: shopifyProductGid,
@@ -289,8 +327,9 @@ Deno.serve(async (req) => {
               });
               const varErrors = varData.productVariantsBulkCreate?.userErrors || [];
               if (varErrors.length > 0) {
-                console.warn(`Variant creation warnings for ${product.name}: ${varErrors.map((e: any) => e.message).join(", ")}`);
+                console.warn(`Variant creation warnings for ${product.name}: ${JSON.stringify(varErrors)}`);
               }
+              console.log(`[${product.name}] Created ${varData.productVariantsBulkCreate?.productVariants?.length || 0} variants on Shopify`);
             }
           } else if (product.base_price > 0) {
             // Simple product with no option variants - update the default variant price
