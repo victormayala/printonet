@@ -2264,7 +2264,7 @@ export default function Products() {
   return (
     <div className="bg-background">
       <div className="p-4 sm:p-6 lg:p-8">
-        <Tabs defaultValue="products">
+        <Tabs defaultValue="products" onValueChange={(v) => setActiveTab(v)}>
           <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
             <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Store className="h-4 w-4" /> <span className="hidden xs:inline">My </span>Products</TabsTrigger>
             <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
