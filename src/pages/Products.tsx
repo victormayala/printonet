@@ -2877,7 +2877,56 @@ export default function Products() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Bulk Markup Dialog */}
+        <Dialog open={markupDialogOpen} onOpenChange={setMarkupDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <SlidersHorizontal className="h-5 w-5" /> Set Markup
+              </DialogTitle>
+              <DialogDescription>
+                Apply a markup to all variant prices across {selectedProductIds.size} selected product{selectedProductIds.size !== 1 ? "s" : ""}. This will update both base price and all variant size prices.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Select value={markupType} onValueChange={(v) => setMarkupType(v as "flat" | "percent")}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flat">$ Flat Amount</SelectItem>
+                    <SelectItem value="percent">% Percentage</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={markupType === "flat" ? "e.g. 5.00" : "e.g. 20"}
+                  value={markupValue}
+                  onChange={(e) => setMarkupValue(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {markupType === "flat"
+                  ? `Adds $${markupValue || "0"} to every variant price.`
+                  : `Increases every variant price by ${markupValue || "0"}%.`}
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setMarkupDialogOpen(false)}>Cancel</Button>
+                <Button
+                  className="gap-2"
+                  disabled={applyingMarkup || !markupValue}
+                  onClick={() => applyMarkupToProducts(Array.from(selectedProductIds))}
+                >
+                  {applyingMarkup && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Apply Markup
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
