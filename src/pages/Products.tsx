@@ -610,7 +610,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg"><ShoppingBag className="h-5 w-5" /> Connect Shopify</CardTitle>
-          <CardDescription>Enter your store name or URL, then authorize with Shopify. We'll request only the product permissions needed.</CardDescription>
+          <CardDescription>Enter your store name or URL, then authorize with Shopify. We'll request product, inventory, and Online Store permissions.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
