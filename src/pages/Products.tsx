@@ -2745,6 +2745,40 @@ export default function Products() {
                   ))}
                 </div>
                 <div className="flex gap-3 pt-2 border-t">
+                  <div className="flex-1 flex items-center gap-2">
+                    <Select value={markupType} onValueChange={(v) => setMarkupType(v as "flat" | "percent")}>
+                      <SelectTrigger className="w-[80px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flat">$ Flat</SelectItem>
+                        <SelectItem value="percent">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder={markupType === "flat" ? "e.g. 5.00" : "e.g. 20"}
+                      className="h-8 w-24 text-xs"
+                      value={markupValue}
+                      onChange={(e) => setMarkupValue(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="gap-1.5 h-8 text-xs"
+                      disabled={applyingMarkup || !markupValue}
+                      onClick={() => {
+                        if (variantDetailProduct) {
+                          applyMarkupToProducts([variantDetailProduct.id]);
+                        }
+                      }}
+                    >
+                      {applyingMarkup && <Loader2 className="h-3 w-3 animate-spin" />}
+                      Apply Markup
+                    </Button>
+                  </div>
+                </div>
                   <Button
                     className="gap-2"
                     disabled={savingVariantPrices}
