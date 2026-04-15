@@ -2123,6 +2123,10 @@ export default function Products() {
   const [savingVariantPrices, setSavingVariantPrices] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [markupDialogOpen, setMarkupDialogOpen] = useState(false);
+  const [markupType, setMarkupType] = useState<"flat" | "percent">("flat");
+  const [markupValue, setMarkupValue] = useState("");
+  const [applyingMarkup, setApplyingMarkup] = useState(false);
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
@@ -2282,6 +2286,49 @@ export default function Products() {
       toast({ title: `Deleted ${ids.length} product${ids.length !== 1 ? "s" : ""}` });
     }
     setSelectedProductIds(new Set());
+    setDeleteConfirmId(null);
+    fetchProducts();
+  };
+
+  const applyMarkupToProducts = async (productIds: string[]) => {
+    const val = parseFloat(markupValue);
+    if (isNaN(val) || val === 0) {
+      toast({ title: "Enter a valid markup amount", variant: "destructive" });
+      return;
+    }
+    setApplyingMarkup(true);
+    let updated = 0;
+    let failed = 0;
+    for (const id of productIds) {
+      const product = products.find((p) => p.id === id);
+      if (!product || !Array.isArray(product.variants)) { failed++; continue; }
+      const newVariants = product.variants.map((v: any) => ({
+        ...v,
+        sizes: v.sizes?.map((s: any) => ({
+          ...s,
+          price: markupType === "flat"
+            ? Math.round((Number(s.price) + val) * 100) / 100
+            : Math.round(Number(s.price) * (1 + val / 100) * 100) / 100,
+        })),
+      }));
+      const newBasePrice = markupType === "flat"
+        ? Math.round((product.base_price + val) * 100) / 100
+        : Math.round(product.base_price * (1 + val / 100) * 100) / 100;
+      const { error } = await supabase
+        .from("inventory_products")
+        .update({ variants: newVariants, base_price: newBasePrice })
+        .eq("id", id);
+      if (error) failed++;
+      else updated++;
+    }
+    setApplyingMarkup(false);
+    setMarkupDialogOpen(false);
+    setMarkupValue("");
+    if (failed > 0) {
+      toast({ title: `Markup applied to ${updated} products, ${failed} failed`, variant: "destructive" });
+    } else {
+      toast({ title: `Markup applied to ${updated} product${updated !== 1 ? "s" : ""}` });
+    }
     fetchProducts();
   };
 
@@ -2347,6 +2394,10 @@ export default function Products() {
                         <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={openPushDialog}>
                           <Send className="h-3.5 w-3.5" />
                           Push to Store
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => { setMarkupDialogOpen(true); setMarkupValue(""); setMarkupType("flat"); }}>
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          Set Markup
                         </Button>
                         <Button size="sm" variant="outline" className="gap-1.5 h-8 text-destructive hover:text-destructive" disabled={bulkDeleting} onClick={() => setDeleteConfirmId("bulk")}>
                           {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -2694,6 +2745,41 @@ export default function Products() {
                   ))}
                 </div>
                 <div className="flex gap-3 pt-2 border-t">
+                  <div className="flex-1 flex items-center gap-2">
+                    <Select value={markupType} onValueChange={(v) => setMarkupType(v as "flat" | "percent")}>
+                      <SelectTrigger className="w-[80px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flat">$ Flat</SelectItem>
+                        <SelectItem value="percent">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder={markupType === "flat" ? "e.g. 5.00" : "e.g. 20"}
+                      className="h-8 w-24 text-xs"
+                      value={markupValue}
+                      onChange={(e) => setMarkupValue(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="gap-1.5 h-8 text-xs"
+                      disabled={applyingMarkup || !markupValue}
+                      onClick={() => {
+                        if (variantDetailProduct) {
+                          applyMarkupToProducts([variantDetailProduct.id]);
+                        }
+                      }}
+                    >
+                      {applyingMarkup && <Loader2 className="h-3 w-3 animate-spin" />}
+                      Apply Markup
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
                   <Button
                     className="gap-2"
                     disabled={savingVariantPrices}
@@ -2791,7 +2877,56 @@ export default function Products() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Bulk Markup Dialog */}
+        <Dialog open={markupDialogOpen} onOpenChange={setMarkupDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <SlidersHorizontal className="h-5 w-5" /> Set Markup
+              </DialogTitle>
+              <DialogDescription>
+                Apply a markup to all variant prices across {selectedProductIds.size} selected product{selectedProductIds.size !== 1 ? "s" : ""}. This will update both base price and all variant size prices.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Select value={markupType} onValueChange={(v) => setMarkupType(v as "flat" | "percent")}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flat">$ Flat Amount</SelectItem>
+                    <SelectItem value="percent">% Percentage</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={markupType === "flat" ? "e.g. 5.00" : "e.g. 20"}
+                  value={markupValue}
+                  onChange={(e) => setMarkupValue(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {markupType === "flat"
+                  ? `Adds $${markupValue || "0"} to every variant price.`
+                  : `Increases every variant price by ${markupValue || "0"}%.`}
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setMarkupDialogOpen(false)}>Cancel</Button>
+                <Button
+                  className="gap-2"
+                  disabled={applyingMarkup || !markupValue}
+                  onClick={() => applyMarkupToProducts(Array.from(selectedProductIds))}
+                >
+                  {applyingMarkup && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Apply Markup
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
