@@ -7,6 +7,60 @@ const corsHeaders = {
 
 const SHOPIFY_API_VERSION = "2025-01";
 
+// Query to find the Online Store publication
+const GET_PUBLICATIONS_QUERY = `
+  query {
+    publications(first: 20) {
+      edges {
+        node {
+          id
+          name
+          supportsFuturePublishing
+        }
+      }
+    }
+  }
+`;
+
+// Mutation to publish a product to sales channels
+const PUBLISHABLE_PUBLISH_MUTATION = `
+  mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+    publishablePublish(id: $id, input: $input) {
+      publishable { ... on Product { id title } }
+      userErrors { field message }
+    }
+  }
+`;
+
+// Mutation to update inventory item (disable tracking = infinite inventory)
+const INVENTORY_ITEM_UPDATE_MUTATION = `
+  mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+    inventoryItemUpdate(id: $id, input: $input) {
+      inventoryItem { id tracked }
+      userErrors { field message }
+    }
+  }
+`;
+
+// Query to get variant inventory items for a product
+const GET_PRODUCT_VARIANTS_INVENTORY_QUERY = `
+  query getProductVariants($id: ID!) {
+    product(id: $id) {
+      variants(first: 100) {
+        edges {
+          node {
+            id
+            inventoryItem {
+              id
+              tracked
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 // GraphQL mutation to create a product (uses ProductCreateInput in 2025-01+)
 const CREATE_PRODUCT_MUTATION = `
   mutation productCreate($product: ProductCreateInput!, $media: [CreateMediaInput!]) {
