@@ -2779,6 +2779,7 @@ export default function Products() {
                     </Button>
                   </div>
                 </div>
+                <div className="flex gap-3 pt-2">
                   <Button
                     className="gap-2"
                     disabled={savingVariantPrices}
