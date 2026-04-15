@@ -1,37 +1,33 @@
 
 
-## Plan: Add SanMar Supplier Integration
+# Remove Marketing Pages
 
-SanMar will follow the exact same pattern as the existing S&S Activewear integration — users enter their own SanMar account credentials, browse the catalog, and import products into their inventory.
+## Summary
+Delete all marketing/landing pages and the shared marketing layout. Redirect `/` to `/auth` (or `/products` if logged in). Remove related nav links and footer.
 
-### SanMar API Details
-SanMar uses a SOAP/REST API. Their product data API provides styles, colors, sizes, pricing, and product images. Users need their **SanMar Customer Number** and **API Key** (or username/password depending on the API version).
+## Pages to Delete
+- `src/pages/Index.tsx` — Landing page
+- `src/pages/Features.tsx`
+- `src/pages/Pricing.tsx`
+- `src/pages/Faq.tsx`
+- `src/pages/About.tsx`
+- `src/pages/Integrations.tsx`
+- `src/pages/Contact.tsx`
+- `src/pages/Privacy.tsx`
+- `src/pages/Terms.tsx`
 
-### Changes
+## Components to Delete
+- `src/components/MarketingLayout.tsx` — Shared header/footer for marketing pages
 
-**1. New Edge Function: `supabase/functions/import-sanmar-products/index.ts`**
-- Mirror the structure of `import-ssactivewear-products`
-- Support actions: `browse`, `import`, `sync`, `details`, `categories`
-- Use SanMar's product data API (REST/JSON endpoints) with the user's credentials
-- Authenticate via the user's SanMar account number and API key
-- Normalize product data into the same `inventory_products` format (name, variants with color/size/price, images)
-- Set `supplier_source.provider = 'sanmar'` for tracking
+## Route Changes (`src/App.tsx`)
+- Remove all 9 marketing route entries (`/`, `/features`, `/pricing`, `/faq`, `/about`, `/integrations`, `/contact`, `/privacy`, `/terms`)
+- Remove their imports
+- Change `/` to redirect to `/auth` (which already redirects to `/products` when logged in):
+  ```tsx
+  <Route path="/" element={<Navigate to="/auth" replace />} />
+  ```
 
-**2. Update `src/pages/Products.tsx`**
-- Add a new `SanMarImport` component, modeled after `SSActivewearImport`
-- Credential form: SanMar Customer Number + API Key, with instructions on where to find them
-- Catalog browser with search, category filtering, pagination
-- Style detail dialog showing colors, sizes, pricing
-- Single and bulk import with sync support
-- Store credentials in `store_integrations` with `platform: 'sanmar'`
-- Add a new "SanMar" tab in the suppliers section (or convert the suppliers tab to show both S&S and SanMar)
-
-**3. Update the Suppliers tab layout**
-- Replace the single `SSActivewearImport` with a sub-tabbed or accordion layout showing both **S&S Activewear** and **SanMar** as supplier options
-
-### Technical Notes
-- SanMar's API base URL: `https://ws.sanmar.com/promostandards/` (PromoStandards) or their proprietary endpoints
-- The edge function handles all API communication server-side — user credentials never touch the frontend beyond the initial form
-- No database migration needed — reuses existing `inventory_products` and `store_integrations` tables
-- The `supplier_source` JSONB column already supports multiple providers
+## Other Cleanup
+- Check `DashboardSidebar.tsx` and `NavLink.tsx` for any links to removed pages and update them
+- Remove any references to marketing pages in other components (e.g., pricing links in Auth page)
 
