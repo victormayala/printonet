@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
         };
 
         if (options.length > 0) {
-          productInput.options = options.map(o => o.name);
+          productInput.productOptions = options;
         }
 
         let shopifyProductId: string;
