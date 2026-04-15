@@ -2395,6 +2395,10 @@ export default function Products() {
                           <Send className="h-3.5 w-3.5" />
                           Push to Store
                         </Button>
+                        <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => { setMarkupDialogOpen(true); setMarkupValue(""); setMarkupType("flat"); }}>
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          Set Markup
+                        </Button>
                         <Button size="sm" variant="outline" className="gap-1.5 h-8 text-destructive hover:text-destructive" disabled={bulkDeleting} onClick={() => setDeleteConfirmId("bulk")}>
                           {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                           Delete ({selectedProductIds.size})
