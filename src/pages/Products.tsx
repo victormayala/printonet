@@ -2790,6 +2790,38 @@ export default function Products() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete {deleteConfirmId === "bulk" ? `${selectedProductIds.size} Products` : "Product"}?</DialogTitle>
+              <DialogDescription>
+                {deleteConfirmId === "bulk"
+                  ? `This will permanently remove ${selectedProductIds.size} selected product${selectedProductIds.size !== 1 ? "s" : ""} from your inventory. This action cannot be undone.`
+                  : "This will permanently remove this product from your inventory. This action cannot be undone."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 justify-end pt-2">
+              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                className="gap-2"
+                disabled={bulkDeleting}
+                onClick={() => {
+                  if (deleteConfirmId === "bulk") {
+                    bulkDeleteProducts();
+                  } else if (deleteConfirmId) {
+                    deleteProduct(deleteConfirmId);
+                  }
+                }}
+              >
+                {bulkDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
