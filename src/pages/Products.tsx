@@ -2348,6 +2348,10 @@ export default function Products() {
                           <Send className="h-3.5 w-3.5" />
                           Push to Store
                         </Button>
+                        <Button size="sm" variant="outline" className="gap-1.5 h-8 text-destructive hover:text-destructive" disabled={bulkDeleting} onClick={() => setDeleteConfirmId("bulk")}>
+                          {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          Delete ({selectedProductIds.size})
+                        </Button>
                       </>
                     )}
                   </div>
@@ -2467,7 +2471,7 @@ export default function Products() {
                             <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); deleteProduct(p.id); }}>
+                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(p.id); }}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -2583,7 +2587,7 @@ export default function Products() {
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteProduct(p.id)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(p.id)}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
