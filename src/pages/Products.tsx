@@ -2116,7 +2116,7 @@ export default function Products() {
   const [pushDialogOpen, setPushDialogOpen] = useState(false);
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [loadingIntegrations, setLoadingIntegrations] = useState(false);
-  const [pushing, setPushing] = useState(false);
+  const [pushingIntegrationId, setPushingIntegrationId] = useState<string | null>(null);
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
   const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState("products");
