@@ -2261,8 +2261,28 @@ export default function Products() {
       toast({ title: "Delete failed", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Product deleted" });
+      setDeleteConfirmId(null);
       fetchProducts();
     }
+  };
+
+  const bulkDeleteProducts = async () => {
+    if (selectedProductIds.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selectedProductIds);
+    let failed = 0;
+    for (const id of ids) {
+      const { error } = await supabase.from("inventory_products").delete().eq("id", id);
+      if (error) failed++;
+    }
+    setBulkDeleting(false);
+    if (failed > 0) {
+      toast({ title: `Deleted ${ids.length - failed} products, ${failed} failed`, variant: "destructive" });
+    } else {
+      toast({ title: `Deleted ${ids.length} product${ids.length !== 1 ? "s" : ""}` });
+    }
+    setSelectedProductIds(new Set());
+    fetchProducts();
   };
 
   return (
