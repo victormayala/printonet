@@ -2286,6 +2286,49 @@ export default function Products() {
       toast({ title: `Deleted ${ids.length} product${ids.length !== 1 ? "s" : ""}` });
     }
     setSelectedProductIds(new Set());
+    setDeleteConfirmId(null);
+    fetchProducts();
+  };
+
+  const applyMarkupToProducts = async (productIds: string[]) => {
+    const val = parseFloat(markupValue);
+    if (isNaN(val) || val === 0) {
+      toast({ title: "Enter a valid markup amount", variant: "destructive" });
+      return;
+    }
+    setApplyingMarkup(true);
+    let updated = 0;
+    let failed = 0;
+    for (const id of productIds) {
+      const product = products.find((p) => p.id === id);
+      if (!product || !Array.isArray(product.variants)) { failed++; continue; }
+      const newVariants = product.variants.map((v: any) => ({
+        ...v,
+        sizes: v.sizes?.map((s: any) => ({
+          ...s,
+          price: markupType === "flat"
+            ? Math.round((Number(s.price) + val) * 100) / 100
+            : Math.round(Number(s.price) * (1 + val / 100) * 100) / 100,
+        })),
+      }));
+      const newBasePrice = markupType === "flat"
+        ? Math.round((product.base_price + val) * 100) / 100
+        : Math.round(product.base_price * (1 + val / 100) * 100) / 100;
+      const { error } = await supabase
+        .from("inventory_products")
+        .update({ variants: newVariants, base_price: newBasePrice })
+        .eq("id", id);
+      if (error) failed++;
+      else updated++;
+    }
+    setApplyingMarkup(false);
+    setMarkupDialogOpen(false);
+    setMarkupValue("");
+    if (failed > 0) {
+      toast({ title: `Markup applied to ${updated} products, ${failed} failed`, variant: "destructive" });
+    } else {
+      toast({ title: `Markup applied to ${updated} product${updated !== 1 ? "s" : ""}` });
+    }
     fetchProducts();
   };
 
