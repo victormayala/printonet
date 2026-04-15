@@ -276,6 +276,7 @@ Deno.serve(async (req) => {
             title: product.name,
             descriptionHtml: product.description || "",
             productType: product.category,
+            status: "ACTIVE",
           };
 
           const data = await shopifyGraphQL(store_url, access_token, UPDATE_PRODUCT_MUTATION, {
@@ -347,6 +348,7 @@ Deno.serve(async (req) => {
             title: product.name,
             descriptionHtml: product.description || "",
             productType: product.category,
+            status: "ACTIVE",
           };
 
           if (productOptions.length > 0) {
@@ -392,7 +394,7 @@ Deno.serve(async (req) => {
               const defaultVariantId = defaultVariants[0].node.id;
               await shopifyGraphQL(store_url, access_token, VARIANTS_BULK_UPDATE_MUTATION, {
                 productId: shopifyProductGid,
-                variants: [{ id: defaultVariantId, price: String(product.base_price) }],
+                variants: [{ id: defaultVariantId, price: String(product.base_price), inventoryPolicy: "CONTINUE", inventoryItem: { tracked: false } }],
               });
             }
           }
@@ -491,15 +493,21 @@ function buildBulkVariants(variants: any[], basePrice: number): any[] {
 
         bulkVariants.push({
           price: String(size.price || basePrice),
+          inventoryPolicy: "CONTINUE",
           optionValues,
-          inventoryItem: size.sku ? { sku: size.sku } : undefined,
+          inventoryItem: {
+            ...(size.sku ? { sku: size.sku } : {}),
+            tracked: false,
+          },
         });
       }
     } else if (colorName) {
       // Color-only variant, no sizes
       bulkVariants.push({
         price: String(variant.price || basePrice),
+        inventoryPolicy: "CONTINUE",
         optionValues: [{ optionName: "Color", name: colorName }],
+        inventoryItem: { tracked: false },
       });
     }
   }
@@ -536,7 +544,12 @@ function buildVariantPriceUpdates(existingVariants: any[], localVariants: any[],
     const key = [colorOpt, sizeOpt].filter(Boolean).join(":");
 
     if (key && priceLookup[key] !== undefined) {
-      updates.push({ id: node.id, price: String(priceLookup[key]) });
+      updates.push({
+        id: node.id,
+        price: String(priceLookup[key]),
+        inventoryPolicy: "CONTINUE",
+        inventoryItem: { tracked: false },
+      });
     }
   }
 

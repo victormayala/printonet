@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       nonce: crypto.randomUUID(),
     }));
 
-    const scopes = "read_products,write_products";
+    const scopes = "read_products,write_products,read_inventory,write_inventory,read_publications,write_publications";
     const authUrl = `https://${shopDomain}/admin/oauth/authorize?` +
       `client_id=${clientId}` +
       `&scope=${scopes}` +
