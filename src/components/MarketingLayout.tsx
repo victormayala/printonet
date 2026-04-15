@@ -34,7 +34,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-20 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src={logo} alt="Customizer Studio" className="h-8" />
+            <img src={logo} alt="Customizer Studio" className="h-10" />
           </Link>
 
           {/* Desktop nav */}
