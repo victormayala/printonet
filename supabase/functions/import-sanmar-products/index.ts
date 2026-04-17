@@ -453,8 +453,7 @@ Deno.serve(async (req) => {
 
       for (const sid of styleIds) {
         try {
-          const prodXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(sid))
-          const product = parseGetProduct(prodXml)
+          const product = await fetchFullProduct(sid)
           if (!product.parts.length) continue
           const enriched = await enrichProduct(sid, product)
 
