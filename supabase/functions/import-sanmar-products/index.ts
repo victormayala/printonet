@@ -253,34 +253,19 @@ Deno.serve(async (req) => {
       const mediaXml = await soapCall(PS_MEDIA, buildGetMediaContent(productId)).catch(() => '')
       const mediaMap = mediaXml ? parseMediaContent(mediaXml) : new Map()
 
-      // Pricing: SanMar's GetConfigurationAndPricing returns prices keyed by partId,
-      // but a single call against the parent style only returns parts under that productId.
-      // We need to call it per unique partId to get all colors priced.
-      // Group partIds and call pricing in batches of 5.
-      const uniquePartIds = [...new Set(product.parts.map(p => p.partId).filter(Boolean))]
-      console.log(`Pricing: fetching ${uniquePartIds.length} partIds for style ${productId}`)
-
+      // Pricing must be requested with the parent style productId.
+      // The response includes prices for child parts, which we map back by partId.
       const priceMap = new Map<string, number>()
-      const BATCH = 5
       let pricingErrorSample = ''
       let pricingResponseSample = ''
-      for (let i = 0; i < uniquePartIds.length; i += BATCH) {
-        const batch = uniquePartIds.slice(i, i + BATCH)
-        const results = await Promise.all(
-          batch.map(async (pid) => {
-            try {
-              const xml = await soapCall(PS_PRICING, buildGetPricing(pid))
-              if (!pricingResponseSample) pricingResponseSample = xml.substring(0, 400)
-              return parsePricing(xml)
-            } catch (e) {
-              if (!pricingErrorSample) pricingErrorSample = `${pid}: ${(e as Error).message}`
-              return new Map<string, number>()
-            }
-          })
-        )
-        for (const m of results) {
-          for (const [k, v] of m.entries()) priceMap.set(k, v)
-        }
+      try {
+        console.log(`Pricing: fetching style-level pricing for ${productId} with ${product.parts.length} parts`)
+        const pricingXml = await soapCall(PS_PRICING, buildGetPricing(productId))
+        pricingResponseSample = pricingXml.substring(0, 400)
+        const parsedPrices = parsePricing(pricingXml)
+        for (const [k, v] of parsedPrices.entries()) priceMap.set(k, v)
+      } catch (e) {
+        pricingErrorSample = `${productId}: ${(e as Error).message}`
       }
       if (pricingErrorSample) console.log('PRICING ERROR sample:', pricingErrorSample)
       if (pricingResponseSample) console.log('PRICING RESPONSE sample:', pricingResponseSample)
