@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
   </soapenv:Body>
 </soapenv:Envelope>`
 
-    const buildGetPricing = (productId: string) => `<?xml version="1.0" encoding="UTF-8"?>
+    const buildGetPricing = (productId: string, priceType: 'Customer' | 'List' = 'Customer', includeConfigurationType = true) => `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="${NS_PRICING}" xmlns:shar="${NS_PRICING_SHARED}">
   <soapenv:Header/><soapenv:Body>
     <ns:GetConfigurationAndPricingRequest>
@@ -136,10 +136,10 @@ Deno.serve(async (req) => {
       <shar:productId>${escXml(productId)}</shar:productId>
       <shar:currency>USD</shar:currency>
       <shar:fobId>1</shar:fobId>
-      <shar:priceType>Net</shar:priceType>
+      <shar:priceType>${priceType}</shar:priceType>
       <shar:localizationCountry>US</shar:localizationCountry>
       <shar:localizationLanguage>en</shar:localizationLanguage>
-      <shar:configurationType>Blank</shar:configurationType>
+      ${includeConfigurationType ? '<shar:configurationType>Blank</shar:configurationType>' : ''}
     </ns:GetConfigurationAndPricingRequest>
   </soapenv:Body>
 </soapenv:Envelope>`
