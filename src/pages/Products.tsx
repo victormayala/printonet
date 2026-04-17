@@ -450,6 +450,171 @@ function ProductForm({
           );
         })}
       </div>
+
+      {/* ============ Variants (color list + per-color pricing) ============ */}
+      {variants.length > 0 && (
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <Label className="text-base">Variants</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {variants.length} color{variants.length !== 1 ? "s" : ""} · Base cost ${baseCostNum.toFixed(2)}
+              </p>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
+              Apply pricing to all colors
+            </Button>
+          </div>
+
+          <div className="rounded-lg border overflow-hidden">
+            <div className="flex h-[480px]">
+              {/* Left rail: color list */}
+              <div className="w-64 border-r overflow-y-auto shrink-0 bg-muted/20">
+                {variants.map((v, idx) => {
+                  const img = v.image || v.colorFrontImage || v.colorSwatchImage;
+                  const isSelected = idx === selectedVariantIdx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedVariantIdx(idx)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left border-b transition-colors ${
+                        isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/40"
+                      }`}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full border shrink-0"
+                        style={{ backgroundColor: resolveVariantHex(v) }}
+                      />
+                      {img ? (
+                        <img src={img} alt={v.color} className="w-9 h-9 object-contain rounded bg-background border shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded bg-background border flex items-center justify-center shrink-0">
+                          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">{v.color || "—"}</p>
+                        <p className="text-[10px] text-muted-foreground">{v.sizes?.length || 0} sizes</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right pane: selected variant detail */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {selectedVariant ? (
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <div className="w-40 h-40 rounded-lg border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                        {(selectedVariant.image || selectedVariant.colorFrontImage) ? (
+                          <img
+                            src={selectedVariant.image || selectedVariant.colorFrontImage}
+                            alt={selectedVariant.color}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-5 h-5 rounded-full border"
+                            style={{ backgroundColor: resolveVariantHex(selectedVariant) }}
+                          />
+                          <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
+                        </div>
+                        <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-[10px]">Base cost</Label>
+                              <Input type="text" value={`$${baseCostNum.toFixed(2)}`} readOnly className="h-8 mt-1 bg-muted text-xs" />
+                            </div>
+                            <div>
+                              <Label className="text-[10px]">Profit margin ($)</Label>
+                              <Input
+                                type="number" step="0.01" min="0"
+                                value={selectedVariant.pricing?.margin ?? 0}
+                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "margin", parseFloat(e.target.value) || 0)}
+                                className="h-8 mt-1 text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[10px]">Embroidery fee ($)</Label>
+                              <Input
+                                type="number" step="0.01" min="0"
+                                value={selectedVariant.pricing?.embroidery_fee ?? 0}
+                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "embroidery_fee", parseFloat(e.target.value) || 0)}
+                                className="h-8 mt-1 text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[10px]">DTG fee ($)</Label>
+                              <Input
+                                type="number" step="0.01" min="0"
+                                value={selectedVariant.pricing?.dtg_fee ?? 0}
+                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "dtg_fee", parseFloat(e.target.value) || 0)}
+                                className="h-8 mt-1 text-xs"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div>
+                              <p className="text-[10px] text-muted-foreground">Final price</p>
+                              <p className="text-xl font-bold text-primary">${computeVariantFinalPrice(selectedVariant).toFixed(2)}</p>
+                            </div>
+                            <Button type="button" size="sm" variant="secondary" onClick={() => applyFinalPriceToVariantSizes(selectedVariantIdx)}>
+                              Apply to all sizes
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sizes</Label>
+                      <div className="rounded-lg border overflow-hidden">
+                        <div className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b">
+                          <span>Size</span>
+                          <span>SKU</span>
+                          <span className="text-right">Price ($)</span>
+                        </div>
+                        {selectedVariant.sizes?.length ? (
+                          selectedVariant.sizes.map((s: any, sIdx: number) => (
+                            <div key={sIdx} className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center">
+                              <span className="text-xs font-medium">{s.size || "—"}</span>
+                              <Input
+                                value={s.sku || ""}
+                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { sku: e.target.value })}
+                                className="h-7 text-xs"
+                                placeholder="SKU"
+                              />
+                              <Input
+                                type="number" step="0.01" min="0"
+                                value={s.price ?? 0}
+                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: parseFloat(e.target.value) || 0 })}
+                                className="h-7 text-xs text-right"
+                              />
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-4 text-center text-xs text-muted-foreground">No sizes</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Select a color to edit</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
         <Label>Active (visible to customers)</Label>
