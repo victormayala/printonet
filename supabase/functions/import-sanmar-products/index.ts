@@ -254,18 +254,30 @@ Deno.serve(async (req) => {
       const mediaMap = mediaXml ? parseMediaContent(mediaXml) : new Map()
 
       // Pricing must be requested with the parent style productId.
-      // The response includes prices for child parts, which we map back by partId.
+      // Try valid PromoStandards price types and with/without explicit configurationType.
       const priceMap = new Map<string, number>()
       let pricingErrorSample = ''
       let pricingResponseSample = ''
-      try {
-        console.log(`Pricing: fetching style-level pricing for ${productId} with ${product.parts.length} parts`)
-        const pricingXml = await soapCall(PS_PRICING, buildGetPricing(productId))
-        pricingResponseSample = pricingXml.substring(0, 400)
-        const parsedPrices = parsePricing(pricingXml)
-        for (const [k, v] of parsedPrices.entries()) priceMap.set(k, v)
-      } catch (e) {
-        pricingErrorSample = `${productId}: ${(e as Error).message}`
+      const pricingAttempts: Array<{ label: string; priceType: 'Customer' | 'List'; includeConfigurationType: boolean }> = [
+        { label: 'customer-blank', priceType: 'Customer', includeConfigurationType: true },
+        { label: 'list-blank', priceType: 'List', includeConfigurationType: true },
+        { label: 'customer-default', priceType: 'Customer', includeConfigurationType: false },
+        { label: 'list-default', priceType: 'List', includeConfigurationType: false },
+      ]
+      for (const attempt of pricingAttempts) {
+        try {
+          console.log(`Pricing: trying ${attempt.label} for ${productId}`)
+          const pricingXml = await soapCall(PS_PRICING, buildGetPricing(productId, attempt.priceType, attempt.includeConfigurationType))
+          if (!pricingResponseSample) pricingResponseSample = pricingXml.substring(0, 400)
+          const parsedPrices = parsePricing(pricingXml)
+          if (parsedPrices.size > 0) {
+            for (const [k, v] of parsedPrices.entries()) priceMap.set(k, v)
+            console.log(`Pricing: ${attempt.label} returned ${parsedPrices.size} prices for ${productId}`)
+            break
+          }
+        } catch (e) {
+          if (!pricingErrorSample) pricingErrorSample = `${attempt.label}: ${(e as Error).message}`
+        }
       }
       if (pricingErrorSample) console.log('PRICING ERROR sample:', pricingErrorSample)
       if (pricingResponseSample) console.log('PRICING RESPONSE sample:', pricingResponseSample)
