@@ -39,10 +39,10 @@ export function DashboardSidebar() {
       <SidebarContent>
         {/* Logo */}
         <div className="flex items-center gap-2 px-4 py-4 border-b border-sidebar-border">
-          <img src={logo} alt="Customizer Studio" className="h-7 w-7 shrink-0" />
+          <img src={logo} alt="Printonet" className="h-7 w-7 shrink-0" />
           {!collapsed && (
             <span className="font-semibold text-sm text-sidebar-foreground truncate">
-              Customizer Studio
+              Printonet
             </span>
           )}
         </div>
