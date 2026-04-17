@@ -248,14 +248,35 @@ Deno.serve(async (req) => {
     // ============ Enrichment: fetch media + pricing in parallel ============
 
     const enrichProduct = async (productId: string, product: ReturnType<typeof parseGetProduct>) => {
-      // Fetch media and pricing in parallel
-      const [mediaXml, pricingXml] = await Promise.all([
-        soapCall(PS_MEDIA, buildGetMediaContent(productId)).catch(() => ''),
-        soapCall(PS_PRICING, buildGetPricing(productId)).catch(() => ''),
-      ])
-
+      // Media: one call for the parent style returns swatches/images for all colors
+      const mediaXml = await soapCall(PS_MEDIA, buildGetMediaContent(productId)).catch(() => '')
       const mediaMap = mediaXml ? parseMediaContent(mediaXml) : new Map()
-      const priceMap = pricingXml ? parsePricing(pricingXml) : new Map()
+
+      // Pricing: SanMar's GetConfigurationAndPricing returns prices keyed by partId,
+      // but a single call against the parent style only returns parts under that productId.
+      // We need to call it per unique partId to get all colors priced.
+      // Group partIds and call pricing in batches of 5.
+      const uniquePartIds = [...new Set(product.parts.map(p => p.partId).filter(Boolean))]
+      console.log(`Pricing: fetching ${uniquePartIds.length} partIds for style ${productId}`)
+
+      const priceMap = new Map<string, number>()
+      const BATCH = 5
+      for (let i = 0; i < uniquePartIds.length; i += BATCH) {
+        const batch = uniquePartIds.slice(i, i + BATCH)
+        const results = await Promise.all(
+          batch.map(async (pid) => {
+            try {
+              const xml = await soapCall(PS_PRICING, buildGetPricing(pid))
+              return parsePricing(xml)
+            } catch {
+              return new Map<string, number>()
+            }
+          })
+        )
+        for (const m of results) {
+          for (const [k, v] of m.entries()) priceMap.set(k, v)
+        }
+      }
 
       console.log(`Enriched ${productId}: ${mediaMap.size} media colors, ${priceMap.size} prices, ${product.parts.length} parts`)
 
