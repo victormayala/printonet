@@ -213,7 +213,7 @@ function ProductForm({
   const baseCostNum = parseFloat(basePrice) || 0;
   const selectedVariant = variants[selectedVariantIdx];
 
-  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: number) => {
+  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: string) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -234,7 +234,7 @@ function ProductForm({
 
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
-    return baseCostNum + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
+    return baseCostNum + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0);
   };
 
   const applyPricingToAllColors = () => {
