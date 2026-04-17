@@ -135,6 +135,7 @@ Deno.serve(async (req) => {
       <shar:password>${escXml(password)}</shar:password>
       <shar:productId>${escXml(productId)}</shar:productId>
       <shar:currency>USD</shar:currency>
+      <shar:fobId>1</shar:fobId>
       <shar:priceType>Net</shar:priceType>
       <shar:localizationCountry>US</shar:localizationCountry>
       <shar:localizationLanguage>en</shar:localizationLanguage>
