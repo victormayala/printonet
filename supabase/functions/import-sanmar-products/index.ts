@@ -343,13 +343,70 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ============ Helper: fetch full color matrix ============
+    // Calls GetProductSellable to get all child productIds, then GetProduct for each
+    // (in batches), merging all parts so we capture every color SanMar offers.
+    const fetchFullProduct = async (styleId: string) => {
+      // 1) Get list of all sellable child productIds for this style
+      let childIds: string[] = []
+      try {
+        const sellableXml = await soapCall(PS_PRODUCT_V2, buildGetProductSellable(styleId))
+        const sellable = parseProductSellable(sellableXml)
+        childIds = [...new Set(sellable.map(p => p.productId).filter(Boolean))]
+      } catch (e) {
+        console.log(`GetProductSellable failed for ${styleId}:`, (e as Error).message)
+      }
+
+      // 2) Always fetch the parent style first to get base metadata
+      const parentXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(styleId))
+      const parentProduct = parseGetProduct(parentXml)
+
+      // Remove the parent id from child list to avoid duplicate fetch
+      childIds = childIds.filter(id => id !== styleId)
+
+      console.log(`Style ${styleId}: parent has ${parentProduct.parts.length} parts, ${childIds.length} additional child IDs to fetch`)
+
+      // 3) Fetch each child productId in parallel batches of 5
+      const BATCH = 5
+      const childParts: typeof parentProduct.parts = []
+      for (let i = 0; i < childIds.length; i += BATCH) {
+        const batch = childIds.slice(i, i + BATCH)
+        const results = await Promise.all(
+          batch.map(async (cid) => {
+            try {
+              const xml = await soapCall(PS_PRODUCT_V2, buildGetProduct(cid))
+              return parseGetProduct(xml).parts
+            } catch {
+              return []
+            }
+          })
+        )
+        for (const parts of results) childParts.push(...parts)
+      }
+
+      // 4) Merge parts, dedupe by partId
+      const allParts = [...parentProduct.parts, ...childParts]
+      const seenPartIds = new Set<string>()
+      const merged: typeof allParts = []
+      for (const p of allParts) {
+        const key = p.partId || `${p.color}-${p.size}`
+        if (seenPartIds.has(key)) continue
+        seenPartIds.add(key)
+        merged.push(p)
+      }
+
+      const uniqueColors = new Set(merged.map(p => p.color).filter(Boolean))
+      console.log(`Style ${styleId}: merged ${merged.length} parts across ${uniqueColors.size} unique colors`)
+
+      return { ...parentProduct, parts: merged }
+    }
+
     // ============ ACTION: details ============
 
     if (action === 'details') {
       if (!style_id) return jsonResponse({ error: 'style_id is required' }, 400)
       try {
-        const prodXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(style_id))
-        const product = parseGetProduct(prodXml)
+        const product = await fetchFullProduct(style_id)
         const enriched = await enrichProduct(style_id, product)
 
         // Group parts by color
@@ -396,8 +453,7 @@ Deno.serve(async (req) => {
 
       for (const sid of styleIds) {
         try {
-          const prodXml = await soapCall(PS_PRODUCT_V2, buildGetProduct(sid))
-          const product = parseGetProduct(prodXml)
+          const product = await fetchFullProduct(sid)
           if (!product.parts.length) continue
           const enriched = await enrichProduct(sid, product)
 

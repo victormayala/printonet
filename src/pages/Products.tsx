@@ -2084,6 +2084,327 @@ function ProductCardImage({ product, hasVariantImages, children }: { product: Pr
   );
 }
 
+// ============ Variant Manager Dialog (Shopify-style) ============
+function VariantManagerDialog({
+  product,
+  onClose,
+  onSaved,
+}: {
+  product: Product | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [variants, setVariants] = useState<any[]>([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (product && Array.isArray(product.variants)) {
+      // Ensure each variant has a pricing object
+      const normalized = product.variants.map((v: any) => ({
+        ...v,
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+      }));
+      setVariants(normalized);
+      setSelectedIdx(0);
+    } else {
+      setVariants([]);
+    }
+  }, [product?.id]);
+
+  if (!product) return null;
+
+  const selected = variants[selectedIdx];
+  const baseCost = product.base_price || 0;
+
+  const updateVariant = (idx: number, patch: any) => {
+    setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
+  };
+
+  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: number) => {
+    setVariants((prev) =>
+      prev.map((v, i) =>
+        i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
+      )
+    );
+  };
+
+  const updateSize = (vIdx: number, sIdx: number, patch: any) => {
+    setVariants((prev) =>
+      prev.map((v, i) => {
+        if (i !== vIdx) return v;
+        const sizes = [...(v.sizes || [])];
+        sizes[sIdx] = { ...sizes[sIdx], ...patch };
+        return { ...v, sizes };
+      })
+    );
+  };
+
+  const computeFinalPrice = (v: any) => {
+    const p = v?.pricing || {};
+    return Number(baseCost) + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
+  };
+
+  const applyPricingToAll = () => {
+    if (!selected?.pricing) return;
+    const src = selected.pricing;
+    const finalPrice = computeFinalPrice(selected);
+    setVariants((prev) =>
+      prev.map((v) => ({
+        ...v,
+        pricing: { ...src },
+        sizes: (v.sizes || []).map((s: any) => ({ ...s, price: finalPrice })),
+      }))
+    );
+    toast({ title: "Pricing applied to all colors" });
+  };
+
+  const applyFinalPriceToVariantSizes = (vIdx: number) => {
+    const v = variants[vIdx];
+    const finalPrice = computeFinalPrice(v);
+    setVariants((prev) =>
+      prev.map((vv, i) =>
+        i === vIdx
+          ? { ...vv, sizes: (vv.sizes || []).map((s: any) => ({ ...s, price: finalPrice })) }
+          : vv
+      )
+    );
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("inventory_products")
+      .update({ variants })
+      .eq("id", product.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Variant prices updated" });
+      onSaved();
+    }
+  };
+
+  return (
+    <Dialog open={!!product} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-5xl p-0 gap-0 overflow-hidden h-[85vh] flex flex-col">
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="truncate">{product.name}</DialogTitle>
+              <DialogDescription className="mt-1">
+                {product.category} · {variants.length} color{variants.length !== 1 ? "s" : ""} · Base cost ${baseCost.toFixed(2)}
+              </DialogDescription>
+            </div>
+            <Button size="sm" variant="outline" onClick={applyPricingToAll} disabled={!selected}>
+              Apply pricing to all colors
+            </Button>
+          </div>
+        </DialogHeader>
+
+        <div className="flex flex-1 min-h-0">
+          {/* Left rail: color list */}
+          <div className="w-72 border-r overflow-y-auto shrink-0 bg-muted/20">
+            {variants.map((v, idx) => {
+              const img = v.image || v.colorFrontImage || v.colorSwatchImage;
+              const isSelected = idx === selectedIdx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedIdx(idx)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left border-b transition-colors ${
+                    isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/40"
+                  }`}
+                >
+                  <div
+                    className="w-5 h-5 rounded-full border shrink-0"
+                    style={{ backgroundColor: resolveVariantHex(v) }}
+                  />
+                  {img ? (
+                    <img src={img} alt={v.color} className="w-10 h-10 object-contain rounded bg-background border shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-background border flex items-center justify-center shrink-0">
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{v.color || "—"}</p>
+                    <p className="text-xs text-muted-foreground">{v.sizes?.length || 0} sizes</p>
+                  </div>
+                </button>
+              );
+            })}
+            {variants.length === 0 && (
+              <div className="p-6 text-center text-sm text-muted-foreground">No variants</div>
+            )}
+          </div>
+
+          {/* Right pane: selected variant detail */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {selected ? (
+              <div className="space-y-6">
+                {/* Image + color header */}
+                <div className="flex gap-6">
+                  <div className="w-64 h-64 rounded-lg border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                    {(selected.image || selected.colorFrontImage) ? (
+                      <img
+                        src={selected.image || selected.colorFrontImage}
+                        alt={selected.color}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-6 h-6 rounded-full border"
+                        style={{ backgroundColor: resolveVariantHex(selected) }}
+                      />
+                      <h3 className="text-lg font-semibold">{selected.color}</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {selected.sizes?.length || 0} size{selected.sizes?.length !== 1 ? "s" : ""}
+                    </p>
+
+                    {/* Pricing block */}
+                    <div className="rounded-lg border p-4 space-y-3 bg-muted/10">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Pricing
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Base cost</Label>
+                          <Input
+                            type="text"
+                            value={`$${baseCost.toFixed(2)}`}
+                            readOnly
+                            className="h-9 mt-1 bg-muted"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Profit margin ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={selected.pricing?.margin ?? 0}
+                            onChange={(e) =>
+                              updatePricing(selectedIdx, "margin", parseFloat(e.target.value) || 0)
+                            }
+                            className="h-9 mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Embroidery fee ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={selected.pricing?.embroidery_fee ?? 0}
+                            onChange={(e) =>
+                              updatePricing(selectedIdx, "embroidery_fee", parseFloat(e.target.value) || 0)
+                            }
+                            className="h-9 mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">DTG fee ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={selected.pricing?.dtg_fee ?? 0}
+                            onChange={(e) =>
+                              updatePricing(selectedIdx, "dtg_fee", parseFloat(e.target.value) || 0)
+                            }
+                            className="h-9 mt-1"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Final price</p>
+                          <p className="text-2xl font-bold text-primary">
+                            ${computeFinalPrice(selected).toFixed(2)}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => applyFinalPriceToVariantSizes(selectedIdx)}
+                        >
+                          Apply to all sizes
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sizes grid */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Sizes
+                  </Label>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-2 bg-muted/40 text-xs font-medium text-muted-foreground border-b">
+                      <span>Size</span>
+                      <span>SKU</span>
+                      <span className="text-right">Price ($)</span>
+                    </div>
+                    {selected.sizes?.length ? (
+                      selected.sizes.map((s: any, sIdx: number) => (
+                        <div key={sIdx} className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-2 border-b last:border-b-0 items-center">
+                          <span className="text-sm font-medium">{s.size || "—"}</span>
+                          <Input
+                            value={s.sku || ""}
+                            onChange={(e) => updateSize(selectedIdx, sIdx, { sku: e.target.value })}
+                            className="h-8 text-xs"
+                            placeholder="SKU"
+                          />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={s.price ?? 0}
+                            onChange={(e) =>
+                              updateSize(selectedIdx, sIdx, { price: parseFloat(e.target.value) || 0 })
+                            }
+                            className="h-8 text-xs text-right"
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                        No sizes for this color
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                Select a color to edit
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t flex justify-end gap-2 shrink-0 bg-background">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Save Prices
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Products() {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
@@ -2661,137 +2982,12 @@ export default function Products() {
           </TabsContent>
         </Tabs>
 
-        {/* Variant Detail Dialog */}
-        <Dialog open={!!variantDetailProduct} onOpenChange={(open) => { if (!open) setVariantDetailProduct(null); }}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{variantDetailProduct?.name}</DialogTitle>
-              <DialogDescription>
-                {variantDetailProduct?.category} · ${variantDetailProduct?.base_price.toFixed(2)} · Edit variant prices below
-              </DialogDescription>
-            </DialogHeader>
-            {variantDetailProduct && Array.isArray(variantDetailProduct.variants) && (
-              <div className="space-y-4">
-                <div className="text-sm">
-                  <span className="font-medium">{variantDetailProduct.variants.length}</span> color{variantDetailProduct.variants.length !== 1 ? 's' : ''} available
-                </div>
-                <div className="space-y-3">
-                  {variantDetailProduct.variants.map((variant: any, idx: number) => (
-                    <div key={idx} className="rounded-lg border p-3 space-y-2">
-                      <div className="flex items-center gap-3">
-                        {(variant.hex || variant.color) && (
-                          <div
-                            className="w-6 h-6 rounded-full border shadow-sm shrink-0"
-                            style={{ backgroundColor: resolveVariantHex(variant) }}
-                            title={variant.color || resolveVariantHex(variant)}
-                          />
-                        )}
-                        {variant.image && (
-                          <img src={variant.image} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
-                        )}
-                        {variant.colorFrontImage && !variant.image && (
-                          <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{variant.color}</p>
-                          <p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p>
-                        </div>
-                      </div>
-                      {variant.sizes?.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {variant.sizes.map((s: any, sIdx: number) => (
-                            <div key={sIdx} className="flex items-center gap-1 rounded-md border px-2 py-1 bg-muted/30">
-                              <span className="text-xs font-medium">{s.size}</span>
-                              <span className="text-xs text-muted-foreground">$</span>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                className="h-6 w-16 text-xs px-1 py-0"
-                                value={s.price ?? ""}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                  const newPrice = parseFloat(e.target.value) || 0;
-                                  setVariantDetailProduct((prev) => {
-                                    if (!prev) return prev;
-                                    const newVariants = [...prev.variants];
-                                    const newSizes = [...newVariants[idx].sizes];
-                                    newSizes[sIdx] = { ...newSizes[sIdx], price: newPrice };
-                                    newVariants[idx] = { ...newVariants[idx], sizes: newSizes };
-                                    return { ...prev, variants: newVariants };
-                                  });
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-3 pt-2 border-t">
-                  <div className="flex-1 flex items-center gap-2">
-                    <Select value={markupType} onValueChange={(v) => setMarkupType(v as "flat" | "percent")}>
-                      <SelectTrigger className="w-[80px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="flat">$ Flat</SelectItem>
-                        <SelectItem value="percent">%</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder={markupType === "flat" ? "e.g. 5.00" : "e.g. 20"}
-                      className="h-8 w-24 text-xs"
-                      value={markupValue}
-                      onChange={(e) => setMarkupValue(e.target.value)}
-                    />
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="gap-1.5 h-8 text-xs"
-                      disabled={applyingMarkup || !markupValue}
-                      onClick={() => {
-                        if (variantDetailProduct) {
-                          applyMarkupToProducts([variantDetailProduct.id]);
-                        }
-                      }}
-                    >
-                      {applyingMarkup && <Loader2 className="h-3 w-3 animate-spin" />}
-                      Apply Markup
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    className="gap-2"
-                    disabled={savingVariantPrices}
-                    onClick={async () => {
-                      if (!variantDetailProduct) return;
-                      setSavingVariantPrices(true);
-                      const { error } = await supabase
-                        .from("inventory_products")
-                        .update({ variants: variantDetailProduct.variants })
-                        .eq("id", variantDetailProduct.id);
-                      setSavingVariantPrices(false);
-                      if (error) {
-                        toast({ title: "Save failed", description: error.message, variant: "destructive" });
-                      } else {
-                        toast({ title: "Variant prices updated" });
-                        fetchProducts();
-                      }
-                    }}
-                  >
-                    {savingVariantPrices && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Save Prices
-                  </Button>
-                  <Button variant="outline" onClick={() => setVariantDetailProduct(null)}>Cancel</Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* Variant Detail Dialog — Shopify-style two-pane manager */}
+        <VariantManagerDialog
+          product={variantDetailProduct}
+          onClose={() => setVariantDetailProduct(null)}
+          onSaved={() => { fetchProducts(); setVariantDetailProduct(null); }}
+        />
 
         {/* Push to Store Dialog */}
         <Dialog open={pushDialogOpen} onOpenChange={setPushDialogOpen}>
