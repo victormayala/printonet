@@ -261,14 +261,18 @@ Deno.serve(async (req) => {
 
       const priceMap = new Map<string, number>()
       const BATCH = 5
+      let pricingErrorSample = ''
+      let pricingResponseSample = ''
       for (let i = 0; i < uniquePartIds.length; i += BATCH) {
         const batch = uniquePartIds.slice(i, i + BATCH)
         const results = await Promise.all(
           batch.map(async (pid) => {
             try {
               const xml = await soapCall(PS_PRICING, buildGetPricing(pid))
+              if (!pricingResponseSample) pricingResponseSample = xml.substring(0, 400)
               return parsePricing(xml)
-            } catch {
+            } catch (e) {
+              if (!pricingErrorSample) pricingErrorSample = `${pid}: ${(e as Error).message}`
               return new Map<string, number>()
             }
           })
@@ -277,6 +281,8 @@ Deno.serve(async (req) => {
           for (const [k, v] of m.entries()) priceMap.set(k, v)
         }
       }
+      if (pricingErrorSample) console.log('PRICING ERROR sample:', pricingErrorSample)
+      if (pricingResponseSample) console.log('PRICING RESPONSE sample:', pricingResponseSample)
 
       console.log(`Enriched ${productId}: ${mediaMap.size} media colors, ${priceMap.size} prices, ${product.parts.length} parts`)
 
