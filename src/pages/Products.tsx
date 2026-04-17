@@ -325,7 +325,17 @@ function ProductForm({
       image_side2: imageRight || null,
       is_active: isActive,
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
-      ...(variants.length > 0 ? { variants } : {}),
+      ...(variants.length > 0 ? {
+        variants: variants.map((v) => ({
+          ...v,
+          pricing: {
+            margin: Number(v.pricing?.margin) || 0,
+            embroidery_fee: Number(v.pricing?.embroidery_fee) || 0,
+            dtg_fee: Number(v.pricing?.dtg_fee) || 0,
+          },
+          sizes: (v.sizes || []).map((s: any) => ({ ...s, price: Number(s.price) || 0 })),
+        })),
+      } : {}),
       ...(product ? {} : { user_id: user?.id }),
     };
 
