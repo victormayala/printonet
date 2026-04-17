@@ -189,6 +189,80 @@ function ProductForm({
   );
   const [detecting, setDetecting] = useState<string | null>(null);
 
+  // ============ Variants (Shopify-style inline manager) ============
+  const [variants, setVariants] = useState<any[]>(() => {
+    const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
+    return initial.map((v: any) => ({
+      ...v,
+      pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+    }));
+  });
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+
+  useEffect(() => {
+    const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
+    setVariants(
+      initial.map((v: any) => ({
+        ...v,
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+      }))
+    );
+    setSelectedVariantIdx(0);
+  }, [product?.id]);
+
+  const baseCostNum = parseFloat(basePrice) || 0;
+  const selectedVariant = variants[selectedVariantIdx];
+
+  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: number) => {
+    setVariants((prev) =>
+      prev.map((v, i) =>
+        i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
+      )
+    );
+  };
+
+  const updateVariantSize = (vIdx: number, sIdx: number, patch: any) => {
+    setVariants((prev) =>
+      prev.map((v, i) => {
+        if (i !== vIdx) return v;
+        const sizes = [...(v.sizes || [])];
+        sizes[sIdx] = { ...sizes[sIdx], ...patch };
+        return { ...v, sizes };
+      })
+    );
+  };
+
+  const computeVariantFinalPrice = (v: any) => {
+    const p = v?.pricing || {};
+    return baseCostNum + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
+  };
+
+  const applyPricingToAllColors = () => {
+    if (!selectedVariant?.pricing) return;
+    const src = selectedVariant.pricing;
+    const finalPrice = computeVariantFinalPrice(selectedVariant);
+    setVariants((prev) =>
+      prev.map((v) => ({
+        ...v,
+        pricing: { ...src },
+        sizes: (v.sizes || []).map((s: any) => ({ ...s, price: finalPrice })),
+      }))
+    );
+    toast({ title: "Pricing applied to all colors" });
+  };
+
+  const applyFinalPriceToVariantSizes = (vIdx: number) => {
+    const v = variants[vIdx];
+    const finalPrice = computeVariantFinalPrice(v);
+    setVariants((prev) =>
+      prev.map((vv, i) =>
+        i === vIdx
+          ? { ...vv, sizes: (vv.sizes || []).map((s: any) => ({ ...s, price: finalPrice })) }
+          : vv
+      )
+    );
+  };
+
   const autoDetectPrintArea = async (imageUrl: string, sideKey: string) => {
     const printAreaKey = sideKey === "left" ? "side1" : sideKey === "right" ? "side2" : sideKey;
     setDetecting(sideKey);
