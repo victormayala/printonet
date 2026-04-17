@@ -76,7 +76,8 @@ Deno.serve(async (req) => {
         const desc = extractTag(text, 'description') || 'Unknown error'
         throw new Error(`SanMar error: ${desc}`)
       }
-      if (lowerText.includes('fault')) {
+      const hasSoapFault = /<(?:[^:]+:)?fault(?:\s|>)/i.test(text) || /<(?:[^:]+:)?faultstring(?:\s|>)/i.test(text)
+      if (hasSoapFault) {
         const faultMsg = extractTag(text, 'faultstring') || extractTag(text, 'faultString') || text.substring(0, 300)
         throw new Error(`SanMar error: ${faultMsg}`)
       }
