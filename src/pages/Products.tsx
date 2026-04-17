@@ -213,7 +213,7 @@ function ProductForm({
   const baseCostNum = parseFloat(basePrice) || 0;
   const selectedVariant = variants[selectedVariantIdx];
 
-  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: number) => {
+  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: string) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -234,7 +234,7 @@ function ProductForm({
 
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
-    return baseCostNum + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
+    return baseCostNum + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0);
   };
 
   const applyPricingToAllColors = () => {
@@ -325,7 +325,17 @@ function ProductForm({
       image_side2: imageRight || null,
       is_active: isActive,
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
-      ...(variants.length > 0 ? { variants } : {}),
+      ...(variants.length > 0 ? {
+        variants: variants.map((v) => ({
+          ...v,
+          pricing: {
+            margin: Number(v.pricing?.margin) || 0,
+            embroidery_fee: Number(v.pricing?.embroidery_fee) || 0,
+            dtg_fee: Number(v.pricing?.dtg_fee) || 0,
+          },
+          sizes: (v.sizes || []).map((s: any) => ({ ...s, price: Number(s.price) || 0 })),
+        })),
+      } : {}),
       ...(product ? {} : { user_id: user?.id }),
     };
 
@@ -537,8 +547,8 @@ function ProductForm({
                               <Label className="text-[10px]">Profit margin ($)</Label>
                               <Input
                                 type="number" step="0.01" min="0"
-                                value={selectedVariant.pricing?.margin ?? 0}
-                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "margin", parseFloat(e.target.value) || 0)}
+                                value={selectedVariant.pricing?.margin ?? ""}
+                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "margin", e.target.value)}
                                 className="h-8 mt-1 text-xs"
                               />
                             </div>
@@ -546,8 +556,8 @@ function ProductForm({
                               <Label className="text-[10px]">Embroidery fee ($)</Label>
                               <Input
                                 type="number" step="0.01" min="0"
-                                value={selectedVariant.pricing?.embroidery_fee ?? 0}
-                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "embroidery_fee", parseFloat(e.target.value) || 0)}
+                                value={selectedVariant.pricing?.embroidery_fee ?? ""}
+                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "embroidery_fee", e.target.value)}
                                 className="h-8 mt-1 text-xs"
                               />
                             </div>
@@ -555,8 +565,8 @@ function ProductForm({
                               <Label className="text-[10px]">DTG fee ($)</Label>
                               <Input
                                 type="number" step="0.01" min="0"
-                                value={selectedVariant.pricing?.dtg_fee ?? 0}
-                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "dtg_fee", parseFloat(e.target.value) || 0)}
+                                value={selectedVariant.pricing?.dtg_fee ?? ""}
+                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "dtg_fee", e.target.value)}
                                 className="h-8 mt-1 text-xs"
                               />
                             </div>
@@ -594,8 +604,8 @@ function ProductForm({
                               />
                               <Input
                                 type="number" step="0.01" min="0"
-                                value={s.price ?? 0}
-                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: parseFloat(e.target.value) || 0 })}
+                                value={s.price ?? ""}
+                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
                                 className="h-7 text-xs text-right"
                               />
                             </div>

@@ -488,11 +488,15 @@ Deno.serve(async (req) => {
             .filter('supplier_source->>style_id', 'eq', String(sid))
             .maybeSingle()
 
+          // Base price = lowest non-zero price across all parts
+          const allPrices = enriched.parts.map((p: any) => Number(p.price) || 0).filter((n: number) => n > 0)
+          const computedBasePrice = allPrices.length > 0 ? Math.min(...allPrices) : (firstPart?.price || 0)
+
           const payload = {
             name: `${enriched.brand} ${sid}`.trim(),
             category: enriched.category?.toLowerCase() || 'apparel',
             description: enriched.description || null,
-            base_price: firstPart?.price || 0,
+            base_price: computedBasePrice,
             image_front: firstPart?.frontImage || null,
             image_back: backPart?.backImage || null,
             image_side1: null, image_side2: null,
