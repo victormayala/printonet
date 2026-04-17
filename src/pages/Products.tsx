@@ -594,8 +594,8 @@ function ProductForm({
                               />
                               <Input
                                 type="number" step="0.01" min="0"
-                                value={s.price ?? 0}
-                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: parseFloat(e.target.value) || 0 })}
+                                value={s.price ?? ""}
+                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
                                 className="h-7 text-xs text-right"
                               />
                             </div>
