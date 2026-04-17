@@ -336,6 +336,9 @@ Deno.serve(async (req) => {
             const enriched = await enrichProduct(id, product)
             const uniqueColors = new Set(enriched.parts.map(p => p.color).filter(Boolean))
             const firstPartWithImage = enriched.parts.find(p => p.frontImage) || enriched.parts[0]
+            // Prefer lowest non-zero price across all parts (matches base_price logic)
+            const allPrices = enriched.parts.map(p => Number(p.price) || 0).filter(n => n > 0)
+            const displayPrice = allPrices.length > 0 ? Math.min(...allPrices) : (firstPartWithImage?.price || 0)
             return {
               styleID: id,
               styleName: id,
@@ -343,7 +346,7 @@ Deno.serve(async (req) => {
               title: enriched.productName,
               baseCategory: enriched.category,
               styleImage: firstPartWithImage?.frontImage || null,
-              customerPrice: firstPartWithImage?.price || 0,
+              customerPrice: displayPrice,
               colorCount: uniqueColors.size,
             }
           } catch {
