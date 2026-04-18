@@ -17,9 +17,10 @@ import {
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List, Eye,
   ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles,
-  Truck, Search, Download, Send
+  Truck, Search, Download, Send, MoreVertical
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -2968,19 +2969,29 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                           {!p.is_active && (
                             <span className="absolute bottom-2 left-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">Inactive</span>
                           )}
-                          <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handlePushSingleProduct(p.id); }} title="Push to Store">
-                              <Send className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); window.open(`/preview/${p.id}`, '_blank'); }} title="Preview Customizer">
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(p.id); }}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                          <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="icon" variant="secondary" className="h-8 w-8" title="Actions">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem onClick={() => window.open(`/preview/${p.id}`, '_blank')}>
+                                  <Eye className="h-4 w-4 mr-2" /> Preview
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEditingProduct(p)}>
+                                  <Pencil className="h-4 w-4 mr-2" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handlePushSingleProduct(p.id)}>
+                                  <Send className="h-4 w-4 mr-2" /> Push to Store
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirmId(p.id)}>
+                                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </ProductCardImage>
                         <CardContent className="p-4">
@@ -3084,19 +3095,29 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                             {p.is_active ? "Active" : "Inactive"}
                           </span>
                         </span>
-                        <div className="w-28 flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handlePushSingleProduct(p.id)} title="Push to Store">
-                            <Send className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => window.open(`/preview/${p.id}`, '_blank')} title="Preview Customizer">
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingProduct(p)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(p.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                        <div className="w-28 flex justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Actions">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => window.open(`/preview/${p.id}`, '_blank')}>
+                                <Eye className="h-4 w-4 mr-2" /> Preview
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setEditingProduct(p)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePushSingleProduct(p.id)}>
+                                <Send className="h-4 w-4 mr-2" /> Push to Store
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirmId(p.id)}>
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     ))}
