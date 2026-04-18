@@ -2275,7 +2275,18 @@ function VariantManagerDialog({
   if (!product) return null;
 
   const selected = variants[selectedIdx];
-  const baseCost = product.base_price || 0;
+
+  // Derive per-variant base cost from its SKU prices (min non-zero), so switching
+  // colors reflects the actual cost (e.g. 2XL upcharge), with product.base_price as fallback.
+  const variantBaseCost = (v: any): number => {
+    const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
+    const prices = sizes
+      .map((s: any) => Number(s?.price) || 0)
+      .filter((n: number) => n > 0);
+    if (prices.length > 0) return Math.min(...prices);
+    return Number(product.base_price) || 0;
+  };
+  const baseCost = selected ? variantBaseCost(selected) : Number(product.base_price) || 0;
 
   const updateVariant = (idx: number, patch: any) => {
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
@@ -2302,7 +2313,8 @@ function VariantManagerDialog({
 
   const computeFinalPrice = (v: any) => {
     const p = v?.pricing || {};
-    return Number(baseCost) + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
+    const cost = variantBaseCost(v);
+    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
   };
 
   const applyPricingToAll = () => {
