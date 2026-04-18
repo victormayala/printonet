@@ -2578,7 +2578,8 @@ export default function Products() {
   const [pushingIntegrationId, setPushingIntegrationId] = useState<string | null>(null);
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
   const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState("products");
+  const [activeTab, setActiveTab] = useState(initialTab);
+  useEffect(() => { setActiveTab(initialTab); }, [initialTab]);
   const [savingVariantPrices, setSavingVariantPrices] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
