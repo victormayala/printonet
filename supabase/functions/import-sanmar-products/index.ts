@@ -465,6 +465,7 @@ Deno.serve(async (req) => {
           hex: null,
           colorFrontImage: parts[0].frontImage || null,
           colorSwatchImage: parts[0].swatchImage || null,
+          gallery: (parts[0].gallery || []).slice(0, 6),
           sizes: parts.map(p => ({
             size: p.size || 'OS',
             sku: p.partId || `${style_id}-${colorName}-${p.size || 'OS'}`,
