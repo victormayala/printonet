@@ -2936,7 +2936,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Categories</SelectItem>
-                        {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {Array.from(new Set([...CATEGORIES, ...products.map(p => p.category).filter(Boolean)])).map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
 
