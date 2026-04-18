@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Code, Copy, Download, ShoppingCart, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Code, Copy, Download, ShoppingCart, CheckCircle2, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { UniversalSnippetDialog } from "@/components/UniversalSnippetDialog";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://your-project.supabase.co";
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
@@ -129,6 +130,20 @@ const { sessionId, status, designOutput } = await response.json();
             Add product customization to any e-commerce platform in minutes. Feed your product data in,
             get customized design images back — ready for fulfillment.
           </p>
+        </div>
+
+        {/* Universal Embed Script — quick action */}
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Zap className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <h3 className="font-semibold">Universal Embed Script</h3>
+            <p className="text-sm text-muted-foreground">
+              One script tag — every active product gets a customizer button automatically. No per-product setup.
+            </p>
+          </div>
+          <UniversalSnippetDialog />
         </div>
 
         {/* How it works */}
