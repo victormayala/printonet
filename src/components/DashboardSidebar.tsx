@@ -1,11 +1,8 @@
-import { useState } from "react";
-import { Package, Paintbrush, Code, User, LogOut, Home, ShoppingBag, ShoppingCart, LayoutTemplate, Truck, Store, Globe, ChevronDown } from "lucide-react";
+import { Package, Paintbrush, Code, User, LogOut, Home, ShoppingBag, ShoppingCart, LayoutTemplate, Truck, Store } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import logo from "@/assets/customizer-studio-short-logo-2.svg";
 
 import {
@@ -16,23 +13,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 
 const navItems = [
   { title: "Products", url: "/products", icon: Package },
-];
-
-const storefrontItems = [
-  { title: "Shopify", url: "/storefront/shopify", icon: ShoppingBag },
-  { title: "WooCommerce", url: "/storefront/woocommerce", icon: Globe },
-];
-
-const secondaryItems = [
+  { title: "Storefront", url: "/storefront", icon: Store },
   { title: "Suppliers", url: "/suppliers", icon: Truck },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
   { title: "Templates", url: "/templates", icon: LayoutTemplate },
@@ -44,12 +31,8 @@ const secondaryItems = [
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
   const { signOut } = useAuth();
   const { totalItems } = useCart();
-
-  const isStorefrontActive = location.pathname.startsWith("/storefront");
-  const [storefrontOpen, setStorefrontOpen] = useState(isStorefrontActive);
 
   return (
     <Sidebar collapsible="icon">
@@ -72,63 +55,7 @@ export function DashboardSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-
-              {/* Storefront — collapsible group */}
-              <Collapsible open={collapsed ? true : storefrontOpen} onOpenChange={setStorefrontOpen}>
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      className={`hover:bg-sidebar-accent ${isStorefrontActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : ""}`}
-                    >
-                      <Store className="h-4 w-4 shrink-0" />
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1 text-left">Storefront</span>
-                          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${storefrontOpen ? "rotate-180" : ""}`} />
-                        </>
-                      )}
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  {!collapsed && (
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {storefrontItems.map((sub) => (
-                          <SidebarMenuSubItem key={sub.title}>
-                            <SidebarMenuSubButton asChild>
-                              <NavLink
-                                to={sub.url}
-                                end
-                                className="hover:bg-sidebar-accent"
-                                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                              >
-                                <sub.icon className="h-4 w-4 shrink-0" />
-                                <span>{sub.title}</span>
-                              </NavLink>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  )}
-                </SidebarMenuItem>
-              </Collapsible>
-
-              {secondaryItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
+                      end={item.url !== "/storefront"}
                       className="hover:bg-sidebar-accent"
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                     >
