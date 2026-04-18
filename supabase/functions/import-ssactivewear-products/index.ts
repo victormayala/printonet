@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
           image_front: imageFront,
           image_back: imageBack,
           image_side1: imageSide1,
-          image_side2: null,
+          image_side2: imageSide2,
           variants,
           is_active: true,
           supplier_source: supplierSource,
