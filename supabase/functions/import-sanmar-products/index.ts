@@ -160,32 +160,44 @@ Deno.serve(async (req) => {
       return products
     }
 
-    // Parse Media Content response — returns map of color → { front, back, swatch }
-    const parseMediaContent = (xml: string): Map<string, { front: string, back: string, swatch: string }> => {
-      const mediaMap = new Map<string, { front: string, back: string, swatch: string }>()
+    // Parse Media Content response — returns map of color → { front, back, swatch, side, gallery }
+    // Gallery = up to 6 product images per color (front, back, side, three-quarter, detail, lifestyle, etc.)
+    // Excludes swatches/logos/embroidery samples.
+    const MAX_GALLERY_PER_COLOR = 6
+    const parseMediaContent = (xml: string): Map<string, { front: string, back: string, swatch: string, side: string, gallery: string[] }> => {
+      const mediaMap = new Map<string, { front: string, back: string, swatch: string, side: string, gallery: string[] }>()
       let firstFront = ''
       for (const block of extractAllBlocks(xml, 'MediaContent')) {
         const url = extractTag(block, 'url')
         if (!url) continue
         const color = extractTag(block, 'color') || '_default'
-        // classTypeId: 1006=Primary, 1007=Front, 1008=Rear, 1004=Swatch, 1001=Blank
+        // classTypeId: 1001=Blank, 1004=Swatch, 1006=Primary, 1007=Front,
+        // 1008=Rear, 1009=Side, 1010=Three-Quarter, 1011=Detail, 1012=Lifestyle
         const classTypeId = extractTag(block, 'classTypeId')
-        const entry = mediaMap.get(color) || { front: '', back: '', swatch: '' }
+        const entry = mediaMap.get(color) || { front: '', back: '', swatch: '', side: '', gallery: [] as string[] }
         if (classTypeId === '1007' || classTypeId === '1006' || classTypeId === '1001') {
           entry.front = entry.front || url
         } else if (classTypeId === '1008') {
           entry.back = entry.back || url
+        } else if (classTypeId === '1009') {
+          entry.side = entry.side || url
         } else if (classTypeId === '1004') {
           entry.swatch = entry.swatch || url
         } else if (!entry.front) {
           entry.front = url
+        }
+        // Build gallery (skip swatches/logos/embroidery/imprint samples)
+        const isProductImage = !classTypeId
+          || ['1001', '1006', '1007', '1008', '1009', '1010', '1011', '1012'].includes(classTypeId)
+        if (isProductImage && entry.gallery.length < MAX_GALLERY_PER_COLOR && !entry.gallery.includes(url)) {
+          entry.gallery.push(url)
         }
         mediaMap.set(color, entry)
         if (!firstFront && entry.front) firstFront = entry.front
       }
       // Ensure _default has at least one front image
       if (!mediaMap.has('_default') && firstFront) {
-        mediaMap.set('_default', { front: firstFront, back: '', swatch: '' })
+        mediaMap.set('_default', { front: firstFront, back: '', swatch: '', side: '', gallery: [firstFront] })
       }
       return mediaMap
     }
@@ -287,7 +299,7 @@ Deno.serve(async (req) => {
 
       // Build enriched parts
       const parts = product.parts.map(p => {
-        const colorMedia = mediaMap.get(p.color) || mediaMap.get('_default') || { front: '', back: '', swatch: '' }
+        const colorMedia = mediaMap.get(p.color) || mediaMap.get('_default') || { front: '', back: '', swatch: '', side: '', gallery: [] as string[] }
         return {
           partId: p.partId,
           color: p.color,
@@ -295,7 +307,9 @@ Deno.serve(async (req) => {
           price: priceMap.get(p.partId) || 0,
           frontImage: colorMedia.front,
           backImage: colorMedia.back,
+          sideImage: colorMedia.side,
           swatchImage: colorMedia.swatch,
+          gallery: colorMedia.gallery || [],
         }
       })
 
@@ -451,6 +465,7 @@ Deno.serve(async (req) => {
           hex: null,
           colorFrontImage: parts[0].frontImage || null,
           colorSwatchImage: parts[0].swatchImage || null,
+          gallery: (parts[0].gallery || []).slice(0, 6),
           sizes: parts.map(p => ({
             size: p.size || 'OS',
             sku: p.partId || `${style_id}-${colorName}-${p.size || 'OS'}`,
@@ -496,6 +511,7 @@ Deno.serve(async (req) => {
           const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
             color: colorName, hex: null,
             image: parts[0].frontImage || null,
+            gallery: (parts[0].gallery || []).slice(0, 6),
             sizes: parts.map(p => ({
               size: p.size || 'OS',
               sku: p.partId || `${sid}-${colorName}-${p.size || 'OS'}`,
@@ -505,6 +521,18 @@ Deno.serve(async (req) => {
 
           const firstPart = enriched.parts.find(p => p.frontImage) || enriched.parts[0]
           const backPart = enriched.parts.find(p => p.backImage)
+          const sidePart = enriched.parts.find(p => (p as any).sideImage)
+          // Build product-level side images from first color's extra gallery items
+          // (skip front + back so we don't repeat them in side slots)
+          const firstColorGallery: string[] = (firstPart as any)?.gallery || []
+          const usedUrls = new Set([firstPart?.frontImage, backPart?.backImage].filter(Boolean) as string[])
+          const sideCandidates: string[] = []
+          if ((sidePart as any)?.sideImage) sideCandidates.push((sidePart as any).sideImage)
+          for (const url of firstColorGallery) {
+            if (sideCandidates.length >= 2) break
+            if (!usedUrls.has(url) && !sideCandidates.includes(url)) sideCandidates.push(url)
+          }
+
           const supplierSource = {
             provider: 'sanmar', style_id: sid, style_name: sid,
             brand: enriched.brand, last_synced: new Date().toISOString(),
@@ -528,7 +556,8 @@ Deno.serve(async (req) => {
             base_price: computedBasePrice,
             image_front: firstPart?.frontImage || null,
             image_back: backPart?.backImage || null,
-            image_side1: null, image_side2: null,
+            image_side1: sideCandidates[0] || null,
+            image_side2: sideCandidates[1] || null,
             variants, is_active: true, supplier_source: supplierSource,
             user_id: targetUserId,
           }
