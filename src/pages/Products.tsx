@@ -491,7 +491,19 @@ function ProductForm({
                           <span className="text-right">Price ($)</span>
                         </div>
                         {selectedVariant.sizes?.length ? (
-                          selectedVariant.sizes.map((s: any, sIdx: number) => (
+                          [...selectedVariant.sizes]
+                            .map((s: any, originalIdx: number) => ({ s, originalIdx }))
+                            .sort((a, b) => {
+                              const order = ["XXS","XS","S","SM","M","MD","L","LG","XL","XLG","2XL","XXL","3XL","XXXL","4XL","5XL","6XL","7XL"];
+                              const norm = (v: string) => (v || "").toString().toUpperCase().trim();
+                              const ai = order.indexOf(norm(a.s.size));
+                              const bi = order.indexOf(norm(b.s.size));
+                              if (ai === -1 && bi === -1) return norm(a.s.size).localeCompare(norm(b.s.size));
+                              if (ai === -1) return 1;
+                              if (bi === -1) return -1;
+                              return ai - bi;
+                            })
+                            .map(({ s, originalIdx: sIdx }) => (
                             <div key={sIdx} className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center">
                               <span className="text-xs font-medium">{s.size || "—"}</span>
                               <Input
