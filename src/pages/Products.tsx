@@ -272,7 +272,7 @@ function ProductForm({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-input bg-background pl-3 pr-8 py-2 text-sm"
           >
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
