@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
 
       // Build enriched parts
       const parts = product.parts.map(p => {
-        const colorMedia = mediaMap.get(p.color) || mediaMap.get('_default') || { front: '', back: '', swatch: '' }
+        const colorMedia = mediaMap.get(p.color) || mediaMap.get('_default') || { front: '', back: '', swatch: '', side: '', gallery: [] as string[] }
         return {
           partId: p.partId,
           color: p.color,
@@ -307,7 +307,9 @@ Deno.serve(async (req) => {
           price: priceMap.get(p.partId) || 0,
           frontImage: colorMedia.front,
           backImage: colorMedia.back,
+          sideImage: colorMedia.side,
           swatchImage: colorMedia.swatch,
+          gallery: colorMedia.gallery || [],
         }
       })
 
