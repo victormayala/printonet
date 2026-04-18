@@ -2823,19 +2823,20 @@ export default function Products() {
               </Card>
             ) : (
               <>
-                {/* Selection bar */}
-                {filteredAndSortedProducts.length > 0 && (
-                  <div className="flex items-center gap-3 mb-4">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedProductIds.size === filteredAndSortedProducts.length && filteredAndSortedProducts.length > 0}
-                        onChange={toggleSelectAllProducts}
-                        className="rounded border-input"
-                      />
-                      Select all
-                    </label>
-                    {selectedProductIds.size > 0 && (
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 mb-6">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {filteredAndSortedProducts.length > 0 && (
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedProductIds.size === filteredAndSortedProducts.length && filteredAndSortedProducts.length > 0}
+                          onChange={toggleSelectAllProducts}
+                          className="rounded border-input"
+                        />
+                        Select all
+                      </label>
+                    )}
+                    {selectedProductIds.size > 0 ? (
                       <>
                         <span className="text-sm text-muted-foreground">{selectedProductIds.size} selected</span>
                         <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={openPushDialog}>
@@ -2851,12 +2852,10 @@ export default function Products() {
                           Delete ({selectedProductIds.size})
                         </Button>
                       </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
                     )}
                   </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 mb-6">
-                  <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
                   <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     {/* Category filter */}
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
