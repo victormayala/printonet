@@ -2675,40 +2675,68 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     setPushResults(null);
     try {
       const ids = Array.from(selectedProductIds);
-      let data: any;
-      let error: any;
+      const creds = integration.credentials as any;
 
-      if (integration.platform === "woocommerce") {
-        const creds = integration.credentials as any;
-        ({ data, error } = await supabase.functions.invoke("export-to-woocommerce", {
-          body: {
-            product_ids: ids,
-            site_url: integration.store_url,
-            consumer_key: creds.consumer_key,
-            consumer_secret: creds.consumer_secret,
-            user_id: user?.id,
-          },
-        }));
-      } else if (integration.platform === "shopify") {
-        const creds = integration.credentials as any;
-        ({ data, error } = await supabase.functions.invoke("export-to-shopify", {
-          body: {
-            product_ids: ids,
-            store_url: integration.store_url,
-            access_token: creds.access_token,
-            user_id: user?.id,
-          },
-        }));
-      }
+      // Invoke edge function ONCE PER PRODUCT to stay under the 150s edge timeout.
+      // Run with limited concurrency to avoid overwhelming the destination store.
+      const concurrency = 3;
+      let created = 0;
+      let updated = 0;
+      let failed = 0;
+      const errors: string[] = [];
 
-      if (error) throw error;
+      const runOne = async (productId: string) => {
+        try {
+          let resp: any;
+          let invokeErr: any;
+          if (integration.platform === "woocommerce") {
+            ({ data: resp, error: invokeErr } = await supabase.functions.invoke("export-to-woocommerce", {
+              body: {
+                product_ids: [productId],
+                site_url: integration.store_url,
+                consumer_key: creds.consumer_key,
+                consumer_secret: creds.consumer_secret,
+                user_id: user?.id,
+              },
+            }));
+          } else if (integration.platform === "shopify") {
+            ({ data: resp, error: invokeErr } = await supabase.functions.invoke("export-to-shopify", {
+              body: {
+                product_ids: [productId],
+                store_url: integration.store_url,
+                access_token: creds.access_token,
+                user_id: user?.id,
+              },
+            }));
+          }
+          if (invokeErr) throw invokeErr;
+          created += resp?.created || 0;
+          updated += resp?.updated || 0;
+          failed += resp?.failed || 0;
+          if (resp?.errors?.length) errors.push(...resp.errors);
+        } catch (err: any) {
+          failed++;
+          errors.push(`Product ${productId}: ${err.message || "unknown error"}`);
+        }
+      };
+
+      const queue = [...ids];
+      const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
+        while (queue.length > 0) {
+          const next = queue.shift();
+          if (next) await runOne(next);
+        }
+      });
+      await Promise.all(workers);
+
+      const data = { created, updated, failed, errors };
       setPushResults(data);
-      if (data.failed === 0) {
-        toast({ title: `Pushed ${data.created} new, ${data.updated} updated to ${integration.platform}` });
+      if (failed === 0) {
+        toast({ title: `Pushed ${created} new, ${updated} updated to ${integration.platform}` });
         setSelectedProductIds(new Set());
         fetchProducts();
       } else {
-        toast({ title: `Pushed with ${data.failed} error(s)`, variant: "destructive" });
+        toast({ title: `Pushed with ${failed} error(s)`, variant: "destructive" });
       }
     } catch (err: any) {
       toast({ title: "Push failed", description: err.message, variant: "destructive" });
