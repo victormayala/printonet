@@ -131,13 +131,37 @@ Deno.serve(async (req) => {
           colorMap.get(key)!.push(p)
         }
 
-        // Build variants array
+        // Build variants array (with up to 6-image gallery per color)
+        const MAX_GALLERY = 6
+        const imgBaseUrl = 'https://www.ssactivewear.com/'
+        const toLargeUrl = (path: string | null | undefined) =>
+          path ? `${imgBaseUrl}${path.replace('_fm.', '_fl.')}` : null
+        const buildColorGallery = (sku: any): string[] => {
+          const candidates = [
+            sku.colorFrontImage,
+            sku.colorOnModelFrontImage,
+            sku.colorBackImage,
+            sku.colorOnModelBackImage,
+            sku.colorSideImage,
+            sku.colorOnModelSideImage,
+            sku.colorDirectSideImage,
+            sku.colorThreeQuarterImage,
+          ]
+          const urls: string[] = []
+          for (const c of candidates) {
+            const u = toLargeUrl(c)
+            if (u && !urls.includes(u) && urls.length < MAX_GALLERY) urls.push(u)
+          }
+          return urls
+        }
+
         const variants = Array.from(colorMap.entries()).map(([colorName, skus]) => {
           const first = skus[0]
           return {
             color: colorName,
             hex: first.color1 || null,
-            image: first.colorFrontImage ? `https://www.ssactivewear.com/${first.colorFrontImage.replace('_fm.', '_fl.')}` : null,
+            image: toLargeUrl(first.colorFrontImage),
+            gallery: buildColorGallery(first),
             sizes: skus.map((s: any) => ({
               size: s.sizeName || s.size2Name || 'OS',
               sku: s.sku,
@@ -147,16 +171,15 @@ Deno.serve(async (req) => {
           }
         })
 
-        // Pick images from first color
+        // Pick images from first color — populate all 4 side slots when available
         const firstProduct = Array.isArray(products) && products.length > 0 ? products[0] : null
-        const imgBase = 'https://www.ssactivewear.com/'
-        const imageFront = firstProduct?.colorFrontImage
-          ? `${imgBase}${firstProduct.colorFrontImage.replace('_fm.', '_fl.')}`
-          : (style.styleImage ? `${imgBase}${style.styleImage}` : null)
-        const imageBack = firstProduct?.colorBackImage
-          ? `${imgBase}${firstProduct.colorBackImage.replace('_fm.', '_fl.')}` : null
-        const imageSide1 = firstProduct?.colorSideImage
-          ? `${imgBase}${firstProduct.colorSideImage.replace('_fm.', '_fl.')}` : null
+        const imageFront = toLargeUrl(firstProduct?.colorFrontImage)
+          || (style.styleImage ? `${imgBaseUrl}${style.styleImage}` : null)
+        const imageBack = toLargeUrl(firstProduct?.colorBackImage)
+        const imageSide1 = toLargeUrl(firstProduct?.colorSideImage)
+          || toLargeUrl(firstProduct?.colorOnModelSideImage)
+        const imageSide2 = toLargeUrl(firstProduct?.colorOnModelFrontImage)
+          || toLargeUrl(firstProduct?.colorThreeQuarterImage)
 
         const productName = `${style.brandName} ${style.styleName}`.trim()
         const supplierSource = {
