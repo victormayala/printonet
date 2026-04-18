@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Code, Copy, Download, ShoppingCart, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Code, Copy, Download, ShoppingCart, CheckCircle2, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { UniversalSnippetDialog } from "@/components/UniversalSnippetDialog";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://your-project.supabase.co";
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
