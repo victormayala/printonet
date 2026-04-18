@@ -511,6 +511,7 @@ Deno.serve(async (req) => {
           const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
             color: colorName, hex: null,
             image: parts[0].frontImage || null,
+            gallery: (parts[0].gallery || []).slice(0, 6),
             sizes: parts.map(p => ({
               size: p.size || 'OS',
               sku: p.partId || `${sid}-${colorName}-${p.size || 'OS'}`,
@@ -520,6 +521,18 @@ Deno.serve(async (req) => {
 
           const firstPart = enriched.parts.find(p => p.frontImage) || enriched.parts[0]
           const backPart = enriched.parts.find(p => p.backImage)
+          const sidePart = enriched.parts.find(p => (p as any).sideImage)
+          // Build product-level side images from first color's extra gallery items
+          // (skip front + back so we don't repeat them in side slots)
+          const firstColorGallery: string[] = (firstPart as any)?.gallery || []
+          const usedUrls = new Set([firstPart?.frontImage, backPart?.backImage].filter(Boolean) as string[])
+          const sideCandidates: string[] = []
+          if ((sidePart as any)?.sideImage) sideCandidates.push((sidePart as any).sideImage)
+          for (const url of firstColorGallery) {
+            if (sideCandidates.length >= 2) break
+            if (!usedUrls.has(url) && !sideCandidates.includes(url)) sideCandidates.push(url)
+          }
+
           const supplierSource = {
             provider: 'sanmar', style_id: sid, style_name: sid,
             brand: enriched.brand, last_synced: new Date().toISOString(),
@@ -543,7 +556,8 @@ Deno.serve(async (req) => {
             base_price: computedBasePrice,
             image_front: firstPart?.frontImage || null,
             image_back: backPart?.backImage || null,
-            image_side1: null, image_side2: null,
+            image_side1: sideCandidates[0] || null,
+            image_side2: sideCandidates[1] || null,
             variants, is_active: true, supplier_source: supplierSource,
             user_id: targetUserId,
           }
