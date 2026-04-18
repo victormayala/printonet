@@ -93,6 +93,14 @@ export function DashboardSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavLink to="/profile" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+                <User className="h-4 w-4 shrink-0" />
+                {!collapsed && <span>Profile</span>}
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton
               onClick={signOut}
               className="hover:bg-sidebar-accent text-destructive hover:text-destructive cursor-pointer"
@@ -102,6 +110,7 @@ export function DashboardSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <div className="h-6" />
       </SidebarFooter>
     </Sidebar>
   );
