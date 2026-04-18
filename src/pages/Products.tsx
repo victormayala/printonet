@@ -282,10 +282,14 @@ function ProductForm({
           <Label>Category</Label>
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {/* Merge default categories with the current value so imported/custom categories
+                  (e.g. "apparel", "T-Shirts - Premium") still display in the trigger. */}
+              {Array.from(new Set([...CATEGORIES, ...(category ? [category] : [])])).map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
