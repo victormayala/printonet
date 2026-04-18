@@ -398,10 +398,6 @@ function ProductForm({
                         isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/40"
                       }`}
                     >
-                      <div
-                        className="w-4 h-4 rounded-full border shrink-0"
-                        style={{ backgroundColor: resolveVariantHex(v) }}
-                      />
                       {img ? (
                         <img src={img} alt={v.color} className="w-9 h-9 object-contain rounded bg-background border shrink-0" />
                       ) : (
