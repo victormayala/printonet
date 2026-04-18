@@ -132,6 +132,20 @@ const { sessionId, status, designOutput } = await response.json();
           </p>
         </div>
 
+        {/* Universal Embed Script — quick action */}
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Zap className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <h3 className="font-semibold">Universal Embed Script</h3>
+            <p className="text-sm text-muted-foreground">
+              One script tag — every active product gets a customizer button automatically. No per-product setup.
+            </p>
+          </div>
+          <UniversalSnippetDialog />
+        </div>
+
         {/* How it works */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
