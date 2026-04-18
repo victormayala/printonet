@@ -269,13 +269,14 @@ function ProductForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-input bg-background pl-3 pr-8 py-2 text-sm"
-          >
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>Base Price</Label>
