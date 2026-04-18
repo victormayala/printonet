@@ -160,32 +160,44 @@ Deno.serve(async (req) => {
       return products
     }
 
-    // Parse Media Content response — returns map of color → { front, back, swatch }
-    const parseMediaContent = (xml: string): Map<string, { front: string, back: string, swatch: string }> => {
-      const mediaMap = new Map<string, { front: string, back: string, swatch: string }>()
+    // Parse Media Content response — returns map of color → { front, back, swatch, side, gallery }
+    // Gallery = up to 6 product images per color (front, back, side, three-quarter, detail, lifestyle, etc.)
+    // Excludes swatches/logos/embroidery samples.
+    const MAX_GALLERY_PER_COLOR = 6
+    const parseMediaContent = (xml: string): Map<string, { front: string, back: string, swatch: string, side: string, gallery: string[] }> => {
+      const mediaMap = new Map<string, { front: string, back: string, swatch: string, side: string, gallery: string[] }>()
       let firstFront = ''
       for (const block of extractAllBlocks(xml, 'MediaContent')) {
         const url = extractTag(block, 'url')
         if (!url) continue
         const color = extractTag(block, 'color') || '_default'
-        // classTypeId: 1006=Primary, 1007=Front, 1008=Rear, 1004=Swatch, 1001=Blank
+        // classTypeId: 1001=Blank, 1004=Swatch, 1006=Primary, 1007=Front,
+        // 1008=Rear, 1009=Side, 1010=Three-Quarter, 1011=Detail, 1012=Lifestyle
         const classTypeId = extractTag(block, 'classTypeId')
-        const entry = mediaMap.get(color) || { front: '', back: '', swatch: '' }
+        const entry = mediaMap.get(color) || { front: '', back: '', swatch: '', side: '', gallery: [] as string[] }
         if (classTypeId === '1007' || classTypeId === '1006' || classTypeId === '1001') {
           entry.front = entry.front || url
         } else if (classTypeId === '1008') {
           entry.back = entry.back || url
+        } else if (classTypeId === '1009') {
+          entry.side = entry.side || url
         } else if (classTypeId === '1004') {
           entry.swatch = entry.swatch || url
         } else if (!entry.front) {
           entry.front = url
+        }
+        // Build gallery (skip swatches/logos/embroidery/imprint samples)
+        const isProductImage = !classTypeId
+          || ['1001', '1006', '1007', '1008', '1009', '1010', '1011', '1012'].includes(classTypeId)
+        if (isProductImage && entry.gallery.length < MAX_GALLERY_PER_COLOR && !entry.gallery.includes(url)) {
+          entry.gallery.push(url)
         }
         mediaMap.set(color, entry)
         if (!firstFront && entry.front) firstFront = entry.front
       }
       // Ensure _default has at least one front image
       if (!mediaMap.has('_default') && firstFront) {
-        mediaMap.set('_default', { front: firstFront, back: '', swatch: '' })
+        mediaMap.set('_default', { front: firstFront, back: '', swatch: '', side: '', gallery: [firstFront] })
       }
       return mediaMap
     }
