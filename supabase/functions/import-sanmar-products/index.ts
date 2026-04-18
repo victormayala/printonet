@@ -522,15 +522,26 @@ Deno.serve(async (req) => {
           const firstPart = enriched.parts.find(p => p.frontImage) || enriched.parts[0]
           const backPart = enriched.parts.find(p => p.backImage)
           const sidePart = enriched.parts.find(p => (p as any).sideImage)
-          // Build product-level side images from first color's extra gallery items
-          // (skip front + back so we don't repeat them in side slots)
-          const firstColorGallery: string[] = (firstPart as any)?.gallery || []
-          const usedUrls = new Set([firstPart?.frontImage, backPart?.backImage].filter(Boolean) as string[])
+          // Build product-level side1/side2 by aggregating gallery URLs from ALL parts
+          // (not just parts[0], whose gallery may be empty for non-primary colors).
+          const usedUrls = new Set<string>(
+            [firstPart?.frontImage, backPart?.backImage].filter(Boolean) as string[]
+          )
           const sideCandidates: string[] = []
-          if ((sidePart as any)?.sideImage) sideCandidates.push((sidePart as any).sideImage)
-          for (const url of firstColorGallery) {
+          if ((sidePart as any)?.sideImage && !usedUrls.has((sidePart as any).sideImage)) {
+            sideCandidates.push((sidePart as any).sideImage)
+            usedUrls.add((sidePart as any).sideImage)
+          }
+          for (const part of enriched.parts) {
             if (sideCandidates.length >= 2) break
-            if (!usedUrls.has(url) && !sideCandidates.includes(url)) sideCandidates.push(url)
+            const gallery: string[] = (part as any)?.gallery || []
+            for (const url of gallery) {
+              if (sideCandidates.length >= 2) break
+              if (url && !usedUrls.has(url)) {
+                sideCandidates.push(url)
+                usedUrls.add(url)
+              }
+            }
           }
 
           const supplierSource = {
