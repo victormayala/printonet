@@ -8,12 +8,10 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import DesignStudio from "./pages/DesignStudio";
 import EmbedCustomizer from "./pages/EmbedCustomizer";
-import Developers from "./pages/Developers";
 import Demo from "./pages/Demo";
-import BrandSettings from "./pages/BrandSettings";
+import Customizer from "./pages/Customizer";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
-import Templates from "./pages/Templates";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ProfileSettings from "./pages/ProfileSettings";
@@ -65,9 +63,12 @@ const App = () => (
             <Route path="/storefront" element={<DashboardRoute><Products initialTab="shopify" showStorefrontTabs /></DashboardRoute>} />
             <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
-            <Route path="/templates" element={<DashboardRoute><Templates /></DashboardRoute>} />
-            <Route path="/brand-settings" element={<DashboardRoute><BrandSettings /></DashboardRoute>} />
-            <Route path="/developers" element={<DashboardRoute><Developers /></DashboardRoute>} />
+            <Route path="/customizer" element={<DashboardRoute><Customizer initialTab="brand" /></DashboardRoute>} />
+            <Route path="/customizer/brand" element={<DashboardRoute><Customizer initialTab="brand" /></DashboardRoute>} />
+            <Route path="/customizer/developers" element={<DashboardRoute><Customizer initialTab="developers" /></DashboardRoute>} />
+            {/* Legacy redirects */}
+            <Route path="/brand-settings" element={<Navigate to="/customizer/brand" replace />} />
+            <Route path="/developers" element={<Navigate to="/customizer/developers" replace />} />
             <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
