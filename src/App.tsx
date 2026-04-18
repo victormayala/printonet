@@ -62,9 +62,7 @@ const App = () => (
 
             {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
-            <Route path="/storefront/shopify" element={<DashboardRoute><Products initialTab="shopify" /></DashboardRoute>} />
-            <Route path="/storefront/woocommerce" element={<DashboardRoute><Products initialTab="woocommerce" /></DashboardRoute>} />
-            <Route path="/storefront" element={<Navigate to="/storefront/shopify" replace />} />
+            <Route path="/storefront" element={<DashboardRoute><Products initialTab="shopify" showStorefrontTabs /></DashboardRoute>} />
             <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
             <Route path="/templates" element={<DashboardRoute><Templates /></DashboardRoute>} />
