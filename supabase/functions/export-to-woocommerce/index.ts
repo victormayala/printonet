@@ -164,9 +164,9 @@ Deno.serve(async (req) => {
           return imageUrlToId[key];
         }
 
-        // Create or update variations for variable products
+        // Create or update variations for variable products using batch endpoint
         if (hasVariants && attributes.length > 0) {
-          // If updating, delete existing variations first to avoid duplicates
+          // If updating, batch-delete existing variations to avoid duplicates
           if (existingWcId) {
             try {
               const varRes = await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations?per_page=100`, {
@@ -174,10 +174,14 @@ Deno.serve(async (req) => {
               });
               if (varRes.ok) {
                 const existingVars = await varRes.json();
-                for (const ev of existingVars) {
-                  await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations/${ev.id}?force=true`, {
-                    method: "DELETE",
-                    headers: { Authorization: authHeader },
+                const deleteIds = existingVars.map((ev: any) => ev.id);
+                // Batch delete (max 100 per call)
+                for (let i = 0; i < deleteIds.length; i += 100) {
+                  const chunk = deleteIds.slice(i, i + 100);
+                  await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations/batch`, {
+                    method: "POST",
+                    headers: { Authorization: authHeader, "Content-Type": "application/json" },
+                    body: JSON.stringify({ delete: chunk }),
                   });
                 }
               }
@@ -186,10 +190,13 @@ Deno.serve(async (req) => {
             }
           }
 
+          // Build all variation payloads in memory
+          const allVariations: any[] = [];
           for (const variant of variants) {
             const colorName = variant.color || variant.colorName || "";
             const variantImg = variant.image || variant.colorFrontImage;
             const sizes = variant.sizes || [];
+            const hexColor = variant.hexColor || variant.hex || variant.colorHex || "";
 
             for (const size of sizes) {
               const variation: any = {
@@ -200,8 +207,6 @@ Deno.serve(async (req) => {
               if (colorName) variation.attributes.push({ name: "Color", option: colorName });
               if (size.size) variation.attributes.push({ name: "Size", option: size.size });
 
-              // Push hex color code as metadata for color swatch plugins
-              const hexColor = variant.hexColor || variant.hex || variant.colorHex || "";
               if (hexColor) {
                 variation.meta_data.push(
                   { key: "_color_hex", value: hexColor },
@@ -210,27 +215,25 @@ Deno.serve(async (req) => {
                 );
               }
 
-              // Attach color-specific image to the variation
               if (variantImg) {
                 const wcImgId = findImageId(variantImg);
-                if (wcImgId) {
-                  variation.image = { id: wcImgId };
-                } else {
-                  variation.image = { src: variantImg };
-                }
+                variation.image = wcImgId ? { id: wcImgId } : { src: variantImg };
               }
 
-              // Add SKU from size data if available
-              if (size.sku) {
-                variation.sku = size.sku;
-              }
+              if (size.sku) variation.sku = size.sku;
 
-              await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations`, {
-                method: "POST",
-                headers: { Authorization: authHeader, "Content-Type": "application/json" },
-                body: JSON.stringify(variation),
-              });
+              allVariations.push(variation);
             }
+          }
+
+          // Batch create variations (max 100 per call)
+          for (let i = 0; i < allVariations.length; i += 100) {
+            const chunk = allVariations.slice(i, i + 100);
+            await fetch(`${baseUrl}/wp-json/wc/v3/products/${wcProductId}/variations/batch`, {
+              method: "POST",
+              headers: { Authorization: authHeader, "Content-Type": "application/json" },
+              body: JSON.stringify({ create: chunk }),
+            });
           }
         }
 
