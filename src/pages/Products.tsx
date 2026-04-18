@@ -1565,8 +1565,8 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
                             title={variant.color || resolveVariantHex(variant)}
                           />
                         )}
-                        {variant.colorFrontImage && (
-                          <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
+                        {(variant.colorFrontImage || variant.image || variant.gallery?.[0]) && (
+                          <img src={variant.colorFrontImage || variant.image || variant.gallery?.[0]} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm">{variant.color}</p>
@@ -2146,7 +2146,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
                     <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center gap-3">
                         {<div className="w-6 h-6 rounded-full border shadow-sm shrink-0" style={{ backgroundColor: resolveVariantHex(variant) }} title={resolveVariantHex(variant)} />}
-                        {variant.colorFrontImage && <img src={variant.colorFrontImage} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />}
+                        {(variant.colorFrontImage || variant.image || variant.gallery?.[0]) && <img src={variant.colorFrontImage || variant.image || variant.gallery?.[0]} alt={variant.color} className="w-12 h-12 object-contain rounded bg-muted" />}
                         <div className="flex-1 min-w-0"><p className="font-medium text-sm">{variant.color}</p><p className="text-xs text-muted-foreground">{variant.sizes?.length || 0} sizes</p></div>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
