@@ -2226,7 +2226,7 @@ function ProductCardImage({ product, hasVariantImages, children }: { product: Pr
     : product.image_front;
 
   return (
-    <div className="aspect-square bg-muted relative">
+    <div className="aspect-square bg-white relative">
       {activeImage ? (
         <img src={activeImage} alt={product.name} className="w-full h-full object-contain p-1 transition-all" />
       ) : (
