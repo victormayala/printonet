@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,24 @@ interface DesignSide {
   productImage?: string;
 }
 
+interface VariantSize {
+  size: string;
+  sku?: string;
+  price: number;
+  qty?: number;
+}
+
+interface DesignVariant {
+  color?: string;
+  colorName?: string;
+  hex?: string;
+  sizes?: VariantSize[];
+}
+
 interface DesignOutput {
   sessionId?: string;
   sides: DesignSide[];
-  variant?: { color?: string; colorName?: string; hex?: string } | null;
+  variant?: DesignVariant | null;
 }
 
 interface SessionRow {
@@ -36,7 +50,8 @@ export default function ReviewDesign() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [resolvedPrice, setResolvedPrice] = useState<number>(0);
+  const [basePriceFallback, setBasePriceFallback] = useState<number>(0);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const returnUrl = searchParams.get("returnUrl") || "";
   const wcProductId = searchParams.get("wcProductId") || "";
@@ -68,10 +83,36 @@ export default function ReviewDesign() {
             price = products[0].base_price || 0;
           }
         }
-        setResolvedPrice(price);
+        setBasePriceFallback(price);
         setLoading(false);
       });
   }, [sessionId]);
+
+  const designOutput = session?.design_output as DesignOutput | null;
+  const variant = designOutput?.variant ?? null;
+  const variantSizes: VariantSize[] = useMemo(
+    () => (Array.isArray(variant?.sizes) ? variant!.sizes! : []),
+    [variant]
+  );
+
+  // Default selected size = first in-stock size, or first size, or null
+  useEffect(() => {
+    if (selectedSize || variantSizes.length === 0) return;
+    const inStock = variantSizes.find((s) => (s.qty ?? 0) > 0);
+    setSelectedSize((inStock || variantSizes[0]).size);
+  }, [variantSizes, selectedSize]);
+
+  // Resolve unit price: selected SKU price → first size price → product base_price
+  const unitPrice = useMemo(() => {
+    if (selectedSize) {
+      const match = variantSizes.find((s) => s.size === selectedSize);
+      if (match && Number(match.price) > 0) return Number(match.price);
+    }
+    if (variantSizes.length > 0 && Number(variantSizes[0].price) > 0) {
+      return Number(variantSizes[0].price);
+    }
+    return basePriceFallback;
+  }, [selectedSize, variantSizes, basePriceFallback]);
 
   if (loading) {
     return (
@@ -92,17 +133,16 @@ export default function ReviewDesign() {
     );
   }
 
-  const designOutput = session.design_output as DesignOutput | null;
   const productData = session.product_data as any;
   const productName = productData?.name || "Your Product";
-  const variantLabel = designOutput?.variant?.colorName || "";
+  const variantLabel = variant?.colorName || variant?.color || "";
   const sides = designOutput?.sides?.filter((s) => s.previewPNG || s.designPNG) || [];
-  const basePrice = resolvedPrice;
   const isEmbedded = window !== window.parent;
 
   const handleAddToCart = () => {
     const previewSide = sides.find((s) => s.previewPNG) || sides[0];
-    const priceInCents = Math.round(basePrice * 100);
+    const priceInCents = Math.round(unitPrice * 100);
+    const variantWithSize = [variantLabel, selectedSize].filter(Boolean).join(" · ");
 
     addItem({
       sessionId: sessionId!,
@@ -110,12 +150,12 @@ export default function ReviewDesign() {
       previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
       quantity,
       priceInCents,
-      variant: variantLabel || undefined,
+      variant: variantWithSize || undefined,
       wcProductId: wcProductId || undefined,
     });
 
     if (isEmbedded) {
-      const payload = { ...designOutput, quantity, sessionId };
+      const payload = { ...designOutput, quantity, sessionId, selectedSize };
       window.parent.postMessage(
         { source: "customizer-studio", type: "review-add-to-cart", payload },
         "*"
@@ -165,6 +205,41 @@ export default function ReviewDesign() {
           </div>
         )}
 
+        {/* Size selector */}
+        {variantSizes.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">Size</span>
+              {selectedSize && unitPrice > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  ${unitPrice.toFixed(2)} each
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {variantSizes.map((s) => {
+                const isActive = selectedSize === s.size;
+                const outOfStock = (s.qty ?? 0) === 0 && s.qty !== undefined;
+                return (
+                  <button
+                    key={s.size}
+                    onClick={() => setSelectedSize(s.size)}
+                    disabled={outOfStock}
+                    className={`px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:border-primary/50"
+                    } ${outOfStock ? "opacity-40 cursor-not-allowed line-through" : ""}`}
+                    title={outOfStock ? "Out of stock" : `$${Number(s.price).toFixed(2)}`}
+                  >
+                    {s.size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Quantity selector */}
         <div className="flex items-center justify-center gap-4">
           <span className="text-sm text-muted-foreground">Quantity</span>
@@ -183,9 +258,9 @@ export default function ReviewDesign() {
               <Plus className="h-4 w-4" />
             </button>
           </div>
-          {basePrice > 0 && (
+          {unitPrice > 0 && (
             <span className="text-sm font-medium text-foreground">
-              ${(basePrice * quantity).toFixed(2)}
+              ${(unitPrice * quantity).toFixed(2)}
             </span>
           )}
         </div>
@@ -224,7 +299,7 @@ export default function ReviewDesign() {
             ) : (
               <>
                 <ShoppingCart className="h-4 w-4 mr-2" />
-                Add to Cart{basePrice > 0 ? ` · $${(basePrice * quantity).toFixed(2)}` : ""}
+                Add to Cart{unitPrice > 0 ? ` · $${(unitPrice * quantity).toFixed(2)}` : ""}
               </>
             )}
           </Button>
