@@ -432,10 +432,6 @@ function ProductForm({
                       </div>
                       <div className="flex-1 min-w-0 space-y-2">
                         <div className="flex items-center gap-2">
-                          <div
-                            className="w-5 h-5 rounded-full border"
-                            style={{ backgroundColor: resolveVariantHex(selectedVariant) }}
-                          />
                           <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
                         </div>
                         <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
