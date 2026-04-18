@@ -2823,18 +2823,6 @@ export default function Products() {
               </Card>
             ) : (
               <>
-                {products.length > 0 && (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border border-dashed bg-muted/30 p-4 mb-6">
-                    <div className="flex items-start gap-3 text-sm">
-                      <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                      <p className="text-muted-foreground">
-                        Your products are ready! Add one script to your store and every product gets a customizer button.{" "}
-                        <Link to="/developers" className="text-primary hover:underline font-medium">Full docs →</Link>
-                      </p>
-                    </div>
-                    <UniversalSnippetDialog />
-                  </div>
-                )}
                 {/* Selection bar */}
                 {filteredAndSortedProducts.length > 0 && (
                   <div className="flex items-center gap-3 mb-4">
