@@ -265,13 +265,35 @@ Deno.serve(async (req) => {
         colorMap.get(key)!.push(p)
       }
 
+      const detailsToLargeUrl = (path: string | null | undefined) =>
+        path ? `https://www.ssactivewear.com/${path.replace('_fm.', '_fl.')}` : null
+      const detailsBuildGallery = (sku: any): string[] => {
+        const candidates = [
+          sku.colorFrontImage,
+          sku.colorOnModelFrontImage,
+          sku.colorBackImage,
+          sku.colorOnModelBackImage,
+          sku.colorSideImage,
+          sku.colorOnModelSideImage,
+          sku.colorDirectSideImage,
+          sku.colorThreeQuarterImage,
+        ]
+        const urls: string[] = []
+        for (const c of candidates) {
+          const u = detailsToLargeUrl(c)
+          if (u && !urls.includes(u) && urls.length < 6) urls.push(u)
+        }
+        return urls
+      }
+
       const variants = Array.from(colorMap.entries()).map(([colorName, skus]) => {
         const first = skus[0]
         return {
           color: colorName,
           hex: first.color1 || null,
-          colorFrontImage: first.colorFrontImage ? `https://www.ssactivewear.com/${first.colorFrontImage.replace('_fm.', '_fl.')}` : null,
+          colorFrontImage: detailsToLargeUrl(first.colorFrontImage),
           colorSwatchImage: first.colorSwatchImage ? `https://www.ssactivewear.com/${first.colorSwatchImage}` : null,
+          gallery: detailsBuildGallery(first),
           sizes: skus.map((s: any) => ({
             size: s.sizeName || s.size2Name || 'OS',
             sku: s.sku,
