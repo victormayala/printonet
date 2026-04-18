@@ -2561,7 +2561,7 @@ function VariantManagerDialog({
 
 type ProductsTab = "products" | "shopify" | "woocommerce" | "suppliers";
 
-export default function Products({ initialTab = "products" }: { initialTab?: ProductsTab } = {}) {
+export default function Products({ initialTab = "products", showStorefrontTabs = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean } = {}) {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2798,12 +2798,19 @@ export default function Products({ initialTab = "products" }: { initialTab?: Pro
     <div className="bg-background">
       <div className="p-4 sm:p-6 lg:p-8">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProductsTab)}>
-          <TabsList className="sr-only">
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="shopify">Shopify</TabsTrigger>
-            <TabsTrigger value="woocommerce">WooCommerce</TabsTrigger>
-            <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-          </TabsList>
+          {showStorefrontTabs ? (
+            <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
+              <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
+              <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
+            </TabsList>
+          ) : (
+            <TabsList className="sr-only">
+              <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="shopify">Shopify</TabsTrigger>
+              <TabsTrigger value="woocommerce">WooCommerce</TabsTrigger>
+              <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+            </TabsList>
+          )}
 
           <TabsContent value="products">
             {showAddForm || editingProduct !== undefined ? (
