@@ -171,15 +171,47 @@ Deno.serve(async (req) => {
           }
         })
 
-        // Pick images from first color — populate all 4 side slots when available
+        // Pick images: front/back from first color, then fill side1/side2
+        // by walking the per-color galleries (across ALL colors) so we get 4 distinct shots.
         const firstProduct = Array.isArray(products) && products.length > 0 ? products[0] : null
         const imageFront = toLargeUrl(firstProduct?.colorFrontImage)
           || (style.styleImage ? `${imgBaseUrl}${style.styleImage}` : null)
         const imageBack = toLargeUrl(firstProduct?.colorBackImage)
-        const imageSide1 = toLargeUrl(firstProduct?.colorSideImage)
-          || toLargeUrl(firstProduct?.colorOnModelSideImage)
-        const imageSide2 = toLargeUrl(firstProduct?.colorOnModelFrontImage)
-          || toLargeUrl(firstProduct?.colorThreeQuarterImage)
+
+        const usedSSUrls = new Set<string>([imageFront, imageBack].filter(Boolean) as string[])
+        const sideSlots: string[] = []
+        // Prefer side / on-model / three-quarter explicitly first
+        const preferredSideKeys = [
+          'colorSideImage', 'colorOnModelSideImage', 'colorDirectSideImage',
+          'colorThreeQuarterImage', 'colorOnModelFrontImage', 'colorOnModelBackImage',
+        ]
+        for (const key of preferredSideKeys) {
+          if (sideSlots.length >= 2) break
+          const u = toLargeUrl(firstProduct?.[key])
+          if (u && !usedSSUrls.has(u)) { sideSlots.push(u); usedSSUrls.add(u) }
+        }
+        // Then fall back to any other gallery image from any variant
+        for (const v of variants) {
+          if (sideSlots.length >= 2) break
+          for (const u of (v.gallery || [])) {
+            if (sideSlots.length >= 2) break
+            if (u && !usedSSUrls.has(u)) { sideSlots.push(u); usedSSUrls.add(u) }
+          }
+        }
+        const imageSide1 = sideSlots[0] || null
+        const imageSide2 = sideSlots[1] || null
+
+        // Compute base_price from variant SKUs (style-level customerPrice is often missing)
+        const allSSPrices: number[] = []
+        for (const v of variants) {
+          for (const sz of (v.sizes || [])) {
+            const n = Number(sz.price) || 0
+            if (n > 0) allSSPrices.push(n)
+          }
+        }
+        const computedBasePrice = allSSPrices.length > 0
+          ? Math.min(...allSSPrices)
+          : (style.customerPrice || style.piecePrice || 0)
 
         const productName = `${style.brandName} ${style.styleName}`.trim()
         const supplierSource = {
@@ -203,7 +235,7 @@ Deno.serve(async (req) => {
           name: productName,
           category: style.baseCategory || 'apparel',
           description: style.title || style.description || null,
-          base_price: style.customerPrice || style.piecePrice || 0,
+          base_price: computedBasePrice,
           image_front: imageFront,
           image_back: imageBack,
           image_side1: imageSide1,
