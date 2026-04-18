@@ -2797,12 +2797,12 @@ export default function Products({ initialTab = "products" }: { initialTab?: Pro
   return (
     <div className="bg-background">
       <div className="p-4 sm:p-6 lg:p-8">
-        <Tabs defaultValue="products" onValueChange={(v) => setActiveTab(v)}>
-          <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
-            <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Store className="h-4 w-4" /> <span className="hidden xs:inline">My </span>Products</TabsTrigger>
-            <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
-            <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
-            <TabsTrigger value="suppliers" className="gap-2 flex-1 sm:flex-none"><Truck className="h-4 w-4" /> Suppliers</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProductsTab)}>
+          <TabsList className="sr-only">
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="shopify">Shopify</TabsTrigger>
+            <TabsTrigger value="woocommerce">WooCommerce</TabsTrigger>
+            <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
