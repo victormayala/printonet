@@ -115,8 +115,18 @@ function ProductForm({
     setSelectedVariantIdx(0);
   }, [product?.id]);
 
-  const baseCostNum = parseFloat(basePrice) || 0;
+  const productBaseCost = parseFloat(basePrice) || 0;
   const selectedVariant = variants[selectedVariantIdx];
+
+  // Per-variant base cost = min non-zero SKU price; falls back to product base price.
+  // Lets switching colors reflect actual cost (e.g. 2XL or color upcharges).
+  const variantBaseCost = (v: any): number => {
+    const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
+    const prices = sizes.map((s: any) => Number(s?.price) || 0).filter((n: number) => n > 0);
+    if (prices.length > 0) return Math.min(...prices);
+    return productBaseCost;
+  };
+  const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
 
   const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: string) => {
     setVariants((prev) =>
@@ -139,7 +149,8 @@ function ProductForm({
 
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
-    return baseCostNum + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0);
+    const cost = variantBaseCost(v);
+    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0);
   };
 
   const applyPricingToAllColors = () => {
