@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Code, Copy, Check, Info, ExternalLink } from "lucide-react";
+import { Code, Copy, Check, Info, ExternalLink, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export function UniversalSnippetDialog() {
