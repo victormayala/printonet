@@ -25,7 +25,7 @@
   'use strict';
 
   // --- Built-in defaults so the script works standalone (e.g. when injected via Shopify ScriptTag) ---
-  var DEFAULT_BASE_URL = 'https://customizerstudio.com';
+  var DEFAULT_BASE_URL = 'https://app.printonet.com';
   var DEFAULT_API_URL = 'https://qumrnazgdrijdcihtkah.supabase.co/functions/v1';
   var DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1bXJuYXpnZHJpamRjaWh0a2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTM2OTQsImV4cCI6MjA4OTUyOTY5NH0.zVeYe3358jl3Gen7jG2I6f_kAqY1MLf1uAMn8EOb99I';
 
