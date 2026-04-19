@@ -3,7 +3,7 @@ import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
-import logo from "@/assets/customizer-studio-short-logo-2.svg";
+import logo from "@/assets/printonet-logo.svg";
 
 import {
   Sidebar,

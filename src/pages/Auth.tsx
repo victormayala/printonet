@@ -1,5 +1,5 @@
 import { useState } from "react";
-import logo from "@/assets/customizer-studio-short-logo.svg";
+import logo from "@/assets/printonet-logo.svg";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
