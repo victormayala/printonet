@@ -48,6 +48,16 @@ export function UniversalSnippetDialog() {
           </DialogDescription>
         </DialogHeader>
 
+        <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+          <div className="space-y-1">
+            <p className="font-medium text-foreground">Using Shopify? Skip this entirely.</p>
+            <p className="text-muted-foreground">
+              Connect your Shopify store via OAuth and we'll auto-inject the customizer on every product page — no theme edits, no script tag needed.
+            </p>
+          </div>
+        </div>
+
         <div>
           <h4 className="text-sm font-semibold mb-2">1. Add this to your site's header</h4>
           <div className="relative">
