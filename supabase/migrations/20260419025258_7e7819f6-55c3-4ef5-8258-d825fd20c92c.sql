@@ -1,0 +1,1 @@
+ALTER TABLE public.store_integrations ADD COLUMN IF NOT EXISTS script_tag_id BIGINT;

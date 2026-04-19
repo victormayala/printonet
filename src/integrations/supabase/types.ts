@@ -275,6 +275,7 @@ export type Database = {
           id: string
           last_synced_at: string | null
           platform: string
+          script_tag_id: number | null
           store_url: string
           updated_at: string
           user_id: string
@@ -285,6 +286,7 @@ export type Database = {
           id?: string
           last_synced_at?: string | null
           platform: string
+          script_tag_id?: number | null
           store_url: string
           updated_at?: string
           user_id: string
@@ -295,6 +297,7 @@ export type Database = {
           id?: string
           last_synced_at?: string | null
           platform?: string
+          script_tag_id?: number | null
           store_url?: string
           updated_at?: string
           user_id?: string
