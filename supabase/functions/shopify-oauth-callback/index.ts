@@ -71,19 +71,65 @@ Deno.serve(async (req) => {
 
     const storeUrl = `https://${shop}`;
 
+    // ---- Auto-inject the customizer-loader.js into the merchant's storefront ----
+    // Use Shopify's ScriptTag API so the merchant doesn't need to edit theme.liquid.
+    const loaderSrc = `https://customizerstudio.com/customizer-loader.js?uid=${encodeURIComponent(userId)}`;
+    let scriptTagId: number | null = null;
+
+    try {
+      // 1. Check if a script tag with this src already exists (idempotent on reconnect)
+      const listRes = await fetch(
+        `https://${shop}/admin/api/2025-01/script_tags.json?src=${encodeURIComponent(loaderSrc)}`,
+        { headers: { "X-Shopify-Access-Token": accessToken, "Content-Type": "application/json" } }
+      );
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const existing = (listData.script_tags || [])[0];
+        if (existing) scriptTagId = existing.id;
+      }
+
+      // 2. Create it if missing
+      if (!scriptTagId) {
+        const createRes = await fetch(`https://${shop}/admin/api/2025-01/script_tags.json`, {
+          method: "POST",
+          headers: { "X-Shopify-Access-Token": accessToken, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            script_tag: {
+              event: "onload",
+              src: loaderSrc,
+              display_scope: "online_store",
+            },
+          }),
+        });
+        if (createRes.ok) {
+          const created = await createRes.json();
+          scriptTagId = created.script_tag?.id ?? null;
+          console.log("Registered Shopify ScriptTag:", scriptTagId);
+        } else {
+          const errText = await createRes.text();
+          console.error("Failed to create ScriptTag:", errText);
+        }
+      } else {
+        console.log("ScriptTag already exists, reusing:", scriptTagId);
+      }
+    } catch (sErr) {
+      console.error("ScriptTag registration error:", sErr);
+      // Non-fatal — continue with integration save
+    }
+
     // Upsert: update if same user + platform + store already exists
+    const integrationRow = {
+      user_id: userId,
+      platform: "shopify",
+      store_url: storeUrl,
+      credentials: { access_token: accessToken, scopes: tokenData.scope || "" },
+      script_tag_id: scriptTagId,
+      last_synced_at: null,
+    };
+
     const { error: upsertError } = await supabase
       .from("store_integrations")
-      .upsert(
-        {
-          user_id: userId,
-          platform: "shopify",
-          store_url: storeUrl,
-          credentials: { access_token: accessToken, scopes: tokenData.scope || "" },
-          last_synced_at: null,
-        },
-        { onConflict: "user_id,platform" }
-      );
+      .upsert(integrationRow, { onConflict: "user_id,platform" });
 
     if (upsertError) {
       console.error("Failed to save integration:", upsertError);
@@ -101,17 +147,13 @@ Deno.serve(async (req) => {
           .update({
             store_url: storeUrl,
             credentials: { access_token: accessToken, scopes: tokenData.scope || "" },
+            script_tag_id: scriptTagId,
           })
           .eq("id", existing.id);
       } else {
         await supabase
           .from("store_integrations")
-          .insert({
-            user_id: userId,
-            platform: "shopify",
-            store_url: storeUrl,
-            credentials: { access_token: accessToken, scopes: tokenData.scope || "" },
-          });
+          .insert(integrationRow);
       }
     }
 

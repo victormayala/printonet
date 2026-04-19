@@ -24,14 +24,29 @@
 (function () {
   'use strict';
 
-  // --- Read config from the script tag itself ---
+  // --- Built-in defaults so the script works standalone (e.g. when injected via Shopify ScriptTag) ---
+  var DEFAULT_BASE_URL = 'https://customizerstudio.com';
+  var DEFAULT_API_URL = 'https://qumrnazgdrijdcihtkah.supabase.co/functions/v1';
+  var DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1bXJuYXpnZHJpamRjaWh0a2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTM2OTQsImV4cCI6MjA4OTUyOTY5NH0.zVeYe3358jl3Gen7jG2I6f_kAqY1MLf1uAMn8EOb99I';
+
+  // --- Read config from the script tag itself (with fallbacks) ---
   var scriptTag = document.currentScript;
-  var API_URL = scriptTag && scriptTag.getAttribute('data-api-url') || '';
-  var BASE_URL = scriptTag && scriptTag.getAttribute('data-base-url') || '';
+  // Parse ?uid=... from the script's own src URL (set when Shopify ScriptTag injects the loader)
+  var _scriptSrc = scriptTag && scriptTag.src ? scriptTag.src : '';
+  var _srcParams = {};
+  try {
+    if (_scriptSrc) {
+      var _u = new URL(_scriptSrc);
+      _u.searchParams.forEach(function (v, k) { _srcParams[k] = v; });
+    }
+  } catch (e) { /* ignore */ }
+
+  var API_URL = (scriptTag && scriptTag.getAttribute('data-api-url')) || DEFAULT_API_URL;
+  var BASE_URL = (scriptTag && scriptTag.getAttribute('data-base-url')) || DEFAULT_BASE_URL;
   var SUPABASE_URL = API_URL.replace('/functions/v1', '');
-  var ANON_KEY = scriptTag && scriptTag.getAttribute('data-anon-key') || '';
-  var USER_ID = scriptTag && scriptTag.getAttribute('data-user-id') || '';
-  var CART_URL = scriptTag && scriptTag.getAttribute('data-cart-url') || '';
+  var ANON_KEY = (scriptTag && scriptTag.getAttribute('data-anon-key')) || DEFAULT_ANON_KEY;
+  var USER_ID = (scriptTag && scriptTag.getAttribute('data-user-id')) || _srcParams.uid || '';
+  var CART_URL = (scriptTag && scriptTag.getAttribute('data-cart-url')) || '';
 
   var _products = null; // cached after first fetch
   var _pickerOverlay = null;
