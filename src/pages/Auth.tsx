@@ -1,6 +1,6 @@
-import { useState } from "react";
-import logo from "@/assets/printonet-logo.svg";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import logo from "@/assets/printonet-logo.svg";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, Mail } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 
 export default function Auth() {
   const { user } = useAuth();
