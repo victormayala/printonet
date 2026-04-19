@@ -810,7 +810,7 @@ function cs_render_settings_page() {
 				<tr>
 					<th>Base URL</th>
 					<td>
-						<input type="url" name="cs_base_url" value="<?php echo esc_attr( $base_url ); ?>" class="regular-text" placeholder="https://cstmzr.lovable.app" />
+						<input type="url" name="cs_base_url" value="<?php echo esc_attr( $base_url ); ?>" class="regular-text" placeholder="https://app.printonet.com" />
 						<p class="description">Your Customizer Studio hosted URL.</p>
 					</td>
 				</tr>

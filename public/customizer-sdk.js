@@ -3,7 +3,7 @@
  * Embed the product customizer in any e-commerce store.
  *
  * Usage:
- *   <script src="https://customizerstudio.com/customizer-sdk.js"></script>
+ *   <script src="https://app.printonet.com/customizer-sdk.js"></script>
  *   <script>
  *     CustomizerStudio.init({ apiUrl: 'https://qumrnazgdrijdcihtkah.supabase.co/functions/v1' });
  *     CustomizerStudio.open({
