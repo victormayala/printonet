@@ -375,7 +375,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       return data;
     },
     onSuccess: () => {
-      toast({ title: "Store provisioning started", description: "InstaWP is cloning your template — this can take 1–2 minutes." });
+      toast({ title: "Store provisioning started", description: "Your branded store is being prepared — this can take 1–2 minutes." });
       onCreated();
     },
     onError: (e: Error) => {
