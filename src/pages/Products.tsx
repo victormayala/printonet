@@ -2077,7 +2077,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Browse SanMar Catalog</CardTitle>
-            <CardDescription>Search and import blank products from SanMar</CardDescription>
+            <CardDescription>Popular styles load automatically. Search by style number for anything else.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
@@ -2094,10 +2094,16 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
               <Button onClick={() => handleBrowse(searchQuery, 1, categoryFilter)} disabled={browsing} className="gap-2 shrink-0">
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Search
               </Button>
+              <Button variant="outline" onClick={loadPopularStyles} disabled={browsing} className="gap-2 shrink-0" title="Show curated popular styles">
+                <Package className="h-4 w-4" /> Popular
+              </Button>
               {(searchQuery || categoryFilter !== "all") && (
-                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setSearchQuery(""); setCategoryFilter("all"); handleBrowse("", 1, "all"); }} title="Clear filters"><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setSearchQuery(""); setCategoryFilter("all"); loadPopularStyles(); }} title="Clear filters"><Trash2 className="h-4 w-4" /></Button>
               )}
             </div>
+            {browsing && catalogResults.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground"><Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" /><p className="text-sm">Loading popular SanMar styles…</p></div>
+            )}
             {hasLoadedCatalog && totalResults > 0 && <p className="text-xs text-muted-foreground">Showing {catalogResults.length} of {totalResults} results{currentPage < totalPages && " — load more below"}</p>}
             {catalogResults.length > 0 && (
               <>
