@@ -31,16 +31,16 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(
+    const { data: userData, error: userErr } = await userClient.auth.getUser(
       authHeader.replace("Bearer ", ""),
     );
-    if (claimsErr || !claims?.claims) {
+    if (userErr || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claims.claims.sub as string;
+    const userId = userData.user.id;
 
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) {
