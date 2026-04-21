@@ -46,6 +46,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    const brandingToken = Deno.env.get("PRINTONET_BRANDING_TOKEN");
+    if (!brandingToken) {
+      const msg = "PRINTONET_BRANDING_TOKEN is not configured";
+      console.error(msg);
+      await admin
+        .from("corporate_stores")
+        .update({ status: "active", error_message: msg })
+        .eq("id", store.id);
+      return new Response(
+        JSON.stringify({ ok: false, branding_error: msg }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const payload = {
       store_name: store.name,
       contact_email: store.contact_email,
@@ -58,17 +75,21 @@ Deno.serve(async (req) => {
       favicon_url: store.favicon_url,
     };
 
-    const url = `${store.instawp_site_url.replace(/\/$/, "")}/wp-json/customizer-studio/v1/branding`;
+    const url = `${store.instawp_site_url.replace(/\/$/, "")}/wp-json/printonet/v1/branding`;
     let brandingError: string | null = null;
     try {
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Printonet-Token": brandingToken,
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
+        const txt = await res.text();
         brandingError = `Branding endpoint returned ${res.status}`;
-        console.warn("Branding push failed", res.status, await res.text());
+        console.warn("Branding push failed", res.status, txt);
       }
     } catch (e) {
       brandingError = e instanceof Error ? e.message : "Branding push failed";
