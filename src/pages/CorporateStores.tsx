@@ -310,7 +310,132 @@ export default function CorporateStores() {
   );
 }
 
-function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
+function StoreActions({ store }: { store: CorporateStore }) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState<null | "pause" | "resume" | "delete" | "rebrand">(null);
+
+  const refetch = () =>
+    queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+
+  const runManage = async (action: "pause" | "resume" | "delete") => {
+    setBusy(action);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-corporate-store", {
+        body: { store_id: store.id, action },
+      });
+      const errMsg = (error as Error | null)?.message || (data as { error?: string } | null)?.error;
+      if (errMsg) throw new Error(errMsg);
+      toast({
+        title:
+          action === "delete"
+            ? "Store deleted"
+            : action === "pause"
+              ? "Store paused"
+              : "Store resumed",
+      });
+      refetch();
+    } catch (e) {
+      toast({
+        title: `Could not ${action} store`,
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+      if (action === "delete") setConfirmDelete(false);
+    }
+  };
+
+  const rebrand = async () => {
+    setBusy("rebrand");
+    const { error } = await supabase.functions.invoke("apply-store-branding", {
+      body: { store_id: store.id },
+    });
+    toast({
+      title: error ? "Re-apply failed" : "Branding re-applied",
+      variant: error ? "destructive" : "default",
+    });
+    setBusy(null);
+  };
+
+  const isActive = store.status === "active";
+  const isPaused = store.status === "paused";
+
+  return (
+    <div className="flex items-center justify-end gap-2">
+      {store.instawp_admin_url && isActive && (
+        <Button asChild variant="outline" size="sm">
+          <a href={store.instawp_admin_url} target="_blank" rel="noreferrer">
+            WP Admin
+          </a>
+        </Button>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" disabled={busy !== null}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {isActive && (
+            <DropdownMenuItem onClick={rebrand}>
+              <RefreshCw className="h-4 w-4" />
+              Re-apply branding
+            </DropdownMenuItem>
+          )}
+          {isActive && (
+            <DropdownMenuItem onClick={() => runManage("pause")}>
+              <Pause className="h-4 w-4" />
+              Pause store
+            </DropdownMenuItem>
+          )}
+          {isPaused && (
+            <DropdownMenuItem onClick={() => runManage("resume")}>
+              <Play className="h-4 w-4" />
+              Resume store
+            </DropdownMenuItem>
+          )}
+          {(isActive || isPaused || store.status === "failed") && <DropdownMenuSeparator />}
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete store
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{store.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently destroys the WooCommerce site and all of its data on
+              InstaWP. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === "delete"}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                runManage("delete");
+              }}
+              disabled={busy === "delete"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {busy === "delete" && <Loader2 className="h-4 w-4 animate-spin" />}
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
   const { user } = useAuth();
   const [values, setValues] = useState<FormValues>({
     name: "",
