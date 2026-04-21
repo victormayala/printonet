@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: Customizer Studio for WooCommerce
- * Description: All-in-one product customizer integration. Auto-injects scripts, adds "Customize" buttons, saves designs to cart & orders. Supports simple and variable products.
- * Version: 1.0.0
- * Author: Customizer Studio
+ * Plugin Name: Printonet for WooCommerce
+ * Description: Printonet integration for WooCommerce. Auto-injects the customizer, adds "Customize" buttons, saves designs to cart & orders, and receives branding from the Printonet dashboard. Supports simple and variable products.
+ * Version: 1.1.0
+ * Author: Printonet
  * Requires Plugins: woocommerce
  * License: GPL-2.0-or-later
  */
