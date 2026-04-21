@@ -1948,8 +1948,60 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     } catch (err: any) { toast({ title: "Browse failed", description: err.message, variant: "destructive" }); } finally { setBrowsing(false); }
   };
 
+  // Curated list of popular SanMar style numbers.
+  // Used to populate the catalog grid on first load (SanMar's API doesn't support keyword search).
+  const POPULAR_SANMAR_STYLES = [
+    // T-Shirts
+    "PC61", "PC54", "PC55", "PC450", "DT6000", "BC3001", "G500", "G800", "ST350", "PC78",
+    // Polos
+    "K500", "K420", "L500", "ST650", "K100",
+    // Hoodies & Sweatshirts
+    "PC78H", "PC90H", "ST254", "F170", "DT6100",
+    // Outerwear & Jackets
+    "J317", "J790", "JST50", "F217",
+    // Headwear
+    "C112", "STC12", "NE1000", "C913",
+    // Bags
+    "BG200", "BG408",
+    // Ladies / V-neck
+    "LPC54V", "LPC61",
+  ];
+
+  const loadPopularStyles = async () => {
+    const creds = getCredentials();
+    if (!creds.username || !creds.password) return;
+    setBrowsing(true);
+    setSelectedStyleIds(new Set());
+    try {
+      const results = await Promise.all(
+        POPULAR_SANMAR_STYLES.map(async (styleId) => {
+          try {
+            const { data } = await supabase.functions.invoke("import-sanmar-products", {
+              body: { action: "browse", ...creds, search: styleId, page: 1, per_page: 1 },
+            });
+            return data?.styles?.[0] || null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      const styles = results.filter(Boolean);
+      setCatalogResults(styles);
+      setAppliedSearchQuery("");
+      setCurrentPage(1);
+      setTotalPages(1);
+      setTotalResults(styles.length);
+      setHasLoadedCatalog(true);
+      if (!styles.length) toast({ title: "Could not load popular styles", description: "Check your SanMar API access.", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Failed to load popular styles", description: err.message, variant: "destructive" });
+    } finally {
+      setBrowsing(false);
+    }
+  };
+
   const handleCategoryChange = (cat: string) => { setCategoryFilter(cat); handleBrowse(appliedSearchQuery, 1, cat); };
-  useEffect(() => { if (integration && !hasLoadedCatalog) { setHasLoadedCatalog(true); } }, [integration]);
+  useEffect(() => { if (integration && !hasLoadedCatalog) { loadPopularStyles(); } }, [integration]);
   useEffect(() => { if (!integration) return; supabase.functions.invoke("import-sanmar-products", { body: { action: "categories", ...getCredentials() } }).then(({ data }) => { if (data?.categories) setCategories(data.categories); }); }, [integration]);
 
   const handleImportStyle = async (styleID: string) => {
@@ -2025,7 +2077,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Browse SanMar Catalog</CardTitle>
-            <CardDescription>Search and import blank products from SanMar</CardDescription>
+            <CardDescription>Popular styles load automatically. Search by style number for anything else.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
@@ -2042,10 +2094,16 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
               <Button onClick={() => handleBrowse(searchQuery, 1, categoryFilter)} disabled={browsing} className="gap-2 shrink-0">
                 {browsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Search
               </Button>
+              <Button variant="outline" onClick={loadPopularStyles} disabled={browsing} className="gap-2 shrink-0" title="Show curated popular styles">
+                <Package className="h-4 w-4" /> Popular
+              </Button>
               {(searchQuery || categoryFilter !== "all") && (
-                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setSearchQuery(""); setCategoryFilter("all"); handleBrowse("", 1, "all"); }} title="Clear filters"><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setSearchQuery(""); setCategoryFilter("all"); loadPopularStyles(); }} title="Clear filters"><Trash2 className="h-4 w-4" /></Button>
               )}
             </div>
+            {browsing && catalogResults.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground"><Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" /><p className="text-sm">Loading popular SanMar styles…</p></div>
+            )}
             {hasLoadedCatalog && totalResults > 0 && <p className="text-xs text-muted-foreground">Showing {catalogResults.length} of {totalResults} results{currentPage < totalPages && " — load more below"}</p>}
             {catalogResults.length > 0 && (
               <>
@@ -2111,7 +2169,12 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
               </>
             )}
             {!browsing && catalogResults.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground"><Search className="h-10 w-10 mx-auto mb-2 opacity-40" /><p className="text-sm">Enter a style number to search the SanMar catalog.</p><p className="text-xs mt-1">Examples: PC61, DT6000, ST350, J317, LPC54V, BC4810GD</p><p className="text-xs mt-1 text-muted-foreground/60">Note: SanMar's API only supports exact style number lookups, not keyword search.</p></div>
+              <div className="text-center py-8 text-muted-foreground space-y-3">
+                <Search className="h-10 w-10 mx-auto opacity-40" />
+                <p className="text-sm">Search by style number or load curated popular styles to get started.</p>
+                <Button onClick={loadPopularStyles} className="gap-2"><Package className="h-4 w-4" /> Load Popular Styles</Button>
+                <p className="text-xs text-muted-foreground/60 pt-1">Note: SanMar's API only supports exact style number lookups, not keyword search.</p>
+              </div>
             )}
           </CardContent>
         </Card>
