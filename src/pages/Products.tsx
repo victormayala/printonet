@@ -1411,6 +1411,13 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
               )}
             </div>
 
+            {browsing && catalogResults.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                <p className="text-sm">Loading S&amp;S Activewear catalog…</p>
+              </div>
+            )}
+
             {hasLoadedCatalog && totalResults > 0 && (
               <p className="text-xs text-muted-foreground">
                 Showing {catalogResults.length} of {totalResults} results
