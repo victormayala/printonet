@@ -56,6 +56,72 @@ export type Database = {
         }
         Relationships: []
       }
+      corporate_stores: {
+        Row: {
+          accent_color: string
+          contact_email: string
+          created_at: string
+          custom_domain: string | null
+          error_message: string | null
+          favicon_url: string | null
+          font_family: string
+          id: string
+          instawp_admin_url: string | null
+          instawp_site_id: string | null
+          instawp_site_url: string | null
+          instawp_task_id: string | null
+          logo_url: string | null
+          name: string
+          primary_color: string
+          secondary_logo_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string
+          contact_email: string
+          created_at?: string
+          custom_domain?: string | null
+          error_message?: string | null
+          favicon_url?: string | null
+          font_family?: string
+          id?: string
+          instawp_admin_url?: string | null
+          instawp_site_id?: string | null
+          instawp_site_url?: string | null
+          instawp_task_id?: string | null
+          logo_url?: string | null
+          name: string
+          primary_color?: string
+          secondary_logo_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string
+          contact_email?: string
+          created_at?: string
+          custom_domain?: string | null
+          error_message?: string | null
+          favicon_url?: string | null
+          font_family?: string
+          id?: string
+          instawp_admin_url?: string | null
+          instawp_site_id?: string | null
+          instawp_site_url?: string | null
+          instawp_task_id?: string | null
+          logo_url?: string | null
+          name?: string
+          primary_color?: string
+          secondary_logo_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customizer_sessions: {
         Row: {
           created_at: string
