@@ -1948,8 +1948,60 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     } catch (err: any) { toast({ title: "Browse failed", description: err.message, variant: "destructive" }); } finally { setBrowsing(false); }
   };
 
+  // Curated list of popular SanMar style numbers.
+  // Used to populate the catalog grid on first load (SanMar's API doesn't support keyword search).
+  const POPULAR_SANMAR_STYLES = [
+    // T-Shirts
+    "PC61", "PC54", "PC55", "PC450", "DT6000", "BC3001", "G500", "G800", "ST350", "PC78",
+    // Polos
+    "K500", "K420", "L500", "ST650", "K100",
+    // Hoodies & Sweatshirts
+    "PC78H", "PC90H", "ST254", "F170", "DT6100",
+    // Outerwear & Jackets
+    "J317", "J790", "JST50", "F217",
+    // Headwear
+    "C112", "STC12", "NE1000", "C913",
+    // Bags
+    "BG200", "BG408",
+    // Ladies / V-neck
+    "LPC54V", "LPC61",
+  ];
+
+  const loadPopularStyles = async () => {
+    const creds = getCredentials();
+    if (!creds.username || !creds.password) return;
+    setBrowsing(true);
+    setSelectedStyleIds(new Set());
+    try {
+      const results = await Promise.all(
+        POPULAR_SANMAR_STYLES.map(async (styleId) => {
+          try {
+            const { data } = await supabase.functions.invoke("import-sanmar-products", {
+              body: { action: "browse", ...creds, search: styleId, page: 1, per_page: 1 },
+            });
+            return data?.styles?.[0] || null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      const styles = results.filter(Boolean);
+      setCatalogResults(styles);
+      setAppliedSearchQuery("");
+      setCurrentPage(1);
+      setTotalPages(1);
+      setTotalResults(styles.length);
+      setHasLoadedCatalog(true);
+      if (!styles.length) toast({ title: "Could not load popular styles", description: "Check your SanMar API access.", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Failed to load popular styles", description: err.message, variant: "destructive" });
+    } finally {
+      setBrowsing(false);
+    }
+  };
+
   const handleCategoryChange = (cat: string) => { setCategoryFilter(cat); handleBrowse(appliedSearchQuery, 1, cat); };
-  useEffect(() => { if (integration && !hasLoadedCatalog) { setHasLoadedCatalog(true); } }, [integration]);
+  useEffect(() => { if (integration && !hasLoadedCatalog) { loadPopularStyles(); } }, [integration]);
   useEffect(() => { if (!integration) return; supabase.functions.invoke("import-sanmar-products", { body: { action: "categories", ...getCredentials() } }).then(({ data }) => { if (data?.categories) setCategories(data.categories); }); }, [integration]);
 
   const handleImportStyle = async (styleID: string) => {
