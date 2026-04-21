@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,23 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
@@ -48,7 +65,7 @@ type CorporateStore = {
   favicon_url: string | null;
   instawp_site_url: string | null;
   instawp_admin_url: string | null;
-  status: "provisioning" | "active" | "failed";
+  status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;
   created_at: string;
 };
@@ -68,6 +85,13 @@ function StatusBadge({ status }: { status: CorporateStore["status"] }) {
     return (
       <Badge variant="destructive" className="gap-1">
         <AlertCircle className="h-3 w-3" /> Failed
+      </Badge>
+    );
+  }
+  if (status === "paused") {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <PauseCircle className="h-3 w-3" /> Paused
       </Badge>
     );
   }
