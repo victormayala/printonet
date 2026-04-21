@@ -1,94 +1,54 @@
 
-## Goal
-Add a "Corporate Stores" feature to Printonet that lets any authenticated user provision a fully-branded WooCommerce store on InstaWP from a single form, by cloning a pre-built InstaWP template site and applying the client's branding pack.
 
-## Architecture overview
+## Ready to implement: Printonet branding receiver + secret wiring
 
-```
-User → /corporate-stores  (UI form)
-        │ uploads logos to Supabase Storage
-        ▼
-Edge Function: provision-corporate-store  (auth required)
-        │ 1. inserts corporate_stores row (status=provisioning)
-        │ 2. calls InstaWP API → clone template
-        │ 3. saves task_id + returns store_id
-        ▼
-Edge Function: instawp-webhook  (public, HMAC-verified)
-        │ on site.ready:  fills site URLs + calls apply-store-branding
-        │ on site.failed: marks row failed
-        ▼
-Edge Function: apply-store-branding  (internal helper)
-        │ POSTs branding pack to the new WP site's REST API
-        │ flips status → active
-```
+You're ready to provide the `PRINTONET_BRANDING_TOKEN`. Here's exactly what I'll do once you approve and paste the secret.
 
-## Database (one new table)
+### Step 1 — Request the secret
+I'll trigger the secret-input prompt for `PRINTONET_BRANDING_TOKEN`. You paste your random string. This same string also goes into `wp-config.php` on your InstaWP template site (see Step 5 below).
 
-`corporate_stores`
-- `id`, `user_id`, `name`, `contact_email`, `custom_domain`
-- `primary_color`, `accent_color`, `font_family`
-- `logo_url`, `secondary_logo_url`, `favicon_url`
-- `instawp_task_id`, `instawp_site_id`, `instawp_site_url`, `instawp_admin_url`
-- `status` ('provisioning' | 'active' | 'failed'), `error_message`
-- `created_at`, `updated_at`
+### Step 2 — Update the WordPress plugin
+**File:** `public/customizer-studio-woocommerce.php`
 
-**RLS**: users can only see/insert/update their own rows.
+- Update plugin header: name → "Printonet for WooCommerce", author → "Printonet".
+- Add `POST /wp-json/printonet/v1/branding` route:
+  - Verifies `X-Printonet-Token` header against the `PRINTONET_BRANDING_TOKEN` constant defined in `wp-config.php`.
+  - Saves payload to `wp_options['printonet_branding']` (single JSON blob).
+  - Updates `blogname` from `store_name` and `admin_email` from `contact_email`.
+  - Returns `{ ok: true }` on success, `401` on bad token, `400` on bad payload.
+- Add `GET /wp-json/printonet/v1/health` route (public): returns `{ ok: true, plugin: "printonet", version: "..." }` so the edge function can confirm the cloned site is responsive.
+- Add `wp_head` action that reads `printonet_branding` and emits:
+  - `:root { --printonet-primary, --printonet-accent, --printonet-font }`
+  - Google Fonts `<link>` for the selected font.
+  - Favicon `<link rel="icon">` if `favicon_url` is set.
+- Existing `customizer-studio/v1/add-to-cart` route and all `cs_*` symbols stay untouched (live customer carts depend on them).
 
-**New storage bucket**: `corporate-store-assets` (public-read), partitioned by `user_id/store_id/`.
+### Step 3 — Update the edge functions
+**File:** `supabase/functions/apply-store-branding/index.ts`
+- Change target URL from `/wp-json/customizer-studio/v1/branding` to `/wp-json/printonet/v1/branding`.
+- Add `X-Printonet-Token` header sourced from `Deno.env.get("PRINTONET_BRANDING_TOKEN")`.
 
-## Secrets I'll request via add_secret
-- `INSTAWP_API_KEY` — InstaWP → Settings → API
-- `INSTAWP_TEMPLATE_ID` — ID of your pre-built WooCommerce template site
-- `INSTAWP_WEBHOOK_SECRET` — for HMAC verification on the webhook
+**File:** `supabase/functions/check-corporate-store-status/index.ts`
+- Before triggering branding push, hit `GET /wp-json/printonet/v1/health` with a couple of retries to confirm WordPress is fully booted on the cloned site.
 
-## Edge functions
+### Step 4 — Replace stale "Customizer Studio" copy in the Corporate Stores UI
+**File:** `src/pages/CorporateStores.tsx`
+- Replace any lingering "Customizer Studio" mentions in dialog/empty-state copy with "Printonet".
 
-1. **`provision-corporate-store`** (verify_jwt = on)
-   - Zod-validates the branding payload.
-   - Inserts row → calls InstaWP `POST /api/v2/sites` with `template_id`.
-   - Saves `instawp_task_id`. Returns `{ store_id }` immediately so the UI can show progress.
+### Step 5 — What you do after I ship the code
+1. Download the updated `public/customizer-studio-woocommerce.php` from the Lovable file tree.
+2. Upload it to your **InstaWP template site** (replace the existing plugin).
+3. Add this line to that template site's `wp-config.php` (above `/* That's all, stop editing! */`):
+   ```php
+   define('PRINTONET_BRANDING_TOKEN', 'PASTE_YOUR_TOKEN_HERE');
+   ```
+   Use the **same string** you'll paste into Lovable in Step 1.
+4. Verify by visiting `https://YOUR-TEMPLATE.instawp.xyz/wp-json/printonet/v1/health` — should return `{"ok":true,...}`.
+5. Re-snapshot the template in InstaWP so all future clones inherit the updated plugin and the constant.
+6. Test by provisioning a new corporate store from `/corporate-stores`.
 
-2. **`instawp-webhook`** (verify_jwt = off, signature verified in code)
-   - Verifies `X-InstaWP-Signature` against `INSTAWP_WEBHOOK_SECRET`.
-   - On `site.ready` → fills site URLs and triggers `apply-store-branding`.
-   - On `site.failed` → marks row failed with the error message.
+### Out of scope this round
+- Renaming legacy `customizer-studio/v1/add-to-cart` route or `cs_*` symbols (would break live customer carts).
+- Renaming the plugin filename (would deactivate the plugin on every existing site).
+- A WP Admin settings UI for editing branding (Printonet dashboard is the source of truth).
 
-3. **`apply-store-branding`** (internal helper)
-   - POSTs branding pack to `{site_url}/wp-json/customizer-studio/v1/branding` using the one-time admin token returned by InstaWP's clone response.
-   - Marks store `active` on success.
-   - Note: a small WP-plugin REST route to receive this payload is a follow-up update to `customizer-studio-woocommerce.php`. The function and infrastructure will be ready; the plugin endpoint can ship next.
-
-## UI (new route `/corporate-stores`)
-
-Sidebar entry under "Storefront", protected for authenticated users.
-
-- **List view** — table of the user's corporate stores: status badge (Provisioning ⏳ / Active ✅ / Failed ❌), site URL, "Open WP Admin" link, "Re-apply branding" action.
-- **"+ New corporate store" button** opens a multi-section dialog form:
-  - **Identity** — store name, contact email, optional custom domain
-  - **Visual** — primary color picker, accent color picker, font family dropdown (reuses our 47 Google Fonts list)
-  - **Assets** — main logo, secondary/dark-mode logo, favicon (drag-and-drop, preview, mime/size validation — same pattern as BrandSettings)
-- On submit → uploads assets to storage → calls `provision-corporate-store` → polls the row every 3s until status ≠ provisioning.
-
-All inputs use Zod client-side AND server-side.
-
-## What you'll need to do (one-time)
-1. Build a WooCommerce template site on InstaWP and install `customizer-studio-woocommerce.php` on it. Copy the **template ID** into `INSTAWP_TEMPLATE_ID`.
-2. In InstaWP → Webhooks add `https://qumrnazgdrijdcihtkah.supabase.co/functions/v1/instawp-webhook` and copy the signing secret into `INSTAWP_WEBHOOK_SECRET`.
-3. Generate an InstaWP API key → paste into `INSTAWP_API_KEY`.
-
-I'll print the exact webhook URL again after the secrets are configured.
-
-## Files
-- `supabase/migrations/<new>` — table + RLS + storage bucket
-- `supabase/functions/provision-corporate-store/index.ts` (new)
-- `supabase/functions/apply-store-branding/index.ts` (new)
-- `supabase/functions/instawp-webhook/index.ts` (new)
-- `src/pages/CorporateStores.tsx` (new — list + form dialog)
-- `src/components/DashboardSidebar.tsx` — add nav link
-- `src/App.tsx` — add route
-
-## Out of scope (this round)
-- Product/catalog seeding (empty stores per your answer)
-- Per-employee permission system inside WooCommerce
-- DNS automation for the custom domain (we store the value; user wires DNS themselves)
-- The new WP-plugin branding REST route — small follow-up update
