@@ -36,7 +36,7 @@ export function DashboardSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         {/* Logo */}
-        <div className="flex items-center gap-2 px-4 py-4 border-b border-sidebar-border">
+        <div className="flex items-center justify-center gap-2 px-4 py-4 border-b border-sidebar-border">
           {collapsed ? (
             <img src={logoIcon} alt="Printonet" className="h-7 w-7 shrink-0" />
           ) : (
