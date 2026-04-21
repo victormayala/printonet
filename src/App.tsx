@@ -21,6 +21,7 @@ import ReviewDesign from "./pages/ReviewDesign";
 import Checkout from "./pages/Checkout";
 import CheckoutReturn from "./pages/CheckoutReturn";
 import Cart from "./pages/Cart";
+import CorporateStores from "./pages/CorporateStores";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const App = () => (
             {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
             <Route path="/storefront" element={<DashboardRoute><Products initialTab="shopify" showStorefrontTabs /></DashboardRoute>} />
+            <Route path="/corporate-stores" element={<DashboardRoute><CorporateStores /></DashboardRoute>} />
             <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
             <Route path="/customizer" element={<DashboardRoute><Customizer initialTab="brand" /></DashboardRoute>} />
