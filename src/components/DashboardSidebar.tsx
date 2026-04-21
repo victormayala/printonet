@@ -3,7 +3,7 @@ import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
-import logo from "@/assets/printonet-logo.svg";
+import logo from "@/assets/printonet-logo-sidebar.svg";
 
 import {
   Sidebar,
@@ -37,11 +37,6 @@ export function DashboardSidebar() {
         {/* Logo */}
         <div className="flex items-center gap-2 px-4 py-4 border-b border-sidebar-border">
           <img src={logo} alt="Printonet" className="h-7 w-7 shrink-0" />
-          {!collapsed && (
-            <span className="font-semibold text-sm text-sidebar-foreground truncate">
-              Printonet
-            </span>
-          )}
         </div>
 
         <SidebarGroup>
