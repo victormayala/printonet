@@ -436,6 +436,8 @@ function StoreActions({ store }: { store: CorporateStore }) {
     </div>
   );
 }
+
+function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth();
   const [values, setValues] = useState<FormValues>({
     name: "",
