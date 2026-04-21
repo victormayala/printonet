@@ -205,7 +205,7 @@ export default function CorporateStores() {
         <CardHeader>
           <CardTitle>Your stores</CardTitle>
           <CardDescription>
-            Each store is a fully isolated WooCommerce site provisioned via InstaWP.
+            Each store is a fully isolated, Printonet-branded WooCommerce site provisioned for you automatically.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -375,7 +375,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       return data;
     },
     onSuccess: () => {
-      toast({ title: "Store provisioning started", description: "InstaWP is cloning your template — this can take 1–2 minutes." });
+      toast({ title: "Store provisioning started", description: "Your branded store is being prepared — this can take 1–2 minutes." });
       onCreated();
     },
     onError: (e: Error) => {
@@ -391,7 +391,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       <DialogHeader>
         <DialogTitle>New corporate store</DialogTitle>
         <DialogDescription>
-          Branding is applied to a fresh WooCommerce site cloned from your InstaWP template.
+          Printonet provisions a fresh, branded WooCommerce store and pushes your colors, fonts, and logos automatically.
         </DialogDescription>
       </DialogHeader>
 

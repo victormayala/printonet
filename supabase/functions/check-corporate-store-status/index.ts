@@ -118,7 +118,38 @@ Deno.serve(async (req) => {
         })
         .eq("id", store.id);
 
-      // Fire-and-forget branding push
+      // Wait until the cloned WP site is reachable + the Printonet plugin is
+      // active before pushing branding. InstaWP marks the task "completed"
+      // before WordPress finishes booting on the new container.
+      let healthy = false;
+      if (siteUrl) {
+        const healthUrl = `${siteUrl.replace(/\/$/, "")}/wp-json/printonet/v1/health`;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          try {
+            const hr = await fetch(healthUrl, {
+              headers: { Accept: "application/json" },
+            });
+            if (hr.ok) {
+              const hj = await hr.json().catch(() => null);
+              if (hj?.ok && hj?.plugin === "printonet") {
+                healthy = true;
+                break;
+              }
+            }
+          } catch (e) {
+            console.log(`health check attempt ${attempt + 1} failed`, e);
+          }
+          await new Promise((r) => setTimeout(r, 3000));
+        }
+      }
+
+      if (!healthy) {
+        console.warn(
+          "Printonet plugin not responding yet on cloned site; branding will need manual re-apply.",
+        );
+      }
+
+      // Fire-and-forget branding push (still attempt even if health was flaky)
       try {
         await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/apply-store-branding`,
