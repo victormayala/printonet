@@ -297,34 +297,7 @@ export default function CorporateStores() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {s.instawp_admin_url && (
-                          <Button asChild variant="outline" size="sm">
-                            <a href={s.instawp_admin_url} target="_blank" rel="noreferrer">
-                              WP Admin
-                            </a>
-                          </Button>
-                        )}
-                        {s.status === "active" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              const { error } = await supabase.functions.invoke(
-                                "apply-store-branding",
-                                { body: { store_id: s.id } },
-                              );
-                              toast({
-                                title: error ? "Re-apply failed" : "Branding re-applied",
-                                variant: error ? "destructive" : "default",
-                              });
-                            }}
-                          >
-                            <RefreshCw className="h-3 w-3" />
-                            Re-apply
-                          </Button>
-                        )}
-                      </div>
+                      <StoreActions store={s} />
                     </TableCell>
                   </TableRow>
                 ))}
