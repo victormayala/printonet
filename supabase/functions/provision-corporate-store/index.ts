@@ -105,6 +105,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // InstaWP requires site_name to match /^[a-zA-Z0-9-]+$/
+    // Sanitize: lowercase, replace any non-alphanumeric with '-', collapse repeats, trim '-'
+    const baseSlug = body.name
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "") // strip accents
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "store";
+    // Append short random suffix to avoid collisions across tenants
+    const suffix = store.id.replace(/-/g, "").slice(0, 8);
+    const siteName = `${baseSlug}-${suffix}`;
+
     // Call InstaWP API to clone the template
     // Docs: https://docs.instawp.com/api-documentation
     const instaRes = await fetch(
@@ -118,7 +132,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           template_slug: INSTAWP_TEMPLATE_ID,
-          site_name: body.name,
+          site_name: siteName,
           is_reserved: false,
         }),
       },
