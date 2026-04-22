@@ -3,7 +3,7 @@
  * Plugin Name: Printonet
  * Plugin URI:  https://app.printonet.com
  * Description: Receives store branding (name, colors, fonts, logos) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
- * Version:     1.0.0
+ * Version:     1.1.0
  * Author:      Printonet
  * Author URI:  https://app.printonet.com
  * License:     GPL-2.0-or-later
@@ -22,19 +22,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.0.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.1.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
+define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
 /* -------------------------------------------------------------------------
  * Auth helpers
  * ------------------------------------------------------------------------- */
 
-/**
- * Constant-time comparison of the incoming token against the configured one.
- *
- * @param string $provided Header value from the request.
- * @return bool
- */
 function printonet_token_is_valid( $provided ) {
 	if ( ! defined( 'PRINTONET_BRANDING_TOKEN' ) ) {
 		return false;
@@ -50,14 +45,6 @@ function printonet_token_is_valid( $provided ) {
  * Sanitization
  * ------------------------------------------------------------------------- */
 
-/**
- * Sanitize a single branding payload field. Allows empty strings so the
- * dashboard can clear a value by sending null or an empty string.
- *
- * @param mixed  $value Raw value.
- * @param string $kind  One of: text, email, url, hex, font.
- * @return string
- */
 function printonet_sanitize_field( $value, $kind ) {
 	if ( null === $value ) {
 		return '';
@@ -78,12 +65,112 @@ function printonet_sanitize_field( $value, $kind ) {
 		case 'hex':
 			return preg_match( '/^#[0-9a-fA-F]{6}$/', $value ) ? strtolower( $value ) : '';
 		case 'font':
-			// Allow letters, numbers, spaces, hyphens — typical Google Font names.
 			return preg_match( '/^[A-Za-z0-9 \-]{1,64}$/', $value ) ? $value : '';
 		case 'text':
 		default:
 			return sanitize_text_field( $value );
 	}
+}
+
+/* -------------------------------------------------------------------------
+ * Asset sideloading — pulls remote logo/favicon URLs into the media library
+ * so WordPress can use them as custom_logo / site_icon. Returns the
+ * attachment ID, or 0 on failure.
+ * ------------------------------------------------------------------------- */
+
+function printonet_sideload_to_media( $url ) {
+	if ( empty( $url ) ) {
+		return 0;
+	}
+	if ( ! function_exists( 'media_sideload_image' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+	}
+
+	$tmp = download_url( $url, 30 );
+	if ( is_wp_error( $tmp ) ) {
+		return 0;
+	}
+
+	// Determine a reasonable filename + extension.
+	$path     = wp_parse_url( $url, PHP_URL_PATH );
+	$basename = $path ? basename( $path ) : 'printonet-asset';
+	if ( false === strpos( $basename, '.' ) ) {
+		$basename .= '.png';
+	}
+
+	$file_array = [
+		'name'     => sanitize_file_name( $basename ),
+		'tmp_name' => $tmp,
+	];
+
+	$attachment_id = media_handle_sideload( $file_array, 0 );
+
+	if ( is_wp_error( $attachment_id ) ) {
+		@unlink( $tmp );
+		return 0;
+	}
+	return (int) $attachment_id;
+}
+
+/**
+ * Apply a logo / favicon URL to WordPress. If we previously sideloaded an
+ * asset for the same "kind" (logo|favicon) at the same URL, reuse it; else
+ * sideload fresh and remove the old one.
+ */
+function printonet_apply_asset( $kind, $url ) {
+	$ids       = get_option( PRINTONET_ASSET_IDS_OPTION, [] );
+	$prev_id   = isset( $ids[ $kind ]['id'] ) ? (int) $ids[ $kind ]['id'] : 0;
+	$prev_url  = isset( $ids[ $kind ]['url'] ) ? (string) $ids[ $kind ]['url'] : '';
+
+	// Clearing the asset.
+	if ( '' === $url ) {
+		if ( $prev_id ) {
+			wp_delete_attachment( $prev_id, true );
+		}
+		unset( $ids[ $kind ] );
+		update_option( PRINTONET_ASSET_IDS_OPTION, $ids, false );
+		if ( 'logo' === $kind ) {
+			remove_theme_mod( 'custom_logo' );
+		} elseif ( 'favicon' === $kind ) {
+			delete_option( 'site_icon' );
+		}
+		return 0;
+	}
+
+	// Already up to date.
+	if ( $prev_id && $prev_url === $url && get_post( $prev_id ) ) {
+		if ( 'logo' === $kind ) {
+			set_theme_mod( 'custom_logo', $prev_id );
+		} elseif ( 'favicon' === $kind ) {
+			update_option( 'site_icon', $prev_id );
+		}
+		return $prev_id;
+	}
+
+	// Sideload fresh.
+	$new_id = printonet_sideload_to_media( $url );
+	if ( ! $new_id ) {
+		return 0;
+	}
+
+	if ( $prev_id ) {
+		wp_delete_attachment( $prev_id, true );
+	}
+
+	$ids[ $kind ] = [ 'id' => $new_id, 'url' => $url ];
+	update_option( PRINTONET_ASSET_IDS_OPTION, $ids, false );
+
+	if ( 'logo' === $kind ) {
+		set_theme_mod( 'custom_logo', $new_id );
+		// Most themes look at this for header logo display.
+		add_theme_support( 'custom-logo' );
+	} elseif ( 'favicon' === $kind ) {
+		update_option( 'site_icon', $new_id );
+	}
+
+	return $new_id;
 }
 
 /* -------------------------------------------------------------------------
@@ -93,8 +180,6 @@ function printonet_sanitize_field( $value, $kind ) {
 add_action(
 	'rest_api_init',
 	function () {
-		// Public liveness check used by Printonet to confirm a freshly
-		// cloned site is responsive before pushing branding.
 		register_rest_route(
 			'printonet/v1',
 			'/health',
@@ -115,8 +200,6 @@ add_action(
 			]
 		);
 
-		// Receives store identity + theme + asset URLs from the Printonet
-		// dashboard. Authenticated with X-Printonet-Token shared secret.
 		register_rest_route(
 			'printonet/v1',
 			'/branding',
@@ -168,10 +251,16 @@ add_action(
 						update_option( 'admin_email', $clean['contact_email'] );
 					}
 
+					// Sideload + apply logo and favicon as native WP assets.
+					$logo_id    = printonet_apply_asset( 'logo', $clean['logo_url'] );
+					$favicon_id = printonet_apply_asset( 'favicon', $clean['favicon_url'] );
+
 					return new WP_REST_Response(
 						[
-							'ok'      => true,
-							'stored'  => $clean,
+							'ok'         => true,
+							'stored'     => $clean,
+							'logo_id'    => $logo_id,
+							'favicon_id' => $favicon_id,
 						],
 						200
 					);
@@ -183,6 +272,10 @@ add_action(
 
 /* -------------------------------------------------------------------------
  * Front-end: inject branding into <head>
+ *
+ * We override common theme color/typography selectors so the brand colors
+ * are visible on default themes (Twenty Twenty-Four, Storefront, Astra, etc.)
+ * without requiring theme customization.
  * ------------------------------------------------------------------------- */
 
 add_action(
@@ -201,31 +294,74 @@ add_action(
 		// Google Fonts <link> for the selected font.
 		if ( '' !== $font ) {
 			$family = rawurlencode( $font );
+			echo "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n";
+			echo "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n";
 			printf(
-				'<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n" .
-				'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n" .
-				'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=%s:wght@400;500;600;700&display=swap">' . "\n",
-				$family . '%3Awght%40400%3B500%3B600%3B700&display=swap' === '' ? $family : $family
+				"<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=%s:wght@400;500;600;700&display=swap\">\n",
+				$family
 			);
 		}
 
-		// Favicon override.
-		if ( '' !== $favicon ) {
-			printf( '<link rel="icon" href="%s">' . "\n", esc_url( $favicon ) );
+		// Fallback favicon link if the site_icon option doesn't render one.
+		if ( '' !== $favicon && ! has_site_icon() ) {
+			printf( "<link rel=\"icon\" href=\"%s\">\n", esc_url( $favicon ) );
 		}
 
-		// CSS variables consumable by themes/blocks.
-		$css = ':root{';
+		// Build the actual brand stylesheet.
+		$css = '';
+
+		// Custom-property tokens (themes/blocks can opt in).
+		$css .= ':root{';
 		if ( '' !== $primary ) {
 			$css .= '--printonet-primary:' . esc_attr( $primary ) . ';';
+			// Override common WP block-editor / theme.json color tokens so most themes pick this up.
+			$css .= '--wp--preset--color--primary:' . esc_attr( $primary ) . ';';
+			$css .= '--wp--preset--color--vivid-cyan-blue:' . esc_attr( $primary ) . ';';
 		}
 		if ( '' !== $accent ) {
 			$css .= '--printonet-accent:' . esc_attr( $accent ) . ';';
+			$css .= '--wp--preset--color--accent:' . esc_attr( $accent ) . ';';
 		}
 		if ( '' !== $font ) {
 			$css .= "--printonet-font:'" . esc_attr( $font ) . "',sans-serif;";
+			$css .= "--wp--preset--font-family--body:'" . esc_attr( $font ) . "',sans-serif;";
+			$css .= "--wp--preset--font-family--heading:'" . esc_attr( $font ) . "',sans-serif;";
 		}
 		$css .= '}';
+
+		// Direct selector overrides — high specificity so they beat default theme rules.
+		if ( '' !== $primary ) {
+			$css .= "
+a, .wp-block-button__link:not(.has-background), .button, button.alt, .woocommerce a.button.alt, .woocommerce #respond input#submit.alt, .woocommerce-page a.button.alt, .woocommerce-page button.button.alt, .woocommerce-page input.button.alt {
+  color: {$primary};
+}
+.wp-block-button__link:not(.has-background), .button.alt, .woocommerce a.button.alt, .woocommerce #respond input#submit.alt, .woocommerce-page a.button.alt, .woocommerce-page button.button.alt, .woocommerce-page input.button.alt, .woocommerce ul.products li.product .button, .woocommerce span.onsale {
+  background-color: {$primary} !important;
+  border-color: {$primary} !important;
+  color: #fff !important;
+}
+.has-primary-color { color: {$primary} !important; }
+.has-primary-background-color { background-color: {$primary} !important; }
+.is-style-outline > .wp-block-button__link, .wp-block-button.is-style-outline .wp-block-button__link { border-color: {$primary} !important; color: {$primary} !important; }
+";
+		}
+
+		if ( '' !== $accent ) {
+			$css .= "
+a:hover, .wp-block-button__link:hover { color: {$accent}; }
+.has-accent-color { color: {$accent} !important; }
+.has-accent-background-color { background-color: {$accent} !important; }
+";
+		}
+
+		if ( '' !== $font ) {
+			$css .= "
+body, button, input, select, optgroup, textarea, .wp-block-post-title, h1, h2, h3, h4, h5, h6 {
+  font-family: '" . esc_attr( $font ) . "', sans-serif;
+}
+";
+		}
+
 		echo "<style id=\"printonet-branding\">{$css}</style>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	},
 	5
