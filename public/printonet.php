@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Printonet
  * Plugin URI:  https://app.printonet.com
- * Description: Receives store branding (name, colors, fonts, logos) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
- * Version:     1.1.0
+ * Description: Receives store branding (name, color, font, logo, favicon) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
+ * Version:     1.2.0
  * Author:      Printonet
  * Author URI:  https://app.printonet.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.1.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.2.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
 define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
