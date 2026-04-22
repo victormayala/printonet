@@ -472,8 +472,6 @@ function StoreFormFields({
   errors,
   logo,
   setLogo,
-  secondaryLogo,
-  setSecondaryLogo,
   favicon,
   setFavicon,
   existing,
@@ -484,16 +482,13 @@ function StoreFormFields({
   errors: Record<string, string>;
   logo: File | null;
   setLogo: (f: File | null) => void;
-  secondaryLogo: File | null;
-  setSecondaryLogo: (f: File | null) => void;
   favicon: File | null;
   setFavicon: (f: File | null) => void;
   existing?: {
     logo_url: string | null;
-    secondary_logo_url: string | null;
     favicon_url: string | null;
   };
-  onClearExisting?: (kind: "logo" | "secondary" | "favicon") => void;
+  onClearExisting?: (kind: "logo" | "favicon") => void;
 }) {
   return (
     <div className="space-y-6 py-2">
