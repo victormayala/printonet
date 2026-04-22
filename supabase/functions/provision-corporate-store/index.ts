@@ -12,10 +12,8 @@ const BodySchema = z.object({
   contact_email: z.string().trim().email().max(255),
   custom_domain: z.string().trim().max(255).optional().nullable(),
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  accent_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   font_family: z.string().min(1).max(80),
   logo_url: z.string().url().optional().nullable(),
-  secondary_logo_url: z.string().url().optional().nullable(),
   favicon_url: z.string().url().optional().nullable(),
 });
 
