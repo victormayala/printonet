@@ -522,7 +522,7 @@ function StoreFormFields({
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visual theme</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor="primary">Primary color</Label>
             <div className="flex items-center gap-2">
@@ -540,24 +540,6 @@ function StoreFormFields({
               />
             </div>
             {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="accent">Accent color</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={values.accent_color}
-                onChange={(e) => setField("accent_color", e.target.value)}
-                className="h-10 w-12 rounded border bg-background cursor-pointer"
-              />
-              <Input
-                id="accent"
-                value={values.accent_color}
-                onChange={(e) => setField("accent_color", e.target.value)}
-                className="font-mono"
-              />
-            </div>
-            {errors.accent_color && <p className="text-xs text-destructive">{errors.accent_color}</p>}
           </div>
           <div className="space-y-1">
             <Label htmlFor="font">Font family</Label>
