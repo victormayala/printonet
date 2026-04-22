@@ -85,10 +85,8 @@ Deno.serve(async (req) => {
         contact_email: body.contact_email,
         custom_domain: body.custom_domain || null,
         primary_color: body.primary_color,
-        accent_color: body.accent_color,
         font_family: body.font_family,
         logo_url: body.logo_url || null,
-        secondary_logo_url: body.secondary_logo_url || null,
         favicon_url: body.favicon_url || null,
         status: "provisioning",
       })
