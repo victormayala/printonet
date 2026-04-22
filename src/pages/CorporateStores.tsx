@@ -604,11 +604,9 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     contact_email: "",
     custom_domain: "",
     primary_color: "#7c3aed",
-    accent_color: "#e0459b",
     font_family: "Inter",
   });
   const [logo, setLogo] = useState<File | null>(null);
-  const [secondaryLogo, setSecondaryLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -627,9 +625,8 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       if (!user?.id) throw new Error("Not signed in");
 
       const tempId = crypto.randomUUID();
-      const [logo_url, secondary_logo_url, favicon_url] = await Promise.all([
+      const [logo_url, favicon_url] = await Promise.all([
         logo ? uploadAsset(user.id, tempId, logo, "logo") : Promise.resolve(null),
-        secondaryLogo ? uploadAsset(user.id, tempId, secondaryLogo, "secondary-logo") : Promise.resolve(null),
         favicon ? uploadAsset(user.id, tempId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
@@ -638,7 +635,6 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           ...parsed.data,
           custom_domain: parsed.data.custom_domain || null,
           logo_url,
-          secondary_logo_url,
           favicon_url,
         },
       });
@@ -672,8 +668,6 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         errors={errors}
         logo={logo}
         setLogo={setLogo}
-        secondaryLogo={secondaryLogo}
-        setSecondaryLogo={setSecondaryLogo}
         favicon={favicon}
         setFavicon={setFavicon}
       />
