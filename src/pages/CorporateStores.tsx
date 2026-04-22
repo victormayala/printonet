@@ -695,15 +695,12 @@ function EditStoreDialog({
     contact_email: store.contact_email,
     custom_domain: store.custom_domain ?? "",
     primary_color: store.primary_color,
-    accent_color: store.accent_color,
     font_family: store.font_family,
   });
   const [logo, setLogo] = useState<File | null>(null);
-  const [secondaryLogo, setSecondaryLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [existing, setExisting] = useState({
     logo_url: store.logo_url,
-    secondary_logo_url: store.secondary_logo_url,
     favicon_url: store.favicon_url,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -711,11 +708,10 @@ function EditStoreDialog({
   const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) =>
     setValues((p) => ({ ...p, [k]: v }));
 
-  const onClearExisting = (kind: "logo" | "secondary" | "favicon") => {
+  const onClearExisting = (kind: "logo" | "favicon") => {
     setExisting((p) => ({
       ...p,
       logo_url: kind === "logo" ? null : p.logo_url,
-      secondary_logo_url: kind === "secondary" ? null : p.secondary_logo_url,
       favicon_url: kind === "favicon" ? null : p.favicon_url,
     }));
   };
@@ -734,9 +730,8 @@ function EditStoreDialog({
       setErrors({});
       if (!user?.id) throw new Error("Not signed in");
 
-      const [newLogoUrl, newSecondaryUrl, newFaviconUrl] = await Promise.all([
+      const [newLogoUrl, newFaviconUrl] = await Promise.all([
         logo ? uploadAsset(user.id, store.id, logo, "logo") : Promise.resolve(null),
-        secondaryLogo ? uploadAsset(user.id, store.id, secondaryLogo, "secondary-logo") : Promise.resolve(null),
         favicon ? uploadAsset(user.id, store.id, favicon, "favicon") : Promise.resolve(null),
       ]);
 
@@ -747,10 +742,8 @@ function EditStoreDialog({
           contact_email: parsed.data.contact_email,
           custom_domain: parsed.data.custom_domain || null,
           primary_color: parsed.data.primary_color,
-          accent_color: parsed.data.accent_color,
           font_family: parsed.data.font_family,
           logo_url: newLogoUrl ?? existing.logo_url,
-          secondary_logo_url: newSecondaryUrl ?? existing.secondary_logo_url,
           favicon_url: newFaviconUrl ?? existing.favicon_url,
         })
         .eq("id", store.id);
@@ -793,8 +786,6 @@ function EditStoreDialog({
         errors={errors}
         logo={logo}
         setLogo={setLogo}
-        secondaryLogo={secondaryLogo}
-        setSecondaryLogo={setSecondaryLogo}
         favicon={favicon}
         setFavicon={setFavicon}
         existing={existing}
