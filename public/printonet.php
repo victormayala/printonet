@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Printonet
  * Plugin URI:  https://app.printonet.com
- * Description: Receives store branding (name, colors, fonts, logos) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
- * Version:     1.1.0
+ * Description: Receives store branding (name, color, font, logo, favicon) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
+ * Version:     1.2.0
  * Author:      Printonet
  * Author URI:  https://app.printonet.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.1.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.2.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
 define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
@@ -234,10 +234,8 @@ add_action(
 						'contact_email'      => printonet_sanitize_field( $body['contact_email'] ?? null, 'email' ),
 						'custom_domain'      => printonet_sanitize_field( $body['custom_domain'] ?? null, 'text' ),
 						'primary_color'      => printonet_sanitize_field( $body['primary_color'] ?? null, 'hex' ),
-						'accent_color'       => printonet_sanitize_field( $body['accent_color'] ?? null, 'hex' ),
 						'font_family'        => printonet_sanitize_field( $body['font_family'] ?? null, 'font' ),
 						'logo_url'           => printonet_sanitize_field( $body['logo_url'] ?? null, 'url' ),
-						'secondary_logo_url' => printonet_sanitize_field( $body['secondary_logo_url'] ?? null, 'url' ),
 						'favicon_url'        => printonet_sanitize_field( $body['favicon_url'] ?? null, 'url' ),
 						'updated_at'         => gmdate( 'c' ),
 					];
@@ -287,7 +285,6 @@ add_action(
 		}
 
 		$primary = isset( $branding['primary_color'] ) ? $branding['primary_color'] : '';
-		$accent  = isset( $branding['accent_color'] ) ? $branding['accent_color'] : '';
 		$font    = isset( $branding['font_family'] ) ? $branding['font_family'] : '';
 		$favicon = isset( $branding['favicon_url'] ) ? $branding['favicon_url'] : '';
 
@@ -318,10 +315,6 @@ add_action(
 			$css .= '--wp--preset--color--primary:' . esc_attr( $primary ) . ';';
 			$css .= '--wp--preset--color--vivid-cyan-blue:' . esc_attr( $primary ) . ';';
 		}
-		if ( '' !== $accent ) {
-			$css .= '--printonet-accent:' . esc_attr( $accent ) . ';';
-			$css .= '--wp--preset--color--accent:' . esc_attr( $accent ) . ';';
-		}
 		if ( '' !== $font ) {
 			$css .= "--printonet-font:'" . esc_attr( $font ) . "',sans-serif;";
 			$css .= "--wp--preset--font-family--body:'" . esc_attr( $font ) . "',sans-serif;";
@@ -343,14 +336,7 @@ a, .wp-block-button__link:not(.has-background), .button, button.alt, .woocommerc
 .has-primary-color { color: {$primary} !important; }
 .has-primary-background-color { background-color: {$primary} !important; }
 .is-style-outline > .wp-block-button__link, .wp-block-button.is-style-outline .wp-block-button__link { border-color: {$primary} !important; color: {$primary} !important; }
-";
-		}
-
-		if ( '' !== $accent ) {
-			$css .= "
-a:hover, .wp-block-button__link:hover { color: {$accent}; }
-.has-accent-color { color: {$accent} !important; }
-.has-accent-background-color { background-color: {$accent} !important; }
+a:hover, .wp-block-button__link:hover { opacity: 0.85; }
 ";
 		}
 

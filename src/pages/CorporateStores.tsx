@@ -45,7 +45,6 @@ const formSchema = z.object({
   contact_email: z.string().trim().email("Invalid email").max(255),
   custom_domain: z.string().trim().max(255).optional().or(z.literal("")),
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be hex like #7c3aed"),
-  accent_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be hex like #e0459b"),
   font_family: z.string().min(1),
 });
 
@@ -473,8 +472,6 @@ function StoreFormFields({
   errors,
   logo,
   setLogo,
-  secondaryLogo,
-  setSecondaryLogo,
   favicon,
   setFavicon,
   existing,
@@ -485,16 +482,13 @@ function StoreFormFields({
   errors: Record<string, string>;
   logo: File | null;
   setLogo: (f: File | null) => void;
-  secondaryLogo: File | null;
-  setSecondaryLogo: (f: File | null) => void;
   favicon: File | null;
   setFavicon: (f: File | null) => void;
   existing?: {
     logo_url: string | null;
-    secondary_logo_url: string | null;
     favicon_url: string | null;
   };
-  onClearExisting?: (kind: "logo" | "secondary" | "favicon") => void;
+  onClearExisting?: (kind: "logo" | "favicon") => void;
 }) {
   return (
     <div className="space-y-6 py-2">
@@ -523,7 +517,7 @@ function StoreFormFields({
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visual theme</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor="primary">Primary color</Label>
             <div className="flex items-center gap-2">
@@ -541,24 +535,6 @@ function StoreFormFields({
               />
             </div>
             {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="accent">Accent color</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={values.accent_color}
-                onChange={(e) => setField("accent_color", e.target.value)}
-                className="h-10 w-12 rounded border bg-background cursor-pointer"
-              />
-              <Input
-                id="accent"
-                value={values.accent_color}
-                onChange={(e) => setField("accent_color", e.target.value)}
-                className="font-mono"
-              />
-            </div>
-            {errors.accent_color && <p className="text-xs text-destructive">{errors.accent_color}</p>}
           </div>
           <div className="space-y-1">
             <Label htmlFor="font">Font family</Label>
@@ -582,7 +558,7 @@ function StoreFormFields({
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Brand assets</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <LogoField
             label="Main logo"
             value={logo}
@@ -590,14 +566,6 @@ function StoreFormFields({
             onChange={setLogo}
             onClearExisting={onClearExisting ? () => onClearExisting("logo") : undefined}
             hint="PNG/SVG, light background"
-          />
-          <LogoField
-            label="Secondary logo"
-            value={secondaryLogo}
-            existingUrl={existing?.secondary_logo_url}
-            onChange={setSecondaryLogo}
-            onClearExisting={onClearExisting ? () => onClearExisting("secondary") : undefined}
-            hint="For dark backgrounds"
           />
           <LogoField
             label="Favicon"
@@ -636,11 +604,9 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     contact_email: "",
     custom_domain: "",
     primary_color: "#7c3aed",
-    accent_color: "#e0459b",
     font_family: "Inter",
   });
   const [logo, setLogo] = useState<File | null>(null);
-  const [secondaryLogo, setSecondaryLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -659,9 +625,8 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       if (!user?.id) throw new Error("Not signed in");
 
       const tempId = crypto.randomUUID();
-      const [logo_url, secondary_logo_url, favicon_url] = await Promise.all([
+      const [logo_url, favicon_url] = await Promise.all([
         logo ? uploadAsset(user.id, tempId, logo, "logo") : Promise.resolve(null),
-        secondaryLogo ? uploadAsset(user.id, tempId, secondaryLogo, "secondary-logo") : Promise.resolve(null),
         favicon ? uploadAsset(user.id, tempId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
@@ -670,7 +635,6 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           ...parsed.data,
           custom_domain: parsed.data.custom_domain || null,
           logo_url,
-          secondary_logo_url,
           favicon_url,
         },
       });
@@ -704,8 +668,6 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         errors={errors}
         logo={logo}
         setLogo={setLogo}
-        secondaryLogo={secondaryLogo}
-        setSecondaryLogo={setSecondaryLogo}
         favicon={favicon}
         setFavicon={setFavicon}
       />
@@ -733,15 +695,12 @@ function EditStoreDialog({
     contact_email: store.contact_email,
     custom_domain: store.custom_domain ?? "",
     primary_color: store.primary_color,
-    accent_color: store.accent_color,
     font_family: store.font_family,
   });
   const [logo, setLogo] = useState<File | null>(null);
-  const [secondaryLogo, setSecondaryLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [existing, setExisting] = useState({
     logo_url: store.logo_url,
-    secondary_logo_url: store.secondary_logo_url,
     favicon_url: store.favicon_url,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -749,11 +708,10 @@ function EditStoreDialog({
   const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) =>
     setValues((p) => ({ ...p, [k]: v }));
 
-  const onClearExisting = (kind: "logo" | "secondary" | "favicon") => {
+  const onClearExisting = (kind: "logo" | "favicon") => {
     setExisting((p) => ({
       ...p,
       logo_url: kind === "logo" ? null : p.logo_url,
-      secondary_logo_url: kind === "secondary" ? null : p.secondary_logo_url,
       favicon_url: kind === "favicon" ? null : p.favicon_url,
     }));
   };
@@ -772,9 +730,8 @@ function EditStoreDialog({
       setErrors({});
       if (!user?.id) throw new Error("Not signed in");
 
-      const [newLogoUrl, newSecondaryUrl, newFaviconUrl] = await Promise.all([
+      const [newLogoUrl, newFaviconUrl] = await Promise.all([
         logo ? uploadAsset(user.id, store.id, logo, "logo") : Promise.resolve(null),
-        secondaryLogo ? uploadAsset(user.id, store.id, secondaryLogo, "secondary-logo") : Promise.resolve(null),
         favicon ? uploadAsset(user.id, store.id, favicon, "favicon") : Promise.resolve(null),
       ]);
 
@@ -785,10 +742,8 @@ function EditStoreDialog({
           contact_email: parsed.data.contact_email,
           custom_domain: parsed.data.custom_domain || null,
           primary_color: parsed.data.primary_color,
-          accent_color: parsed.data.accent_color,
           font_family: parsed.data.font_family,
           logo_url: newLogoUrl ?? existing.logo_url,
-          secondary_logo_url: newSecondaryUrl ?? existing.secondary_logo_url,
           favicon_url: newFaviconUrl ?? existing.favicon_url,
         })
         .eq("id", store.id);
@@ -831,8 +786,6 @@ function EditStoreDialog({
         errors={errors}
         logo={logo}
         setLogo={setLogo}
-        secondaryLogo={secondaryLogo}
-        setSecondaryLogo={setSecondaryLogo}
         favicon={favicon}
         setFavicon={setFavicon}
         existing={existing}

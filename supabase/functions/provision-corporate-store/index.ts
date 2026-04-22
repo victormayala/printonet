@@ -12,10 +12,8 @@ const BodySchema = z.object({
   contact_email: z.string().trim().email().max(255),
   custom_domain: z.string().trim().max(255).optional().nullable(),
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  accent_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   font_family: z.string().min(1).max(80),
   logo_url: z.string().url().optional().nullable(),
-  secondary_logo_url: z.string().url().optional().nullable(),
   favicon_url: z.string().url().optional().nullable(),
 });
 
@@ -87,10 +85,8 @@ Deno.serve(async (req) => {
         contact_email: body.contact_email,
         custom_domain: body.custom_domain || null,
         primary_color: body.primary_color,
-        accent_color: body.accent_color,
         font_family: body.font_family,
         logo_url: body.logo_url || null,
-        secondary_logo_url: body.secondary_logo_url || null,
         favicon_url: body.favicon_url || null,
         status: "provisioning",
       })
