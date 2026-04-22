@@ -45,7 +45,6 @@ const formSchema = z.object({
   contact_email: z.string().trim().email("Invalid email").max(255),
   custom_domain: z.string().trim().max(255).optional().or(z.literal("")),
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be hex like #7c3aed"),
-  accent_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be hex like #e0459b"),
   font_family: z.string().min(1),
 });
 
