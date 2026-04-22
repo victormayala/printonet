@@ -563,7 +563,7 @@ function StoreFormFields({
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Brand assets</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <LogoField
             label="Main logo"
             value={logo}
@@ -571,14 +571,6 @@ function StoreFormFields({
             onChange={setLogo}
             onClearExisting={onClearExisting ? () => onClearExisting("logo") : undefined}
             hint="PNG/SVG, light background"
-          />
-          <LogoField
-            label="Secondary logo"
-            value={secondaryLogo}
-            existingUrl={existing?.secondary_logo_url}
-            onChange={setSecondaryLogo}
-            onClearExisting={onClearExisting ? () => onClearExisting("secondary") : undefined}
-            hint="For dark backgrounds"
           />
           <LogoField
             label="Favicon"
