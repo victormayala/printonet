@@ -285,7 +285,6 @@ add_action(
 		}
 
 		$primary = isset( $branding['primary_color'] ) ? $branding['primary_color'] : '';
-		$accent  = isset( $branding['accent_color'] ) ? $branding['accent_color'] : '';
 		$font    = isset( $branding['font_family'] ) ? $branding['font_family'] : '';
 		$favicon = isset( $branding['favicon_url'] ) ? $branding['favicon_url'] : '';
 
@@ -316,10 +315,6 @@ add_action(
 			$css .= '--wp--preset--color--primary:' . esc_attr( $primary ) . ';';
 			$css .= '--wp--preset--color--vivid-cyan-blue:' . esc_attr( $primary ) . ';';
 		}
-		if ( '' !== $accent ) {
-			$css .= '--printonet-accent:' . esc_attr( $accent ) . ';';
-			$css .= '--wp--preset--color--accent:' . esc_attr( $accent ) . ';';
-		}
 		if ( '' !== $font ) {
 			$css .= "--printonet-font:'" . esc_attr( $font ) . "',sans-serif;";
 			$css .= "--wp--preset--font-family--body:'" . esc_attr( $font ) . "',sans-serif;";
@@ -341,14 +336,7 @@ a, .wp-block-button__link:not(.has-background), .button, button.alt, .woocommerc
 .has-primary-color { color: {$primary} !important; }
 .has-primary-background-color { background-color: {$primary} !important; }
 .is-style-outline > .wp-block-button__link, .wp-block-button.is-style-outline .wp-block-button__link { border-color: {$primary} !important; color: {$primary} !important; }
-";
-		}
-
-		if ( '' !== $accent ) {
-			$css .= "
-a:hover, .wp-block-button__link:hover { color: {$accent}; }
-.has-accent-color { color: {$accent} !important; }
-.has-accent-background-color { background-color: {$accent} !important; }
+a:hover, .wp-block-button__link:hover { opacity: 0.85; }
 ";
 		}
 
