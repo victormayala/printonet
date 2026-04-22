@@ -234,10 +234,8 @@ add_action(
 						'contact_email'      => printonet_sanitize_field( $body['contact_email'] ?? null, 'email' ),
 						'custom_domain'      => printonet_sanitize_field( $body['custom_domain'] ?? null, 'text' ),
 						'primary_color'      => printonet_sanitize_field( $body['primary_color'] ?? null, 'hex' ),
-						'accent_color'       => printonet_sanitize_field( $body['accent_color'] ?? null, 'hex' ),
 						'font_family'        => printonet_sanitize_field( $body['font_family'] ?? null, 'font' ),
 						'logo_url'           => printonet_sanitize_field( $body['logo_url'] ?? null, 'url' ),
-						'secondary_logo_url' => printonet_sanitize_field( $body['secondary_logo_url'] ?? null, 'url' ),
 						'favicon_url'        => printonet_sanitize_field( $body['favicon_url'] ?? null, 'url' ),
 						'updated_at'         => gmdate( 'c' ),
 					];
