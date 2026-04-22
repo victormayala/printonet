@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -105,16 +105,20 @@ function StatusBadge({ status }: { status: CorporateStore["status"] }) {
 function LogoField({
   label,
   value,
+  existingUrl,
   onChange,
+  onClearExisting,
   hint,
 }: {
   label: string;
   value: File | null;
+  existingUrl?: string | null;
   onChange: (f: File | null) => void;
+  onClearExisting?: () => void;
   hint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const previewUrl = value ? URL.createObjectURL(value) : null;
+  const previewUrl = value ? URL.createObjectURL(value) : existingUrl || null;
 
   return (
     <div className="space-y-2">
@@ -149,10 +153,18 @@ function LogoField({
           />
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-              {value ? "Replace" : "Upload"}
+              {value || existingUrl ? "Replace" : "Upload"}
             </Button>
-            {value && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
+            {(value || existingUrl) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  onChange(null);
+                  onClearExisting?.();
+                }}
+              >
                 <X className="h-3 w-3" />
               </Button>
             )}
@@ -314,6 +326,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete" | "rebrand">(null);
 
   const refetch = () =>
@@ -379,6 +392,12 @@ function StoreActions({ store }: { store: CorporateStore }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {(isActive || isPaused) && (
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" />
+              Edit branding
+            </DropdownMenuItem>
+          )}
           {isActive && (
             <DropdownMenuItem onClick={rebrand}>
               <RefreshCw className="h-4 w-4" />
@@ -408,6 +427,16 @@ function StoreActions({ store }: { store: CorporateStore }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <EditStoreDialog
+          store={store}
+          onSaved={() => {
+            setEditOpen(false);
+            refetch();
+          }}
+        />
+      </Dialog>
+
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -435,6 +464,169 @@ function StoreActions({ store }: { store: CorporateStore }) {
       </AlertDialog>
     </div>
   );
+}
+
+/** Shared identity + theme + assets editor used by both create and edit dialogs. */
+function StoreFormFields({
+  values,
+  setField,
+  errors,
+  logo,
+  setLogo,
+  secondaryLogo,
+  setSecondaryLogo,
+  favicon,
+  setFavicon,
+  existing,
+  onClearExisting,
+}: {
+  values: FormValues;
+  setField: <K extends keyof FormValues>(k: K, v: FormValues[K]) => void;
+  errors: Record<string, string>;
+  logo: File | null;
+  setLogo: (f: File | null) => void;
+  secondaryLogo: File | null;
+  setSecondaryLogo: (f: File | null) => void;
+  favicon: File | null;
+  setFavicon: (f: File | null) => void;
+  existing?: {
+    logo_url: string | null;
+    secondary_logo_url: string | null;
+    favicon_url: string | null;
+  };
+  onClearExisting?: (kind: "logo" | "secondary" | "favicon") => void;
+}) {
+  return (
+    <div className="space-y-6 py-2">
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Identity</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 space-y-1">
+            <Label htmlFor="name">Store name</Label>
+            <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
+            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email">Contact email</Label>
+            <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
+            {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="domain">Custom domain (optional)</Label>
+            <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
+            {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+          </div>
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visual theme</h3>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="primary">Primary color</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={values.primary_color}
+                onChange={(e) => setField("primary_color", e.target.value)}
+                className="h-10 w-12 rounded border bg-background cursor-pointer"
+              />
+              <Input
+                id="primary"
+                value={values.primary_color}
+                onChange={(e) => setField("primary_color", e.target.value)}
+                className="font-mono"
+              />
+            </div>
+            {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="accent">Accent color</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={values.accent_color}
+                onChange={(e) => setField("accent_color", e.target.value)}
+                className="h-10 w-12 rounded border bg-background cursor-pointer"
+              />
+              <Input
+                id="accent"
+                value={values.accent_color}
+                onChange={(e) => setField("accent_color", e.target.value)}
+                className="font-mono"
+              />
+            </div>
+            {errors.accent_color && <p className="text-xs text-destructive">{errors.accent_color}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="font">Font family</Label>
+            <Select value={values.font_family} onValueChange={(v) => setField("font_family", v)}>
+              <SelectTrigger id="font">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FONT_OPTIONS.map((f) => (
+                  <SelectItem key={f} value={f} style={{ fontFamily: f }}>
+                    {f}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Brand assets</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <LogoField
+            label="Main logo"
+            value={logo}
+            existingUrl={existing?.logo_url}
+            onChange={setLogo}
+            onClearExisting={onClearExisting ? () => onClearExisting("logo") : undefined}
+            hint="PNG/SVG, light background"
+          />
+          <LogoField
+            label="Secondary logo"
+            value={secondaryLogo}
+            existingUrl={existing?.secondary_logo_url}
+            onChange={setSecondaryLogo}
+            onClearExisting={onClearExisting ? () => onClearExisting("secondary") : undefined}
+            hint="For dark backgrounds"
+          />
+          <LogoField
+            label="Favicon"
+            value={favicon}
+            existingUrl={existing?.favicon_url}
+            onChange={setFavicon}
+            onClearExisting={onClearExisting ? () => onClearExisting("favicon") : undefined}
+            hint="32×32 or 64×64 px, .ico/.png"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+async function uploadAsset(
+  userId: string,
+  storeId: string,
+  file: File,
+  kind: string,
+): Promise<string> {
+  const ext = file.name.split(".").pop() || "png";
+  const path = `${userId}/${storeId}/${kind}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("corporate-store-assets")
+    .upload(path, file, { upsert: true, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from("corporate-store-assets").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
@@ -466,24 +658,11 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       setErrors({});
       if (!user?.id) throw new Error("Not signed in");
 
-      // Upload assets first
       const tempId = crypto.randomUUID();
-      const upload = async (file: File | null, kind: string) => {
-        if (!file) return null;
-        const ext = file.name.split(".").pop() || "png";
-        const path = `${user.id}/${tempId}/${kind}.${ext}`;
-        const { error } = await supabase.storage
-          .from("corporate-store-assets")
-          .upload(path, file, { upsert: true, contentType: file.type });
-        if (error) throw error;
-        const { data } = supabase.storage.from("corporate-store-assets").getPublicUrl(path);
-        return data.publicUrl;
-      };
-
       const [logo_url, secondary_logo_url, favicon_url] = await Promise.all([
-        upload(logo, "logo"),
-        upload(secondaryLogo, "secondary-logo"),
-        upload(favicon, "favicon"),
+        logo ? uploadAsset(user.id, tempId, logo, "logo") : Promise.resolve(null),
+        secondaryLogo ? uploadAsset(user.id, tempId, secondaryLogo, "secondary-logo") : Promise.resolve(null),
+        favicon ? uploadAsset(user.id, tempId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
       const { data, error } = await supabase.functions.invoke("provision-corporate-store", {
@@ -519,103 +698,151 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-6 py-2">
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Identity</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 space-y-1">
-              <Label htmlFor="name">Store name</Label>
-              <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
-              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="email">Contact email</Label>
-              <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
-              {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="domain">Custom domain (optional)</Label>
-              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
-              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
-            </div>
-          </div>
-        </section>
-
-        <Separator />
-
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visual theme</h3>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="primary">Primary color</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={values.primary_color}
-                  onChange={(e) => setField("primary_color", e.target.value)}
-                  className="h-10 w-12 rounded border bg-background cursor-pointer"
-                />
-                <Input
-                  id="primary"
-                  value={values.primary_color}
-                  onChange={(e) => setField("primary_color", e.target.value)}
-                  className="font-mono"
-                />
-              </div>
-              {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="accent">Accent color</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={values.accent_color}
-                  onChange={(e) => setField("accent_color", e.target.value)}
-                  className="h-10 w-12 rounded border bg-background cursor-pointer"
-                />
-                <Input
-                  id="accent"
-                  value={values.accent_color}
-                  onChange={(e) => setField("accent_color", e.target.value)}
-                  className="font-mono"
-                />
-              </div>
-              {errors.accent_color && <p className="text-xs text-destructive">{errors.accent_color}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="font">Font family</Label>
-              <Select value={values.font_family} onValueChange={(v) => setField("font_family", v)}>
-                <SelectTrigger id="font">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FONT_OPTIONS.map((f) => (
-                    <SelectItem key={f} value={f} style={{ fontFamily: f }}>
-                      {f}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </section>
-
-        <Separator />
-
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Brand assets</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <LogoField label="Main logo" value={logo} onChange={setLogo} hint="PNG/SVG, light background" />
-            <LogoField label="Secondary logo" value={secondaryLogo} onChange={setSecondaryLogo} hint="For dark backgrounds" />
-            <LogoField label="Favicon" value={favicon} onChange={setFavicon} hint="32×32 or 64×64 px, .ico/.png" />
-          </div>
-        </section>
-      </div>
+      <StoreFormFields
+        values={values}
+        setField={setField}
+        errors={errors}
+        logo={logo}
+        setLogo={setLogo}
+        secondaryLogo={secondaryLogo}
+        setSecondaryLogo={setSecondaryLogo}
+        favicon={favicon}
+        setFavicon={setFavicon}
+      />
 
       <DialogFooter>
         <Button onClick={() => provision.mutate()} disabled={provision.isPending}>
           {provision.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           Provision store
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+function EditStoreDialog({
+  store,
+  onSaved,
+}: {
+  store: CorporateStore;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const [values, setValues] = useState<FormValues>({
+    name: store.name,
+    contact_email: store.contact_email,
+    custom_domain: store.custom_domain ?? "",
+    primary_color: store.primary_color,
+    accent_color: store.accent_color,
+    font_family: store.font_family,
+  });
+  const [logo, setLogo] = useState<File | null>(null);
+  const [secondaryLogo, setSecondaryLogo] = useState<File | null>(null);
+  const [favicon, setFavicon] = useState<File | null>(null);
+  const [existing, setExisting] = useState({
+    logo_url: store.logo_url,
+    secondary_logo_url: store.secondary_logo_url,
+    favicon_url: store.favicon_url,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) =>
+    setValues((p) => ({ ...p, [k]: v }));
+
+  const onClearExisting = (kind: "logo" | "secondary" | "favicon") => {
+    setExisting((p) => ({
+      ...p,
+      logo_url: kind === "logo" ? null : p.logo_url,
+      secondary_logo_url: kind === "secondary" ? null : p.secondary_logo_url,
+      favicon_url: kind === "favicon" ? null : p.favicon_url,
+    }));
+  };
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const parsed = formSchema.safeParse(values);
+      if (!parsed.success) {
+        const fe: Record<string, string> = {};
+        for (const [k, v] of Object.entries(parsed.error.flatten().fieldErrors)) {
+          if (v?.[0]) fe[k] = v[0];
+        }
+        setErrors(fe);
+        throw new Error("Please fix the highlighted fields");
+      }
+      setErrors({});
+      if (!user?.id) throw new Error("Not signed in");
+
+      const [newLogoUrl, newSecondaryUrl, newFaviconUrl] = await Promise.all([
+        logo ? uploadAsset(user.id, store.id, logo, "logo") : Promise.resolve(null),
+        secondaryLogo ? uploadAsset(user.id, store.id, secondaryLogo, "secondary-logo") : Promise.resolve(null),
+        favicon ? uploadAsset(user.id, store.id, favicon, "favicon") : Promise.resolve(null),
+      ]);
+
+      const { error: updateErr } = await supabase
+        .from("corporate_stores")
+        .update({
+          name: parsed.data.name,
+          contact_email: parsed.data.contact_email,
+          custom_domain: parsed.data.custom_domain || null,
+          primary_color: parsed.data.primary_color,
+          accent_color: parsed.data.accent_color,
+          font_family: parsed.data.font_family,
+          logo_url: newLogoUrl ?? existing.logo_url,
+          secondary_logo_url: newSecondaryUrl ?? existing.secondary_logo_url,
+          favicon_url: newFaviconUrl ?? existing.favicon_url,
+        })
+        .eq("id", store.id);
+      if (updateErr) throw updateErr;
+
+      // Re-apply branding to the live WooCommerce site (best-effort)
+      const { error: brandErr } = await supabase.functions.invoke("apply-store-branding", {
+        body: { store_id: store.id },
+      });
+      if (brandErr) {
+        // Non-fatal — DB is updated; surface a warning toast
+        toast({
+          title: "Saved, but branding push failed",
+          description: brandErr.message,
+          variant: "destructive",
+        });
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Branding updated" });
+      onSaved();
+    },
+    onError: (e: Error) => {
+      toast({ title: "Could not save changes", description: e.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Edit "{store.name}"</DialogTitle>
+        <DialogDescription>
+          Update branding fields and we'll push the changes to your WooCommerce site automatically.
+        </DialogDescription>
+      </DialogHeader>
+
+      <StoreFormFields
+        values={values}
+        setField={setField}
+        errors={errors}
+        logo={logo}
+        setLogo={setLogo}
+        secondaryLogo={secondaryLogo}
+        setSecondaryLogo={setSecondaryLogo}
+        favicon={favicon}
+        setFavicon={setFavicon}
+        existing={existing}
+        onClearExisting={onClearExisting}
+      />
+
+      <DialogFooter>
+        <Button onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          Save & re-apply branding
         </Button>
       </DialogFooter>
     </DialogContent>
