@@ -68,10 +68,8 @@ Deno.serve(async (req) => {
       contact_email: store.contact_email,
       custom_domain: store.custom_domain,
       primary_color: store.primary_color,
-      accent_color: store.accent_color,
       font_family: store.font_family,
       logo_url: store.logo_url,
-      secondary_logo_url: store.secondary_logo_url,
       favicon_url: store.favicon_url,
     };
 
