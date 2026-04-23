@@ -458,53 +458,27 @@ function ProductForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Product Type</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setProductType("single")}
-              className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors ${
-                productType === "single" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
-              }`}
-            >
-              <span className="text-sm font-medium">Single Product</span>
-              <span className="text-[11px] text-muted-foreground">One SKU, no variants</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setProductType("variable")}
-              className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors ${
-                productType === "variable" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
-              }`}
-            >
-              <span className="text-sm font-medium">Variable Product</span>
-              <span className="text-[11px] text-muted-foreground">Colors & sizes</span>
-            </button>
-          </div>
+          <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select product type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="single">Single Product</SelectItem>
+              <SelectItem value="variable">Variable Product</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>Status</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setStatus("draft")}
-              className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
-                status === "draft" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
-              }`}
-            >
-              <span className="h-2 w-2 rounded-full bg-muted-foreground" />
-              <span className="text-sm font-medium">Draft</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatus("published")}
-              className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
-                status === "published" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
-              }`}
-            >
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              <span className="text-sm font-medium">Published</span>
-            </button>
-          </div>
+          <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "published")}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
