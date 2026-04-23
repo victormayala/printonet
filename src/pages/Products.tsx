@@ -663,7 +663,12 @@ function ProductForm({
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
-          <CategoryCombobox value={category} onChange={setCategory} />
+          <CategoryCombobox
+            value={category}
+            onChange={setCategory}
+            extraOptions={knownCategories}
+            onCategoryRenamed={onCategoryRenamed}
+          />
           <p className="text-[11px] text-muted-foreground">Pick one or type to add a new category.</p>
         </div>
         <div className="space-y-2">
