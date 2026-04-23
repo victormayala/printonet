@@ -494,12 +494,8 @@ function ProductForm({
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
-          <Input
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="Type or pick a category"
-          />
-          <p className="text-[11px] text-muted-foreground">Edit freely — works for supplier-imported categories too.</p>
+          <CategoryCombobox value={category} onChange={setCategory} />
+          <p className="text-[11px] text-muted-foreground">Pick one or type to add a new category.</p>
         </div>
         <div className="space-y-2">
           <Label>Regular Price</Label>
