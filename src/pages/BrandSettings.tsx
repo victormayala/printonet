@@ -465,7 +465,7 @@ export default function BrandSettings() {
             </div>
 
             {/* Preview + Code */}
-            <div className="space-y-6">
+            <div className="space-y-6 min-w-0">
               {/* Live Preview */}
               <div className="rounded-xl border bg-card overflow-hidden">
                 <div className="px-4 py-2.5 border-b flex items-center gap-2">
