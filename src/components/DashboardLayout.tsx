@@ -11,7 +11,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <SidebarTrigger />
           </header>
           <main className="flex-1 overflow-auto min-w-0">
-            <div className="max-w-[1024px] mx-auto w-full min-w-0">
+            <div className="max-w-[1280px] mx-auto w-full min-w-0">
               {children}
             </div>
           </main>
