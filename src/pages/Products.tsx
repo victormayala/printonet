@@ -38,6 +38,14 @@ type Product = {
   is_active: boolean;
   created_at: string;
   print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
+  product_type?: "single" | "variable" | null;
+  status?: "draft" | "published" | null;
+  weight?: number | null;
+  weight_unit?: "lbs" | "kg" | null;
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  dimension_unit?: "in" | "cm" | null;
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
