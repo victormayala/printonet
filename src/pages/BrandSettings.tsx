@@ -267,7 +267,7 @@ export default function BrandSettings() {
           </Button>
         </div>
 
-          <div className="grid lg:grid-cols-[360px_1fr] gap-8">
+          <div className="grid lg:grid-cols-[360px_minmax(0,1fr)] gap-8">
             {/* Settings Panel */}
             <div className="space-y-6">
               {/* Theme Toggle */}
