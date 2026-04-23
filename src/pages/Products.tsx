@@ -234,6 +234,7 @@ function ProductForm({
   const [category, setCategory] = useState(product?.category || "T-Shirts");
   const [description, setDescription] = useState(product?.description || "");
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
+  const [salePrice, setSalePrice] = useState(product?.sale_price != null ? String(product.sale_price) : "");
   const [imageFront, setImageFront] = useState(product?.image_front || "");
   const [imageBack, setImageBack] = useState(product?.image_back || "");
   const [imageLeft, setImageLeft] = useState(product?.image_side1 || "");
@@ -409,6 +410,7 @@ function ProductForm({
       category,
       description: description.trim() || null,
       base_price: parseFloat(basePrice) || 0,
+      sale_price: salePrice.trim() === "" ? null : (parseFloat(salePrice) || null),
       image_front: imageFront || null,
       image_back: imageBack || null,
       image_side1: imageLeft || null,
