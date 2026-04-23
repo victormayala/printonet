@@ -77,6 +77,149 @@ function resolveVariantHex(variant: any): string {
   return COLOR_NAME_MAP[key] || '#ccc';
 }
 
+function AddVariantDialog({
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onAdd: (variant: any) => void;
+}) {
+  const [color, setColor] = useState("");
+  const [hex, setHex] = useState("#000000");
+  const [image, setImage] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [sizesText, setSizesText] = useState("S, M, L, XL");
+  const [defaultPrice, setDefaultPrice] = useState("0");
+
+  const reset = () => {
+    setColor("");
+    setHex("#000000");
+    setImage("");
+    setSizesText("S, M, L, XL");
+    setDefaultPrice("0");
+  };
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${Date.now()}-variant.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    setImage(data.publicUrl);
+    setUploading(false);
+  };
+
+  const handleAdd = () => {
+    if (!color.trim()) {
+      toast({ title: "Color name is required", variant: "destructive" });
+      return;
+    }
+    const sizes = sizesText
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((size) => ({
+        size,
+        sku: `${color.trim().toUpperCase().replace(/\s+/g, "-")}-${size}`,
+        price: Number(defaultPrice) || 0,
+      }));
+    onAdd({
+      color: color.trim(),
+      hex,
+      image: image || null,
+      colorFrontImage: image || null,
+      sizes,
+      pricing: { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+    });
+    reset();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add variant</DialogTitle>
+          <DialogDescription>Create a color variant with one or more sizes.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
+            <div className="space-y-2">
+              <Label>Color name</Label>
+              <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="e.g. Navy Blue" />
+            </div>
+            <div className="space-y-2">
+              <Label>Swatch</Label>
+              <input
+                type="color"
+                value={hex}
+                onChange={(e) => setHex(e.target.value)}
+                className="h-10 w-14 rounded-md border cursor-pointer bg-background"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Variant image (optional)</Label>
+            {image ? (
+              <div className="relative w-24 h-24 rounded-md border overflow-hidden bg-muted">
+                <img src={image} alt="" className="w-full h-full object-contain" />
+                <button
+                  type="button"
+                  onClick={() => setImage("")}
+                  className="absolute top-1 right-1 rounded-full bg-background/80 p-1"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 rounded-md border-2 border-dashed h-20 cursor-pointer hover:border-primary/40 transition-colors">
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Upload image</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }}
+                />
+              </label>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Sizes (comma-separated)</Label>
+            <Input value={sizesText} onChange={(e) => setSizesText(e.target.value)} placeholder="S, M, L, XL, 2XL" />
+            <p className="text-[11px] text-muted-foreground">SKUs will be auto-generated as COLOR-SIZE.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Default price per size ($)</Label>
+            <Input
+              type="number" step="0.01" min="0"
+              value={defaultPrice}
+              onChange={(e) => setDefaultPrice(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>Cancel</Button>
+          <Button onClick={handleAdd}>Add variant</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProductForm({
   product,
   onSave,
