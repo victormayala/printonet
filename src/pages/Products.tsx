@@ -3256,7 +3256,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
 
           <TabsContent value="products">
             {showAddForm || editingProduct !== undefined ? (
-              <Card>
+              <Card className="max-w-[1024px] mx-auto">
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowAddForm(false); setEditingProduct(undefined); }}>
