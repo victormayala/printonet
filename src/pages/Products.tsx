@@ -95,6 +95,14 @@ function ProductForm({
   const [imageLeft, setImageLeft] = useState(product?.image_side1 || "");
   const [imageRight, setImageRight] = useState(product?.image_side2 || "");
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
+  const [productType, setProductType] = useState<"single" | "variable">(product?.product_type || "single");
+  const [status, setStatus] = useState<"draft" | "published">(product?.status || "draft");
+  const [weight, setWeight] = useState(product?.weight?.toString() || "");
+  const [weightUnit, setWeightUnit] = useState<"lbs" | "kg">(product?.weight_unit || "lbs");
+  const [length, setLength] = useState(product?.length?.toString() || "");
+  const [pwidth, setPwidth] = useState(product?.width?.toString() || "");
+  const [pheight, setPheight] = useState(product?.height?.toString() || "");
+  const [dimensionUnit, setDimensionUnit] = useState<"in" | "cm">(product?.dimension_unit || "in");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
@@ -111,6 +119,7 @@ function ProductForm({
     }));
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+  const [showAddVariant, setShowAddVariant] = useState(false);
 
   useEffect(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
