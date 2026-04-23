@@ -53,15 +53,73 @@ type Product = {
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
 
-function CategoryCombobox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function CategoryCombobox({
+  value,
+  onChange,
+  extraOptions = [],
+  onCategoryRenamed,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  extraOptions?: string[];
+  onCategoryRenamed?: (oldName: string, newName: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const options = Array.from(new Set([...CATEGORIES, ...(value ? [value] : [])]));
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const options = Array.from(
+    new Set([...CATEGORIES, ...extraOptions, ...(value ? [value] : [])])
+  );
   const trimmed = search.trim();
-  const showCreate = trimmed.length > 0 && !options.some((o) => o.toLowerCase() === trimmed.toLowerCase());
+  const showCreate =
+    trimmed.length > 0 && !options.some((o) => o.toLowerCase() === trimmed.toLowerCase());
+
+  const startEdit = (e: React.MouseEvent, opt: string) => {
+    e.stopPropagation();
+    setEditing(opt);
+    setEditValue(opt);
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setEditValue("");
+  };
+
+  const commitRename = async (oldName: string) => {
+    const newName = editValue.trim();
+    if (!newName || newName === oldName) {
+      cancelEdit();
+      return;
+    }
+    if (options.some((o) => o.toLowerCase() === newName.toLowerCase() && o !== oldName)) {
+      toast({ title: "Category already exists", variant: "destructive" });
+      return;
+    }
+    setRenaming(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { error } = await supabase
+        .from("inventory_products")
+        .update({ category: newName })
+        .eq("user_id", user.id)
+        .eq("category", oldName);
+      if (error) {
+        toast({ title: "Rename failed", description: error.message, variant: "destructive" });
+        setRenaming(false);
+        return;
+      }
+    }
+    if (value === oldName) onChange(newName);
+    onCategoryRenamed?.(oldName, newName);
+    toast({ title: `Renamed to "${newName}"` });
+    setRenaming(false);
+    cancelEdit();
+  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) cancelEdit(); }}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -80,20 +138,65 @@ function CategoryCombobox({ value, onChange }: { value: string; onChange: (v: st
           <CommandList>
             <CommandEmpty>No matches.</CommandEmpty>
             <CommandGroup>
-              {options.map((opt) => (
-                <CommandItem
-                  key={opt}
-                  value={opt}
-                  onSelect={() => {
-                    onChange(opt);
-                    setSearch("");
-                    setOpen(false);
-                  }}
-                >
-                  <Check className={`mr-2 h-4 w-4 ${value === opt ? "opacity-100" : "opacity-0"}`} />
-                  {opt}
-                </CommandItem>
-              ))}
+              {options.map((opt) => {
+                const isEditing = editing === opt;
+                return (
+                  <CommandItem
+                    key={opt}
+                    value={opt}
+                    onSelect={() => {
+                      if (isEditing) return;
+                      onChange(opt);
+                      setSearch("");
+                      setOpen(false);
+                    }}
+                    className="group"
+                  >
+                    <Check className={`mr-2 h-4 w-4 shrink-0 ${value === opt ? "opacity-100" : "opacity-0"}`} />
+                    {isEditing ? (
+                      <div className="flex items-center gap-1 flex-1" onClick={(e) => e.stopPropagation()}>
+                        <Input
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); commitRename(opt); }
+                            if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+                          }}
+                          className="h-7 text-sm"
+                          disabled={renaming}
+                        />
+                        <Button
+                          type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                          onClick={(e) => { e.stopPropagation(); commitRename(opt); }}
+                          disabled={renaming}
+                        >
+                          {renaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                        </Button>
+                        <Button
+                          type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                          onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                          disabled={renaming}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="flex-1 truncate">{opt}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => startEdit(e, opt)}
+                          className="ml-2 opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"
+                          title="Rename category"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </CommandItem>
+                );
+              })}
               {showCreate && (
                 <CommandItem
                   value={`__create_${trimmed}`}
