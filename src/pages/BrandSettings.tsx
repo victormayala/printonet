@@ -253,7 +253,7 @@ export default function BrandSettings() {
 
   return (
     <div className="bg-background">
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="font-display text-xl sm:text-2xl font-bold">Brand Settings</h2>
