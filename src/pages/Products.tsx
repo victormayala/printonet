@@ -30,6 +30,7 @@ type Product = {
   category: string;
   description: string | null;
   base_price: number;
+  sale_price?: number | null;
   image_front: string | null;
   image_back: string | null;
   image_side1: string | null;
