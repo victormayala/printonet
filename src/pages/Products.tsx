@@ -2756,7 +2756,7 @@ function VariantManagerDialog({
 
   return (
     <Dialog open={!!product} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="!max-w-[1024px] w-[1024px] p-0 gap-0 overflow-hidden h-[85vh] flex flex-col">
+      <DialogContent className="max-w-[1024px] p-0 gap-0 overflow-hidden h-[85vh] flex flex-col">
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
@@ -3256,7 +3256,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
 
           <TabsContent value="products">
             {showAddForm || editingProduct !== undefined ? (
-              <Card>
+              <Card className="max-w-[1024px] mx-auto">
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowAddForm(false); setEditingProduct(undefined); }}>
