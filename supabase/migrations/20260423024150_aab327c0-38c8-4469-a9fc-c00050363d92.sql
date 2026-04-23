@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory_products ADD COLUMN sale_price numeric;

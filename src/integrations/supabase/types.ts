@@ -221,6 +221,7 @@ export type Database = {
           name: string
           print_areas: Json | null
           product_type: string
+          sale_price: number | null
           status: string
           supplier_source: Json | null
           updated_at: string
@@ -247,6 +248,7 @@ export type Database = {
           name: string
           print_areas?: Json | null
           product_type?: string
+          sale_price?: number | null
           status?: string
           supplier_source?: Json | null
           updated_at?: string
@@ -273,6 +275,7 @@ export type Database = {
           name?: string
           print_areas?: Json | null
           product_type?: string
+          sale_price?: number | null
           status?: string
           supplier_source?: Json | null
           updated_at?: string

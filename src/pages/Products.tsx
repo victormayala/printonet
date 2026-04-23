@@ -30,6 +30,7 @@ type Product = {
   category: string;
   description: string | null;
   base_price: number;
+  sale_price?: number | null;
   image_front: string | null;
   image_back: string | null;
   image_side1: string | null;
@@ -233,6 +234,7 @@ function ProductForm({
   const [category, setCategory] = useState(product?.category || "T-Shirts");
   const [description, setDescription] = useState(product?.description || "");
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
+  const [salePrice, setSalePrice] = useState(product?.sale_price != null ? String(product.sale_price) : "");
   const [imageFront, setImageFront] = useState(product?.image_front || "");
   const [imageBack, setImageBack] = useState(product?.image_back || "");
   const [imageLeft, setImageLeft] = useState(product?.image_side1 || "");
@@ -408,6 +410,7 @@ function ProductForm({
       category,
       description: description.trim() || null,
       base_price: parseFloat(basePrice) || 0,
+      sale_price: salePrice.trim() === "" ? null : (parseFloat(salePrice) || null),
       image_front: imageFront || null,
       image_back: imageBack || null,
       image_side1: imageLeft || null,
@@ -486,7 +489,7 @@ function ProductForm({
         <Label>Name</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
           <Select value={category} onValueChange={setCategory}>
@@ -503,8 +506,20 @@ function ProductForm({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Base Price</Label>
+          <Label>Regular Price</Label>
           <Input type="number" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>
+            Sale Price <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+          </Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={salePrice}
+            onChange={(e) => setSalePrice(e.target.value)}
+            placeholder="—"
+          />
         </div>
       </div>
       <div className="space-y-2">
