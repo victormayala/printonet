@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
@@ -50,6 +52,68 @@ type Product = {
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
+
+function CategoryCombobox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const options = Array.from(new Set([...CATEGORIES, ...(value ? [value] : [])]));
+  const trimmed = search.trim();
+  const showCreate = trimmed.length > 0 && !options.some((o) => o.toLowerCase() === trimmed.toLowerCase());
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className={value ? "" : "text-muted-foreground"}>{value || "Select or type a category"}</span>
+          <ArrowUpDown className="h-4 w-4 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search or type new..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            <CommandEmpty>No matches.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt}
+                  value={opt}
+                  onSelect={() => {
+                    onChange(opt);
+                    setSearch("");
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={`mr-2 h-4 w-4 ${value === opt ? "opacity-100" : "opacity-0"}`} />
+                  {opt}
+                </CommandItem>
+              ))}
+              {showCreate && (
+                <CommandItem
+                  value={`__create_${trimmed}`}
+                  onSelect={() => {
+                    onChange(trimmed);
+                    setSearch("");
+                    setOpen(false);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add "{trimmed}"
+                </CommandItem>
+              )}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const COLOR_NAME_MAP: Record<string, string> = {
   black: '#000000', white: '#ffffff', red: '#e53e3e', blue: '#3b82f6', navy: '#1e3a5f',
@@ -492,12 +556,8 @@ function ProductForm({
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
-          <Input
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="Type or pick a category"
-          />
-          <p className="text-[11px] text-muted-foreground">Edit freely — works for supplier-imported categories too.</p>
+          <CategoryCombobox value={category} onChange={setCategory} />
+          <p className="text-[11px] text-muted-foreground">Pick one or type to add a new category.</p>
         </div>
         <div className="space-y-2">
           <Label>Regular Price</Label>
