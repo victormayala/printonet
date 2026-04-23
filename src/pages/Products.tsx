@@ -196,6 +196,19 @@ function ProductForm({
     );
   };
 
+  const removeVariant = (idx: number) => {
+    setVariants((prev) => prev.filter((_, i) => i !== idx));
+    setSelectedVariantIdx((prev) => Math.max(0, Math.min(prev, variants.length - 2)));
+  };
+
+  const addManualVariant = (variant: any) => {
+    setVariants((prev) => {
+      const next = [...prev, variant];
+      setSelectedVariantIdx(next.length - 1);
+      return next;
+    });
+  };
+
   const autoDetectPrintArea = async (imageUrl: string, sideKey: string) => {
     const printAreaKey = sideKey === "left" ? "side1" : sideKey === "right" ? "side2" : sideKey;
     setDetecting(sideKey);
