@@ -3423,6 +3423,10 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                 <CardContent>
                   <ProductForm
                     product={editingProduct}
+                    knownCategories={Array.from(new Set(products.map((p) => p.category).filter(Boolean)))}
+                    onCategoryRenamed={(oldName, newName) => {
+                      setProducts((prev) => prev.map((p) => p.category === oldName ? { ...p, category: newName } : p));
+                    }}
                     onSave={() => { setShowAddForm(false); setEditingProduct(undefined); fetchProducts(); }}
                     onCancel={() => { setShowAddForm(false); setEditingProduct(undefined); }}
                   />
