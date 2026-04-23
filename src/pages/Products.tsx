@@ -266,7 +266,7 @@ function ProductForm({
       height: pheight === "" ? null : Number(pheight),
       dimension_unit: dimensionUnit,
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
-      ...(variants.length > 0 ? {
+      ...(productType === "variable" ? {
         variants: variants.map((v) => ({
           ...v,
           pricing: {
@@ -276,7 +276,7 @@ function ProductForm({
           },
           sizes: (v.sizes || []).map((s: any) => ({ ...s, price: Number(s.price) || 0 })),
         })),
-      } : {}),
+      } : { variants: [] }),
       ...(product ? {} : { user_id: user?.id }),
     };
 
