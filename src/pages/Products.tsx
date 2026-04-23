@@ -257,6 +257,14 @@ function ProductForm({
       image_side1: imageLeft || null,
       image_side2: imageRight || null,
       is_active: isActive,
+      product_type: productType,
+      status,
+      weight: weight === "" ? null : Number(weight),
+      weight_unit: weightUnit,
+      length: length === "" ? null : Number(length),
+      width: pwidth === "" ? null : Number(pwidth),
+      height: pheight === "" ? null : Number(pheight),
+      dimension_unit: dimensionUnit,
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
       ...(variants.length > 0 ? {
         variants: variants.map((v) => ({
