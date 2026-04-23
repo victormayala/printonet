@@ -298,6 +298,60 @@ function ProductForm({
 
   return (
     <div className="space-y-5">
+      {/* Product Type + Status */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Product Type</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setProductType("single")}
+              className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors ${
+                productType === "single" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="text-sm font-medium">Single Product</span>
+              <span className="text-[11px] text-muted-foreground">One SKU, no variants</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setProductType("variable")}
+              className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors ${
+                productType === "variable" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="text-sm font-medium">Variable Product</span>
+              <span className="text-[11px] text-muted-foreground">Colors & sizes</span>
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setStatus("draft")}
+              className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
+                status === "draft" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+              <span className="text-sm font-medium">Draft</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatus("published")}
+              className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
+                status === "published" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              <span className="text-sm font-medium">Published</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label>Name</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
