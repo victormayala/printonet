@@ -475,7 +475,37 @@ function ProductForm({
       </div>
 
       {/* ============ Variants (color list + per-color pricing) ============ */}
-      {variants.length > 0 && (
+      {productType === "variable" && (
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <Label className="text-base">Variants</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {variants.length} color{variants.length !== 1 ? "s" : ""}
+                {variants.length > 0 && ` · Base cost $${baseCostNum.toFixed(2)}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => setShowAddVariant(true)} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Add variant
+              </Button>
+              {variants.length > 0 && (
+                <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
+                  Apply pricing to all colors
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {variants.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <Package className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground mb-3">No variants yet. Add colors and sizes to get started.</p>
+              <Button type="button" size="sm" onClick={() => setShowAddVariant(true)} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Add your first variant
+              </Button>
+            </div>
+          ) : (
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
