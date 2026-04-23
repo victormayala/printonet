@@ -492,30 +492,11 @@ function ProductForm({
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
-          <div className="flex gap-2">
-            <Input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Type or pick a category"
-              list="product-category-suggestions"
-              className="flex-1"
-            />
-            <datalist id="product-category-suggestions">
-              {Array.from(new Set([...CATEGORIES, ...(category ? [category] : [])])).map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-            <Select value="" onValueChange={(v) => setCategory(v)}>
-              <SelectTrigger className="w-10 px-0 justify-center" aria-label="Pick category">
-                <span className="sr-only">Pick category</span>
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from(new Set([...CATEGORIES, ...(category ? [category] : [])])).map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="Type or pick a category"
+          />
           <p className="text-[11px] text-muted-foreground">Edit freely — works for supplier-imported categories too.</p>
         </div>
         <div className="space-y-2">
