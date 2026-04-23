@@ -38,6 +38,14 @@ type Product = {
   is_active: boolean;
   created_at: string;
   print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
+  product_type?: "single" | "variable" | null;
+  status?: "draft" | "published" | null;
+  weight?: number | null;
+  weight_unit?: "lbs" | "kg" | null;
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  dimension_unit?: "in" | "cm" | null;
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
@@ -69,6 +77,149 @@ function resolveVariantHex(variant: any): string {
   return COLOR_NAME_MAP[key] || '#ccc';
 }
 
+function AddVariantDialog({
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onAdd: (variant: any) => void;
+}) {
+  const [color, setColor] = useState("");
+  const [hex, setHex] = useState("#000000");
+  const [image, setImage] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [sizesText, setSizesText] = useState("S, M, L, XL");
+  const [defaultPrice, setDefaultPrice] = useState("0");
+
+  const reset = () => {
+    setColor("");
+    setHex("#000000");
+    setImage("");
+    setSizesText("S, M, L, XL");
+    setDefaultPrice("0");
+  };
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${Date.now()}-variant.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    setImage(data.publicUrl);
+    setUploading(false);
+  };
+
+  const handleAdd = () => {
+    if (!color.trim()) {
+      toast({ title: "Color name is required", variant: "destructive" });
+      return;
+    }
+    const sizes = sizesText
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((size) => ({
+        size,
+        sku: `${color.trim().toUpperCase().replace(/\s+/g, "-")}-${size}`,
+        price: Number(defaultPrice) || 0,
+      }));
+    onAdd({
+      color: color.trim(),
+      hex,
+      image: image || null,
+      colorFrontImage: image || null,
+      sizes,
+      pricing: { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+    });
+    reset();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add variant</DialogTitle>
+          <DialogDescription>Create a color variant with one or more sizes.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
+            <div className="space-y-2">
+              <Label>Color name</Label>
+              <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="e.g. Navy Blue" />
+            </div>
+            <div className="space-y-2">
+              <Label>Swatch</Label>
+              <input
+                type="color"
+                value={hex}
+                onChange={(e) => setHex(e.target.value)}
+                className="h-10 w-14 rounded-md border cursor-pointer bg-background"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Variant image (optional)</Label>
+            {image ? (
+              <div className="relative w-24 h-24 rounded-md border overflow-hidden bg-muted">
+                <img src={image} alt="" className="w-full h-full object-contain" />
+                <button
+                  type="button"
+                  onClick={() => setImage("")}
+                  className="absolute top-1 right-1 rounded-full bg-background/80 p-1"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 rounded-md border-2 border-dashed h-20 cursor-pointer hover:border-primary/40 transition-colors">
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Upload image</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }}
+                />
+              </label>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Sizes (comma-separated)</Label>
+            <Input value={sizesText} onChange={(e) => setSizesText(e.target.value)} placeholder="S, M, L, XL, 2XL" />
+            <p className="text-[11px] text-muted-foreground">SKUs will be auto-generated as COLOR-SIZE.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Default price per size ($)</Label>
+            <Input
+              type="number" step="0.01" min="0"
+              value={defaultPrice}
+              onChange={(e) => setDefaultPrice(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>Cancel</Button>
+          <Button onClick={handleAdd}>Add variant</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProductForm({
   product,
   onSave,
@@ -87,6 +238,14 @@ function ProductForm({
   const [imageLeft, setImageLeft] = useState(product?.image_side1 || "");
   const [imageRight, setImageRight] = useState(product?.image_side2 || "");
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
+  const [productType, setProductType] = useState<"single" | "variable">(product?.product_type || "single");
+  const [status, setStatus] = useState<"draft" | "published">(product?.status || "draft");
+  const [weight, setWeight] = useState(product?.weight?.toString() || "");
+  const [weightUnit, setWeightUnit] = useState<"lbs" | "kg">(product?.weight_unit || "lbs");
+  const [length, setLength] = useState(product?.length?.toString() || "");
+  const [pwidth, setPwidth] = useState(product?.width?.toString() || "");
+  const [pheight, setPheight] = useState(product?.height?.toString() || "");
+  const [dimensionUnit, setDimensionUnit] = useState<"in" | "cm">(product?.dimension_unit || "in");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
@@ -103,6 +262,7 @@ function ProductForm({
     }));
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+  const [showAddVariant, setShowAddVariant] = useState(false);
 
   useEffect(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
@@ -179,6 +339,19 @@ function ProductForm({
     );
   };
 
+  const removeVariant = (idx: number) => {
+    setVariants((prev) => prev.filter((_, i) => i !== idx));
+    setSelectedVariantIdx((prev) => Math.max(0, Math.min(prev, variants.length - 2)));
+  };
+
+  const addManualVariant = (variant: any) => {
+    setVariants((prev) => {
+      const next = [...prev, variant];
+      setSelectedVariantIdx(next.length - 1);
+      return next;
+    });
+  };
+
   const autoDetectPrintArea = async (imageUrl: string, sideKey: string) => {
     const printAreaKey = sideKey === "left" ? "side1" : sideKey === "right" ? "side2" : sideKey;
     setDetecting(sideKey);
@@ -240,8 +413,16 @@ function ProductForm({
       image_side1: imageLeft || null,
       image_side2: imageRight || null,
       is_active: isActive,
+      product_type: productType,
+      status,
+      weight: weight === "" ? null : Number(weight),
+      weight_unit: weightUnit,
+      length: length === "" ? null : Number(length),
+      width: pwidth === "" ? null : Number(pwidth),
+      height: pheight === "" ? null : Number(pheight),
+      dimension_unit: dimensionUnit,
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
-      ...(variants.length > 0 ? {
+      ...(productType === "variable" ? {
         variants: variants.map((v) => ({
           ...v,
           pricing: {
@@ -251,7 +432,7 @@ function ProductForm({
           },
           sizes: (v.sizes || []).map((s: any) => ({ ...s, price: Number(s.price) || 0 })),
         })),
-      } : {}),
+      } : { variants: [] }),
       ...(product ? {} : { user_id: user?.id }),
     };
 
@@ -273,6 +454,60 @@ function ProductForm({
 
   return (
     <div className="space-y-5">
+      {/* Product Type + Status */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Product Type</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setProductType("single")}
+              className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors ${
+                productType === "single" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="text-sm font-medium">Single Product</span>
+              <span className="text-[11px] text-muted-foreground">One SKU, no variants</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setProductType("variable")}
+              className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors ${
+                productType === "variable" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="text-sm font-medium">Variable Product</span>
+              <span className="text-[11px] text-muted-foreground">Colors & sizes</span>
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setStatus("draft")}
+              className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
+                status === "draft" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+              <span className="text-sm font-medium">Draft</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatus("published")}
+              className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
+                status === "published" ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              <span className="text-sm font-medium">Published</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label>Name</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
@@ -383,172 +618,279 @@ function ProductForm({
       </div>
 
       {/* ============ Variants (color list + per-color pricing) ============ */}
-      {variants.length > 0 && (
+      {productType === "variable" && (
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <Label className="text-base">Variants</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {variants.length} color{variants.length !== 1 ? "s" : ""} · Base cost ${baseCostNum.toFixed(2)}
+                {variants.length} color{variants.length !== 1 ? "s" : ""}
+                {variants.length > 0 && ` · Base cost $${baseCostNum.toFixed(2)}`}
               </p>
             </div>
-            <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
-              Apply pricing to all colors
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => setShowAddVariant(true)} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Add variant
+              </Button>
+              {variants.length > 0 && (
+                <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
+                  Apply pricing to all colors
+                </Button>
+              )}
+            </div>
           </div>
 
-          <div className="rounded-lg border overflow-hidden">
-            <div className="flex h-[480px]">
-              {/* Left rail: color list */}
-              <div className="w-64 border-r overflow-y-auto shrink-0 bg-muted/20">
-                {variants.map((v, idx) => {
-                  const img = v.image || v.colorFrontImage || v.colorSwatchImage;
-                  const isSelected = idx === selectedVariantIdx;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSelectedVariantIdx(idx)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left border-b transition-colors ${
-                        isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/40"
-                      }`}
-                    >
-                      {img ? (
-                        <img src={img} alt={v.color} className="w-9 h-9 object-contain rounded bg-background border shrink-0" />
-                      ) : (
-                        <div className="w-9 h-9 rounded bg-background border flex items-center justify-center shrink-0">
-                          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">{v.color || "—"}</p>
-                        <p className="text-[10px] text-muted-foreground">{v.sizes?.length || 0} sizes</p>
+          {variants.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <Package className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground mb-3">No variants yet. Add colors and sizes to get started.</p>
+              <Button type="button" size="sm" onClick={() => setShowAddVariant(true)} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Add your first variant
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-hidden">
+              <div className="flex h-[480px]">
+                {/* Left rail: color list */}
+                <div className="w-64 border-r overflow-y-auto shrink-0 bg-muted/20">
+                  {variants.map((v, idx) => {
+                    const img = v.image || v.colorFrontImage || v.colorSwatchImage;
+                    const isSelected = idx === selectedVariantIdx;
+                    return (
+                      <div
+                        key={idx}
+                        className={`group w-full flex items-center gap-2.5 px-3 py-2 text-left border-b transition-colors ${
+                          isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/40"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVariantIdx(idx)}
+                          className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                        >
+                          {img ? (
+                            <img src={img} alt={v.color} className="w-9 h-9 object-contain rounded bg-background border shrink-0" />
+                          ) : (
+                            <div
+                              className="w-9 h-9 rounded border shrink-0"
+                              style={{ background: resolveVariantHex(v) }}
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate">{v.color || "—"}</p>
+                            <p className="text-[10px] text-muted-foreground">{v.sizes?.length || 0} sizes</p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeVariant(idx)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-destructive"
+                          title="Remove variant"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {/* Right pane: selected variant detail */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {selectedVariant ? (
-                  <div className="space-y-4">
-                    <div className="flex gap-4">
-                      <div className="w-40 h-40 rounded-lg border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
-                        {(selectedVariant.image || selectedVariant.colorFrontImage) ? (
-                          <img
-                            src={selectedVariant.image || selectedVariant.colorFrontImage}
-                            alt={selectedVariant.color}
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
+                {/* Right pane: selected variant detail */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {selectedVariant ? (
+                    <div className="space-y-4">
+                      <div className="flex gap-4">
+                        <div className="w-40 h-40 rounded-lg border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                          {(selectedVariant.image || selectedVariant.colorFrontImage) ? (
+                            <img
+                              src={selectedVariant.image || selectedVariant.colorFrontImage}
+                              alt={selectedVariant.color}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                          )}
                         </div>
-                        <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <Label className="text-[10px]">Base cost</Label>
-                              <Input type="text" value={`$${baseCostNum.toFixed(2)}`} readOnly className="h-8 mt-1 bg-muted text-xs" />
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
+                          </div>
+                          <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[10px]">Base cost</Label>
+                                <Input type="text" value={`$${baseCostNum.toFixed(2)}`} readOnly className="h-8 mt-1 bg-muted text-xs" />
+                              </div>
+                              <div>
+                                <Label className="text-[10px]">Profit margin ($)</Label>
+                                <Input
+                                  type="number" step="0.01" min="0"
+                                  value={selectedVariant.pricing?.margin ?? ""}
+                                  onChange={(e) => updateVariantPricing(selectedVariantIdx, "margin", e.target.value)}
+                                  className="h-8 mt-1 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[10px]">Embroidery fee ($)</Label>
+                                <Input
+                                  type="number" step="0.01" min="0"
+                                  value={selectedVariant.pricing?.embroidery_fee ?? ""}
+                                  onChange={(e) => updateVariantPricing(selectedVariantIdx, "embroidery_fee", e.target.value)}
+                                  className="h-8 mt-1 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[10px]">DTG fee ($)</Label>
+                                <Input
+                                  type="number" step="0.01" min="0"
+                                  value={selectedVariant.pricing?.dtg_fee ?? ""}
+                                  onChange={(e) => updateVariantPricing(selectedVariantIdx, "dtg_fee", e.target.value)}
+                                  className="h-8 mt-1 text-xs"
+                                />
+                              </div>
                             </div>
-                            <div>
-                              <Label className="text-[10px]">Profit margin ($)</Label>
-                              <Input
-                                type="number" step="0.01" min="0"
-                                value={selectedVariant.pricing?.margin ?? ""}
-                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "margin", e.target.value)}
-                                className="h-8 mt-1 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-[10px]">Embroidery fee ($)</Label>
-                              <Input
-                                type="number" step="0.01" min="0"
-                                value={selectedVariant.pricing?.embroidery_fee ?? ""}
-                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "embroidery_fee", e.target.value)}
-                                className="h-8 mt-1 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-[10px]">DTG fee ($)</Label>
-                              <Input
-                                type="number" step="0.01" min="0"
-                                value={selectedVariant.pricing?.dtg_fee ?? ""}
-                                onChange={(e) => updateVariantPricing(selectedVariantIdx, "dtg_fee", e.target.value)}
-                                className="h-8 mt-1 text-xs"
-                              />
+                            <div className="flex items-center justify-between pt-2 border-t">
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Final price</p>
+                                <p className="text-xl font-bold text-primary">${computeVariantFinalPrice(selectedVariant).toFixed(2)}</p>
+                              </div>
+                              <Button type="button" size="sm" variant="secondary" onClick={() => applyFinalPriceToVariantSizes(selectedVariantIdx)}>
+                                Apply to all sizes
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between pt-2 border-t">
-                            <div>
-                              <p className="text-[10px] text-muted-foreground">Final price</p>
-                              <p className="text-xl font-bold text-primary">${computeVariantFinalPrice(selectedVariant).toFixed(2)}</p>
-                            </div>
-                            <Button type="button" size="sm" variant="secondary" onClick={() => applyFinalPriceToVariantSizes(selectedVariantIdx)}>
-                              Apply to all sizes
-                            </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sizes</Label>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b">
+                            <span>Size</span>
+                            <span>SKU</span>
+                            <span className="text-right">Price ($)</span>
                           </div>
+                          {selectedVariant.sizes?.length ? (
+                            [...selectedVariant.sizes]
+                              .map((s: any, originalIdx: number) => ({ s, originalIdx }))
+                              .sort((a, b) => {
+                                const order = ["XXS","XS","S","SM","M","MD","L","LG","XL","XLG","2XL","XXL","3XL","XXXL","4XL","5XL","6XL","7XL"];
+                                const norm = (v: string) => (v || "").toString().toUpperCase().trim();
+                                const ai = order.indexOf(norm(a.s.size));
+                                const bi = order.indexOf(norm(b.s.size));
+                                if (ai === -1 && bi === -1) return norm(a.s.size).localeCompare(norm(b.s.size));
+                                if (ai === -1) return 1;
+                                if (bi === -1) return -1;
+                                return ai - bi;
+                              })
+                              .map(({ s, originalIdx: sIdx }) => (
+                              <div key={sIdx} className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center">
+                                <span className="text-xs font-medium">{s.size || "—"}</span>
+                                <Input
+                                  value={s.sku || ""}
+                                  onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { sku: e.target.value })}
+                                  className="h-7 text-xs"
+                                  placeholder="SKU"
+                                />
+                                <Input
+                                  type="number" step="0.01" min="0"
+                                  value={s.price ?? ""}
+                                  onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
+                                  className="h-7 text-xs text-right"
+                                />
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-4 text-center text-xs text-muted-foreground">No sizes</div>
+                          )}
                         </div>
                       </div>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sizes</Label>
-                      <div className="rounded-lg border overflow-hidden">
-                        <div className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b">
-                          <span>Size</span>
-                          <span>SKU</span>
-                          <span className="text-right">Price ($)</span>
-                        </div>
-                        {selectedVariant.sizes?.length ? (
-                          [...selectedVariant.sizes]
-                            .map((s: any, originalIdx: number) => ({ s, originalIdx }))
-                            .sort((a, b) => {
-                              const order = ["XXS","XS","S","SM","M","MD","L","LG","XL","XLG","2XL","XXL","3XL","XXXL","4XL","5XL","6XL","7XL"];
-                              const norm = (v: string) => (v || "").toString().toUpperCase().trim();
-                              const ai = order.indexOf(norm(a.s.size));
-                              const bi = order.indexOf(norm(b.s.size));
-                              if (ai === -1 && bi === -1) return norm(a.s.size).localeCompare(norm(b.s.size));
-                              if (ai === -1) return 1;
-                              if (bi === -1) return -1;
-                              return ai - bi;
-                            })
-                            .map(({ s, originalIdx: sIdx }) => (
-                            <div key={sIdx} className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center">
-                              <span className="text-xs font-medium">{s.size || "—"}</span>
-                              <Input
-                                value={s.sku || ""}
-                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { sku: e.target.value })}
-                                className="h-7 text-xs"
-                                placeholder="SKU"
-                              />
-                              <Input
-                                type="number" step="0.01" min="0"
-                                value={s.price ?? ""}
-                                onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
-                                className="h-7 text-xs text-right"
-                              />
-                            </div>
-                          ))
-                        ) : (
-                          <div className="px-3 py-4 text-center text-xs text-muted-foreground">No sizes</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Select a color to edit</div>
-                )}
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Select a color to edit</div>
+                  )}
+                </div>
               </div>
+            </div>
+          )}
+
+          <AddVariantDialog
+            open={showAddVariant}
+            onOpenChange={setShowAddVariant}
+            onAdd={addManualVariant}
+          />
+        </div>
+      )}
+
+      {/* ============ Shipping ============ */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <Truck className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-base">Shipping</Label>
+        </div>
+        <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
+          <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
+            <div className="space-y-2">
+              <Label className="text-xs">Weight</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Unit</Label>
+              <Select value={weightUnit} onValueChange={(v) => setWeightUnit(v as "lbs" | "kg")}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lbs">lbs</SelectItem>
+                  <SelectItem value="kg">kg</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Dimensions</Label>
+              <Select value={dimensionUnit} onValueChange={(v) => setDimensionUnit(v as "in" | "cm")}>
+                <SelectTrigger className="w-24 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in">in</SelectItem>
+                  <SelectItem value="cm">cm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Input
+                type="number" step="0.01" min="0"
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                placeholder="Length"
+              />
+              <Input
+                type="number" step="0.01" min="0"
+                value={pwidth}
+                onChange={(e) => setPwidth(e.target.value)}
+                placeholder="Width"
+              />
+              <Input
+                type="number" step="0.01" min="0"
+                value={pheight}
+                onChange={(e) => setPheight(e.target.value)}
+                placeholder="Height"
+              />
             </div>
           </div>
         </div>
-      )}
+      </div>
+
 
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />

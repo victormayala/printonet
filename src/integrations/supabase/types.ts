@@ -209,54 +209,78 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          dimension_unit: string
+          height: number | null
           id: string
           image_back: string | null
           image_front: string | null
           image_side1: string | null
           image_side2: string | null
           is_active: boolean
+          length: number | null
           name: string
           print_areas: Json | null
+          product_type: string
+          status: string
           supplier_source: Json | null
           updated_at: string
           user_id: string | null
           variants: Json | null
+          weight: number | null
+          weight_unit: string
+          width: number | null
         }
         Insert: {
           base_price?: number
           category?: string
           created_at?: string
           description?: string | null
+          dimension_unit?: string
+          height?: number | null
           id?: string
           image_back?: string | null
           image_front?: string | null
           image_side1?: string | null
           image_side2?: string | null
           is_active?: boolean
+          length?: number | null
           name: string
           print_areas?: Json | null
+          product_type?: string
+          status?: string
           supplier_source?: Json | null
           updated_at?: string
           user_id?: string | null
           variants?: Json | null
+          weight?: number | null
+          weight_unit?: string
+          width?: number | null
         }
         Update: {
           base_price?: number
           category?: string
           created_at?: string
           description?: string | null
+          dimension_unit?: string
+          height?: number | null
           id?: string
           image_back?: string | null
           image_front?: string | null
           image_side1?: string | null
           image_side2?: string | null
           is_active?: boolean
+          length?: number | null
           name?: string
           print_areas?: Json | null
+          product_type?: string
+          status?: string
           supplier_source?: Json | null
           updated_at?: string
           user_id?: string | null
           variants?: Json | null
+          weight?: number | null
+          weight_unit?: string
+          width?: number | null
         }
         Relationships: []
       }
