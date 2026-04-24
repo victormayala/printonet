@@ -1,54 +1,53 @@
+## Goal
 
+Replace the current rich `tenant-catalog-payload.json` with an example that matches the **`@printonet/medusa-backend`** webhook contract you uploaded. The receiving Medusa app only accepts a small, flat shape — anything richer gets ignored.
 
-## Ready to implement: Printonet branding receiver + secret wiring
+## What the contract actually requires
 
-You're ready to provide the `PRINTONET_BRANDING_TOKEN`. Here's exactly what I'll do once you approve and paste the secret.
+**Transport**
+- `POST {baseUrl}/admin/printonet/events`
+- `Content-Type: application/json`
+- Header `x-printonet-signature: <hex HMAC-SHA256 of raw body using PRINTONET_WEBHOOK_SECRET>`
 
-### Step 1 — Request the secret
-I'll trigger the secret-input prompt for `PRINTONET_BRANDING_TOKEN`. You paste your random string. This same string also goes into `wp-config.php` on your InstaWP template site (see Step 5 below).
+**Envelope (camelCase, top-level)**
+- `id` — event id (idempotency key)
+- `type` — `catalog.sync` (NOT `tenant.catalog.sync`)
+- `tenantId`
+- `occurredAt` — ISO-8601
+- `payload` — `{ products: [...] }`, max 200 items per event
 
-### Step 2 — Update the WordPress plugin
-**File:** `public/customizer-studio-woocommerce.php`
+**Each product (flat — nested fields are ignored by the parser)**
+- `id` *(required, string)*
+- `name` *(required, string)*
+- `description` *(optional, string)*
+- `priceCents` *(required, integer ≥ 0 — cents, not dollars)*
+- `currencyCode` *(optional, 3-letter ISO, e.g. `usd`)*
 
-- Update plugin header: name → "Printonet for WooCommerce", author → "Printonet".
-- Add `POST /wp-json/printonet/v1/branding` route:
-  - Verifies `X-Printonet-Token` header against the `PRINTONET_BRANDING_TOKEN` constant defined in `wp-config.php`.
-  - Saves payload to `wp_options['printonet_branding']` (single JSON blob).
-  - Updates `blogname` from `store_name` and `admin_email` from `contact_email`.
-  - Returns `{ ok: true }` on success, `401` on bad token, `400` on bad payload.
-- Add `GET /wp-json/printonet/v1/health` route (public): returns `{ ok: true, plugin: "printonet", version: "..." }` so the edge function can confirm the cloned site is responsive.
-- Add `wp_head` action that reads `printonet_branding` and emits:
-  - `:root { --printonet-primary, --printonet-accent, --printonet-font }`
-  - Google Fonts `<link>` for the selected font.
-  - Favicon `<link rel="icon">` if `favicon_url` is set.
-- Existing `customizer-studio/v1/add-to-cart` route and all `cs_*` symbols stay untouched (live customer carts depend on them).
+## Plan
 
-### Step 3 — Update the edge functions
-**File:** `supabase/functions/apply-store-branding/index.ts`
-- Change target URL from `/wp-json/customizer-studio/v1/branding` to `/wp-json/printonet/v1/branding`.
-- Add `X-Printonet-Token` header sourced from `Deno.env.get("PRINTONET_BRANDING_TOKEN")`.
+1. **Overwrite `tenant-catalog-payload.json`** with a single example event matching the contract:
+   - Real envelope fields (`id`, `type: "catalog.sync"`, `tenantId`, `occurredAt`, `payload.products[]`)
+   - 3–4 representative products derived from `inventory_products` (Bella+Canvas tee, hoodie, mug, etc.) using:
+     - `id` = inventory product UUID
+     - `name` = product name
+     - `description` = trimmed product description
+     - `priceCents` = `Math.round(min(variant.price) * 100)` (lowest variant price → cents)
+     - `currencyCode` = `"usd"`
+   - Keep it under 200 products (we'll show ~4).
 
-**File:** `supabase/functions/check-corporate-store-status/index.ts`
-- Before triggering branding push, hit `GET /wp-json/printonet/v1/health` with a couple of retries to confirm WordPress is fully booted on the cloned site.
+2. **Add a small companion file `tenant-catalog-payload.README.md`** in `/mnt/documents/` documenting:
+   - The endpoint + headers
+   - Exact HMAC pseudocode (Node `createHmac("sha256", secret).update(rawBody, "utf8").digest("hex")`)
+   - The mapping from our internal `inventory_products` row → flat `CatalogSyncProduct` (especially the `priceCents` derivation rule, since that's the one judgment call the bridge has to make)
+   - A note that nested `variants` / `media` / `print_areas` from our DB are dropped at the bridge — if we want them on the Medusa side later, the contract has to be extended on their end first.
 
-### Step 4 — Replace stale "Customizer Studio" copy in the Corporate Stores UI
-**File:** `src/pages/CorporateStores.tsx`
-- Replace any lingering "Customizer Studio" mentions in dialog/empty-state copy with "Printonet".
+3. **Deliver both files** as `<lov-artifact>` tags.
 
-### Step 5 — What you do after I ship the code
-1. Download the updated `public/customizer-studio-woocommerce.php` from the Lovable file tree.
-2. Upload it to your **InstaWP template site** (replace the existing plugin).
-3. Add this line to that template site's `wp-config.php` (above `/* That's all, stop editing! */`):
-   ```php
-   define('PRINTONET_BRANDING_TOKEN', 'PASTE_YOUR_TOKEN_HERE');
-   ```
-   Use the **same string** you'll paste into Lovable in Step 1.
-4. Verify by visiting `https://YOUR-TEMPLATE.instawp.xyz/wp-json/printonet/v1/health` — should return `{"ok":true,...}`.
-5. Re-snapshot the template in InstaWP so all future clones inherit the updated plugin and the constant.
-6. Test by provisioning a new corporate store from `/corporate-stores`.
+## What I will NOT include
 
-### Out of scope this round
-- Renaming legacy `customizer-studio/v1/add-to-cart` route or `cs_*` symbols (would break live customer carts).
-- Renaming the plugin filename (would deactivate the plugin on every existing site).
-- A WP Admin settings UI for editing branding (Printonet dashboard is the source of truth).
+- The previous rich `pricing` / `variants` / `media` / `taxonomy` / `deletions` / `print_areas` / `sync.mode` blocks — the Medusa parser ignores them. Including them in the example would mislead whoever wires this up.
+- A second "extended platform" example — your contract is explicit that the bridge must flatten before signing, so the example should already be flattened.
 
+## Open question (only if you want a different choice)
+
+Default `priceCents` rule: **lowest variant price × 100, rounded**. If you'd rather use `base_price` from `inventory_products` directly (even when variants override it), say so and I'll switch the rule in step 1 + the README.
