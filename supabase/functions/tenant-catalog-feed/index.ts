@@ -148,20 +148,74 @@ Deno.serve(async (req) => {
     });
   }
 
-  const match = (stores ?? []).find((s) => {
-    return (
-      hostOf(s.custom_domain) === tenantSlug ||
-      hostOf(s.instawp_site_url) === tenantSlug ||
-      normalizeSlug(s.custom_domain ?? "") === tenantSlug ||
-      normalizeSlug(s.name ?? "") === tenantSlug
-    );
+  // Helpers: extract the leftmost subdomain label and a name-slug.
+  const firstLabel = (host: string) => host.split(".")[0] ?? "";
+  const nameSlug = (n: string) =>
+    n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  // InstaWP hosts look like `pepsitwice-4bb193c1.instawp.site` — strip trailing `-<8hex>`.
+  const stripInstawpSuffix = (label: string) =>
+    label.replace(/-[a-f0-9]{6,}$/i, "");
+
+  const tenantFirstLabel = firstLabel(tenantSlug);
+
+  const candidates = (stores ?? []).map((s) => {
+    const cdHost = hostOf(s.custom_domain);
+    const iwHost = hostOf(s.instawp_site_url);
+    const iwLabel = firstLabel(iwHost);
+    const iwBase = stripInstawpSuffix(iwLabel);
+    const ns = nameSlug(s.name ?? "");
+    return { store: s, cdHost, iwHost, iwLabel, iwBase, ns };
   });
 
+  let match = candidates.find((c) =>
+    c.cdHost === tenantSlug ||
+    c.iwHost === tenantSlug ||
+    normalizeSlug(c.store.custom_domain ?? "") === tenantSlug ||
+    normalizeSlug(c.store.name ?? "") === tenantSlug ||
+    c.iwLabel === tenantSlug ||
+    c.iwBase === tenantSlug ||
+    c.iwLabel === tenantFirstLabel ||
+    c.iwBase === tenantFirstLabel ||
+    c.ns === tenantSlug ||
+    c.ns === tenantFirstLabel
+  )?.store;
+
+  // Fallback: if the WP plugin sends the platform host itself (e.g. "stores.printonet.com"),
+  // and there is exactly one active corporate store, treat it as the implicit tenant.
+  // This unblocks the single-tenant smoke-test case while we wire per-tenant slugs.
   if (!match) {
-    return new Response(JSON.stringify({ error: "tenant_not_found", tenant_slug: tenantSlug }), {
-      status: 404,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const PLATFORM_HOSTS = new Set([
+      "stores.printonet.com",
+      "printonet.com",
+      "www.printonet.com",
+      "app.printonet.com",
+    ]);
+    const activeStores = (stores ?? []).filter((s: any) => s.status !== "removed");
+    if (PLATFORM_HOSTS.has(tenantSlug) && activeStores.length === 1) {
+      match = activeStores[0];
+    }
+  }
+
+  if (!match) {
+    return new Response(
+      JSON.stringify({
+        error: "tenant_not_found",
+        tenant_slug: tenantSlug,
+        hint: "Send the InstaWP subdomain (e.g. 'pepsitwice-4bb193c1.instawp.site' or 'pepsitwice'), the store name slug, or a configured custom_domain.",
+        known_tenants: candidates.map((c) => ({
+          name: c.store.name,
+          custom_domain: c.cdHost || null,
+          instawp_host: c.iwHost || null,
+          instawp_label: c.iwLabel || null,
+          instawp_base: c.iwBase || null,
+          name_slug: c.ns || null,
+        })),
+      }),
+      {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 
   const { data: rows, error: prodErr } = await supabase
