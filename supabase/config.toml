@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.apply-store-branding]
 verify_jwt = false
+
+[functions.tenant-catalog-feed]
+verify_jwt = false
