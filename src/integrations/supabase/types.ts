@@ -73,8 +73,10 @@ export type Database = {
           logo_url: string | null
           name: string
           primary_color: string
+          provision_request_id: string | null
           secondary_logo_url: string | null
           status: string
+          tenant_slug: string | null
           updated_at: string
           user_id: string
         }
@@ -94,8 +96,10 @@ export type Database = {
           logo_url?: string | null
           name: string
           primary_color?: string
+          provision_request_id?: string | null
           secondary_logo_url?: string | null
           status?: string
+          tenant_slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -115,8 +119,10 @@ export type Database = {
           logo_url?: string | null
           name?: string
           primary_color?: string
+          provision_request_id?: string | null
           secondary_logo_url?: string | null
           status?: string
+          tenant_slug?: string | null
           updated_at?: string
           user_id?: string
         }

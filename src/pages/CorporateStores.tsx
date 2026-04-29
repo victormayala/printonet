@@ -597,6 +597,12 @@ async function uploadAsset(
   return data.publicUrl;
 }
 
+type SlugCheck = {
+  available: boolean;
+  tenant_slug: string;
+  suggestions?: string[];
+};
+
 function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth();
   const [values, setValues] = useState<FormValues>({
@@ -609,6 +615,36 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Slug-availability state
+  const [slugCheck, setSlugCheck] = useState<SlugCheck | null>(null);
+  const [chosenSlug, setChosenSlug] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const callSlugCheck = async (payload: { store_name?: string; tenant_slug?: string }) => {
+    setChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tenant-check-slug", {
+        body: payload,
+      });
+      if (error) throw error;
+      const resp = (data as { response?: SlugCheck })?.response;
+      if (!resp || typeof resp.tenant_slug !== "string") {
+        throw new Error("Unexpected response from tenant engine");
+      }
+      setSlugCheck(resp);
+      if (resp.available) setChosenSlug(resp.tenant_slug);
+      else setChosenSlug(null);
+    } catch (e) {
+      toast({
+        title: "Could not check slug availability",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const provision = useMutation({
     mutationFn: async () => {
@@ -624,6 +660,24 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       setErrors({});
       if (!user?.id) throw new Error("Not signed in");
 
+      // Step 1: ensure we have a checked, available slug.
+      let finalSlug = chosenSlug;
+      if (!finalSlug) {
+        const { data, error } = await supabase.functions.invoke("tenant-check-slug", {
+          body: { store_name: parsed.data.name },
+        });
+        if (error) throw error;
+        const resp = (data as { response?: SlugCheck })?.response;
+        if (!resp) throw new Error("Slug check failed");
+        if (!resp.available) {
+          setSlugCheck(resp);
+          throw new Error("That name is taken — please pick a suggestion below.");
+        }
+        finalSlug = resp.tenant_slug;
+        setSlugCheck(resp);
+        setChosenSlug(finalSlug);
+      }
+
       const tempId = crypto.randomUUID();
       const [logo_url, favicon_url] = await Promise.all([
         logo ? uploadAsset(user.id, tempId, logo, "logo") : Promise.resolve(null),
@@ -636,6 +690,8 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           custom_domain: parsed.data.custom_domain || null,
           logo_url,
           favicon_url,
+          tenant_slug: finalSlug,
+          request_id: tempId, // idempotent retries
         },
       });
       if (error) throw error;
@@ -650,8 +706,16 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     },
   });
 
-  const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) =>
+  const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) => {
     setValues((p) => ({ ...p, [k]: v }));
+    if (k === "name") {
+      // Invalidate slug check whenever the name changes.
+      setSlugCheck(null);
+      setChosenSlug(null);
+    }
+  };
+
+  const canCheck = values.name.trim().length >= 2 && !checking;
 
   return (
     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -672,8 +736,76 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         setFavicon={setFavicon}
       />
 
+      {/* Slug availability */}
+      <div className="rounded-md border p-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-medium">Site address</div>
+            <div className="text-xs text-muted-foreground">
+              We'll generate a URL-friendly slug from your store name.
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canCheck}
+            onClick={() => callSlugCheck({ store_name: values.name })}
+          >
+            {checking && <Loader2 className="h-3 w-3 animate-spin" />}
+            Check availability
+          </Button>
+        </div>
+
+        {slugCheck && (
+          <div className="space-y-2">
+            {slugCheck.available && chosenSlug ? (
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span>
+                  <span className="font-medium">{chosenSlug}</span> is available
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>
+                    <span className="font-medium">{slugCheck.tenant_slug}</span> is taken
+                  </span>
+                </div>
+                {slugCheck.suggestions && slugCheck.suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-xs text-muted-foreground">Pick a suggestion:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {slugCheck.suggestions.map((s) => {
+                        const selected = chosenSlug === s;
+                        return (
+                          <Button
+                            key={s}
+                            type="button"
+                            size="sm"
+                            variant={selected ? "default" : "outline"}
+                            onClick={() => callSlugCheck({ tenant_slug: s })}
+                          >
+                            {s}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       <DialogFooter>
-        <Button onClick={() => provision.mutate()} disabled={provision.isPending}>
+        <Button
+          onClick={() => provision.mutate()}
+          disabled={provision.isPending || checking}
+        >
           {provision.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           Provision store
         </Button>
