@@ -76,11 +76,38 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert row first (status = provisioning)
+    // Idempotent retries: if the caller passes a request_id we've already
+    // seen for this user, return the existing record instead of double-provisioning.
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    const requestId = body.request_id ?? crypto.randomUUID();
+    if (body.request_id) {
+      const { data: existing } = await admin
+        .from("corporate_stores")
+        .select("id, instawp_task_id, tenant_slug")
+        .eq("user_id", userId)
+        .eq("provision_request_id", body.request_id)
+        .maybeSingle();
+      if (existing) {
+        return new Response(
+          JSON.stringify({
+            store_id: existing.id,
+            task_id: existing.instawp_task_id,
+            tenant_slug: existing.tenant_slug,
+            idempotent: true,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
+    // Insert row first (status = provisioning)
     const { data: store, error: insertErr } = await admin
       .from("corporate_stores")
       .insert({
@@ -92,6 +119,8 @@ Deno.serve(async (req) => {
         font_family: body.font_family,
         logo_url: body.logo_url || null,
         favicon_url: body.favicon_url || null,
+        tenant_slug: body.tenant_slug || null,
+        provision_request_id: requestId,
         status: "provisioning",
       })
       .select()
@@ -105,19 +134,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // InstaWP requires site_name to match /^[a-zA-Z0-9-]+$/
-    // Sanitize: lowercase, replace any non-alphanumeric with '-', collapse repeats, trim '-'
-    const baseSlug = body.name
-      .toLowerCase()
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "") // strip accents
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 40) || "store";
-    // Append short random suffix to avoid collisions across tenants
-    const suffix = store.id.replace(/-/g, "").slice(0, 8);
-    const siteName = `${baseSlug}-${suffix}`;
+    // Use the canonical tenant_slug returned by /slug-availability when present.
+    // Fall back to a sanitized version of the store name for legacy callers.
+    let siteName = body.tenant_slug?.trim() || "";
+    if (!siteName) {
+      const baseSlug = body.name
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "") // strip accents
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40) || "store";
+      const suffix = store.id.replace(/-/g, "").slice(0, 8);
+      siteName = `${baseSlug}-${suffix}`;
+    }
+
 
     // Call InstaWP API to clone the template
     // Docs: https://docs.instawp.com/api-documentation
