@@ -202,11 +202,18 @@ Deno.serve(async (req) => {
         instawp_site_id: siteId,
         instawp_site_url: siteUrl,
         instawp_admin_url: adminUrl,
+        tenant_slug: store.tenant_slug ?? siteName,
       })
       .eq("id", store.id);
 
     return new Response(
-      JSON.stringify({ store_id: store.id, task_id: taskId }),
+      JSON.stringify({
+        store_id: store.id,
+        task_id: taskId,
+        tenant_slug: store.tenant_slug ?? siteName,
+        site_id: siteId,
+        domain: siteUrl,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
