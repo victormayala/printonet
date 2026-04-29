@@ -15,6 +15,10 @@ const BodySchema = z.object({
   font_family: z.string().min(1).max(80),
   logo_url: z.string().url().optional().nullable(),
   favicon_url: z.string().url().optional().nullable(),
+  // Canonical slug returned by /slug-availability (preferred)
+  tenant_slug: z.string().trim().regex(/^[a-z0-9-]{2,63}$/).optional().nullable(),
+  // Idempotency key for safe retries
+  request_id: z.string().uuid().optional().nullable(),
 });
 
 Deno.serve(async (req) => {
