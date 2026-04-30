@@ -494,6 +494,34 @@ export default function CorporateStoreDetails() {
           )}
         </CardContent>
       </Card>
+
+      <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{store.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently destroys the WooCommerce subsite and all of its data
+              on the Printonet network. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === "delete"}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                runManage("delete");
+              }}
+              disabled={busy === "delete"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {busy === "delete" && <Loader2 className="h-4 w-4 animate-spin" />}
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
