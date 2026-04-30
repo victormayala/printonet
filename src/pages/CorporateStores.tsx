@@ -668,6 +668,9 @@ function StoreActions({ store }: { store: CorporateStore }) {
         />
       </Dialog>
 
+      <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
+
+
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
