@@ -221,6 +221,7 @@ export default function CorporateStoreDetails() {
     } finally {
       setBusy(null);
       if (action === "delete") setConfirmDelete(false);
+      if (action === "pause") setConfirmPause(false);
     }
   };
 
@@ -501,6 +502,31 @@ export default function CorporateStoreDetails() {
       </Card>
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
+
+      <AlertDialog open={confirmPause} onOpenChange={setConfirmPause}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pause "{store.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The storefront will be temporarily unavailable to shoppers until you resume it.
+              No data will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === "pause"}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                runManage("pause");
+              }}
+              disabled={busy === "pause"}
+            >
+              {busy === "pause" && <Loader2 className="h-4 w-4 animate-spin" />}
+              Pause store
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
