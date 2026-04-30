@@ -551,6 +551,151 @@ function PushProductsDialog({
   );
 }
 
+function CopyField({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input readOnly value={value} className={mono ? "font-mono text-sm" : "text-sm"} />
+        <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label={`Copy ${label}`}>
+          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function PasswordCopyField({ label, value }: { label: string; value: string }) {
+  const [visible, setVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          readOnly
+          type={visible ? "text" : "password"}
+          value={value}
+          className="font-mono text-sm"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? "Hide password" : "Show password"}
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
+        <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label="Copy password">
+          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CredentialsDialog({
+  store,
+  open,
+  onOpenChange,
+}: {
+  store: CorporateStore;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const adminUrl = store.store_admin_url || store.wp_admin_url;
+  const loginUrl =
+    store.store_login_url ||
+    (store.wp_site_url ? `${store.wp_site_url.replace(/\/$/, "")}/wp-login.php` : null);
+  const hasAny =
+    !!adminUrl || !!loginUrl || !!store.admin_username || !!store.admin_password;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Admin credentials — {store.name}</DialogTitle>
+          <DialogDescription>
+            Sign-in details delivered by the multi-tenant platform when this store was provisioned.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!hasAny ? (
+          <div className="text-sm text-muted-foreground py-4">
+            No credentials available yet. They will appear here once the platform finishes provisioning.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {adminUrl && (
+                <Button asChild size="sm">
+                  <a href={adminUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" /> Open WP Admin
+                  </a>
+                </Button>
+              )}
+              {loginUrl && (
+                <Button asChild size="sm" variant="outline">
+                  <a href={loginUrl} target="_blank" rel="noreferrer">
+                    <LogIn className="h-4 w-4" /> Login page
+                  </a>
+                </Button>
+              )}
+            </div>
+
+            {adminUrl && <CopyField label="Admin URL" value={adminUrl} mono />}
+            {loginUrl && <CopyField label="Login URL" value={loginUrl} mono />}
+            {store.admin_username && (
+              <CopyField label="Username" value={store.admin_username} mono />
+            )}
+            {store.admin_password && (
+              <PasswordCopyField label="Password" value={store.admin_password} />
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Treat these credentials as sensitive. We recommend the store owner change the password after first login.
+            </p>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function StoreActions({ store }: { store: CorporateStore }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
