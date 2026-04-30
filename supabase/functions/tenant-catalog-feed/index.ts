@@ -6,8 +6,8 @@
 //   X-Printonet-Signature: hex( HMAC-SHA256( `${ts}.${rawBody}`, PLATFORM_HMAC_SECRET ) )
 // For GET requests rawBody is "" — tenant signs `${ts}.`.
 //
-// Resolves tenant_slug -> user_id by matching host of corporate_stores.custom_domain
-// or instawp_site_url, then returns that owner's active inventory_products in the
+// Resolves tenant_slug -> user_id by matching corporate_stores.tenant_slug,
+// custom_domain, or wp_site_url, then returns that owner's active inventory_products in the
 // normalized shape: { items: [{ sku, name, price, stock, ... }] }.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -137,10 +137,10 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Resolve tenant_slug -> user_id by matching host of custom_domain or instawp_site_url.
+  // Resolve tenant_slug -> user_id by matching tenant_slug, custom_domain, or wp_site_url.
   const { data: stores, error: storeErr } = await supabase
     .from("corporate_stores")
-    .select("user_id, custom_domain, instawp_site_url, name");
+    .select("user_id, tenant_slug, custom_domain, wp_site_url, name, status");
   if (storeErr) {
     return new Response(JSON.stringify({ error: "db_error", detail: storeErr.message }), {
       status: 500,
@@ -152,30 +152,34 @@ Deno.serve(async (req) => {
   const firstLabel = (host: string) => host.split(".")[0] ?? "";
   const nameSlug = (n: string) =>
     n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  // InstaWP hosts look like `pepsitwice-4bb193c1.instawp.site` — strip trailing `-<8hex>`.
-  const stripInstawpSuffix = (label: string) =>
+  // Legacy generated hosts sometimes include a trailing `-<hex>` suffix.
+  const stripGeneratedSuffix = (label: string) =>
     label.replace(/-[a-f0-9]{6,}$/i, "");
 
   const tenantFirstLabel = firstLabel(tenantSlug);
 
   const candidates = (stores ?? []).map((s) => {
     const cdHost = hostOf(s.custom_domain);
-    const iwHost = hostOf(s.instawp_site_url);
-    const iwLabel = firstLabel(iwHost);
-    const iwBase = stripInstawpSuffix(iwLabel);
+    const wpHost = hostOf(s.wp_site_url);
+    const wpLabel = firstLabel(wpHost);
+    const wpBase = stripGeneratedSuffix(wpLabel);
+    const storedSlug = normalizeSlug(s.tenant_slug ?? "");
     const ns = nameSlug(s.name ?? "");
-    return { store: s, cdHost, iwHost, iwLabel, iwBase, ns };
+    return { store: s, cdHost, wpHost, wpLabel, wpBase, storedSlug, ns };
   });
 
   let match = candidates.find((c) =>
+    c.storedSlug === tenantSlug ||
+    c.storedSlug === tenantFirstLabel ||
     c.cdHost === tenantSlug ||
-    c.iwHost === tenantSlug ||
+    c.wpHost === tenantSlug ||
     normalizeSlug(c.store.custom_domain ?? "") === tenantSlug ||
+    normalizeSlug(c.store.wp_site_url ?? "") === tenantSlug ||
     normalizeSlug(c.store.name ?? "") === tenantSlug ||
-    c.iwLabel === tenantSlug ||
-    c.iwBase === tenantSlug ||
-    c.iwLabel === tenantFirstLabel ||
-    c.iwBase === tenantFirstLabel ||
+    c.wpLabel === tenantSlug ||
+    c.wpBase === tenantSlug ||
+    c.wpLabel === tenantFirstLabel ||
+    c.wpBase === tenantFirstLabel ||
     c.ns === tenantSlug ||
     c.ns === tenantFirstLabel
   )?.store;
@@ -201,13 +205,14 @@ Deno.serve(async (req) => {
       JSON.stringify({
         error: "tenant_not_found",
         tenant_slug: tenantSlug,
-        hint: "Send the InstaWP subdomain (e.g. 'pepsitwice-4bb193c1.instawp.site' or 'pepsitwice'), the store name slug, or a configured custom_domain.",
+        hint: "Send tenant_slug, the WordPress site host/subdomain, the store name slug, or a configured custom_domain.",
         known_tenants: candidates.map((c) => ({
           name: c.store.name,
+          tenant_slug: c.storedSlug || null,
           custom_domain: c.cdHost || null,
-          instawp_host: c.iwHost || null,
-          instawp_label: c.iwLabel || null,
-          instawp_base: c.iwBase || null,
+          wp_host: c.wpHost || null,
+          wp_label: c.wpLabel || null,
+          wp_base: c.wpBase || null,
           name_slug: c.ns || null,
         })),
       }),
