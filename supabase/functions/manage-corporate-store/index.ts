@@ -70,26 +70,25 @@ Deno.serve(async (req) => {
     }
 
     // The multisite root exposes manage actions.
-    // Delete uses the dedicated /delete-store endpoint with idempotency.
-    // Pause/resume continue to use the /tenant/<action> endpoints.
-    const payload: Record<string, unknown> =
-      action === "delete"
-        ? {
-            tenant_slug: store.tenant_slug,
-            request_id: crypto.randomUUID(),
-          }
-        : {
-            tenant_slug: store.tenant_slug,
-            site_id: store.wp_site_id,
-            action,
-          };
+    // - delete  → /delete-store (idempotent via request_id)
+    // - pause   → /tenant/config with status=paused (alias of suspended)
+    // - resume  → /tenant/config with status=active
+    let path: string;
+    let payload: Record<string, unknown>;
 
-    const path =
-      action === "delete"
-        ? "/wp-json/printonet/v1/delete-store"
-        : action === "pause"
-          ? "/wp-json/printonet/v1/tenant/pause"
-          : "/wp-json/printonet/v1/tenant/resume";
+    if (action === "delete") {
+      path = "/wp-json/printonet/v1/delete-store";
+      payload = {
+        tenant_slug: store.tenant_slug,
+        request_id: crypto.randomUUID(),
+      };
+    } else {
+      path = "/wp-json/printonet/v1/tenant/config";
+      payload = {
+        tenant_slug: store.tenant_slug,
+        status: action === "pause" ? "paused" : "active",
+      };
+    }
 
     const result = await signedTenantCall(path, { method: "POST", body: payload });
 
