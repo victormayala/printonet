@@ -170,6 +170,7 @@ export default function CorporateStoreDetails() {
   const queryClient = useQueryClient();
   const [pushOpen, setPushOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmPause, setConfirmPause] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
 
   const { data: store, isLoading, error } = useQuery({
