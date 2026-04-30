@@ -84,7 +84,9 @@ Deno.serve(async (req) => {
     if (body.request_id) {
       const { data: existing } = await admin
         .from("corporate_stores")
-        .select("id, tenant_slug, wp_site_id, wp_site_url, wp_admin_url, status")
+        .select(
+          "id, tenant_slug, wp_site_id, wp_site_url, wp_admin_url, store_admin_url, store_login_url, admin_username, admin_password, admin_user_id, status",
+        )
         .eq("user_id", userId)
         .eq("provision_request_id", body.request_id)
         .maybeSingle();
@@ -96,6 +98,11 @@ Deno.serve(async (req) => {
             site_id: existing.wp_site_id,
             site_url: existing.wp_site_url,
             admin_url: existing.wp_admin_url,
+            store_admin_url: existing.store_admin_url,
+            store_login_url: existing.store_login_url,
+            admin_username: existing.admin_username,
+            admin_password: existing.admin_password,
+            admin_user_id: existing.admin_user_id,
             idempotent: true,
           }),
           {
