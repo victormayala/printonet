@@ -167,6 +167,10 @@ export default function CorporateStoreDetails() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [pushOpen, setPushOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
 
   const { data: store, isLoading, error } = useQuery({
     queryKey: ["corporate_store", id, user?.id],
@@ -181,6 +185,43 @@ export default function CorporateStoreDetails() {
       return data as CorporateStore | null;
     },
   });
+
+  const runManage = async (action: "pause" | "resume" | "delete") => {
+    if (!store) return;
+    setBusy(action);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-corporate-store", {
+        body: { store_id: store.id, action },
+      });
+      const errMsg =
+        (error as Error | null)?.message ||
+        (data as { error?: string } | null)?.error;
+      if (errMsg) throw new Error(errMsg);
+      toast({
+        title:
+          action === "delete"
+            ? "Store deleted"
+            : action === "pause"
+              ? "Store paused"
+              : "Store resumed",
+      });
+      queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+      if (action === "delete") {
+        navigate("/corporate-stores");
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
+      }
+    } catch (e) {
+      toast({
+        title: `Could not ${action} store`,
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+      if (action === "delete") setConfirmDelete(false);
+    }
+  };
 
   if (isLoading) {
     return (
