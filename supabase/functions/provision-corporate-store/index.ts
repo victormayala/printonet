@@ -323,6 +323,11 @@ Deno.serve(async (req) => {
         site_id: siteId,
         site_url: siteUrl,
         admin_url: adminUrl,
+        store_admin_url: storeAdminUrl,
+        store_login_url: storeLoginUrl,
+        admin_username: adminUsername,
+        admin_password: adminPassword,
+        admin_user_id: adminUserId,
       }),
       {
         status: 200,
