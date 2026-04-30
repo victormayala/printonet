@@ -617,6 +617,12 @@ function StoreActions({ store }: { store: CorporateStore }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {isActive && (
+            <DropdownMenuItem onClick={() => setPushOpen(true)}>
+              <Package className="h-4 w-4" />
+              Push products
+            </DropdownMenuItem>
+          )}
           {(isActive || isPaused) && (
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4" />
