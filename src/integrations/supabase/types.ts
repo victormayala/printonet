@@ -66,10 +66,6 @@ export type Database = {
           favicon_url: string | null
           font_family: string
           id: string
-          instawp_admin_url: string | null
-          instawp_site_id: string | null
-          instawp_site_url: string | null
-          instawp_task_id: string | null
           logo_url: string | null
           name: string
           primary_color: string
@@ -79,6 +75,9 @@ export type Database = {
           tenant_slug: string | null
           updated_at: string
           user_id: string
+          wp_admin_url: string | null
+          wp_site_id: string | null
+          wp_site_url: string | null
         }
         Insert: {
           accent_color?: string
@@ -89,10 +88,6 @@ export type Database = {
           favicon_url?: string | null
           font_family?: string
           id?: string
-          instawp_admin_url?: string | null
-          instawp_site_id?: string | null
-          instawp_site_url?: string | null
-          instawp_task_id?: string | null
           logo_url?: string | null
           name: string
           primary_color?: string
@@ -102,6 +97,9 @@ export type Database = {
           tenant_slug?: string | null
           updated_at?: string
           user_id: string
+          wp_admin_url?: string | null
+          wp_site_id?: string | null
+          wp_site_url?: string | null
         }
         Update: {
           accent_color?: string
@@ -112,10 +110,6 @@ export type Database = {
           favicon_url?: string | null
           font_family?: string
           id?: string
-          instawp_admin_url?: string | null
-          instawp_site_id?: string | null
-          instawp_site_url?: string | null
-          instawp_task_id?: string | null
           logo_url?: string | null
           name?: string
           primary_color?: string
@@ -125,6 +119,9 @@ export type Database = {
           tenant_slug?: string | null
           updated_at?: string
           user_id?: string
+          wp_admin_url?: string | null
+          wp_site_id?: string | null
+          wp_site_url?: string | null
         }
         Relationships: []
       }
