@@ -203,12 +203,14 @@ Deno.serve(async (req) => {
       siteIdRaw === undefined || siteIdRaw === null ? null : String(siteIdRaw);
     const siteUrl =
       (data.site_url as string | undefined) ??
+      (data.store_url as string | undefined) ??
       (data.url as string | undefined) ??
       null;
     const adminUrl =
       (data.admin_url as string | undefined) ??
       (data.wp_admin_url as string | undefined) ??
-      null;
+      (data.store_admin_url as string | undefined) ??
+      (siteUrl ? `${(siteUrl as string).replace(/\/$/, "")}/wp-admin` : null);
     const canonicalSlug =
       (data.tenant_slug as string | undefined) ?? body.tenant_slug;
 
