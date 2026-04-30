@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -16,7 +16,11 @@ import {
   Loader2,
   LogIn,
   Mail,
+  Package,
+  Pause,
   PauseCircle,
+  Play,
+  Trash2,
   Type,
 } from "lucide-react";
 
@@ -25,36 +29,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { CorporateStore } from "@/types/corporateStore";
+import { PushProductsDialog } from "@/components/PushProductsDialog";
 
-type CorporateStore = {
-  id: string;
-  user_id: string;
-  name: string;
-  contact_email: string;
-  custom_domain: string | null;
-  primary_color: string;
-  accent_color: string;
-  font_family: string;
-  logo_url: string | null;
-  secondary_logo_url: string | null;
-  favicon_url: string | null;
-  wp_site_url: string | null;
-  wp_admin_url: string | null;
-  wp_site_id: string | null;
-  store_admin_url: string | null;
-  store_login_url: string | null;
-  admin_username: string | null;
-  admin_password: string | null;
-  admin_user_id: string | null;
-  tenant_slug: string | null;
-  status: "provisioning" | "active" | "failed" | "paused";
-  error_message: string | null;
-  created_at: string;
-};
 
 function StatusBadge({ status }: { status: CorporateStore["status"] }) {
   if (status === "active") {
@@ -176,6 +167,10 @@ export default function CorporateStoreDetails() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [pushOpen, setPushOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
 
   const { data: store, isLoading, error } = useQuery({
     queryKey: ["corporate_store", id, user?.id],
@@ -190,6 +185,43 @@ export default function CorporateStoreDetails() {
       return data as CorporateStore | null;
     },
   });
+
+  const runManage = async (action: "pause" | "resume" | "delete") => {
+    if (!store) return;
+    setBusy(action);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-corporate-store", {
+        body: { store_id: store.id, action },
+      });
+      const errMsg =
+        (error as Error | null)?.message ||
+        (data as { error?: string } | null)?.error;
+      if (errMsg) throw new Error(errMsg);
+      toast({
+        title:
+          action === "delete"
+            ? "Store deleted"
+            : action === "pause"
+              ? "Store paused"
+              : "Store resumed",
+      });
+      queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+      if (action === "delete") {
+        navigate("/corporate-stores");
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
+      }
+    } catch (e) {
+      toast({
+        title: `Could not ${action} store`,
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+      if (action === "delete") setConfirmDelete(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -257,7 +289,7 @@ export default function CorporateStoreDetails() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {store.wp_site_url && (
             <Button asChild variant="outline">
               <a href={store.wp_site_url} target="_blank" rel="noreferrer">
@@ -266,12 +298,52 @@ export default function CorporateStoreDetails() {
             </Button>
           )}
           {adminUrl && (
-            <Button asChild>
+            <Button asChild variant="outline">
               <a href={adminUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4" /> Open WP Admin
               </a>
             </Button>
           )}
+          {store.status === "active" && (
+            <Button onClick={() => setPushOpen(true)}>
+              <Package className="h-4 w-4" /> Push products
+            </Button>
+          )}
+          {store.status === "active" && (
+            <Button
+              variant="outline"
+              onClick={() => runManage("pause")}
+              disabled={busy !== null}
+            >
+              {busy === "pause" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Pause className="h-4 w-4" />
+              )}
+              Pause
+            </Button>
+          )}
+          {store.status === "paused" && (
+            <Button
+              variant="outline"
+              onClick={() => runManage("resume")}
+              disabled={busy !== null}
+            >
+              {busy === "resume" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              Resume
+            </Button>
+          )}
+          <Button
+            variant="destructive"
+            onClick={() => setConfirmDelete(true)}
+            disabled={busy !== null}
+          >
+            <Trash2 className="h-4 w-4" /> Delete
+          </Button>
         </div>
       </div>
 
@@ -422,6 +494,34 @@ export default function CorporateStoreDetails() {
           )}
         </CardContent>
       </Card>
+
+      <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{store.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently destroys the WooCommerce subsite and all of its data
+              on the Printonet network. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === "delete"}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                runManage("delete");
+              }}
+              disabled={busy === "delete"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {busy === "delete" && <Loader2 className="h-4 w-4 animate-spin" />}
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
