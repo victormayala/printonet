@@ -551,6 +551,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [pushOpen, setPushOpen] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete" | "rebrand">(null);
 
   const refetch = () =>
