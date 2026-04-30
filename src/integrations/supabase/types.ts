@@ -59,6 +59,9 @@ export type Database = {
       corporate_stores: {
         Row: {
           accent_color: string
+          admin_password: string | null
+          admin_user_id: string | null
+          admin_username: string | null
           contact_email: string
           created_at: string
           custom_domain: string | null
@@ -72,6 +75,8 @@ export type Database = {
           provision_request_id: string | null
           secondary_logo_url: string | null
           status: string
+          store_admin_url: string | null
+          store_login_url: string | null
           tenant_slug: string | null
           updated_at: string
           user_id: string
@@ -81,6 +86,9 @@ export type Database = {
         }
         Insert: {
           accent_color?: string
+          admin_password?: string | null
+          admin_user_id?: string | null
+          admin_username?: string | null
           contact_email: string
           created_at?: string
           custom_domain?: string | null
@@ -94,6 +102,8 @@ export type Database = {
           provision_request_id?: string | null
           secondary_logo_url?: string | null
           status?: string
+          store_admin_url?: string | null
+          store_login_url?: string | null
           tenant_slug?: string | null
           updated_at?: string
           user_id: string
@@ -103,6 +113,9 @@ export type Database = {
         }
         Update: {
           accent_color?: string
+          admin_password?: string | null
+          admin_user_id?: string | null
+          admin_username?: string | null
           contact_email?: string
           created_at?: string
           custom_domain?: string | null
@@ -116,6 +129,8 @@ export type Database = {
           provision_request_id?: string | null
           secondary_logo_url?: string | null
           status?: string
+          store_admin_url?: string | null
+          store_login_url?: string | null
           tenant_slug?: string | null
           updated_at?: string
           user_id?: string

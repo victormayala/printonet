@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, KeyRound, Copy, Check, Eye, EyeOff, LogIn } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -67,6 +67,11 @@ type CorporateStore = {
   wp_site_url: string | null;
   wp_admin_url: string | null;
   wp_site_id: string | null;
+  store_admin_url: string | null;
+  store_login_url: string | null;
+  admin_username: string | null;
+  admin_password: string | null;
+  admin_user_id: string | null;
   tenant_slug: string | null;
   status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;
@@ -546,12 +551,158 @@ function PushProductsDialog({
   );
 }
 
+function CopyField({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input readOnly value={value} className={mono ? "font-mono text-sm" : "text-sm"} />
+        <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label={`Copy ${label}`}>
+          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function PasswordCopyField({ label, value }: { label: string; value: string }) {
+  const [visible, setVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          readOnly
+          type={visible ? "text" : "password"}
+          value={value}
+          className="font-mono text-sm"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? "Hide password" : "Show password"}
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
+        <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label="Copy password">
+          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CredentialsDialog({
+  store,
+  open,
+  onOpenChange,
+}: {
+  store: CorporateStore;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const adminUrl = store.store_admin_url || store.wp_admin_url;
+  const loginUrl =
+    store.store_login_url ||
+    (store.wp_site_url ? `${store.wp_site_url.replace(/\/$/, "")}/wp-login.php` : null);
+  const hasAny =
+    !!adminUrl || !!loginUrl || !!store.admin_username || !!store.admin_password;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Admin credentials — {store.name}</DialogTitle>
+          <DialogDescription>
+            Sign-in details delivered by the multi-tenant platform when this store was provisioned.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!hasAny ? (
+          <div className="text-sm text-muted-foreground py-4">
+            No credentials available yet. They will appear here once the platform finishes provisioning.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {adminUrl && (
+                <Button asChild size="sm">
+                  <a href={adminUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" /> Open WP Admin
+                  </a>
+                </Button>
+              )}
+              {loginUrl && (
+                <Button asChild size="sm" variant="outline">
+                  <a href={loginUrl} target="_blank" rel="noreferrer">
+                    <LogIn className="h-4 w-4" /> Login page
+                  </a>
+                </Button>
+              )}
+            </div>
+
+            {adminUrl && <CopyField label="Admin URL" value={adminUrl} mono />}
+            {loginUrl && <CopyField label="Login URL" value={loginUrl} mono />}
+            {store.admin_username && (
+              <CopyField label="Username" value={store.admin_username} mono />
+            )}
+            {store.admin_password && (
+              <PasswordCopyField label="Password" value={store.admin_password} />
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Treat these credentials as sensitive. We recommend the store owner change the password after first login.
+            </p>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function StoreActions({ store }: { store: CorporateStore }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
+  const [credsOpen, setCredsOpen] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete" | "rebrand">(null);
 
   const refetch = () =>
@@ -623,6 +774,16 @@ function StoreActions({ store }: { store: CorporateStore }) {
               Push products
             </DropdownMenuItem>
           )}
+          {(isActive || isPaused) &&
+            (store.admin_username ||
+              store.admin_password ||
+              store.store_admin_url ||
+              store.store_login_url) && (
+              <DropdownMenuItem onClick={() => setCredsOpen(true)}>
+                <KeyRound className="h-4 w-4" />
+                View credentials
+              </DropdownMenuItem>
+            )}
           {(isActive || isPaused) && (
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4" />
@@ -669,7 +830,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
       </Dialog>
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
-
+      <CredentialsDialog store={store} open={credsOpen} onOpenChange={setCredsOpen} />
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

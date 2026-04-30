@@ -84,7 +84,9 @@ Deno.serve(async (req) => {
     if (body.request_id) {
       const { data: existing } = await admin
         .from("corporate_stores")
-        .select("id, tenant_slug, wp_site_id, wp_site_url, wp_admin_url, status")
+        .select(
+          "id, tenant_slug, wp_site_id, wp_site_url, wp_admin_url, store_admin_url, store_login_url, admin_username, admin_password, admin_user_id, status",
+        )
         .eq("user_id", userId)
         .eq("provision_request_id", body.request_id)
         .maybeSingle();
@@ -96,6 +98,11 @@ Deno.serve(async (req) => {
             site_id: existing.wp_site_id,
             site_url: existing.wp_site_url,
             admin_url: existing.wp_admin_url,
+            store_admin_url: existing.store_admin_url,
+            store_login_url: existing.store_login_url,
+            admin_username: existing.admin_username,
+            admin_password: existing.admin_password,
+            admin_user_id: existing.admin_user_id,
             idempotent: true,
           }),
           {
@@ -211,6 +218,29 @@ Deno.serve(async (req) => {
       (data.wp_admin_url as string | undefined) ??
       (data.store_admin_url as string | undefined) ??
       (siteUrl ? `${(siteUrl as string).replace(/\/$/, "")}/wp-admin` : null);
+    const storeAdminUrl =
+      (data.store_admin_url as string | undefined) ??
+      (data.admin_url as string | undefined) ??
+      (data.wp_admin_url as string | undefined) ??
+      adminUrl ??
+      null;
+    const storeLoginUrl =
+      (data.store_login_url as string | undefined) ??
+      (data.login_url as string | undefined) ??
+      (siteUrl ? `${(siteUrl as string).replace(/\/$/, "")}/wp-login.php` : null);
+    const adminUsername =
+      (data.admin_username as string | undefined) ??
+      (data.username as string | undefined) ??
+      null;
+    const adminPassword =
+      (data.admin_password as string | undefined) ??
+      (data.password as string | undefined) ??
+      null;
+    const adminUserIdRaw = data.admin_user_id ?? data.user_id;
+    const adminUserId =
+      adminUserIdRaw === undefined || adminUserIdRaw === null
+        ? null
+        : String(adminUserIdRaw);
     const canonicalSlug =
       (data.tenant_slug as string | undefined) ?? body.tenant_slug;
 
@@ -247,6 +277,11 @@ Deno.serve(async (req) => {
         wp_site_id: siteId,
         wp_site_url: siteUrl,
         wp_admin_url: adminUrl,
+        store_admin_url: storeAdminUrl,
+        store_login_url: storeLoginUrl,
+        admin_username: adminUsername,
+        admin_password: adminPassword,
+        admin_user_id: adminUserId,
         tenant_slug: canonicalSlug,
         status: "active",
         error_message: null,
@@ -288,6 +323,11 @@ Deno.serve(async (req) => {
         site_id: siteId,
         site_url: siteUrl,
         admin_url: adminUrl,
+        store_admin_url: storeAdminUrl,
+        store_login_url: storeLoginUrl,
+        admin_username: adminUsername,
+        admin_password: adminPassword,
+        admin_user_id: adminUserId,
       }),
       {
         status: 200,
