@@ -125,7 +125,9 @@ Deno.serve(async (req) => {
     `evt_${Date.now().toString(36)}_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
   const payload = {
+    supplier: "printonet_internal",
     tenant_slug: body.tenant_slug,
+    credentials: {},
     event_id,
     occurred_at: new Date().toISOString(),
     products,
