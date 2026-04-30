@@ -1,5 +1,9 @@
+// Pause / resume / delete a tenant subsite on the Printonet WordPress Multisite.
+// Uses signed HMAC requests against the network root.
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { signedTenantCall } from "../_shared/printonet-tenant.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,13 +34,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const supabase = createClient(
+    const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-
-    const { data: userData, error: userErr } = await supabase.auth.getUser(
+    const { data: userData, error: userErr } = await userClient.auth.getUser(
       authHeader.replace("Bearer ", ""),
     );
     if (userErr || !userData?.user) {
@@ -46,17 +49,9 @@ Deno.serve(async (req) => {
 
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) {
-      return jsonResponse(
-        { error: parsed.error.flatten().fieldErrors },
-        400,
-      );
+      return jsonResponse({ error: parsed.error.flatten().fieldErrors }, 400);
     }
     const { store_id, action } = parsed.data;
-
-    const INSTAWP_API_KEY = Deno.env.get("INSTAWP_API_KEY");
-    if (!INSTAWP_API_KEY) {
-      return jsonResponse({ error: "InstaWP not configured" }, 500);
-    }
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -74,83 +69,65 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Store not found" }, 404);
     }
 
-    const siteId = store.instawp_site_id;
-
-    // Helper: call InstaWP and tolerate already-deleted/missing sites
-    const callInstaWP = async (
-      method: "GET" | "DELETE",
-      path: string,
-    ): Promise<{ ok: boolean; status: number; message?: string }> => {
-      if (!siteId) return { ok: true, status: 200 };
-      const res = await fetch(`https://app.instawp.io/api/v2/${path}`, {
-        method,
-        headers: {
-          Authorization: `Bearer ${INSTAWP_API_KEY}`,
-          Accept: "application/json",
-        },
-      });
-      const json = await res.json().catch(() => ({}));
-      console.log(`InstaWP ${method} ${path}`, res.status, json);
-      // Treat 404 as benign for delete operations
-      if (res.status === 404 && method === "DELETE") {
-        return { ok: true, status: 404 };
-      }
-      return {
-        ok: res.ok && json?.status !== false,
-        status: res.status,
-        message: json?.message || json?.error,
-      };
+    // The multisite root exposes manage actions under /tenant/<action>.
+    // We send the canonical tenant_slug so it works without site_id too.
+    const payload = {
+      tenant_slug: store.tenant_slug,
+      site_id: store.wp_site_id,
+      action,
     };
 
-    if (action === "delete") {
-      const result = await callInstaWP("DELETE", `sites/${siteId}`);
-      if (!result.ok) {
+    const path =
+      action === "delete"
+        ? "/wp-json/printonet/v1/tenant/delete"
+        : action === "pause"
+          ? "/wp-json/printonet/v1/tenant/pause"
+          : "/wp-json/printonet/v1/tenant/resume";
+
+    const result = await signedTenantCall(path, { method: "POST", body: payload });
+
+    // For delete, treat upstream "not found" as benign — the row is going away anyway.
+    const treatAsOk =
+      action === "delete" &&
+      (("error" in result && false) ||
+        (!("error" in result) && (result.ok || result.status === 404)));
+
+    if ("error" in result) {
+      if (action !== "delete") {
         return jsonResponse(
-          { error: result.message || `InstaWP error (${result.status})` },
+          { error: `${result.error}${result.detail ? `: ${result.detail}` : ""}` },
           502,
         );
       }
+      // delete + upstream unreachable → still proceed to clean DB row
+    } else if (!result.ok && !treatAsOk) {
+      const resp = result.response as Record<string, unknown> | string | null;
+      const msg =
+        (typeof resp === "object" && resp &&
+          ((resp as Record<string, unknown>).message as string ||
+            (resp as Record<string, unknown>).error as string)) ||
+        `Tenant engine error (${result.status})`;
+      return jsonResponse({ error: msg }, 502);
+    }
+
+    if (action === "delete") {
       const { error: delErr } = await admin
         .from("corporate_stores")
         .delete()
         .eq("id", store_id);
-      if (delErr) {
-        return jsonResponse({ error: delErr.message }, 500);
-      }
+      if (delErr) return jsonResponse({ error: delErr.message }, 500);
       return jsonResponse({ ok: true });
     }
 
-    if (action === "pause") {
-      const result = await callInstaWP("GET", `sites/${siteId}/sleep`);
-      if (!result.ok) {
-        return jsonResponse(
-          { error: result.message || `InstaWP error (${result.status})` },
-          502,
-        );
-      }
-      await admin
-        .from("corporate_stores")
-        .update({ status: "paused", error_message: null })
-        .eq("id", store_id);
-      return jsonResponse({ ok: true });
-    }
+    await admin
+      .from("corporate_stores")
+      .update({
+        status: action === "pause" ? "paused" : "active",
+        error_message: null,
+      })
+      .eq("id", store_id);
 
-    if (action === "resume") {
-      const result = await callInstaWP("GET", `sites/${siteId}/wake`);
-      if (!result.ok) {
-        return jsonResponse(
-          { error: result.message || `InstaWP error (${result.status})` },
-          502,
-        );
-      }
-      await admin
-        .from("corporate_stores")
-        .update({ status: "active", error_message: null })
-        .eq("id", store_id);
-      return jsonResponse({ ok: true });
-    }
-
-    return jsonResponse({ error: "Unknown action" }, 400);
+    return jsonResponse({ ok: true });
   } catch (e) {
     console.error("manage-corporate-store error", e);
     return jsonResponse(
