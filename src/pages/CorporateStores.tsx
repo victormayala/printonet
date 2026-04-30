@@ -67,6 +67,11 @@ type CorporateStore = {
   wp_site_url: string | null;
   wp_admin_url: string | null;
   wp_site_id: string | null;
+  store_admin_url: string | null;
+  store_login_url: string | null;
+  admin_username: string | null;
+  admin_password: string | null;
+  admin_user_id: string | null;
   tenant_slug: string | null;
   status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;
