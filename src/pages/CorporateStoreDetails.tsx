@@ -289,7 +289,7 @@ export default function CorporateStoreDetails() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {store.wp_site_url && (
             <Button asChild variant="outline">
               <a href={store.wp_site_url} target="_blank" rel="noreferrer">
@@ -298,12 +298,52 @@ export default function CorporateStoreDetails() {
             </Button>
           )}
           {adminUrl && (
-            <Button asChild>
+            <Button asChild variant="outline">
               <a href={adminUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4" /> Open WP Admin
               </a>
             </Button>
           )}
+          {store.status === "active" && (
+            <Button onClick={() => setPushOpen(true)}>
+              <Package className="h-4 w-4" /> Push products
+            </Button>
+          )}
+          {store.status === "active" && (
+            <Button
+              variant="outline"
+              onClick={() => runManage("pause")}
+              disabled={busy !== null}
+            >
+              {busy === "pause" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Pause className="h-4 w-4" />
+              )}
+              Pause
+            </Button>
+          )}
+          {store.status === "paused" && (
+            <Button
+              variant="outline"
+              onClick={() => runManage("resume")}
+              disabled={busy !== null}
+            >
+              {busy === "resume" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              Resume
+            </Button>
+          )}
+          <Button
+            variant="destructive"
+            onClick={() => setConfirmDelete(true)}
+            disabled={busy !== null}
+          >
+            <Trash2 className="h-4 w-4" /> Delete
+          </Button>
         </div>
       </div>
 
