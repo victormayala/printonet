@@ -830,7 +830,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
       </Dialog>
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
-
+      <CredentialsDialog store={store} open={credsOpen} onOpenChange={setCredsOpen} />
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
