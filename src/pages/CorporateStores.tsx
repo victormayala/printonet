@@ -53,31 +53,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-type CorporateStore = {
-  id: string;
-  user_id: string;
-  name: string;
-  contact_email: string;
-  custom_domain: string | null;
-  primary_color: string;
-  accent_color: string;
-  font_family: string;
-  logo_url: string | null;
-  secondary_logo_url: string | null;
-  favicon_url: string | null;
-  wp_site_url: string | null;
-  wp_admin_url: string | null;
-  wp_site_id: string | null;
-  store_admin_url: string | null;
-  store_login_url: string | null;
-  admin_username: string | null;
-  admin_password: string | null;
-  admin_user_id: string | null;
-  tenant_slug: string | null;
-  status: "provisioning" | "active" | "failed" | "paused";
-  error_message: string | null;
-  created_at: string;
-};
+import { CorporateStore, resolveTenantSlug } from "@/types/corporateStore";
+import { PushProductsDialog } from "@/components/PushProductsDialog";
 
 const MAX_LOGO_BYTES = 4 * 1024 * 1024;
 const ACCEPTED_MIME = ["image/png", "image/jpeg", "image/svg+xml", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"];
