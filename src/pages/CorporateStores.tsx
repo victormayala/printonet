@@ -202,11 +202,16 @@ export default function CorporateStores() {
     if (provisioningIds.length === 0) return;
     const interval = setInterval(async () => {
       await Promise.all(
-        provisioningIds.map((id) =>
-          supabase.functions.invoke("check-corporate-store-status", {
-            body: { store_id: id },
-          }),
-        ),
+        provisioningIds.map(async (id) => {
+          try {
+            await supabase.functions.invoke("check-corporate-store-status", {
+              body: { store_id: id },
+            });
+          } catch (err) {
+            // 404s for stale/deleted rows are expected — just skip.
+            console.warn("status poll failed for", id, err);
+          }
+        }),
       );
       queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
     }, 4000);
