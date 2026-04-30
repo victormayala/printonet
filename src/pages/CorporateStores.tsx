@@ -774,6 +774,16 @@ function StoreActions({ store }: { store: CorporateStore }) {
               Push products
             </DropdownMenuItem>
           )}
+          {(isActive || isPaused) &&
+            (store.admin_username ||
+              store.admin_password ||
+              store.store_admin_url ||
+              store.store_login_url) && (
+              <DropdownMenuItem onClick={() => setCredsOpen(true)}>
+                <KeyRound className="h-4 w-4" />
+                View credentials
+              </DropdownMenuItem>
+            )}
           {(isActive || isPaused) && (
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4" />
