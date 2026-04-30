@@ -62,8 +62,10 @@ type CorporateStore = {
   logo_url: string | null;
   secondary_logo_url: string | null;
   favicon_url: string | null;
-  instawp_site_url: string | null;
-  instawp_admin_url: string | null;
+  wp_site_url: string | null;
+  wp_admin_url: string | null;
+  wp_site_id: string | null;
+  tenant_slug: string | null;
   status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;
   created_at: string;
@@ -293,14 +295,14 @@ export default function CorporateStores() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {s.instawp_site_url ? (
+                      {s.wp_site_url ? (
                         <a
-                          href={s.instawp_site_url}
+                          href={s.wp_site_url}
                           target="_blank"
                           rel="noreferrer"
                           className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                         >
-                          {s.instawp_site_url.replace(/^https?:\/\//, "")}
+                          {s.wp_site_url.replace(/^https?:\/\//, "")}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       ) : (
@@ -377,9 +379,9 @@ function StoreActions({ store }: { store: CorporateStore }) {
 
   return (
     <div className="flex items-center justify-end gap-2">
-      {store.instawp_admin_url && isActive && (
+      {store.wp_admin_url && isActive && (
         <Button asChild variant="outline" size="sm">
-          <a href={store.instawp_admin_url} target="_blank" rel="noreferrer">
+          <a href={store.wp_admin_url} target="_blank" rel="noreferrer">
             WP Admin
           </a>
         </Button>
@@ -441,8 +443,8 @@ function StoreActions({ store }: { store: CorporateStore }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{store.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently destroys the WooCommerce site and all of its data on
-              InstaWP. This action cannot be undone.
+              This permanently destroys the WooCommerce subsite and all of its data
+              on the Printonet network. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
