@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       .eq("id", parsed.data.store_id)
       .maybeSingle();
 
-    if (!store || !store.instawp_site_url) {
+    if (!store || !store.wp_site_url) {
       return new Response(JSON.stringify({ error: "Store not ready" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       favicon_url: store.favicon_url,
     };
 
-    const url = `${store.instawp_site_url.replace(/\/$/, "")}/wp-json/printonet/v1/branding`;
+    const url = `${store.wp_site_url.replace(/\/$/, "")}/wp-json/printonet/v1/branding`;
     let brandingError: string | null = null;
     try {
       const res = await fetch(url, {
