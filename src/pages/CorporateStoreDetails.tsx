@@ -289,61 +289,65 @@ export default function CorporateStoreDetails() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {store.wp_site_url && (
-            <Button asChild variant="outline">
-              <a href={store.wp_site_url} target="_blank" rel="noreferrer">
-                <Globe className="h-4 w-4" /> Visit store
-              </a>
-            </Button>
-          )}
-          {adminUrl && (
-            <Button asChild variant="outline">
-              <a href={adminUrl} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-4 w-4" /> Open WP Admin
-              </a>
-            </Button>
-          )}
-          {store.status === "active" && (
-            <Button onClick={() => setPushOpen(true)}>
-              <Package className="h-4 w-4" /> Push products
-            </Button>
-          )}
-          {store.status === "active" && (
+        <div className="flex items-center gap-2 flex-wrap flex-1 justify-end">
+          <div className="flex items-center gap-2 flex-wrap">
+            {store.wp_site_url && (
+              <Button asChild variant="outline">
+                <a href={store.wp_site_url} target="_blank" rel="noreferrer">
+                  <Globe className="h-4 w-4" /> Visit store
+                </a>
+              </Button>
+            )}
+            {adminUrl && (
+              <Button asChild variant="outline">
+                <a href={adminUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" /> Open WP Admin
+                </a>
+              </Button>
+            )}
+            {store.status === "active" && (
+              <Button onClick={() => setPushOpen(true)}>
+                <Package className="h-4 w-4" /> Push products
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap ml-auto">
+            {store.status === "active" && (
+              <Button
+                variant="outline"
+                onClick={() => setConfirmPause(true)}
+                disabled={busy !== null}
+              >
+                {busy === "pause" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Pause className="h-4 w-4" />
+                )}
+                Pause
+              </Button>
+            )}
+            {store.status === "paused" && (
+              <Button
+                variant="outline"
+                onClick={() => runManage("resume")}
+                disabled={busy !== null}
+              >
+                {busy === "resume" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                Resume
+              </Button>
+            )}
             <Button
-              variant="outline"
-              onClick={() => runManage("pause")}
+              variant="destructive"
+              onClick={() => setConfirmDelete(true)}
               disabled={busy !== null}
             >
-              {busy === "pause" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Pause className="h-4 w-4" />
-              )}
-              Pause
+              <Trash2 className="h-4 w-4" /> Delete
             </Button>
-          )}
-          {store.status === "paused" && (
-            <Button
-              variant="outline"
-              onClick={() => runManage("resume")}
-              disabled={busy !== null}
-            >
-              {busy === "resume" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-              Resume
-            </Button>
-          )}
-          <Button
-            variant="destructive"
-            onClick={() => setConfirmDelete(true)}
-            disabled={busy !== null}
-          >
-            <Trash2 className="h-4 w-4" /> Delete
-          </Button>
+          </div>
         </div>
       </div>
 
