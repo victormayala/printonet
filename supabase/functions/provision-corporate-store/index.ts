@@ -218,6 +218,29 @@ Deno.serve(async (req) => {
       (data.wp_admin_url as string | undefined) ??
       (data.store_admin_url as string | undefined) ??
       (siteUrl ? `${(siteUrl as string).replace(/\/$/, "")}/wp-admin` : null);
+    const storeAdminUrl =
+      (data.store_admin_url as string | undefined) ??
+      (data.admin_url as string | undefined) ??
+      (data.wp_admin_url as string | undefined) ??
+      adminUrl ??
+      null;
+    const storeLoginUrl =
+      (data.store_login_url as string | undefined) ??
+      (data.login_url as string | undefined) ??
+      (siteUrl ? `${(siteUrl as string).replace(/\/$/, "")}/wp-login.php` : null);
+    const adminUsername =
+      (data.admin_username as string | undefined) ??
+      (data.username as string | undefined) ??
+      null;
+    const adminPassword =
+      (data.admin_password as string | undefined) ??
+      (data.password as string | undefined) ??
+      null;
+    const adminUserIdRaw = data.admin_user_id ?? data.user_id;
+    const adminUserId =
+      adminUserIdRaw === undefined || adminUserIdRaw === null
+        ? null
+        : String(adminUserIdRaw);
     const canonicalSlug =
       (data.tenant_slug as string | undefined) ?? body.tenant_slug;
 
