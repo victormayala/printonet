@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, KeyRound, Copy, Check, Eye, EyeOff, LogIn } from "lucide-react";
@@ -754,6 +755,9 @@ function StoreActions({ store }: { store: CorporateStore }) {
 
   return (
     <div className="flex items-center justify-end gap-2">
+      <Button asChild variant="outline" size="sm">
+        <Link to={`/corporate-stores/${store.id}`}>See details</Link>
+      </Button>
       {store.wp_admin_url && isActive && (
         <Button asChild variant="outline" size="sm">
           <a href={store.wp_admin_url} target="_blank" rel="noreferrer">
