@@ -69,17 +69,24 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Store not found" }, 404);
     }
 
-    // The multisite root exposes manage actions under /tenant/<action>.
-    // We send the canonical tenant_slug so it works without site_id too.
-    const payload = {
-      tenant_slug: store.tenant_slug,
-      site_id: store.wp_site_id,
-      action,
-    };
+    // The multisite root exposes manage actions.
+    // Delete uses the dedicated /delete-store endpoint with idempotency.
+    // Pause/resume continue to use the /tenant/<action> endpoints.
+    const payload: Record<string, unknown> =
+      action === "delete"
+        ? {
+            tenant_slug: store.tenant_slug,
+            request_id: crypto.randomUUID(),
+          }
+        : {
+            tenant_slug: store.tenant_slug,
+            site_id: store.wp_site_id,
+            action,
+          };
 
     const path =
       action === "delete"
-        ? "/wp-json/printonet/v1/tenant/delete"
+        ? "/wp-json/printonet/v1/delete-store"
         : action === "pause"
           ? "/wp-json/printonet/v1/tenant/pause"
           : "/wp-json/printonet/v1/tenant/resume";
