@@ -702,6 +702,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
+  const [credsOpen, setCredsOpen] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete" | "rebrand">(null);
 
   const refetch = () =>
