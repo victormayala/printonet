@@ -151,12 +151,25 @@ Deno.serve(async (req) => {
     };
     if (body.custom_domain) wpPayload.custom_domain = body.custom_domain;
 
+    console.log("[provision-corporate-store] calling tenant", {
+      store_id: store.id,
+      tenant_slug: body.tenant_slug,
+      request_id: requestId,
+    });
+
     const result = await signedTenantCall(
       "/wp-json/printonet/v1/provision-store",
       { method: "POST", body: wpPayload },
     );
 
+    // Always log the upstream outcome for debugging.
     if ("error" in result) {
+      console.error("[provision-corporate-store] upstream unreachable", {
+        store_id: store.id,
+        error: result.error,
+        detail: result.detail,
+        target: result.target,
+      });
       const msg = `${result.error}${result.detail ? `: ${result.detail}` : ""}`;
       await admin
         .from("corporate_stores")
@@ -168,29 +181,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!result.ok) {
-      const resp = result.response as Record<string, unknown> | string | null;
-      const msg =
-        (typeof resp === "object" && resp &&
-          ((resp as Record<string, unknown>).message as string ||
-            (resp as Record<string, unknown>).error as string)) ||
-        `Tenant engine error (${result.status})`;
-      await admin
-        .from("corporate_stores")
-        .update({ status: "failed", error_message: String(msg) })
-        .eq("id", store.id);
-      return new Response(
-        JSON.stringify({ error: msg, store_id: store.id, upstream: resp }),
-        {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    console.log("[provision-corporate-store] upstream response", {
+      store_id: store.id,
+      status: result.status,
+      ok: result.ok,
+      target: result.target,
+      raw_body: result.response,
+    });
 
-    // Expected response shape (per contract):
-    //   { site_id, site_url, admin_url, tenant_slug, ... }
-    const data = (result.response ?? {}) as Record<string, unknown>;
+    const data =
+      (result.response && typeof result.response === "object"
+        ? (result.response as Record<string, unknown>)
+        : {}) as Record<string, unknown>;
+
+    // Treat any 2xx with explicit success:true as provisioned.
+    // Also accept 200/201 when the body carries a site_url/site_id (legacy / non-success-flag responses).
+    const is2xx = result.status >= 200 && result.status < 300;
+    const successFlag = data.success === true;
     const siteIdRaw = data.site_id ?? data.id;
     const siteId =
       siteIdRaw === undefined || siteIdRaw === null ? null : String(siteIdRaw);
@@ -205,19 +212,53 @@ Deno.serve(async (req) => {
     const canonicalSlug =
       (data.tenant_slug as string | undefined) ?? body.tenant_slug;
 
-    await admin
+    const provisioned =
+      is2xx && (successFlag || !!siteUrl || !!siteId);
+
+    if (!provisioned) {
+      const msg =
+        (data.message as string) ||
+        (data.error as string) ||
+        `Tenant engine error (${result.status})`;
+      console.error("[provision-corporate-store] marking failed", {
+        store_id: store.id,
+        status: result.status,
+        msg,
+      });
+      await admin
+        .from("corporate_stores")
+        .update({ status: "failed", error_message: String(msg) })
+        .eq("id", store.id);
+      return new Response(
+        JSON.stringify({ error: msg, store_id: store.id, upstream: data }),
+        {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Same server-side path that reserved the row now flips it to active.
+    const { error: updateErr } = await admin
       .from("corporate_stores")
       .update({
         wp_site_id: siteId,
         wp_site_url: siteUrl,
         wp_admin_url: adminUrl,
         tenant_slug: canonicalSlug,
-        // The multisite handler creates the subsite synchronously, so flip
-        // straight to active. Branding is pushed in a follow-up call.
-        status: siteUrl ? "active" : "provisioning",
+        status: "active",
         error_message: null,
       })
       .eq("id", store.id);
+
+    if (updateErr) {
+      console.error("[provision-corporate-store] DB update failed", updateErr);
+    } else {
+      console.log("[provision-corporate-store] store marked active", {
+        store_id: store.id,
+        site_url: siteUrl,
+      });
+    }
 
     // Best-effort branding push (won't fail provisioning if it errors).
     if (siteUrl) {
