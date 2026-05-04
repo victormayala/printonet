@@ -296,9 +296,9 @@ function CategoryNodeItem({
   onAddChild: (name: string, parentId: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onAskDelete: (n: CategoryNode) => void;
-  onDragStart: (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => void;
-  onDragOver: (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => void;
-  onDrop: (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => Promise<void>;
+  onDragStart: (event: DragEvent<HTMLDivElement>, node: CategoryNode) => void;
+  onDragOver: (event: DragEvent<HTMLDivElement>, node: CategoryNode) => void;
+  onDrop: (event: DragEvent<HTMLDivElement>, node: CategoryNode) => Promise<void>;
   onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
