@@ -584,9 +584,13 @@ function ProductForm({
     }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
+    const selectedRootForSave = (categoryRows ?? []).find((c) => c.id === categoryId);
+    const selectedSubForSave = (categoryRows ?? []).find((c) => c.id === subcategoryId);
     const payload = {
       name: name.trim(),
-      category,
+      category: selectedRootForSave?.name ?? category,
+      category_id: categoryId,
+      subcategory_id: subcategoryId,
       description: description.trim() || null,
       base_price: parseFloat(basePrice) || 0,
       sale_price: salePrice.trim() === "" ? null : (parseFloat(salePrice) || null),
