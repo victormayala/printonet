@@ -227,15 +227,18 @@ export default function CategoriesManager() {
 }
 
 function CategoryNodeItem({
-  node, level, expanded, onToggle, onAddChild, onRename, onAskDelete,
+  node, level, index, siblingsCount, expanded, onToggle, onAddChild, onRename, onAskDelete, onMove,
 }: {
   node: CategoryNode;
   level: number;
+  index: number;
+  siblingsCount: number;
   expanded: Set<string>;
   onToggle: (id: string) => void;
   onAddChild: (name: string, parentId: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onAskDelete: (n: CategoryNode) => void;
+  onMove: (n: CategoryNode, dir: "up" | "down") => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(node.name);
@@ -250,6 +253,28 @@ function CategoryNodeItem({
         className="flex items-center gap-2 rounded-md hover:bg-muted/50 px-2 py-1.5 group"
         style={{ paddingLeft: `${level * 16 + 8}px` }}
       >
+        <div className="flex flex-col -my-1">
+          <button
+            type="button"
+            onClick={() => onMove(node, "up")}
+            disabled={index === 0}
+            className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+            aria-label="Move up"
+            title="Move up"
+          >
+            <ArrowUp className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onMove(node, "down")}
+            disabled={index >= siblingsCount - 1}
+            className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+            aria-label="Move down"
+            title="Move down"
+          >
+            <ArrowDown className="h-3 w-3" />
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => onToggle(node.id)}
@@ -319,16 +344,19 @@ function CategoryNodeItem({
 
       {hasChildren && isOpen && (
         <ul>
-          {node.children.map((child) => (
+          {node.children.map((child, i) => (
             <CategoryNodeItem
               key={child.id}
               node={child}
               level={level + 1}
+              index={i}
+              siblingsCount={node.children.length}
               expanded={expanded}
               onToggle={onToggle}
               onAddChild={onAddChild}
               onRename={onRename}
               onAskDelete={onAskDelete}
+              onMove={onMove}
             />
           ))}
         </ul>
