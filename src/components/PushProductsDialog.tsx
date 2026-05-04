@@ -52,12 +52,25 @@ export function PushProductsDialog({
     queryFn: async (): Promise<InventoryProductRow[]> => {
       const { data, error } = await supabase
         .from("inventory_products")
-        .select("id,name,base_price,sale_price,image_front,is_active,variants")
+        .select("id,name,base_price,sale_price,image_front,is_active,category_id,subcategory_id")
         .eq("user_id", user!.id)
         .eq("is_active", true)
         .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []) as InventoryProductRow[];
+    },
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ["product_categories_for_push", user?.id],
+    enabled: !!user?.id && open,
+    queryFn: async (): Promise<CategoryRow[]> => {
+      const { data, error } = await supabase
+        .from("product_categories")
+        .select("id,name,parent_id")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return (data ?? []) as CategoryRow[];
     },
   });
 
