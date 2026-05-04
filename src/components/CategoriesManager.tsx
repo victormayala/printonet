@@ -392,19 +392,22 @@ function CategoryNodeItem({
 
       {hasChildren && isOpen && (
         <ul>
-          {node.children.map((child, i) => (
+          {node.children.map((child) => (
             <CategoryNodeItem
               key={child.id}
               node={child}
               level={level + 1}
-              index={i}
-              siblingsCount={node.children.length}
               expanded={expanded}
+              dragItem={dragItem}
+              dropIntent={dropIntent}
               onToggle={onToggle}
               onAddChild={onAddChild}
               onRename={onRename}
               onAskDelete={onAskDelete}
-              onMove={onMove}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              onDragEnd={onDragEnd}
             />
           ))}
         </ul>
