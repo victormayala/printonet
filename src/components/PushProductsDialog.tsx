@@ -140,7 +140,11 @@ export function PushProductsDialog({
     setPushing(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
-        body: { tenant_slug: tenantSlug, products: payloadProducts },
+        body: {
+          tenant_slug: tenantSlug,
+          wp_site_url: store.wp_site_url ?? undefined,
+          products: payloadProducts,
+        },
       });
       const errMsg =
         (error as Error | null)?.message ||
