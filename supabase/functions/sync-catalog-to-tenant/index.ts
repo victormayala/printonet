@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     const limit = Math.min(body.limit ?? MAX_BATCH, MAX_BATCH);
     const { data: rows, error } = await supabase
       .from("inventory_products")
-      .select("id,name,description,base_price,variants")
+      .select("id,name,description,base_price,variants,category_id,subcategory_id")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .limit(limit);
@@ -113,6 +113,13 @@ Deno.serve(async (req) => {
         headers: { ...tenantCors, "Content-Type": "application/json" },
       });
     }
+    const { data: cats } = await supabase
+      .from("product_categories")
+      .select("id,name,parent_id")
+      .eq("user_id", user.id);
+    const catById = new Map<string, { id: string; name: string; parent_id: string | null }>();
+    (cats ?? []).forEach((c: any) => catById.set(c.id, c));
+
     products = (rows ?? []).map((p: any) => {
       const item: CatalogProduct = {
         id: p.id,
@@ -121,6 +128,19 @@ Deno.serve(async (req) => {
         currency_code: "usd",
       };
       if (p.description) item.description = String(p.description).trim().slice(0, 2000);
+      const root = p.category_id ? catById.get(p.category_id) : null;
+      const sub = p.subcategory_id ? catById.get(p.subcategory_id) : null;
+      if (root) {
+        item.category = root.name;
+        item.category_name = root.name;
+        item.categories = [
+          sub ? { name: root.name, children: [{ name: sub.name }] } : { name: root.name },
+        ];
+      }
+      if (sub) {
+        item.subcategory = sub.name;
+        item.subcategory_name = sub.name;
+      }
       return item;
     });
   }
