@@ -585,7 +585,6 @@ function ProductForm({
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     const selectedRootForSave = (categoryRows ?? []).find((c) => c.id === categoryId);
-    const selectedSubForSave = (categoryRows ?? []).find((c) => c.id === subcategoryId);
     const payload = {
       name: name.trim(),
       category: selectedRootForSave?.name ?? category,
