@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2, FolderTree } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2, FolderTree, ArrowUp, ArrowDown } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,7 @@ export type CategoryRow = {
   user_id: string;
   parent_id: string | null;
   name: string;
+  sort_order: number;
 };
 
 export type CategoryNode = CategoryRow & { children: CategoryNode[] };
@@ -34,7 +35,7 @@ export function buildCategoryTree(rows: CategoryRow[]): CategoryNode[] {
     }
   });
   const sortRec = (nodes: CategoryNode[]) => {
-    nodes.sort((a, b) => a.name.localeCompare(b.name));
+    nodes.sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
     nodes.forEach((n) => sortRec(n.children));
   };
   sortRec(roots);
@@ -49,7 +50,7 @@ export function useCategories() {
     queryFn: async (): Promise<CategoryRow[]> => {
       const { data, error } = await supabase
         .from("product_categories")
-        .select("id,user_id,parent_id,name")
+        .select("id,user_id,parent_id,name,sort_order")
         .eq("user_id", user!.id);
       if (error) throw error;
       return (data ?? []) as CategoryRow[];
@@ -74,14 +75,39 @@ export default function CategoriesManager() {
     if (!user) return;
     const trimmed = name.trim();
     if (!trimmed) return;
+    const siblings = (rows ?? []).filter((r) => r.parent_id === parentId);
+    const nextOrder = siblings.length
+      ? Math.max(...siblings.map((s) => s.sort_order ?? 0)) + 1
+      : 0;
     const { error } = await supabase.from("product_categories").insert({
-      user_id: user.id, parent_id: parentId, name: trimmed,
+      user_id: user.id, parent_id: parentId, name: trimmed, sort_order: nextOrder,
     });
     if (error) {
       toast({ title: "Could not create", description: error.message, variant: "destructive" });
       return;
     }
     toast({ title: parentId ? "Sub-category added" : "Category added" });
+    refresh();
+  };
+
+  const moveCategory = async (node: CategoryNode, direction: "up" | "down") => {
+    const siblings = (rows ?? [])
+      .filter((r) => r.parent_id === node.parent_id)
+      .slice()
+      .sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
+    const idx = siblings.findIndex((s) => s.id === node.id);
+    const swapWith = direction === "up" ? siblings[idx - 1] : siblings[idx + 1];
+    if (!swapWith) return;
+    const a = { id: node.id, sort_order: swapWith.sort_order };
+    const b = { id: swapWith.id, sort_order: node.sort_order };
+    const [r1, r2] = await Promise.all([
+      supabase.from("product_categories").update({ sort_order: a.sort_order }).eq("id", a.id),
+      supabase.from("product_categories").update({ sort_order: b.sort_order }).eq("id", b.id),
+    ]);
+    if (r1.error || r2.error) {
+      toast({ title: "Reorder failed", description: r1.error?.message ?? r2.error?.message, variant: "destructive" });
+      return;
+    }
     refresh();
   };
 
@@ -159,16 +185,19 @@ export default function CategoriesManager() {
           </div>
         ) : (
           <ul className="space-y-1">
-            {tree.map((node) => (
+            {tree.map((node, i) => (
               <CategoryNodeItem
                 key={node.id}
                 node={node}
                 level={0}
+                index={i}
+                siblingsCount={tree.length}
                 expanded={expanded}
                 onToggle={toggle}
                 onAddChild={addCategory}
                 onRename={renameCategory}
                 onAskDelete={setConfirmDelete}
+                onMove={moveCategory}
               />
             ))}
           </ul>
@@ -198,15 +227,18 @@ export default function CategoriesManager() {
 }
 
 function CategoryNodeItem({
-  node, level, expanded, onToggle, onAddChild, onRename, onAskDelete,
+  node, level, index, siblingsCount, expanded, onToggle, onAddChild, onRename, onAskDelete, onMove,
 }: {
   node: CategoryNode;
   level: number;
+  index: number;
+  siblingsCount: number;
   expanded: Set<string>;
   onToggle: (id: string) => void;
   onAddChild: (name: string, parentId: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onAskDelete: (n: CategoryNode) => void;
+  onMove: (n: CategoryNode, dir: "up" | "down") => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(node.name);
@@ -221,6 +253,28 @@ function CategoryNodeItem({
         className="flex items-center gap-2 rounded-md hover:bg-muted/50 px-2 py-1.5 group"
         style={{ paddingLeft: `${level * 16 + 8}px` }}
       >
+        <div className="flex flex-col -my-1">
+          <button
+            type="button"
+            onClick={() => onMove(node, "up")}
+            disabled={index === 0}
+            className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+            aria-label="Move up"
+            title="Move up"
+          >
+            <ArrowUp className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onMove(node, "down")}
+            disabled={index >= siblingsCount - 1}
+            className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+            aria-label="Move down"
+            title="Move down"
+          >
+            <ArrowDown className="h-3 w-3" />
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => onToggle(node.id)}
@@ -290,16 +344,19 @@ function CategoryNodeItem({
 
       {hasChildren && isOpen && (
         <ul>
-          {node.children.map((child) => (
+          {node.children.map((child, i) => (
             <CategoryNodeItem
               key={child.id}
               node={child}
               level={level + 1}
+              index={i}
+              siblingsCount={node.children.length}
               expanded={expanded}
               onToggle={onToggle}
               onAddChild={onAddChild}
               onRename={onRename}
               onAskDelete={onAskDelete}
+              onMove={onMove}
             />
           ))}
         </ul>
