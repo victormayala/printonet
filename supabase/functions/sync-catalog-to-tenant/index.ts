@@ -149,6 +149,21 @@ Deno.serve(async (req) => {
     body.event_id ??
     `evt_${Date.now().toString(36)}_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
+  // Build the inline `items` array the tenant engine consumes directly
+  // (sku, name, numeric price, stock, plus category fields). This bypasses
+  // the pull-from-feed path and ensures the storefront actually updates.
+  const items = products.map((p) => ({
+    sku: p.id,
+    name: p.name,
+    description: p.description,
+    price: Math.max(0, Number(p.price_cents ?? 0)) / 100,
+    stock: 9999,
+    currency: (p.currency_code ?? "usd").toUpperCase(),
+    ...(p.category ? { category: p.category, category_name: p.category } : {}),
+    ...(p.subcategory ? { subcategory: p.subcategory, subcategory_name: p.subcategory } : {}),
+    ...(p.categories ? { categories: p.categories } : {}),
+  }));
+
   const payload = {
     supplier: "printonet_internal",
     tenant_slug: body.tenant_slug,
@@ -156,6 +171,8 @@ Deno.serve(async (req) => {
     event_id,
     occurred_at: new Date().toISOString(),
     products,
+    items,
+    catalog: items,
   };
 
   if (body.dry_run) {
