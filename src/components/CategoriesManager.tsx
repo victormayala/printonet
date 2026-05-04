@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type DragEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2, FolderTree, GripVertical } from "lucide-react";
 
@@ -130,17 +130,18 @@ export default function CategoriesManager() {
     refresh();
   };
 
-  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => {
+  const handleDragStart = (event: DragEvent<HTMLDivElement>, node: CategoryNode) => {
     setDragItem({ id: node.id, parent_id: node.parent_id });
     setDropIntent(null);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", node.id);
   };
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => {
-    if (!dragItem || dragItem.id === node.id) return;
+  const handleDragOver = (event: DragEvent<HTMLDivElement>, node: CategoryNode) => {
+    const activeDrag = dragItem ?? rows?.find((r) => r.id === event.dataTransfer.getData("text/plain"));
+    if (!activeDrag || activeDrag.id === node.id) return;
     event.preventDefault();
-    if ((dragItem.parent_id ?? null) !== (node.parent_id ?? null)) {
+    if ((activeDrag.parent_id ?? null) !== (node.parent_id ?? null)) {
       event.dataTransfer.dropEffect = "none";
       setDropIntent(null);
       return;
@@ -151,7 +152,7 @@ export default function CategoriesManager() {
     setDropIntent({ targetId: node.id, position });
   };
 
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => {
+  const handleDrop = async (event: DragEvent<HTMLDivElement>, node: CategoryNode) => {
     event.preventDefault();
     const draggedId = dragItem?.id || event.dataTransfer.getData("text/plain");
     const position = dropIntent?.targetId === node.id ? dropIntent.position : "after";
@@ -239,7 +240,7 @@ export default function CategoriesManager() {
           </div>
         ) : (
           <ul className="space-y-1">
-            {tree.map((node, i) => (
+            {tree.map((node) => (
               <CategoryNodeItem
                 key={node.id}
                 node={node}
