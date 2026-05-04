@@ -284,18 +284,21 @@ export default function CategoriesManager() {
 }
 
 function CategoryNodeItem({
-  node, level, index, siblingsCount, expanded, onToggle, onAddChild, onRename, onAskDelete, onMove,
+  node, level, expanded, dragItem, dropIntent, onToggle, onAddChild, onRename, onAskDelete, onDragStart, onDragOver, onDrop, onDragEnd,
 }: {
   node: CategoryNode;
   level: number;
-  index: number;
-  siblingsCount: number;
   expanded: Set<string>;
+  dragItem: DragItem | null;
+  dropIntent: DropIntent;
   onToggle: (id: string) => void;
   onAddChild: (name: string, parentId: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onAskDelete: (n: CategoryNode) => void;
-  onMove: (n: CategoryNode, dir: "up" | "down") => Promise<void>;
+  onDragStart: (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => void;
+  onDragOver: (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => void;
+  onDrop: (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => Promise<void>;
+  onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(node.name);
@@ -303,35 +306,23 @@ function CategoryNodeItem({
   const [childName, setChildName] = useState("");
   const isOpen = expanded.has(node.id);
   const hasChildren = node.children.length > 0;
+  const isDragging = dragItem?.id === node.id;
+  const dropPosition = dropIntent?.targetId === node.id ? dropIntent.position : null;
 
   return (
     <li>
       <div
-        className="flex items-center gap-2 rounded-md hover:bg-muted/50 px-2 py-1.5 group"
+        draggable={!editing && !adding}
+        onDragStart={(event) => onDragStart(event, node)}
+        onDragOver={(event) => onDragOver(event, node)}
+        onDrop={(event) => onDrop(event, node)}
+        onDragEnd={onDragEnd}
+        className={`flex items-center gap-2 rounded-md hover:bg-muted/50 px-2 py-1.5 group border-y transition-colors ${
+          isDragging ? "opacity-50 bg-muted/60" : ""
+        } ${dropPosition === "before" ? "border-t-primary border-b-transparent" : dropPosition === "after" ? "border-b-primary border-t-transparent" : "border-transparent"}`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
       >
-        <div className="flex flex-col -my-1">
-          <button
-            type="button"
-            onClick={() => onMove(node, "up")}
-            disabled={index === 0}
-            className="text-muted-foreground hover:text-foreground disabled:opacity-20"
-            aria-label="Move up"
-            title="Move up"
-          >
-            <ArrowUp className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onMove(node, "down")}
-            disabled={index >= siblingsCount - 1}
-            className="text-muted-foreground hover:text-foreground disabled:opacity-20"
-            aria-label="Move down"
-            title="Move down"
-          >
-            <ArrowDown className="h-3 w-3" />
-          </button>
-        </div>
+        <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground active:cursor-grabbing" aria-hidden="true" />
         <button
           type="button"
           onClick={() => onToggle(node.id)}
