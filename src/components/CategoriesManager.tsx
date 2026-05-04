@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2, FolderTree, ArrowUp, ArrowDown } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2, FolderTree, GripVertical } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +22,8 @@ export type CategoryRow = {
 };
 
 export type CategoryNode = CategoryRow & { children: CategoryNode[] };
+type DragItem = Pick<CategoryRow, "id" | "parent_id">;
+type DropIntent = { targetId: string; position: "before" | "after" } | null;
 
 export function buildCategoryTree(rows: CategoryRow[]): CategoryNode[] {
   const map = new Map<string, CategoryNode>();
@@ -68,6 +70,8 @@ export default function CategoriesManager() {
   const [creating, setCreating] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState<CategoryNode | null>(null);
+  const [dragItem, setDragItem] = useState<DragItem | null>(null);
+  const [dropIntent, setDropIntent] = useState<DropIntent>(null);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["product_categories", user?.id] });
 
@@ -90,22 +94,32 @@ export default function CategoriesManager() {
     refresh();
   };
 
-  const moveCategory = async (node: CategoryNode, direction: "up" | "down") => {
-    const siblings = (rows ?? [])
-      .filter((r) => r.parent_id === node.parent_id)
+  const reorderCategory = async (draggedId: string, targetId: string, position: "before" | "after") => {
+    if (!user || draggedId === targetId) return;
+    const currentRows = rows ?? [];
+    const dragged = currentRows.find((r) => r.id === draggedId);
+    const target = currentRows.find((r) => r.id === targetId);
+    if (!dragged || !target) return;
+    if ((dragged.parent_id ?? null) !== (target.parent_id ?? null)) {
+      toast({ title: "Reorder within the same level", description: "Drag categories among categories, or sub-categories within the same parent.", variant: "destructive" });
+      return;
+    }
+
+    const siblings = currentRows
+      .filter((r) => (r.parent_id ?? null) === (target.parent_id ?? null))
       .slice()
       .sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
-    const idx = siblings.findIndex((s) => s.id === node.id);
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (idx < 0 || swapIdx < 0 || swapIdx >= siblings.length) return;
-    // Reorder array and renumber every sibling to guarantee distinct sort_order values
-    const reordered = siblings.slice();
-    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+    const withoutDragged = siblings.filter((s) => s.id !== draggedId);
+    const targetIndex = withoutDragged.findIndex((s) => s.id === targetId);
+    if (targetIndex < 0) return;
+
+    const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
+    const reordered = withoutDragged.slice();
+    reordered.splice(insertIndex, 0, dragged);
+
     const updates = await Promise.all(
       reordered.map((s, i) =>
-        s.sort_order === i
-          ? Promise.resolve({ error: null as any })
-          : supabase.from("product_categories").update({ sort_order: i }).eq("id", s.id),
+        supabase.from("product_categories").update({ sort_order: i }).eq("id", s.id).eq("user_id", user.id),
       ),
     );
     const failed = updates.find((u) => u.error);
@@ -114,6 +128,41 @@ export default function CategoriesManager() {
       return;
     }
     refresh();
+  };
+
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => {
+    setDragItem({ id: node.id, parent_id: node.parent_id });
+    setDropIntent(null);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", node.id);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => {
+    if (!dragItem || dragItem.id === node.id) return;
+    event.preventDefault();
+    if ((dragItem.parent_id ?? null) !== (node.parent_id ?? null)) {
+      event.dataTransfer.dropEffect = "none";
+      setDropIntent(null);
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const position = event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+    event.dataTransfer.dropEffect = "move";
+    setDropIntent({ targetId: node.id, position });
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>, node: CategoryNode) => {
+    event.preventDefault();
+    const draggedId = dragItem?.id || event.dataTransfer.getData("text/plain");
+    const position = dropIntent?.targetId === node.id ? dropIntent.position : "after";
+    setDragItem(null);
+    setDropIntent(null);
+    await reorderCategory(draggedId, node.id, position);
+  };
+
+  const handleDragEnd = () => {
+    setDragItem(null);
+    setDropIntent(null);
   };
 
   const renameCategory = async (id: string, name: string) => {
@@ -195,14 +244,17 @@ export default function CategoriesManager() {
                 key={node.id}
                 node={node}
                 level={0}
-                index={i}
-                siblingsCount={tree.length}
                 expanded={expanded}
+                dragItem={dragItem}
+                dropIntent={dropIntent}
                 onToggle={toggle}
                 onAddChild={addCategory}
                 onRename={renameCategory}
                 onAskDelete={setConfirmDelete}
-                onMove={moveCategory}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
               />
             ))}
           </ul>
