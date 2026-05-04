@@ -30,7 +30,7 @@ type InventoryProductRow = {
   subcategory_id: string | null;
 };
 
-type CategoryRow = { id: string; name: string; parent_id: string | null };
+type CategoryRow = { id: string; name: string };
 
 export function PushProductsDialog({
   store,
