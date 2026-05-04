@@ -50,13 +50,15 @@ export async function signedTenantCall(
   opts: {
     method?: "GET" | "POST";
     body?: unknown; // JSON-serializable; pass undefined to send no body
+    baseUrlOverride?: string; // override PRINTONET_TENANT_BASE_URL (e.g. per-store wp_site_url)
   } = {},
 ): Promise<SignedCallResult | { error: string; detail?: string; target?: string }> {
   const cfg = getTenantConfig();
   if ("error" in cfg) return { error: "missing_config", detail: cfg.error };
 
   const method = opts.method ?? "POST";
-  const target = `${cfg.baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+  const baseUrl = (opts.baseUrlOverride ?? cfg.baseUrl).replace(/\/+$/, "");
+  const target = `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 
   // Build raw body. For GET with no payload, we sign an empty string.
   const rawBody = opts.body === undefined ? "" : JSON.stringify(opts.body);
