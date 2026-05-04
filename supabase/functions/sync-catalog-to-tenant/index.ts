@@ -188,9 +188,18 @@ Deno.serve(async (req) => {
     );
   }
 
+  // Prefer posting directly to the tenant's own site URL so WordPress's
+  // current blog resolves to that storefront (avoids accidentally updating
+  // network blog 1 when the multisite primary host is used).
+  const baseUrlOverride =
+    typeof body.wp_site_url === "string" && /^https?:\/\//i.test(body.wp_site_url)
+      ? body.wp_site_url
+      : undefined;
+
   const result = await signedTenantCall("/wp-json/printonet/v1/suppliers/sync", {
     method: "POST",
     body: payload,
+    baseUrlOverride,
   });
 
   if ("error" in result) {
