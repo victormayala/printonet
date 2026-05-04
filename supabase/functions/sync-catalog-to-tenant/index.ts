@@ -1,18 +1,15 @@
-// Outbound: POST {TENANT_BASE_URL}/wp-json/printonet/v1/suppliers/sync
+// Outbound: POST {wp_site_url || TENANT_BASE_URL}/wp-json/printonet/v1/suppliers/sync
 // Signed with timestamp+body HMAC (see _shared/printonet-tenant.ts).
 //
-// Payload shape sent to the tenant engine:
-// {
-//   tenant_slug: string,
-//   event_id: string,
-//   occurred_at: string (ISO-8601),
-//   products: [
-//     { id, name, description?, price_cents, currency_code }
-//   ]
-// }
+// Caller can supply:
+//   - product_ids: string[]  (preferred — function loads full rows from DB)
+//   - products:    full CatalogProduct[] (advanced — used as-is)
+//   - neither:     all active products for the authenticated user are pushed
 //
-// Caller can supply `products` directly or let us pull active products from
-// inventory_products for the authenticated user.
+// Each item sent to the tenant engine includes the COMPLETE product record:
+// images (front/back/side1/side2), full variants jsonb (colors/sizes/per-size
+// pricing & SKUs), dimensions, weight, print areas, supplier source, status,
+// product_type, sale_price, plus a category tree.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { signedTenantCall, tenantCors } from "../_shared/printonet-tenant.ts";
@@ -30,12 +27,34 @@ interface CatalogProduct {
   category_name?: string;
   subcategory_name?: string;
   categories?: Array<string | { name: string; children?: Array<{ name: string }> }>;
+  // Full product fields
+  sale_price_cents?: number | null;
+  product_type?: string;
+  status?: string;
+  images?: {
+    front?: string | null;
+    back?: string | null;
+    side1?: string | null;
+    side2?: string | null;
+  };
+  variants?: unknown;
+  print_areas?: unknown;
+  supplier_source?: unknown;
+  weight?: number | null;
+  weight_unit?: string | null;
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  dimension_unit?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface SyncRequest {
   tenant_slug: string;
   wp_site_url?: string;
   products?: CatalogProduct[];
+  product_ids?: string[];
   limit?: number;
   event_id?: string;
   dry_run?: boolean;
@@ -57,6 +76,62 @@ function variantPriceCents(p: any): number {
   const lowest = prices.length ? Math.min(...prices) : Number(p.base_price);
   const cents = Math.round((Number.isFinite(lowest) ? lowest : 0) * 100);
   return Math.max(0, cents);
+}
+
+const FULL_COLUMNS =
+  "id,name,description,base_price,sale_price,variants,category,category_id,subcategory_id," +
+  "image_front,image_back,image_side1,image_side2,print_areas,supplier_source," +
+  "product_type,status,weight,weight_unit,length,width,height,dimension_unit," +
+  "created_at,updated_at";
+
+function buildCatalogProduct(p: any, catById: Map<string, { id: string; name: string }>): CatalogProduct {
+  const item: CatalogProduct = {
+    id: p.id,
+    name: p.name,
+    price_cents: variantPriceCents(p),
+    currency_code: "usd",
+    sale_price_cents:
+      p.sale_price != null && Number.isFinite(Number(p.sale_price))
+        ? Math.max(0, Math.round(Number(p.sale_price) * 100))
+        : null,
+    product_type: p.product_type ?? undefined,
+    status: p.status ?? undefined,
+    images: {
+      front: p.image_front ?? null,
+      back: p.image_back ?? null,
+      side1: p.image_side1 ?? null,
+      side2: p.image_side2 ?? null,
+    },
+    variants: p.variants ?? [],
+    print_areas: p.print_areas ?? {},
+    supplier_source: p.supplier_source ?? null,
+    weight: p.weight ?? null,
+    weight_unit: p.weight_unit ?? null,
+    length: p.length ?? null,
+    width: p.width ?? null,
+    height: p.height ?? null,
+    dimension_unit: p.dimension_unit ?? null,
+    created_at: p.created_at ?? undefined,
+    updated_at: p.updated_at ?? undefined,
+  };
+  if (p.description) item.description = String(p.description).trim().slice(0, 5000);
+  const root = p.category_id ? catById.get(p.category_id) : null;
+  const sub = p.subcategory_id ? catById.get(p.subcategory_id) : null;
+  if (root) {
+    item.category = root.name;
+    item.category_name = root.name;
+    item.categories = [
+      sub ? { name: root.name, children: [{ name: sub.name }] } : { name: root.name },
+    ];
+  } else if (p.category) {
+    item.category = p.category;
+    item.category_name = p.category;
+  }
+  if (sub) {
+    item.subcategory = sub.name;
+    item.subcategory_name = sub.name;
+  }
+  return item;
 }
 
 Deno.serve(async (req) => {
@@ -86,8 +161,11 @@ Deno.serve(async (req) => {
   }
 
   let products: CatalogProduct[] = [];
-  if (Array.isArray(body.products) && body.products.length > 0) {
-    products = body.products.slice(0, MAX_BATCH);
+  const hasInlineProducts = Array.isArray(body.products) && body.products.length > 0;
+  const hasProductIds = Array.isArray(body.product_ids) && body.product_ids.length > 0;
+
+  if (hasInlineProducts && !hasProductIds) {
+    products = body.products!.slice(0, MAX_BATCH);
   } else {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -101,13 +179,20 @@ Deno.serve(async (req) => {
         headers: { ...tenantCors, "Content-Type": "application/json" },
       });
     }
-    const limit = Math.min(body.limit ?? MAX_BATCH, MAX_BATCH);
-    const { data: rows, error } = await supabase
+
+    let query = supabase
       .from("inventory_products")
-      .select("id,name,description,base_price,variants,category_id,subcategory_id")
+      .select(FULL_COLUMNS)
       .eq("user_id", user.id)
-      .eq("is_active", true)
-      .limit(limit);
+      .eq("is_active", true);
+
+    if (hasProductIds) {
+      query = query.in("id", body.product_ids!.slice(0, MAX_BATCH));
+    } else {
+      query = query.limit(Math.min(body.limit ?? MAX_BATCH, MAX_BATCH));
+    }
+
+    const { data: rows, error } = await query;
     if (error) {
       return new Response(JSON.stringify({ error: "db_error", detail: error.message }), {
         status: 500,
@@ -121,49 +206,52 @@ Deno.serve(async (req) => {
     const catById = new Map<string, { id: string; name: string }>();
     (cats ?? []).forEach((c: any) => catById.set(c.id, c));
 
-    products = (rows ?? []).map((p: any) => {
-      const item: CatalogProduct = {
-        id: p.id,
-        name: p.name,
-        price_cents: variantPriceCents(p),
-        currency_code: "usd",
-      };
-      if (p.description) item.description = String(p.description).trim().slice(0, 2000);
-      const root = p.category_id ? catById.get(p.category_id) : null;
-      const sub = p.subcategory_id ? catById.get(p.subcategory_id) : null;
-      if (root) {
-        item.category = root.name;
-        item.category_name = root.name;
-        item.categories = [
-          sub ? { name: root.name, children: [{ name: sub.name }] } : { name: root.name },
-        ];
-      }
-      if (sub) {
-        item.subcategory = sub.name;
-        item.subcategory_name = sub.name;
-      }
-      return item;
-    });
+    products = (rows ?? []).map((p: any) => buildCatalogProduct(p, catById));
   }
 
   const event_id =
     body.event_id ??
     `evt_${Date.now().toString(36)}_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
-  // Build the inline `items` array the tenant engine consumes directly
-  // (sku, name, numeric price, stock, plus category fields). This bypasses
-  // the pull-from-feed path and ensures the storefront actually updates.
-  const items = products.map((p) => ({
-    sku: p.id,
-    name: p.name,
-    description: p.description,
-    price: Math.max(0, Number(p.price_cents ?? 0)) / 100,
-    stock: 9999,
-    currency: (p.currency_code ?? "usd").toUpperCase(),
-    ...(p.category ? { category: p.category, category_name: p.category } : {}),
-    ...(p.subcategory ? { subcategory: p.subcategory, subcategory_name: p.subcategory } : {}),
-    ...(p.categories ? { categories: p.categories } : {}),
-  }));
+  // Build the inline `items` array the tenant engine consumes directly.
+  // Includes the full product record so the storefront can render images,
+  // variants, dimensions, sale pricing, etc. without a follow-up pull.
+  const items = products.map((p) => {
+    const priceDollars = Math.max(0, Number(p.price_cents ?? 0)) / 100;
+    const salePriceDollars =
+      p.sale_price_cents != null
+        ? Math.max(0, Number(p.sale_price_cents)) / 100
+        : null;
+    return {
+      sku: p.id,
+      name: p.name,
+      description: p.description,
+      price: priceDollars,
+      sale_price: salePriceDollars,
+      stock: 9999,
+      currency: (p.currency_code ?? "usd").toUpperCase(),
+      ...(p.category ? { category: p.category, category_name: p.category } : {}),
+      ...(p.subcategory ? { subcategory: p.subcategory, subcategory_name: p.subcategory } : {}),
+      ...(p.categories ? { categories: p.categories } : {}),
+      // Full product payload
+      product_type: p.product_type,
+      status: p.status,
+      images: p.images,
+      variants: p.variants,
+      print_areas: p.print_areas,
+      supplier_source: p.supplier_source,
+      weight: p.weight,
+      weight_unit: p.weight_unit,
+      dimensions: {
+        length: p.length,
+        width: p.width,
+        height: p.height,
+        unit: p.dimension_unit,
+      },
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+    };
+  });
 
   const payload = {
     supplier: "printonet_internal",
@@ -188,9 +276,6 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Prefer posting directly to the tenant's own site URL so WordPress's
-  // current blog resolves to that storefront (avoids accidentally updating
-  // network blog 1 when the multisite primary host is used).
   const baseUrlOverride =
     typeof body.wp_site_url === "string" && /^https?:\/\//i.test(body.wp_site_url)
       ? body.wp_site_url
