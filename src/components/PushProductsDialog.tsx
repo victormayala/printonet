@@ -67,7 +67,7 @@ export function PushProductsDialog({
     queryFn: async (): Promise<CategoryRow[]> => {
       const { data, error } = await supabase
         .from("product_categories")
-        .select("id,name,parent_id")
+        .select("id,name")
         .eq("user_id", user!.id);
       if (error) throw error;
       return (data ?? []) as CategoryRow[];
