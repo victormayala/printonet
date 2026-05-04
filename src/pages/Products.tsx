@@ -671,14 +671,40 @@ function ProductForm({
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
-          <CategoryCombobox
-            value={category}
-            onChange={setCategory}
-            extraOptions={knownCategories}
-            onCategoryRenamed={onCategoryRenamed}
-          />
-          <p className="text-[11px] text-muted-foreground">Pick one or type to add a new category.</p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Category</Label>
+          <Select value={categoryId ?? "__none"} onValueChange={(v) => { setCategoryId(v === "__none" ? null : v); setSubcategoryId(null); }}>
+            <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">— None —</SelectItem>
+              {categoryTree.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">Manage categories in the Categories tab.</p>
         </div>
+        <div className="space-y-2">
+          <Label>Sub-category</Label>
+          <Select
+            value={subcategoryId ?? "__none"}
+            onValueChange={(v) => setSubcategoryId(v === "__none" ? null : v)}
+            disabled={!selectedRoot || selectedRoot.children.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={selectedRoot && selectedRoot.children.length > 0 ? "Select a sub-category" : "— None —"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">— None —</SelectItem>
+              {(selectedRoot?.children ?? []).map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Regular Price</Label>
           <Input type="number" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} />
