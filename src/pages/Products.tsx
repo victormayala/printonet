@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import CategoriesManager, { useCategories, buildCategoryTree } from "@/components/CategoriesManager";
 
 type Product = {
   id: string;
@@ -49,6 +50,8 @@ type Product = {
   width?: number | null;
   height?: number | null;
   dimension_unit?: "in" | "cm" | null;
+  category_id?: string | null;
+  subcategory_id?: string | null;
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
@@ -403,6 +406,11 @@ function ProductForm({
 }) {
   const [name, setName] = useState(product?.name || "");
   const [category, setCategory] = useState(product?.category || "T-Shirts");
+  const [categoryId, setCategoryId] = useState<string | null>(product?.category_id || null);
+  const [subcategoryId, setSubcategoryId] = useState<string | null>(product?.subcategory_id || null);
+  const { data: categoryRows } = useCategories();
+  const categoryTree = buildCategoryTree(categoryRows ?? []);
+  const selectedRoot = categoryTree.find((c) => c.id === categoryId);
   const [description, setDescription] = useState(product?.description || "");
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
   const [salePrice, setSalePrice] = useState(product?.sale_price != null ? String(product.sale_price) : "");
@@ -576,9 +584,12 @@ function ProductForm({
     }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
+    const selectedRootForSave = (categoryRows ?? []).find((c) => c.id === categoryId);
     const payload = {
       name: name.trim(),
-      category,
+      category: selectedRootForSave?.name ?? category,
+      category_id: categoryId,
+      subcategory_id: subcategoryId,
       description: description.trim() || null,
       base_price: parseFloat(basePrice) || 0,
       sale_price: salePrice.trim() === "" ? null : (parseFloat(salePrice) || null),
@@ -660,17 +671,40 @@ function ProductForm({
         <Label>Name</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Category</Label>
-          <CategoryCombobox
-            value={category}
-            onChange={setCategory}
-            extraOptions={knownCategories}
-            onCategoryRenamed={onCategoryRenamed}
-          />
-          <p className="text-[11px] text-muted-foreground">Pick one or type to add a new category.</p>
+          <Select value={categoryId ?? "__none"} onValueChange={(v) => { setCategoryId(v === "__none" ? null : v); setSubcategoryId(null); }}>
+            <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">— None —</SelectItem>
+              {categoryTree.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">Manage categories in the Categories tab.</p>
         </div>
+        <div className="space-y-2">
+          <Label>Sub-category</Label>
+          <Select
+            value={subcategoryId ?? "__none"}
+            onValueChange={(v) => setSubcategoryId(v === "__none" ? null : v)}
+            disabled={!selectedRoot || selectedRoot.children.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={selectedRoot && selectedRoot.children.length > 0 ? "Select a sub-category" : "— None —"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">— None —</SelectItem>
+              {(selectedRoot?.children ?? []).map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Regular Price</Label>
           <Input type="number" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} />
@@ -3128,7 +3162,7 @@ function VariantManagerDialog({
   );
 }
 
-type ProductsTab = "products" | "shopify" | "woocommerce" | "suppliers";
+type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "suppliers";
 
 export default function Products({ initialTab = "products", showStorefrontTabs = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean } = {}) {
   const { user, signOut } = useAuth();
@@ -3401,11 +3435,12 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
               <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
             </TabsList>
           ) : (
-            <TabsList className="sr-only">
-              <TabsTrigger value="products">Products</TabsTrigger>
-              <TabsTrigger value="shopify">Shopify</TabsTrigger>
-              <TabsTrigger value="woocommerce">WooCommerce</TabsTrigger>
-              <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+            <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
+              <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Package className="h-4 w-4" /> Products</TabsTrigger>
+              <TabsTrigger value="categories" className="gap-2 flex-1 sm:flex-none"><LayoutGrid className="h-4 w-4" /> Categories</TabsTrigger>
+              <TabsTrigger value="shopify" className="sr-only">Shopify</TabsTrigger>
+              <TabsTrigger value="woocommerce" className="sr-only">WooCommerce</TabsTrigger>
+              <TabsTrigger value="suppliers" className="sr-only">Suppliers</TabsTrigger>
             </TabsList>
           )}
 
@@ -3730,6 +3765,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             )}
           </TabsContent>
 
+          <TabsContent value="categories">
+            {activeTab === "categories" && <CategoriesManager />}
+          </TabsContent>
           <TabsContent value="shopify">
             {activeTab === "shopify" && <ShopifyImport onDone={fetchProducts} />}
           </TabsContent>
