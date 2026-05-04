@@ -49,6 +49,8 @@ type Product = {
   width?: number | null;
   height?: number | null;
   dimension_unit?: "in" | "cm" | null;
+  category_id?: string | null;
+  subcategory_id?: string | null;
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
