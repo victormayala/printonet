@@ -405,6 +405,11 @@ function ProductForm({
 }) {
   const [name, setName] = useState(product?.name || "");
   const [category, setCategory] = useState(product?.category || "T-Shirts");
+  const [categoryId, setCategoryId] = useState<string | null>(product?.category_id || null);
+  const [subcategoryId, setSubcategoryId] = useState<string | null>(product?.subcategory_id || null);
+  const { data: categoryRows } = useCategories();
+  const categoryTree = buildCategoryTree(categoryRows ?? []);
+  const selectedRoot = categoryTree.find((c) => c.id === categoryId);
   const [description, setDescription] = useState(product?.description || "");
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
   const [salePrice, setSalePrice] = useState(product?.sale_price != null ? String(product.sale_price) : "");
