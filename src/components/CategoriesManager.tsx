@@ -185,16 +185,19 @@ export default function CategoriesManager() {
           </div>
         ) : (
           <ul className="space-y-1">
-            {tree.map((node) => (
+            {tree.map((node, i) => (
               <CategoryNodeItem
                 key={node.id}
                 node={node}
                 level={0}
+                index={i}
+                siblingsCount={tree.length}
                 expanded={expanded}
                 onToggle={toggle}
                 onAddChild={addCategory}
                 onRename={renameCategory}
                 onAskDelete={setConfirmDelete}
+                onMove={moveCategory}
               />
             ))}
           </ul>
