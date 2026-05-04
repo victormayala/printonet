@@ -112,14 +112,28 @@ export function PushProductsDialog({
       return;
     }
 
+    const catById = new Map((categories ?? []).map((c) => [c.id, c]));
     const chosen = (products ?? []).filter((p) => selected.has(p.id));
     const payloadProducts = chosen.map((p) => {
       const price = Number(p.sale_price ?? p.base_price ?? 0);
+      const root = p.category_id ? catById.get(p.category_id) : null;
+      const sub = p.subcategory_id ? catById.get(p.subcategory_id) : null;
       return {
         id: p.id,
         name: p.name,
         price_cents: Math.max(0, Math.round(price * 100)),
         currency_code: "usd",
+        ...(root ? { category: root.name, category_name: root.name } : {}),
+        ...(sub ? { subcategory: sub.name, subcategory_name: sub.name } : {}),
+        ...(root
+          ? {
+              categories: [
+                sub
+                  ? { name: root.name, children: [{ name: sub.name }] }
+                  : { name: root.name },
+              ],
+            }
+          : {}),
       };
     });
 
