@@ -25,6 +25,11 @@ interface CatalogProduct {
   description?: string;
   price_cents: number;
   currency_code?: string;
+  category?: string;
+  subcategory?: string;
+  category_name?: string;
+  subcategory_name?: string;
+  categories?: Array<string | { name: string; children?: Array<{ name: string }> }>;
 }
 
 interface SyncRequest {
