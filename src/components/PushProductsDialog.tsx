@@ -26,7 +26,11 @@ type InventoryProductRow = {
   sale_price: number | null;
   image_front: string | null;
   is_active: boolean;
+  category_id: string | null;
+  subcategory_id: string | null;
 };
+
+type CategoryRow = { id: string; name: string; parent_id: string | null };
 
 export function PushProductsDialog({
   store,
