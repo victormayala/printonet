@@ -75,14 +75,39 @@ export default function CategoriesManager() {
     if (!user) return;
     const trimmed = name.trim();
     if (!trimmed) return;
+    const siblings = (rows ?? []).filter((r) => r.parent_id === parentId);
+    const nextOrder = siblings.length
+      ? Math.max(...siblings.map((s) => s.sort_order ?? 0)) + 1
+      : 0;
     const { error } = await supabase.from("product_categories").insert({
-      user_id: user.id, parent_id: parentId, name: trimmed,
+      user_id: user.id, parent_id: parentId, name: trimmed, sort_order: nextOrder,
     });
     if (error) {
       toast({ title: "Could not create", description: error.message, variant: "destructive" });
       return;
     }
     toast({ title: parentId ? "Sub-category added" : "Category added" });
+    refresh();
+  };
+
+  const moveCategory = async (node: CategoryNode, direction: "up" | "down") => {
+    const siblings = (rows ?? [])
+      .filter((r) => r.parent_id === node.parent_id)
+      .slice()
+      .sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
+    const idx = siblings.findIndex((s) => s.id === node.id);
+    const swapWith = direction === "up" ? siblings[idx - 1] : siblings[idx + 1];
+    if (!swapWith) return;
+    const a = { id: node.id, sort_order: swapWith.sort_order };
+    const b = { id: swapWith.id, sort_order: node.sort_order };
+    const [r1, r2] = await Promise.all([
+      supabase.from("product_categories").update({ sort_order: a.sort_order }).eq("id", a.id),
+      supabase.from("product_categories").update({ sort_order: b.sort_order }).eq("id", b.id),
+    ]);
+    if (r1.error || r2.error) {
+      toast({ title: "Reorder failed", description: r1.error?.message ?? r2.error?.message, variant: "destructive" });
+      return;
+    }
     refresh();
   };
 
