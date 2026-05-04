@@ -222,6 +222,57 @@ Deno.serve(async (req) => {
       p.sale_price_cents != null
         ? Math.max(0, Number(p.sale_price_cents)) / 100
         : null;
+
+    // Aggregate every supplier image we have: base front/back/side1/side2,
+    // each variant's primary `image`, and every URL inside variant `gallery`
+    // arrays. Deduped, order-preserving. Also expose a per-color image map so
+    // tenant storefronts can render full color swatches + galleries without
+    // having to walk the variants array themselves.
+    const gallery: string[] = [];
+    const seen = new Set<string>();
+    const pushUrl = (u: unknown) => {
+      if (typeof u !== "string") return;
+      const url = u.trim();
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      gallery.push(url);
+    };
+    const imgs = p.images ?? {};
+    pushUrl((imgs as any).front);
+    pushUrl((imgs as any).back);
+    pushUrl((imgs as any).side1);
+    pushUrl((imgs as any).side2);
+
+    const colorImages: Record<string, { image?: string; hex?: string; gallery: string[] }> = {};
+    const variantsArr = Array.isArray(p.variants) ? (p.variants as any[]) : [];
+    for (const v of variantsArr) {
+      const colorName = typeof v?.color === "string" ? v.color : null;
+      if (colorName && !colorImages[colorName]) {
+        colorImages[colorName] = { image: v?.image, hex: v?.hex, gallery: [] };
+      }
+      pushUrl(v?.image);
+      if (colorName) {
+        const entry = colorImages[colorName];
+        if (typeof v?.image === "string" && !entry.gallery.includes(v.image)) {
+          entry.gallery.push(v.image);
+        }
+      }
+      const vGallery = Array.isArray(v?.gallery) ? v.gallery : [];
+      for (const u of vGallery) {
+        pushUrl(u);
+        if (colorName && typeof u === "string" && !colorImages[colorName].gallery.includes(u)) {
+          colorImages[colorName].gallery.push(u);
+        }
+      }
+    }
+
+    const imagesPayload = {
+      ...(imgs as Record<string, unknown>),
+      gallery,
+      all: gallery,
+      by_color: colorImages,
+    };
+
     return {
       sku: p.id,
       name: p.name,
@@ -236,7 +287,9 @@ Deno.serve(async (req) => {
       // Full product payload
       product_type: p.product_type,
       status: p.status,
-      images: p.images,
+      images: imagesPayload,
+      gallery,
+      image_count: gallery.length,
       variants: p.variants,
       print_areas: p.print_areas,
       supplier_source: p.supplier_source,
