@@ -96,16 +96,21 @@ export default function CategoriesManager() {
       .slice()
       .sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
     const idx = siblings.findIndex((s) => s.id === node.id);
-    const swapWith = direction === "up" ? siblings[idx - 1] : siblings[idx + 1];
-    if (!swapWith) return;
-    const a = { id: node.id, sort_order: swapWith.sort_order };
-    const b = { id: swapWith.id, sort_order: node.sort_order };
-    const [r1, r2] = await Promise.all([
-      supabase.from("product_categories").update({ sort_order: a.sort_order }).eq("id", a.id),
-      supabase.from("product_categories").update({ sort_order: b.sort_order }).eq("id", b.id),
-    ]);
-    if (r1.error || r2.error) {
-      toast({ title: "Reorder failed", description: r1.error?.message ?? r2.error?.message, variant: "destructive" });
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= siblings.length) return;
+    // Reorder array and renumber every sibling to guarantee distinct sort_order values
+    const reordered = siblings.slice();
+    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+    const updates = await Promise.all(
+      reordered.map((s, i) =>
+        s.sort_order === i
+          ? Promise.resolve({ error: null as any })
+          : supabase.from("product_categories").update({ sort_order: i }).eq("id", s.id),
+      ),
+    );
+    const failed = updates.find((u) => u.error);
+    if (failed?.error) {
+      toast({ title: "Reorder failed", description: failed.error.message, variant: "destructive" });
       return;
     }
     refresh();
