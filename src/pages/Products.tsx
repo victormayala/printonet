@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import CategoriesManager, { useCategories, buildCategoryTree } from "@/components/CategoriesManager";
+import CategoriesManager, { useCategories, useCategoryLinks, buildCategoryTree } from "@/components/CategoriesManager";
 
 type Product = {
   id: string;
@@ -409,7 +409,8 @@ function ProductForm({
   const [categoryId, setCategoryId] = useState<string | null>(product?.category_id || null);
   const [subcategoryId, setSubcategoryId] = useState<string | null>(product?.subcategory_id || null);
   const { data: categoryRows } = useCategories();
-  const categoryTree = buildCategoryTree(categoryRows ?? []);
+  const { data: categoryLinks } = useCategoryLinks();
+  const categoryTree = buildCategoryTree(categoryRows ?? [], categoryLinks ?? []);
   const selectedRoot = categoryTree.find((c) => c.id === categoryId);
   const [description, setDescription] = useState(product?.description || "");
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");

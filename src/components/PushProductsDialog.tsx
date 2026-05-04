@@ -30,7 +30,7 @@ type InventoryProductRow = {
   subcategory_id: string | null;
 };
 
-type CategoryRow = { id: string; name: string; parent_id: string | null };
+type CategoryRow = { id: string; name: string };
 
 export function PushProductsDialog({
   store,
@@ -67,7 +67,7 @@ export function PushProductsDialog({
     queryFn: async (): Promise<CategoryRow[]> => {
       const { data, error } = await supabase
         .from("product_categories")
-        .select("id,name,parent_id")
+        .select("id,name")
         .eq("user_id", user!.id);
       if (error) throw error;
       return (data ?? []) as CategoryRow[];

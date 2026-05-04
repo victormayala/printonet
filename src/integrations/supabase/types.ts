@@ -380,8 +380,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: string
           name: string
-          parent_id: string | null
           sort_order: number
           updated_at: string
           user_id: string
@@ -389,8 +389,8 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kind?: string
           name: string
-          parent_id?: string | null
           sort_order?: number
           updated_at?: string
           user_id: string
@@ -398,16 +398,50 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kind?: string
           name?: string
-          parent_id?: string | null
           sort_order?: number
           updated_at?: string
           user_id?: string
         }
+        Relationships: []
+      }
+      product_category_links: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          sort_order: number
+          subcategory_id: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          subcategory_id: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          subcategory_id?: string
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "product_categories_parent_id_fkey"
-            columns: ["parent_id"]
+            foreignKeyName: "product_category_links_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_category_links_subcategory_id_fkey"
+            columns: ["subcategory_id"]
             isOneToOne: false
             referencedRelation: "product_categories"
             referencedColumns: ["id"]
