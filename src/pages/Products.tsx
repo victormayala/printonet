@@ -3768,8 +3768,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           <TabsContent value="categories">
             {activeTab === "categories" && <CategoriesManager />}
           </TabsContent>
-
-
+          <TabsContent value="shopify">
             {activeTab === "shopify" && <ShopifyImport onDone={fetchProducts} />}
           </TabsContent>
 
