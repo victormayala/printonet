@@ -3162,7 +3162,7 @@ function VariantManagerDialog({
   );
 }
 
-type ProductsTab = "products" | "shopify" | "woocommerce" | "suppliers";
+type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "suppliers";
 
 export default function Products({ initialTab = "products", showStorefrontTabs = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean } = {}) {
   const { user, signOut } = useAuth();
