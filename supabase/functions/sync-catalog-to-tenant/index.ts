@@ -34,6 +34,7 @@ interface CatalogProduct {
 
 interface SyncRequest {
   tenant_slug: string;
+  wp_site_url?: string;
   products?: CatalogProduct[];
   limit?: number;
   event_id?: string;
