@@ -287,18 +287,18 @@ Deno.serve(async (req) => {
     baseUrlOverride,
   });
 
+  // Always return HTTP 200 so the supabase-js client surfaces the body
+  // (a non-2xx swallows the response and the caller only sees a generic
+  // "Edge Function returned a non-2xx status code" message).
   if ("error" in result) {
-    return new Response(JSON.stringify(result), {
-      status: 502,
-      headers: { ...tenantCors, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ ok: false, event_id, product_count: products.length, ...result }),
+      { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
+    );
   }
 
   return new Response(
     JSON.stringify({ ...result, event_id, product_count: products.length }),
-    {
-      status: result.ok ? 200 : 502,
-      headers: { ...tenantCors, "Content-Type": "application/json" },
-    },
+    { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
   );
 });

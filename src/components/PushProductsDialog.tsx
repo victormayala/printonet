@@ -124,10 +124,26 @@ export function PushProductsDialog({
           product_ids: productIds,
         },
       });
-      const errMsg =
-        (error as Error | null)?.message ||
-        (data as { error?: string } | null)?.error;
-      if (errMsg) throw new Error(errMsg);
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as {
+        ok?: boolean;
+        status?: number;
+        error?: string;
+        detail?: string;
+        response?: { message?: string; code?: string } | string;
+        target?: string;
+      };
+      if (res.ok === false || res.error) {
+        const upstream =
+          typeof res.response === "string"
+            ? res.response
+            : res.response?.message || res.response?.code;
+        throw new Error(
+          [res.error, res.detail, upstream, res.status ? `HTTP ${res.status}` : null, res.target]
+            .filter(Boolean)
+            .join(" — ") || "Sync failed",
+        );
+      }
       toast({
         title: "Catalog pushed",
         description: `${chosen.length} product${chosen.length === 1 ? "" : "s"} sent to ${store.name}.`,
