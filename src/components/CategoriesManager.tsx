@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2, FolderTree } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2, FolderTree, ArrowUp, ArrowDown } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,7 @@ export type CategoryRow = {
   user_id: string;
   parent_id: string | null;
   name: string;
+  sort_order: number;
 };
 
 export type CategoryNode = CategoryRow & { children: CategoryNode[] };
@@ -34,7 +35,7 @@ export function buildCategoryTree(rows: CategoryRow[]): CategoryNode[] {
     }
   });
   const sortRec = (nodes: CategoryNode[]) => {
-    nodes.sort((a, b) => a.name.localeCompare(b.name));
+    nodes.sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
     nodes.forEach((n) => sortRec(n.children));
   };
   sortRec(roots);
@@ -49,7 +50,7 @@ export function useCategories() {
     queryFn: async (): Promise<CategoryRow[]> => {
       const { data, error } = await supabase
         .from("product_categories")
-        .select("id,user_id,parent_id,name")
+        .select("id,user_id,parent_id,name,sort_order")
         .eq("user_id", user!.id);
       if (error) throw error;
       return (data ?? []) as CategoryRow[];
