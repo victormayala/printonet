@@ -115,9 +115,9 @@ Deno.serve(async (req) => {
     }
     const { data: cats } = await supabase
       .from("product_categories")
-      .select("id,name,parent_id")
+      .select("id,name")
       .eq("user_id", user.id);
-    const catById = new Map<string, { id: string; name: string; parent_id: string | null }>();
+    const catById = new Map<string, { id: string; name: string }>();
     (cats ?? []).forEach((c: any) => catById.set(c.id, c));
 
     products = (rows ?? []).map((p: any) => {
