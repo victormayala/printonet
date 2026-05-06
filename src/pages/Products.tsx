@@ -3165,7 +3165,7 @@ function VariantManagerDialog({
 
 type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "suppliers";
 
-export default function Products({ initialTab = "products", showStorefrontTabs = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean } = {}) {
+export default function Products({ initialTab = "products", showStorefrontTabs = false, hideTabsList = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean; hideTabsList?: boolean } = {}) {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
