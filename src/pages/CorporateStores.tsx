@@ -6,6 +6,7 @@ import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCi
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import Products from "@/pages/Products";
 
 import { supabase } from "@/integrations/supabase/client";
