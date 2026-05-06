@@ -1279,7 +1279,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
   };
 
   if (loadingIntegration) {
-    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return <SupplierTabSkeleton />;
   }
 
   if (integration) {
