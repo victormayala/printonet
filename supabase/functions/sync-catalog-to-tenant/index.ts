@@ -297,13 +297,37 @@ Deno.serve(async (req) => {
       by_color: colorImages,
     };
 
+    const inv = (p as any).inventory ?? { unlimited_stock: true, stock: null };
+    const isUnlimited = inv?.unlimited_stock !== false;
+    const stockNum = isUnlimited
+      ? 9999
+      : Math.max(0, Math.floor(Number(inv?.stock ?? 0)));
+
+    // Mirror inventory semantics onto every variant size row so the tenant
+    // engine's variable-product path doesn't default missing stock to 0.
+    const variantsWithStock = Array.isArray(p.variants)
+      ? (p.variants as any[]).map((v) => ({
+          ...v,
+          unlimited_stock: isUnlimited,
+          stock: stockNum,
+          sizes: Array.isArray(v?.sizes)
+            ? v.sizes.map((s: any) => ({
+                ...s,
+                unlimited_stock: isUnlimited,
+                stock: s?.stock != null && !isUnlimited ? s.stock : stockNum,
+              }))
+            : v?.sizes,
+        }))
+      : p.variants;
+
     return {
       sku: p.id,
       name: p.name,
       description: p.description,
       price: priceDollars,
       sale_price: salePriceDollars,
-      stock: 9999,
+      stock: stockNum,
+      unlimited_stock: isUnlimited,
       currency: (p.currency_code ?? "usd").toUpperCase(),
       ...(p.category ? { category: p.category, category_name: p.category } : {}),
       ...(p.subcategory ? { subcategory: p.subcategory, subcategory_name: p.subcategory } : {}),
@@ -314,7 +338,7 @@ Deno.serve(async (req) => {
       images: imagesPayload,
       gallery,
       image_count: gallery.length,
-      variants: p.variants,
+      variants: variantsWithStock,
       print_areas: p.print_areas,
       supplier_source: p.supplier_source,
       weight: p.weight,
