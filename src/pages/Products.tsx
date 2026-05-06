@@ -1119,7 +1119,7 @@ function ProductForm({
         <Label>Active (visible to customers)</Label>
       </div>
       <div className="flex gap-3 pt-2">
-        <Button onClick={handleSave} disabled={saving} className="gap-2">
+        <Button onClick={handleSave} disabled={saving} className="gap-2" data-product-form-save>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {product ? "Update Product" : "Add Product"}
         </Button>
@@ -3379,6 +3379,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     const { data, error } = await supabase.from("inventory_products").select("*").order("created_at", { ascending: false });
     if (!error && data) setProducts(data as unknown as Product[]);
     setLoading(false);
+    return data as any;
   };
 
   useEffect(() => {
@@ -3481,11 +3482,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             {showAddForm || editingProduct !== undefined ? (
               <Card>
                 <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowAddForm(false); setEditingProduct(undefined); }}>
-                      <ArrowLeft className="h-4 w-4" />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowAddForm(false); setEditingProduct(undefined); }}>
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                      <CardTitle>{editingProduct ? "Edit Product" : "Add Product"}</CardTitle>
+                    </div>
+                    <Button
+                      onClick={() => document.querySelector<HTMLButtonElement>('[data-product-form-save]')?.click()}
+                      className="gap-2"
+                    >
+                      {editingProduct ? "Update Product" : "Add Product"}
                     </Button>
-                    <CardTitle>{editingProduct ? "Edit Product" : "Add Product"}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -3495,7 +3504,13 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                     onCategoryRenamed={(oldName, newName) => {
                       setProducts((prev) => prev.map((p) => p.category === oldName ? { ...p, category: newName } : p));
                     }}
-                    onSave={() => { setShowAddForm(false); setEditingProduct(undefined); fetchProducts(); }}
+                    onSave={async () => {
+                      const refreshed = await fetchProducts();
+                      if (editingProduct && Array.isArray(refreshed)) {
+                        const updated = refreshed.find((p: any) => p.id === editingProduct.id);
+                        if (updated) setEditingProduct(updated as any);
+                      }
+                    }}
                     onCancel={() => { setShowAddForm(false); setEditingProduct(undefined); }}
                   />
                 </CardContent>
