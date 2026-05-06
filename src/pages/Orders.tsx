@@ -131,8 +131,17 @@ export default function Orders() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="rounded-md border overflow-hidden">
+          <div className="divide-y">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-4">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-4 w-24 ml-auto" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : filtered.length === 0 ? (
         <Card>
