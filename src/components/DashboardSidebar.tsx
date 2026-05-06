@@ -21,7 +21,7 @@ import {
 const navItems = [
   { title: "Products", url: "/products", icon: Package },
   { title: "Storefront", url: "/storefront", icon: Store },
-  { title: "Corporate Stores", url: "/corporate-stores", icon: Building2 },
+  { title: "My Stores", url: "/corporate-stores", icon: Building2 },
   { title: "Suppliers", url: "/suppliers", icon: Truck },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
   { title: "Customizer", url: "/customizer", icon: Wand2 },
