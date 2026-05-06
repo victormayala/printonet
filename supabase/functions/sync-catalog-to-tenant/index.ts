@@ -328,16 +328,30 @@ Deno.serve(async (req) => {
     };
   });
 
-  const payload = {
+  const shouldPrune = mode === "full" && (body.prune ?? true);
+
+  const payload: Record<string, unknown> = {
     supplier: "printonet_internal",
     tenant_slug: body.tenant_slug,
     credentials: {},
     event_id,
     occurred_at: new Date().toISOString(),
-    products,
-    items,
-    catalog: items,
   };
+
+  if (mode === "delete") {
+    payload.removed_skus = removedSkus;
+  } else if (mode === "incremental") {
+    // items wins over catalog on the tenant — send items only.
+    payload.items = items;
+    if (removedSkus.length) payload.removed_skus = removedSkus;
+  } else {
+    // full: send catalog only (omit items so tenant applies the full snapshot)
+    // and request pruning of SKUs missing from the snapshot.
+    payload.catalog = items;
+    payload.prune_supplier_catalog = shouldPrune;
+    if (removedSkus.length) payload.removed_skus = removedSkus;
+  }
+
 
   if (body.dry_run) {
     return new Response(
