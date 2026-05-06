@@ -21,6 +21,7 @@ import {
   Loader2, ExternalLink, Filter, Link2, Copy, Check, Printer,
 } from "lucide-react";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Session = {
   id: string;
