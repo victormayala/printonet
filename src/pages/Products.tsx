@@ -3379,6 +3379,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     const { data, error } = await supabase.from("inventory_products").select("*").order("created_at", { ascending: false });
     if (!error && data) setProducts(data as unknown as Product[]);
     setLoading(false);
+    return data as any;
   };
 
   useEffect(() => {
