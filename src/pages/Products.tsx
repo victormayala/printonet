@@ -840,7 +840,7 @@ function ProductForm({
       </div>
 
       {/* ============ Variants (color list + per-color pricing) ============ */}
-      {productType === "variable" && (
+      {(productType === "variable" || variants.length > 0) && (
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>

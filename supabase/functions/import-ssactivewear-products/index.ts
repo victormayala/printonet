@@ -249,6 +249,7 @@ Deno.serve(async (req) => {
           image_side1: imageSide1,
           image_side2: imageSide2,
           variants,
+          product_type: variants.length > 0 ? 'variable' : 'single',
           is_active: true,
           supplier_source: supplierSource,
           user_id: targetUserId,
