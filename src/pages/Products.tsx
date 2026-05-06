@@ -3165,7 +3165,7 @@ function VariantManagerDialog({
 
 type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "suppliers";
 
-export default function Products({ initialTab = "products", showStorefrontTabs = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean } = {}) {
+export default function Products({ initialTab = "products", showStorefrontTabs = false, hideTabsList = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean; hideTabsList?: boolean } = {}) {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3430,7 +3430,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     <div className="bg-background">
       <div className="p-4 sm:p-6 lg:p-8">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProductsTab)}>
-          {showStorefrontTabs ? (
+          {hideTabsList ? null : showStorefrontTabs ? (
             <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
               <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
               <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>

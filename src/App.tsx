@@ -62,7 +62,7 @@ const App = () => (
 
             {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
-            <Route path="/storefront" element={<DashboardRoute><Products initialTab="shopify" showStorefrontTabs /></DashboardRoute>} />
+            <Route path="/storefront" element={<Navigate to="/corporate-stores?tab=shopify" replace />} />
             <Route path="/corporate-stores" element={<DashboardRoute><CorporateStores /></DashboardRoute>} />
             <Route path="/corporate-stores/:id" element={<DashboardRoute><CorporateStoreDetails /></DashboardRoute>} />
             <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />

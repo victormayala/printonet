@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, KeyRound, Copy, Check, Eye, EyeOff, LogIn } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, KeyRound, Copy, Check, Eye, EyeOff, LogIn, Building2, ShoppingBag, Globe } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Products from "@/pages/Products";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -167,6 +169,17 @@ export default function CorporateStores() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
+  const setActiveTab = (v: string) => {
+    if (v === "stores") {
+      searchParams.delete("tab");
+    } else {
+      searchParams.set("tab", v);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
 
   const { data: stores = [], isLoading } = useQuery({
     queryKey: ["corporate_stores", user?.id],
@@ -205,110 +218,128 @@ export default function CorporateStores() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Corporate Stores</h1>
-          <p className="text-muted-foreground mt-1">
-            Provision branded WooCommerce stores for corporate clients (e.g. Pepsico employee merch).
-          </p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4" />
-              New corporate store
-            </Button>
-          </DialogTrigger>
-          <NewStoreDialog
-            onCreated={() => {
-              setOpen(false);
-              queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
-            }}
-          />
-        </Dialog>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-2 w-full sm:w-auto flex-wrap">
+          <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none"><Building2 className="h-4 w-4" /> My Stores</TabsTrigger>
+          <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
+          <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your stores</CardTitle>
-          <CardDescription>
-            Each store is a fully isolated, Printonet-branded WooCommerce site provisioned for you automatically.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
-              <p className="text-sm">Loading…</p>
+        <TabsContent value="stores" className="space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">My Stores</h1>
+              <p className="text-muted-foreground mt-1">
+                Provision branded WooCommerce stores for corporate clients (e.g. Pepsico employee merch).
+              </p>
             </div>
-          ) : stores.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-sm">No corporate stores yet. Click "New corporate store" to create one.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Store</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Site URL</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stores.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {s.logo_url ? (
-                          <img src={s.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
-                        ) : (
-                          <div
-                            className="h-8 w-8 rounded shrink-0"
-                            style={{ background: s.primary_color }}
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">{s.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{s.contact_email}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <StatusBadge status={s.status} />
-                        {s.error_message && s.status === "failed" && (
-                          <div className="text-xs text-destructive max-w-xs truncate" title={s.error_message}>
-                            {s.error_message}
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4" />
+                  New store
+                </Button>
+              </DialogTrigger>
+              <NewStoreDialog
+                onCreated={() => {
+                  setOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+                }}
+              />
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Your stores</CardTitle>
+              <CardDescription>
+                Each store is a fully isolated, Printonet-branded WooCommerce site provisioned for you automatically.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                  <p className="text-sm">Loading…</p>
+                </div>
+              ) : stores.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-sm">No stores yet. Click "New store" to create one.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Store</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Site URL</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stores.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {s.logo_url ? (
+                              <img src={s.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
+                            ) : (
+                              <div
+                                className="h-8 w-8 rounded shrink-0"
+                                style={{ background: s.primary_color }}
+                              />
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{s.name}</div>
+                              <div className="text-xs text-muted-foreground truncate">{s.contact_email}</div>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {s.wp_site_url ? (
-                        <a
-                          href={s.wp_site_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-                        >
-                          {s.wp_site_url.replace(/^https?:\/\//, "")}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Pending…</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <StoreActions store={s} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <StatusBadge status={s.status} />
+                            {s.error_message && s.status === "failed" && (
+                              <div className="text-xs text-destructive max-w-xs truncate" title={s.error_message}>
+                                {s.error_message}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {s.wp_site_url ? (
+                            <a
+                              href={s.wp_site_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              {s.wp_site_url.replace(/^https?:\/\//, "")}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Pending…</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <StoreActions store={s} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="shopify" className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8">
+          <Products initialTab="shopify" showStorefrontTabs hideTabsList />
+        </TabsContent>
+
+        <TabsContent value="woocommerce" className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8">
+          <Products initialTab="woocommerce" showStorefrontTabs hideTabsList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

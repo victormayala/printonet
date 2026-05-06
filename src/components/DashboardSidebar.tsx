@@ -1,4 +1,4 @@
-import { Package, Wand2, User, LogOut, Home, ShoppingBag, ShoppingCart, Truck, Store, Building2 } from "lucide-react";
+import { Package, Wand2, User, LogOut, Home, ShoppingBag, ShoppingCart, Truck, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
@@ -20,7 +20,6 @@ import {
 
 const navItems = [
   { title: "Products", url: "/products", icon: Package },
-  { title: "Storefront", url: "/storefront", icon: Store },
   { title: "My Stores", url: "/corporate-stores", icon: Building2 },
   { title: "Suppliers", url: "/suppliers", icon: Truck },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
