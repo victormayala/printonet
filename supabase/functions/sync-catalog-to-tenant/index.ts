@@ -305,17 +305,37 @@ Deno.serve(async (req) => {
 
     // Mirror inventory semantics onto every variant size row so the tenant
     // engine's variable-product path doesn't default missing stock to 0.
+    // Also include WooCommerce meta semantics:
+    //   _stock_status = "instock" whenever we have stock (or unlimited)
+    //   _manage_stock = "no" when unlimited, "yes" when finite
+    const stockStatus = isUnlimited || stockNum > 0 ? "instock" : "outofstock";
+    const manageStock = isUnlimited ? "no" : "yes";
+
     const variantsWithStock = Array.isArray(p.variants)
       ? (p.variants as any[]).map((v) => ({
           ...v,
           unlimited_stock: isUnlimited,
           stock: stockNum,
+          stock_status: stockStatus,
+          manage_stock: manageStock,
+          _stock_status: stockStatus,
+          _manage_stock: manageStock,
           sizes: Array.isArray(v?.sizes)
-            ? v.sizes.map((s: any) => ({
-                ...s,
-                unlimited_stock: isUnlimited,
-                stock: s?.stock != null && !isUnlimited ? s.stock : stockNum,
-              }))
+            ? v.sizes.map((s: any) => {
+                const sStock =
+                  s?.stock != null && !isUnlimited ? Number(s.stock) : stockNum;
+                const sStatus =
+                  isUnlimited || sStock > 0 ? "instock" : "outofstock";
+                return {
+                  ...s,
+                  unlimited_stock: isUnlimited,
+                  stock: sStock,
+                  stock_status: sStatus,
+                  manage_stock: manageStock,
+                  _stock_status: sStatus,
+                  _manage_stock: manageStock,
+                };
+              })
             : v?.sizes,
         }))
       : p.variants;
@@ -328,6 +348,10 @@ Deno.serve(async (req) => {
       sale_price: salePriceDollars,
       stock: stockNum,
       unlimited_stock: isUnlimited,
+      stock_status: stockStatus,
+      manage_stock: manageStock,
+      _stock_status: stockStatus,
+      _manage_stock: manageStock,
       currency: (p.currency_code ?? "usd").toUpperCase(),
       ...(p.category ? { category: p.category, category_name: p.category } : {}),
       ...(p.subcategory ? { subcategory: p.subcategory, subcategory_name: p.subcategory } : {}),
