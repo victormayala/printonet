@@ -3259,6 +3259,8 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           tenant_slug: slug,
           wp_site_url: store.wp_site_url || undefined,
           limit: 200,
+          mode: "full",
+          prune: true,
         },
       });
       if (error) throw error;
