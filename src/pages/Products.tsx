@@ -3482,11 +3482,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             {showAddForm || editingProduct !== undefined ? (
               <Card>
                 <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowAddForm(false); setEditingProduct(undefined); }}>
-                      <ArrowLeft className="h-4 w-4" />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowAddForm(false); setEditingProduct(undefined); }}>
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                      <CardTitle>{editingProduct ? "Edit Product" : "Add Product"}</CardTitle>
+                    </div>
+                    <Button
+                      onClick={() => document.querySelector<HTMLButtonElement>('[data-product-form-save]')?.click()}
+                      className="gap-2"
+                    >
+                      {editingProduct ? "Update Product" : "Add Product"}
                     </Button>
-                    <CardTitle>{editingProduct ? "Edit Product" : "Add Product"}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
