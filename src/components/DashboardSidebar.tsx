@@ -1,4 +1,4 @@
-import { Package, Wand2, User, LogOut, Home, ShoppingBag, ShoppingCart, Truck, Store, Building2 } from "lucide-react";
+import { Package, Wand2, User, LogOut, Home, ShoppingBag, ShoppingCart, Truck, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
