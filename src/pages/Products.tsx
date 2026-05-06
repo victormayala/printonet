@@ -3777,21 +3777,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             {activeTab === "woocommerce" && <WooCommerceImport onDone={fetchProducts} />}
           </TabsContent>
 
-          <TabsContent value="suppliers">
-            {activeTab === "suppliers" && (
-              <Tabs defaultValue="ssactivewear" className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
-                  <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
-                </TabsList>
-                <TabsContent value="ssactivewear">
-                  <SSActivewearImport onDone={fetchProducts} />
-                </TabsContent>
-                <TabsContent value="sanmar">
-                  <div><SanMarImport onDone={fetchProducts} /></div>
-                </TabsContent>
-              </Tabs>
-            )}
+          <TabsContent value="suppliers" forceMount className="data-[state=inactive]:hidden">
+            <Tabs defaultValue="ssactivewear" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
+                <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
+              </TabsList>
+              <TabsContent value="ssactivewear" forceMount className="data-[state=inactive]:hidden">
+                <SSActivewearImport onDone={fetchProducts} />
+              </TabsContent>
+              <TabsContent value="sanmar" forceMount className="data-[state=inactive]:hidden">
+                <SanMarImport onDone={fetchProducts} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
 
