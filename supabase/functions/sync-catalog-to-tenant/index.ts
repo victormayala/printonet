@@ -58,6 +58,14 @@ interface SyncRequest {
   limit?: number;
   event_id?: string;
   dry_run?: boolean;
+  /**
+   * "full"        — push entire catalog and prune missing SKUs on tenant (default for Sync All).
+   * "incremental" — push items only, no pruning.
+   * "delete"      — only send removed_skus.
+   */
+  mode?: "full" | "incremental" | "delete";
+  removed_skus?: string[];
+  prune?: boolean;
 }
 
 function variantPriceCents(p: any): number {
