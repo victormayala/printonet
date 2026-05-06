@@ -26,6 +26,38 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import CategoriesManager, { useCategories, useCategoryLinks, buildCategoryTree } from "@/components/CategoriesManager";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function SupplierTabSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-64" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </CardHeader>
+        <CardContent className="flex gap-3 flex-wrap">
+          <Skeleton className="h-9 w-36" />
+          <Skeleton className="h-9 w-32" />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-4 w-72 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-10 w-full" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square w-full rounded-md" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 type Product = {
   id: string;
@@ -1861,7 +1893,7 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
   };
 
   if (loadingIntegration) {
-    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return <SupplierTabSkeleton />;
   }
 
   if (integration) {
@@ -2590,7 +2622,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     toast({ title: "SanMar disconnected" });
   };
 
-  if (loadingIntegration) return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (loadingIntegration) return <SupplierTabSkeleton />;
 
   if (integration) {
     return (
@@ -3777,21 +3809,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             {activeTab === "woocommerce" && <WooCommerceImport onDone={fetchProducts} />}
           </TabsContent>
 
-          <TabsContent value="suppliers">
-            {activeTab === "suppliers" && (
-              <Tabs defaultValue="ssactivewear" className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
-                  <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
-                </TabsList>
-                <TabsContent value="ssactivewear">
-                  <SSActivewearImport onDone={fetchProducts} />
-                </TabsContent>
-                <TabsContent value="sanmar">
-                  <div><SanMarImport onDone={fetchProducts} /></div>
-                </TabsContent>
-              </Tabs>
-            )}
+          <TabsContent value="suppliers" forceMount className="data-[state=inactive]:hidden">
+            <Tabs defaultValue="ssactivewear" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
+                <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
+              </TabsList>
+              <TabsContent value="ssactivewear" forceMount className="data-[state=inactive]:hidden">
+                <SSActivewearImport onDone={fetchProducts} />
+              </TabsContent>
+              <TabsContent value="sanmar" forceMount className="data-[state=inactive]:hidden">
+                <SanMarImport onDone={fetchProducts} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
 
