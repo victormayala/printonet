@@ -32,7 +32,15 @@ Deno.serve(async (req) => {
       })
     }
 
-    const body = await req.json()
+    let body: any = {}
+    try {
+      const raw = await req.text()
+      body = raw ? JSON.parse(raw) : {}
+    } catch (e) {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body', details: String(e) }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
     const { action, account_number, api_key, search, category, style_id, user_id, page, per_page } = body
 
     if (!account_number || !api_key) {
