@@ -169,6 +169,17 @@ export default function CorporateStores() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
+  const setActiveTab = (v: string) => {
+    if (v === "stores") {
+      searchParams.delete("tab");
+    } else {
+      searchParams.set("tab", v);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
 
   const { data: stores = [], isLoading } = useQuery({
     queryKey: ["corporate_stores", user?.id],
