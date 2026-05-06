@@ -91,7 +91,7 @@ const FULL_COLUMNS =
   "id,name,description,base_price,sale_price,variants,category,category_id,subcategory_id," +
   "image_front,image_back,image_side1,image_side2,print_areas,supplier_source," +
   "product_type,status,weight,weight_unit,length,width,height,dimension_unit," +
-  "created_at,updated_at";
+  "inventory,created_at,updated_at";
 
 function buildCatalogProduct(p: any, catById: Map<string, { id: string; name: string }>): CatalogProduct {
   const item: CatalogProduct = {
