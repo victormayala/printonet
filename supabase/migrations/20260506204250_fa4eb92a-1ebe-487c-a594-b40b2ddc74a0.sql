@@ -1,0 +1,1 @@
+UPDATE public.inventory_products SET product_type = 'variable' WHERE product_type = 'single' AND jsonb_array_length(coalesce(variants, '[]'::jsonb)) > 0;
