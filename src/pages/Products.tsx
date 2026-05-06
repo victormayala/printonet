@@ -3677,6 +3677,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                       </Button>
                     </div>
 
+                    <Button onClick={openTenantSync} variant="outline" className="gap-2 h-9">
+                      <RefreshCw className="h-4 w-4" /> Sync to Stores
+                    </Button>
                     <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2 h-9">
                       <Plus className="h-4 w-4" /> Add Product
                     </Button>
