@@ -461,6 +461,10 @@ function ProductForm({
   const [pwidth, setPwidth] = useState(product?.width?.toString() || "");
   const [pheight, setPheight] = useState(product?.height?.toString() || "");
   const [dimensionUnit, setDimensionUnit] = useState<"in" | "cm">(product?.dimension_unit || "in");
+  const [unlimitedStock, setUnlimitedStock] = useState<boolean>(product?.inventory?.unlimited_stock ?? true);
+  const [stockQty, setStockQty] = useState<string>(
+    product?.inventory?.stock != null ? String(product.inventory.stock) : ""
+  );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
