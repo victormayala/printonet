@@ -3605,7 +3605,17 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                 </div>
 
                 {loading ? (
-                  <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <Card key={i} className="overflow-hidden">
+                        <Skeleton className="aspect-square w-full rounded-none" />
+                        <div className="p-3 space-y-2">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-3 w-1/2" />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
                 ) : products.length === 0 ? (
                   <Card className="flex flex-col items-center py-16 text-center">
                     <Package className="h-12 w-12 text-muted-foreground mb-4" />
