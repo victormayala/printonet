@@ -570,6 +570,7 @@ Deno.serve(async (req) => {
             image_side1: sideCandidates[0] || null,
             image_side2: sideCandidates[1] || null,
             variants, is_active: true, supplier_source: supplierSource,
+            product_type: variants.length > 0 ? 'variable' : 'single',
             user_id: targetUserId,
           }
 
