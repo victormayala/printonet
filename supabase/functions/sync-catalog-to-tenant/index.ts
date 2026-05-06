@@ -46,6 +46,7 @@ interface CatalogProduct {
   width?: number | null;
   height?: number | null;
   dimension_unit?: string | null;
+  inventory?: { unlimited_stock?: boolean; stock?: number | null } | null;
   created_at?: string;
   updated_at?: string;
 }
