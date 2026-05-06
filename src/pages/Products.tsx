@@ -2622,7 +2622,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     toast({ title: "SanMar disconnected" });
   };
 
-  if (loadingIntegration) return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (loadingIntegration) return <SupplierTabSkeleton />;
 
   if (integration) {
     return (
