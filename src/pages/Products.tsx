@@ -3495,7 +3495,13 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                     onCategoryRenamed={(oldName, newName) => {
                       setProducts((prev) => prev.map((p) => p.category === oldName ? { ...p, category: newName } : p));
                     }}
-                    onSave={() => { setShowAddForm(false); setEditingProduct(undefined); fetchProducts(); }}
+                    onSave={async () => {
+                      const refreshed = await fetchProducts();
+                      if (editingProduct && Array.isArray(refreshed)) {
+                        const updated = refreshed.find((p: any) => p.id === editingProduct.id);
+                        if (updated) setEditingProduct(updated as any);
+                      }
+                    }}
                     onCancel={() => { setShowAddForm(false); setEditingProduct(undefined); }}
                   />
                 </CardContent>
