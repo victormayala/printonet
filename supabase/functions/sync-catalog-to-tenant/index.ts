@@ -120,6 +120,7 @@ function buildCatalogProduct(p: any, catById: Map<string, { id: string; name: st
     width: p.width ?? null,
     height: p.height ?? null,
     dimension_unit: p.dimension_unit ?? null,
+    inventory: p.inventory ?? { unlimited_stock: true, stock: null },
     created_at: p.created_at ?? undefined,
     updated_at: p.updated_at ?? undefined,
   };
