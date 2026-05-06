@@ -353,12 +353,19 @@ Deno.serve(async (req) => {
   }
 
 
+  const meta = {
+    event_id,
+    mode,
+    product_count: products.length,
+    removed_count: removedSkus.length,
+    pruned: shouldPrune,
+  };
+
   if (body.dry_run) {
     return new Response(
       JSON.stringify({
         path: "/wp-json/printonet/v1/suppliers/sync",
-        event_id,
-        product_count: products.length,
+        ...meta,
         payload_preview: payload,
       }),
       { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
@@ -376,18 +383,15 @@ Deno.serve(async (req) => {
     baseUrlOverride,
   });
 
-  // Always return HTTP 200 so the supabase-js client surfaces the body
-  // (a non-2xx swallows the response and the caller only sees a generic
-  // "Edge Function returned a non-2xx status code" message).
   if ("error" in result) {
     return new Response(
-      JSON.stringify({ ok: false, event_id, product_count: products.length, ...result }),
+      JSON.stringify({ ok: false, ...meta, ...result }),
       { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
     );
   }
 
   return new Response(
-    JSON.stringify({ ...result, event_id, product_count: products.length }),
+    JSON.stringify({ ...result, ...meta }),
     { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
   );
 });
