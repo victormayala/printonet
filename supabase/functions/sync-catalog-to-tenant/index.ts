@@ -168,11 +168,24 @@ Deno.serve(async (req) => {
     });
   }
 
+  const mode: "full" | "incremental" | "delete" = body.mode ?? "full";
+  const removedSkus = Array.isArray(body.removed_skus)
+    ? body.removed_skus.filter((s) => typeof s === "string" && s.length > 0)
+    : [];
+
   let products: CatalogProduct[] = [];
   const hasInlineProducts = Array.isArray(body.products) && body.products.length > 0;
   const hasProductIds = Array.isArray(body.product_ids) && body.product_ids.length > 0;
 
-  if (hasInlineProducts && !hasProductIds) {
+  if (mode === "delete") {
+    if (removedSkus.length === 0) {
+      return new Response(JSON.stringify({ error: "removed_skus_required_for_delete_mode" }), {
+        status: 400,
+        headers: { ...tenantCors, "Content-Type": "application/json" },
+      });
+    }
+    // products stays empty; we'll send removed_skus only.
+  } else if (hasInlineProducts && !hasProductIds) {
     products = body.products!.slice(0, MAX_BATCH);
   } else {
     const supabase = createClient(
@@ -216,6 +229,7 @@ Deno.serve(async (req) => {
 
     products = (rows ?? []).map((p: any) => buildCatalogProduct(p, catById));
   }
+
 
   const event_id =
     body.event_id ??
