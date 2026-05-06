@@ -4072,6 +4072,67 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             </div>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={tenantSyncOpen} onOpenChange={setTenantSyncOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Sync products to your stores</DialogTitle>
+              <DialogDescription>
+                Push your full product catalog to each connected multi-tenant storefront.
+              </DialogDescription>
+            </DialogHeader>
+            {loadingStores ? (
+              <div className="py-6 flex items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading stores...
+              </div>
+            ) : corporateStores.length === 0 ? (
+              <p className="py-6 text-sm text-muted-foreground text-center">
+                You don't have any corporate stores yet.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {corporateStores.map((store) => {
+                  const result = storeSyncResults[store.id];
+                  const isSyncing = syncingStoreId === store.id;
+                  const disabled = store.status !== "active";
+                  return (
+                    <div key={store.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{store.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{store.wp_site_url || store.tenant_slug || "—"}</p>
+                        {result && (
+                          <p className={`text-xs mt-1 ${result.ok ? "text-green-600" : "text-destructive"}`}>{result.message}</p>
+                        )}
+                        {disabled && <p className="text-xs text-muted-foreground mt-1">Status: {store.status}</p>}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => syncToStore(store)}
+                        disabled={isSyncing || disabled || !!syncingStoreId}
+                        className="gap-1.5"
+                      >
+                        {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                        Sync
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setTenantSyncOpen(false)}>Close</Button>
+              <Button
+                onClick={syncToAllStores}
+                disabled={!!syncingStoreId || corporateStores.length === 0 || loadingStores}
+                className="gap-2"
+              >
+                {syncingStoreId ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Sync All
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
