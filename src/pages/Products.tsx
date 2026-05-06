@@ -3226,6 +3226,70 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const [markupValue, setMarkupValue] = useState("");
   const [applyingMarkup, setApplyingMarkup] = useState(false);
 
+  // Sync to multi-tenant stores
+  const [tenantSyncOpen, setTenantSyncOpen] = useState(false);
+  const [corporateStores, setCorporateStores] = useState<any[]>([]);
+  const [loadingStores, setLoadingStores] = useState(false);
+  const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
+  const [storeSyncResults, setStoreSyncResults] = useState<Record<string, { ok: boolean; message: string; count?: number }>>({});
+
+  const openTenantSync = async () => {
+    setTenantSyncOpen(true);
+    setStoreSyncResults({});
+    setLoadingStores(true);
+    const { data } = await supabase
+      .from("corporate_stores")
+      .select("*")
+      .eq("user_id", user?.id || "")
+      .order("created_at", { ascending: false });
+    setCorporateStores(data || []);
+    setLoadingStores(false);
+  };
+
+  const syncToStore = async (store: any) => {
+    const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
+    if (!slug) {
+      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: "Missing tenant slug / site URL" } }));
+      return;
+    }
+    setSyncingStoreId(store.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
+        body: {
+          tenant_slug: slug,
+          wp_site_url: store.wp_site_url || undefined,
+          limit: 200,
+        },
+      });
+      if (error) throw error;
+      const ok = (data as any)?.ok !== false && !(data as any)?.error;
+      const count = (data as any)?.product_count;
+      setStoreSyncResults((p) => ({
+        ...p,
+        [store.id]: {
+          ok,
+          message: ok ? `Synced ${count ?? 0} products` : ((data as any)?.detail || (data as any)?.error || "Sync failed"),
+          count,
+        },
+      }));
+      if (ok) toast({ title: `Synced to ${store.name}`, description: `${count ?? 0} products pushed.` });
+      else toast({ title: `Failed to sync ${store.name}`, description: (data as any)?.detail || (data as any)?.error || "Unknown error", variant: "destructive" });
+    } catch (err: any) {
+      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: err?.message || "Sync failed" } }));
+      toast({ title: `Failed to sync ${store.name}`, description: err?.message, variant: "destructive" });
+    } finally {
+      setSyncingStoreId(null);
+    }
+  };
+
+  const syncToAllStores = async () => {
+    for (const store of corporateStores) {
+      if (store.status !== "active") continue;
+      // eslint-disable-next-line no-await-in-loop
+      await syncToStore(store);
+    }
+  };
+
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
       const n = new Set(prev);
