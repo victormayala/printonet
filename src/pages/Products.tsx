@@ -1279,7 +1279,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
   };
 
   if (loadingIntegration) {
-    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return <SupplierTabSkeleton />;
   }
 
   if (integration) {
@@ -1492,7 +1492,7 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
   };
 
   if (loadingIntegration) {
-    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return <SupplierTabSkeleton />;
   }
 
   if (integration) {
@@ -3798,15 +3798,15 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             )}
           </TabsContent>
 
-          <TabsContent value="categories">
-            {activeTab === "categories" && <CategoriesManager />}
+          <TabsContent value="categories" forceMount className="data-[state=inactive]:hidden">
+            <CategoriesManager />
           </TabsContent>
-          <TabsContent value="shopify">
-            {activeTab === "shopify" && <ShopifyImport onDone={fetchProducts} />}
+          <TabsContent value="shopify" forceMount className="data-[state=inactive]:hidden">
+            <ShopifyImport onDone={fetchProducts} />
           </TabsContent>
 
-          <TabsContent value="woocommerce">
-            {activeTab === "woocommerce" && <WooCommerceImport onDone={fetchProducts} />}
+          <TabsContent value="woocommerce" forceMount className="data-[state=inactive]:hidden">
+            <WooCommerceImport onDone={fetchProducts} />
           </TabsContent>
 
           <TabsContent value="suppliers" forceMount className="data-[state=inactive]:hidden">
