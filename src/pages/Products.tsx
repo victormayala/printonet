@@ -3452,6 +3452,27 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     fetchProducts();
   }, []);
 
+  const mirrorDeletesToStores = async (skus: string[]) => {
+    if (!skus.length) return;
+    const targets = corporateStores.filter((s) => s.status === "active");
+    for (const store of targets) {
+      const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
+      if (!slug) continue;
+      try {
+        await supabase.functions.invoke("sync-catalog-to-tenant", {
+          body: {
+            tenant_slug: slug,
+            wp_site_url: store.wp_site_url || undefined,
+            mode: "delete",
+            removed_skus: skus,
+          },
+        });
+      } catch {
+        // best-effort; surfaced via toast below
+      }
+    }
+  };
+
   const deleteProduct = async (id: string) => {
     const { error } = await supabase.from("inventory_products").delete().eq("id", id);
     if (error) {
@@ -3460,6 +3481,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
       toast({ title: "Product deleted" });
       setDeleteConfirmId(null);
       fetchProducts();
+      mirrorDeletesToStores([id]);
     }
   };
 
@@ -3467,10 +3489,12 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     if (selectedProductIds.size === 0) return;
     setBulkDeleting(true);
     const ids = Array.from(selectedProductIds);
+    const deleted: string[] = [];
     let failed = 0;
     for (const id of ids) {
       const { error } = await supabase.from("inventory_products").delete().eq("id", id);
       if (error) failed++;
+      else deleted.push(id);
     }
     setBulkDeleting(false);
     if (failed > 0) {
@@ -3481,7 +3505,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     setSelectedProductIds(new Set());
     setDeleteConfirmId(null);
     fetchProducts();
+    mirrorDeletesToStores(deleted);
   };
+
 
   const applyMarkupToProducts = async (productIds: string[]) => {
     const val = parseFloat(markupValue);
