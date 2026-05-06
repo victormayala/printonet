@@ -332,11 +332,11 @@ export default function CorporateStores() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="shopify" className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8">
+        <TabsContent value="shopify" forceMount className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 data-[state=inactive]:hidden">
           <Products initialTab="shopify" showStorefrontTabs hideTabsList />
         </TabsContent>
 
-        <TabsContent value="woocommerce" className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8">
+        <TabsContent value="woocommerce" forceMount className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 data-[state=inactive]:hidden">
           <Products initialTab="woocommerce" showStorefrontTabs hideTabsList />
         </TabsContent>
       </Tabs>
