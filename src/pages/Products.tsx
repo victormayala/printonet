@@ -1119,7 +1119,7 @@ function ProductForm({
         <Label>Active (visible to customers)</Label>
       </div>
       <div className="flex gap-3 pt-2">
-        <Button onClick={handleSave} disabled={saving} className="gap-2">
+        <Button onClick={handleSave} disabled={saving} className="gap-2" data-product-form-save>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {product ? "Update Product" : "Add Product"}
         </Button>
