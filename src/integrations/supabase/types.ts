@@ -235,6 +235,7 @@ export type Database = {
           image_front: string | null
           image_side1: string | null
           image_side2: string | null
+          inventory: Json
           is_active: boolean
           length: number | null
           name: string
@@ -264,6 +265,7 @@ export type Database = {
           image_front?: string | null
           image_side1?: string | null
           image_side2?: string | null
+          inventory?: Json
           is_active?: boolean
           length?: number | null
           name: string
@@ -293,6 +295,7 @@ export type Database = {
           image_front?: string | null
           image_side1?: string | null
           image_side2?: string | null
+          inventory?: Json
           is_active?: boolean
           length?: number | null
           name?: string
