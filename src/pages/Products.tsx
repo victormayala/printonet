@@ -1053,6 +1053,41 @@ function ProductForm({
         </div>
       )}
 
+      {/* ============ Inventory ============ */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <Package className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-base">Inventory</Label>
+        </div>
+        <div className="rounded-lg border p-4 space-y-3 bg-muted/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm">Unlimited stock</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Always purchasable (recommended for print-on-demand).
+              </p>
+            </div>
+            <Switch checked={unlimitedStock} onCheckedChange={setUnlimitedStock} />
+          </div>
+          {!unlimitedStock && (
+            <div className="space-y-2">
+              <Label className="text-xs">Stock quantity</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={stockQty}
+                onChange={(e) => setStockQty(e.target.value)}
+                placeholder="0"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Storefront will show out-of-stock when this reaches 0.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ============ Shipping ============ */}
       <div className="space-y-3 pt-2">
         <div className="flex items-center gap-2">
