@@ -84,6 +84,7 @@ type Product = {
   dimension_unit?: "in" | "cm" | null;
   category_id?: string | null;
   subcategory_id?: string | null;
+  inventory?: { unlimited_stock?: boolean; stock?: number | null } | null;
 };
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
@@ -460,6 +461,10 @@ function ProductForm({
   const [pwidth, setPwidth] = useState(product?.width?.toString() || "");
   const [pheight, setPheight] = useState(product?.height?.toString() || "");
   const [dimensionUnit, setDimensionUnit] = useState<"in" | "cm">(product?.dimension_unit || "in");
+  const [unlimitedStock, setUnlimitedStock] = useState<boolean>(product?.inventory?.unlimited_stock ?? true);
+  const [stockQty, setStockQty] = useState<string>(
+    product?.inventory?.stock != null ? String(product.inventory.stock) : ""
+  );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
@@ -639,6 +644,10 @@ function ProductForm({
       width: pwidth === "" ? null : Number(pwidth),
       height: pheight === "" ? null : Number(pheight),
       dimension_unit: dimensionUnit,
+      inventory: {
+        unlimited_stock: unlimitedStock,
+        stock: unlimitedStock ? null : (stockQty.trim() === "" ? 0 : Math.max(0, Math.floor(Number(stockQty) || 0))),
+      },
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
       ...(productType === "variable" ? {
         variants: variants.map((v) => ({
@@ -1043,6 +1052,41 @@ function ProductForm({
           />
         </div>
       )}
+
+      {/* ============ Inventory ============ */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <Package className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-base">Inventory</Label>
+        </div>
+        <div className="rounded-lg border p-4 space-y-3 bg-muted/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm">Unlimited stock</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Always purchasable (recommended for print-on-demand).
+              </p>
+            </div>
+            <Switch checked={unlimitedStock} onCheckedChange={setUnlimitedStock} />
+          </div>
+          {!unlimitedStock && (
+            <div className="space-y-2">
+              <Label className="text-xs">Stock quantity</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={stockQty}
+                onChange={(e) => setStockQty(e.target.value)}
+                placeholder="0"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Storefront will show out-of-stock when this reaches 0.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ============ Shipping ============ */}
       <div className="space-y-3 pt-2">
