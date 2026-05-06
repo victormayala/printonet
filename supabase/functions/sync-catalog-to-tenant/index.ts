@@ -58,6 +58,14 @@ interface SyncRequest {
   limit?: number;
   event_id?: string;
   dry_run?: boolean;
+  /**
+   * "full"        — push entire catalog and prune missing SKUs on tenant (default for Sync All).
+   * "incremental" — push items only, no pruning.
+   * "delete"      — only send removed_skus.
+   */
+  mode?: "full" | "incremental" | "delete";
+  removed_skus?: string[];
+  prune?: boolean;
 }
 
 function variantPriceCents(p: any): number {
@@ -160,11 +168,24 @@ Deno.serve(async (req) => {
     });
   }
 
+  const mode: "full" | "incremental" | "delete" = body.mode ?? "full";
+  const removedSkus = Array.isArray(body.removed_skus)
+    ? body.removed_skus.filter((s) => typeof s === "string" && s.length > 0)
+    : [];
+
   let products: CatalogProduct[] = [];
   const hasInlineProducts = Array.isArray(body.products) && body.products.length > 0;
   const hasProductIds = Array.isArray(body.product_ids) && body.product_ids.length > 0;
 
-  if (hasInlineProducts && !hasProductIds) {
+  if (mode === "delete") {
+    if (removedSkus.length === 0) {
+      return new Response(JSON.stringify({ error: "removed_skus_required_for_delete_mode" }), {
+        status: 400,
+        headers: { ...tenantCors, "Content-Type": "application/json" },
+      });
+    }
+    // products stays empty; we'll send removed_skus only.
+  } else if (hasInlineProducts && !hasProductIds) {
     products = body.products!.slice(0, MAX_BATCH);
   } else {
     const supabase = createClient(
@@ -208,6 +229,7 @@ Deno.serve(async (req) => {
 
     products = (rows ?? []).map((p: any) => buildCatalogProduct(p, catById));
   }
+
 
   const event_id =
     body.event_id ??
@@ -306,23 +328,44 @@ Deno.serve(async (req) => {
     };
   });
 
-  const payload = {
+  const shouldPrune = mode === "full" && (body.prune ?? true);
+
+  const payload: Record<string, unknown> = {
     supplier: "printonet_internal",
     tenant_slug: body.tenant_slug,
     credentials: {},
     event_id,
     occurred_at: new Date().toISOString(),
-    products,
-    items,
-    catalog: items,
+  };
+
+  if (mode === "delete") {
+    payload.removed_skus = removedSkus;
+  } else if (mode === "incremental") {
+    // items wins over catalog on the tenant — send items only.
+    payload.items = items;
+    if (removedSkus.length) payload.removed_skus = removedSkus;
+  } else {
+    // full: send catalog only (omit items so tenant applies the full snapshot)
+    // and request pruning of SKUs missing from the snapshot.
+    payload.catalog = items;
+    payload.prune_supplier_catalog = shouldPrune;
+    if (removedSkus.length) payload.removed_skus = removedSkus;
+  }
+
+
+  const meta = {
+    event_id,
+    mode,
+    product_count: products.length,
+    removed_count: removedSkus.length,
+    pruned: shouldPrune,
   };
 
   if (body.dry_run) {
     return new Response(
       JSON.stringify({
         path: "/wp-json/printonet/v1/suppliers/sync",
-        event_id,
-        product_count: products.length,
+        ...meta,
         payload_preview: payload,
       }),
       { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
@@ -340,18 +383,15 @@ Deno.serve(async (req) => {
     baseUrlOverride,
   });
 
-  // Always return HTTP 200 so the supabase-js client surfaces the body
-  // (a non-2xx swallows the response and the caller only sees a generic
-  // "Edge Function returned a non-2xx status code" message).
   if ("error" in result) {
     return new Response(
-      JSON.stringify({ ok: false, event_id, product_count: products.length, ...result }),
+      JSON.stringify({ ok: false, ...meta, ...result }),
       { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
     );
   }
 
   return new Response(
-    JSON.stringify({ ...result, event_id, product_count: products.length }),
+    JSON.stringify({ ...result, ...meta }),
     { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
   );
 });
