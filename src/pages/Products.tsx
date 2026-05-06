@@ -644,6 +644,10 @@ function ProductForm({
       width: pwidth === "" ? null : Number(pwidth),
       height: pheight === "" ? null : Number(pheight),
       dimension_unit: dimensionUnit,
+      inventory: {
+        unlimited_stock: unlimitedStock,
+        stock: unlimitedStock ? null : (stockQty.trim() === "" ? 0 : Math.max(0, Math.floor(Number(stockQty) || 0))),
+      },
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
       ...(productType === "variable" ? {
         variants: variants.map((v) => ({
