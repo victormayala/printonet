@@ -52,6 +52,7 @@ const formSchema = z.object({
   custom_domain: z.string().trim().max(255).optional().or(z.literal("")),
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be hex like #7c3aed"),
   font_family: z.string().min(1),
+  store_type: z.enum(["corporate", "retail"]).default("retail"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
