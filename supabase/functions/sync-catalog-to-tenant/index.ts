@@ -317,14 +317,32 @@ Deno.serve(async (req) => {
     }
 
     const frontUrl = typeof (imgs as any).front === "string" ? (imgs as any).front : null;
-    // Ensure the front image is always the first entry so the tenant uses it
-    // as the featured/primary image. Some MTP storefronts pick gallery[0] or
-    // the last appended image — force front to position 0 explicitly.
+    // Ensure every override (branded composite) is at the front of the gallery
+    // and present in every per-color gallery, so swatch switches still show
+    // the logo. Last pushed = first in gallery.
+    for (let i = overrideUrls.length - 1; i >= 0; i--) {
+      const u = overrideUrls[i];
+      const idx = gallery.indexOf(u);
+      if (idx > 0) gallery.splice(idx, 1);
+      if (gallery[0] !== u) gallery.unshift(u);
+    }
     if (frontUrl) {
       const idx = gallery.indexOf(frontUrl);
       if (idx > 0) {
         gallery.splice(idx, 1);
         gallery.unshift(frontUrl);
+      }
+    }
+    // Inject overrides into every per-color gallery + set the swatch image to
+    // the front override when present so color swatches show the branded mockup.
+    if (overrideUrls.length > 0) {
+      for (const colorName of Object.keys(colorImages)) {
+        const entry = colorImages[colorName];
+        const merged: string[] = [];
+        for (const u of overrideUrls) if (!merged.includes(u)) merged.push(u);
+        for (const u of entry.gallery) if (!merged.includes(u)) merged.push(u);
+        entry.gallery = merged;
+        if (frontUrl) entry.image = frontUrl;
       }
     }
     const imagesPayload = {
