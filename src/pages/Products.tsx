@@ -2635,9 +2635,16 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     if (selectedStyleIds.size === 0) return;
     const creds = getCredentials(); setBulkImporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: Array.from(selectedStyleIds), user_id: user?.id } });
-      if (error) throw error;
-      toast({ title: `Imported ${data.imported} new, ${data.updated} updated products` });
+      let pending = Array.from(selectedStyleIds);
+      let imported = 0, updated = 0;
+      while (pending.length > 0) {
+        const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: pending, user_id: user?.id } });
+        if (error) throw error;
+        imported += data?.imported ?? 0;
+        updated += data?.updated ?? 0;
+        pending = Array.isArray(data?.remaining_style_ids) ? data.remaining_style_ids : [];
+      }
+      toast({ title: `Imported ${imported} new, ${updated} updated products` });
       setImportedStyleIds((prev) => { const n = new Set(prev); selectedStyleIds.forEach((id) => n.add(id)); return n; });
       setSelectedStyleIds(new Set()); onDone();
     } catch (err: any) { toast({ title: "Bulk import failed", description: err.message, variant: "destructive" }); } finally { setBulkImporting(false); }
@@ -2651,9 +2658,16 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     if (importedStyleIds.size === 0) { toast({ title: "No supplier products to sync" }); return; }
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: Array.from(importedStyleIds), user_id: user?.id } });
-      if (error) throw error;
-      toast({ title: `Synced! ${data.imported} new, ${data.updated} updated` });
+      let pending = Array.from(importedStyleIds);
+      let imported = 0, updated = 0;
+      while (pending.length > 0) {
+        const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: pending, user_id: user?.id } });
+        if (error) throw error;
+        imported += data?.imported ?? 0;
+        updated += data?.updated ?? 0;
+        pending = Array.isArray(data?.remaining_style_ids) ? data.remaining_style_ids : [];
+      }
+      toast({ title: `Synced! ${imported} new, ${updated} updated` });
       if (integration) await supabase.from("store_integrations").update({ last_synced_at: new Date().toISOString() }).eq("id", integration.id);
       onDone();
     } catch (err: any) { toast({ title: "Sync failed", description: err.message, variant: "destructive" }); } finally { setSyncing(false); }
