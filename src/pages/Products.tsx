@@ -2635,9 +2635,16 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     if (selectedStyleIds.size === 0) return;
     const creds = getCredentials(); setBulkImporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: Array.from(selectedStyleIds), user_id: user?.id } });
-      if (error) throw error;
-      toast({ title: `Imported ${data.imported} new, ${data.updated} updated products` });
+      let pending = Array.from(selectedStyleIds);
+      let imported = 0, updated = 0;
+      while (pending.length > 0) {
+        const { data, error } = await supabase.functions.invoke("import-sanmar-products", { body: { action: "sync", ...creds, style_ids: pending, user_id: user?.id } });
+        if (error) throw error;
+        imported += data?.imported ?? 0;
+        updated += data?.updated ?? 0;
+        pending = Array.isArray(data?.remaining_style_ids) ? data.remaining_style_ids : [];
+      }
+      toast({ title: `Imported ${imported} new, ${updated} updated products` });
       setImportedStyleIds((prev) => { const n = new Set(prev); selectedStyleIds.forEach((id) => n.add(id)); return n; });
       setSelectedStyleIds(new Set()); onDone();
     } catch (err: any) { toast({ title: "Bulk import failed", description: err.message, variant: "destructive" }); } finally { setBulkImporting(false); }
