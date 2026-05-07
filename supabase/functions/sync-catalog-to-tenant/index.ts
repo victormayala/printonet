@@ -307,8 +307,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    const frontUrl = typeof (imgs as any).front === "string" ? (imgs as any).front : null;
+    // Ensure the front image is always the first entry so the tenant uses it
+    // as the featured/primary image. Some MTP storefronts pick gallery[0] or
+    // the last appended image — force front to position 0 explicitly.
+    if (frontUrl) {
+      const idx = gallery.indexOf(frontUrl);
+      if (idx > 0) {
+        gallery.splice(idx, 1);
+        gallery.unshift(frontUrl);
+      }
+    }
     const imagesPayload = {
       ...(imgs as Record<string, unknown>),
+      featured: frontUrl,
+      primary: frontUrl,
+      main: frontUrl,
       gallery,
       all: gallery,
       by_color: colorImages,
@@ -377,6 +391,9 @@ Deno.serve(async (req) => {
       product_type: p.product_type,
       status: p.status,
       images: imagesPayload,
+      featured_image: frontUrl,
+      primary_image: frontUrl,
+      image: frontUrl,
       gallery,
       image_count: gallery.length,
       variants: variantsWithStock,
