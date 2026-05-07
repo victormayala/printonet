@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore, resolveTenantSlug } from "@/types/corporateStore";
@@ -484,86 +484,111 @@ export function PushProductsDialog({
                               )}
                             </div>
 
-                            {/* Per-view enable + position */}
+                            {/* Per-view image picker — shows all available mockups as thumbnails */}
                             {state.logoUrl && availableViews.length > 0 && (
-                              <Tabs defaultValue={availableViews[0]} className="w-full">
-                                <TabsList className="grid grid-flow-col auto-cols-fr h-8">
-                                  {availableViews.map((v) => (
-                                    <TabsTrigger key={v} value={v} className="text-xs h-6">
-                                      {VIEW_LABEL[v]}
-                                      {state.views[v].enabled && <span className="ml-1 text-primary">●</span>}
-                                    </TabsTrigger>
-                                  ))}
-                                </TabsList>
-                                {availableViews.map((v) => {
-                                  const vs = state.views[v];
-                                  const mockup = getMockup(p, v)!;
-                                  return (
-                                    <TabsContent key={v} value={v} className="mt-2">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <Checkbox
-                                          checked={vs.enabled}
-                                          onCheckedChange={(c) =>
-                                            updateView(p.id, v, { enabled: c === true })
-                                          }
+                              <div className="space-y-3">
+                                <p className="text-xs text-muted-foreground">
+                                  Click an image to add the corporate logo to it. You can pick multiple.
+                                </p>
+                                <div className="grid grid-cols-4 gap-2">
+                                  {availableViews.map((v) => {
+                                    const vs = state.views[v];
+                                    const mockup = getMockup(p, v)!;
+                                    return (
+                                      <button
+                                        key={v}
+                                        type="button"
+                                        onClick={() =>
+                                          updateView(p.id, v, { enabled: !vs.enabled })
+                                        }
+                                        className={`group relative aspect-square rounded border-2 overflow-hidden bg-muted transition-all ${
+                                          vs.enabled
+                                            ? "border-primary ring-2 ring-primary/30"
+                                            : "border-border hover:border-muted-foreground"
+                                        }`}
+                                        title={`${vs.enabled ? "Remove logo from" : "Add logo to"} ${VIEW_LABEL[v]}`}
+                                      >
+                                        <img
+                                          src={mockup}
+                                          alt={VIEW_LABEL[v]}
+                                          className="absolute inset-0 h-full w-full object-contain"
                                         />
-                                        <Label className="text-xs cursor-pointer">
-                                          Add logo to {VIEW_LABEL[v]}
-                                        </Label>
-                                      </div>
-                                      {vs.enabled && (
-                                        <div className="grid grid-cols-[140px_1fr] gap-3">
-                                          <div className="relative aspect-square rounded border bg-muted overflow-hidden">
-                                            <img src={mockup} alt="" className="absolute inset-0 h-full w-full object-contain" />
-                                            <img
-                                              src={state.logoUrl}
-                                              alt="logo"
-                                              className="absolute pointer-events-none"
-                                              style={{
-                                                left: `${vs.position.x_pct * 100}%`,
-                                                top: `${vs.position.y_pct * 100}%`,
-                                                width: `${vs.position.width_pct * 100}%`,
-                                                transform: `translate(-50%, -50%) rotate(${vs.position.rotation_deg}deg)`,
-                                              }}
-                                            />
-                                          </div>
-                                          <div className="space-y-2">
-                                            <PositionSlider
-                                              label="Horizontal"
-                                              value={vs.position.x_pct}
-                                              onChange={(x) =>
-                                                updateView(p.id, v, {
-                                                  position: { ...vs.position, x_pct: x },
-                                                })
-                                              }
-                                            />
-                                            <PositionSlider
-                                              label="Vertical"
-                                              value={vs.position.y_pct}
-                                              onChange={(y) =>
-                                                updateView(p.id, v, {
-                                                  position: { ...vs.position, y_pct: y },
-                                                })
-                                              }
-                                            />
-                                            <PositionSlider
-                                              label="Size"
-                                              value={vs.position.width_pct}
-                                              min={0.05}
-                                              max={0.8}
-                                              onChange={(w) =>
-                                                updateView(p.id, v, {
-                                                  position: { ...vs.position, width_pct: w },
-                                                })
-                                              }
-                                            />
-                                          </div>
+                                        {vs.enabled && (
+                                          <img
+                                            src={state.logoUrl}
+                                            alt=""
+                                            className="absolute pointer-events-none"
+                                            style={{
+                                              left: `${vs.position.x_pct * 100}%`,
+                                              top: `${vs.position.y_pct * 100}%`,
+                                              width: `${vs.position.width_pct * 100}%`,
+                                              transform: `translate(-50%, -50%) rotate(${vs.position.rotation_deg}deg)`,
+                                            }}
+                                          />
+                                        )}
+                                        <div className="absolute top-1 left-1">
+                                          <Checkbox
+                                            checked={vs.enabled}
+                                            className="bg-background/90 pointer-events-none"
+                                          />
                                         </div>
-                                      )}
-                                    </TabsContent>
-                                  );
-                                })}
-                              </Tabs>
+                                        <div className="absolute bottom-0 inset-x-0 bg-background/80 text-[10px] py-0.5 text-center font-medium">
+                                          {VIEW_LABEL[v]}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Position controls per enabled view */}
+                                {availableViews.filter((v) => state.views[v].enabled).length > 0 && (
+                                  <div className="space-y-3 border-t pt-3">
+                                    {availableViews
+                                      .filter((v) => state.views[v].enabled)
+                                      .map((v) => {
+                                        const vs = state.views[v];
+                                        return (
+                                          <div key={v} className="space-y-2">
+                                            <Label className="text-xs font-semibold">
+                                              {VIEW_LABEL[v]} placement
+                                            </Label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                              <PositionSlider
+                                                label="X"
+                                                value={vs.position.x_pct}
+                                                onChange={(x) =>
+                                                  updateView(p.id, v, {
+                                                    position: { ...vs.position, x_pct: x },
+                                                  })
+                                                }
+                                              />
+                                              <PositionSlider
+                                                label="Y"
+                                                value={vs.position.y_pct}
+                                                onChange={(y) =>
+                                                  updateView(p.id, v, {
+                                                    position: { ...vs.position, y_pct: y },
+                                                  })
+                                                }
+                                              />
+                                              <PositionSlider
+                                                label="Size"
+                                                value={vs.position.width_pct}
+                                                min={0.05}
+                                                max={0.8}
+                                                onChange={(w) =>
+                                                  updateView(p.id, v, {
+                                                    position: { ...vs.position, width_pct: w },
+                                                  })
+                                                }
+                                              />
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </CollapsibleContent>
                         </Collapsible>
