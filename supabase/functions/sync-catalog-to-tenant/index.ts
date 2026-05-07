@@ -405,7 +405,8 @@ Deno.serve(async (req) => {
                 };
               })
             : v?.sizes,
-        }))
+          };
+        })
       : p.variants;
 
     return {
