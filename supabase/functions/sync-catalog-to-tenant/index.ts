@@ -270,7 +270,15 @@ Deno.serve(async (req) => {
       seen.add(url);
       gallery.push(url);
     };
-    const imgs = p.images ?? {};
+    const baseImgs = p.images ?? {};
+    const override = body.image_overrides?.[p.id] ?? {};
+    const imgs: Record<string, unknown> = {
+      ...baseImgs,
+      ...(override.front ? { front: override.front } : {}),
+      ...(override.back ? { back: override.back } : {}),
+      ...(override.side1 ? { side1: override.side1 } : {}),
+      ...(override.side2 ? { side2: override.side2 } : {}),
+    };
     pushUrl((imgs as any).front);
     pushUrl((imgs as any).back);
     pushUrl((imgs as any).side1);
