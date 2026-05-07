@@ -285,6 +285,11 @@ export default function CorporateStoreDetails() {
             <h1 className="text-3xl font-bold tracking-tight truncate">{store.name}</h1>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               <StatusBadge status={store.status} />
+              {store.store_type === "corporate" && (
+                <Badge variant="secondary" className="gap-1">
+                  <Package className="h-3 w-3" /> Corporate
+                </Badge>
+              )}
               <span className="text-sm text-muted-foreground">
                 Created {new Date(store.created_at).toLocaleDateString()}
               </span>
