@@ -30,6 +30,7 @@ const BodySchema = z.object({
   default_country: z.string().trim().min(2).max(8).optional().nullable(),
   weight_unit: z.string().trim().max(8).optional().nullable(),
   dimension_unit: z.string().trim().max(8).optional().nullable(),
+  store_type: z.enum(["corporate", "retail"]).optional().nullable(),
 });
 
 Deno.serve(async (req) => {
@@ -127,6 +128,7 @@ Deno.serve(async (req) => {
         favicon_url: body.favicon_url || null,
         tenant_slug: body.tenant_slug,
         provision_request_id: requestId,
+        store_type: body.store_type ?? "retail",
         status: "provisioning",
       })
       .select()
