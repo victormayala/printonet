@@ -279,6 +279,15 @@ Deno.serve(async (req) => {
       ...(override.side1 ? { side1: override.side1 } : {}),
       ...(override.side2 ? { side2: override.side2 } : {}),
     };
+    // Collect every overridden (logo-baked) URL so we can force them to the
+    // front of the gallery AND every per-color gallery — otherwise tenant
+    // storefronts that switch images per color swatch render the supplier's
+    // raw mockup with no logo on it.
+    const overrideUrls: string[] = [];
+    for (const k of ["front", "back", "side1", "side2"] as const) {
+      const u = (override as any)[k];
+      if (typeof u === "string" && u && !overrideUrls.includes(u)) overrideUrls.push(u);
+    }
     pushUrl((imgs as any).front);
     pushUrl((imgs as any).back);
     pushUrl((imgs as any).side1);
@@ -308,14 +317,32 @@ Deno.serve(async (req) => {
     }
 
     const frontUrl = typeof (imgs as any).front === "string" ? (imgs as any).front : null;
-    // Ensure the front image is always the first entry so the tenant uses it
-    // as the featured/primary image. Some MTP storefronts pick gallery[0] or
-    // the last appended image — force front to position 0 explicitly.
+    // Ensure every override (branded composite) is at the front of the gallery
+    // and present in every per-color gallery, so swatch switches still show
+    // the logo. Last pushed = first in gallery.
+    for (let i = overrideUrls.length - 1; i >= 0; i--) {
+      const u = overrideUrls[i];
+      const idx = gallery.indexOf(u);
+      if (idx > 0) gallery.splice(idx, 1);
+      if (gallery[0] !== u) gallery.unshift(u);
+    }
     if (frontUrl) {
       const idx = gallery.indexOf(frontUrl);
       if (idx > 0) {
         gallery.splice(idx, 1);
         gallery.unshift(frontUrl);
+      }
+    }
+    // Inject overrides into every per-color gallery + set the swatch image to
+    // the front override when present so color swatches show the branded mockup.
+    if (overrideUrls.length > 0) {
+      for (const colorName of Object.keys(colorImages)) {
+        const entry = colorImages[colorName];
+        const merged: string[] = [];
+        for (const u of overrideUrls) if (!merged.includes(u)) merged.push(u);
+        for (const u of entry.gallery) if (!merged.includes(u)) merged.push(u);
+        entry.gallery = merged;
+        if (frontUrl) entry.image = frontUrl;
       }
     }
     const imagesPayload = {
@@ -343,8 +370,18 @@ Deno.serve(async (req) => {
     const manageStock = isUnlimited ? "no" : "yes";
 
     const variantsWithStock = Array.isArray(p.variants)
-      ? (p.variants as any[]).map((v) => ({
+      ? (p.variants as any[]).map((v) => {
+          // Replace the variant primary image with the front composite when
+          // present so per-color swatch UIs in the tenant render the branded
+          // mockup, and prepend overrides into the variant gallery.
+          const baseGallery = Array.isArray(v?.gallery) ? v.gallery : [];
+          const mergedGallery: string[] = [];
+          for (const u of overrideUrls) if (!mergedGallery.includes(u)) mergedGallery.push(u);
+          for (const u of baseGallery) if (typeof u === "string" && !mergedGallery.includes(u)) mergedGallery.push(u);
+          return {
           ...v,
+          ...(frontUrl ? { image: frontUrl } : {}),
+          gallery: mergedGallery,
           unlimited_stock: isUnlimited,
           stock: stockNum,
           stock_status: stockStatus,
@@ -368,7 +405,8 @@ Deno.serve(async (req) => {
                 };
               })
             : v?.sizes,
-        }))
+          };
+        })
       : p.variants;
 
     return {
