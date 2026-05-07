@@ -370,8 +370,18 @@ Deno.serve(async (req) => {
     const manageStock = isUnlimited ? "no" : "yes";
 
     const variantsWithStock = Array.isArray(p.variants)
-      ? (p.variants as any[]).map((v) => ({
+      ? (p.variants as any[]).map((v) => {
+          // Replace the variant primary image with the front composite when
+          // present so per-color swatch UIs in the tenant render the branded
+          // mockup, and prepend overrides into the variant gallery.
+          const baseGallery = Array.isArray(v?.gallery) ? v.gallery : [];
+          const mergedGallery: string[] = [];
+          for (const u of overrideUrls) if (!mergedGallery.includes(u)) mergedGallery.push(u);
+          for (const u of baseGallery) if (typeof u === "string" && !mergedGallery.includes(u)) mergedGallery.push(u);
+          return {
           ...v,
+          ...(frontUrl ? { image: frontUrl } : {}),
+          gallery: mergedGallery,
           unlimited_stock: isUnlimited,
           stock: stockNum,
           stock_status: stockStatus,
