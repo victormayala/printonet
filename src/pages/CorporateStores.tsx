@@ -840,6 +840,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     custom_domain: "",
     primary_color: "#7c3aed",
     font_family: "Inter",
+    store_type: "retail",
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
