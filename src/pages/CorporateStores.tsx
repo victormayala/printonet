@@ -707,6 +707,24 @@ function StoreFormFields({
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Identity</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-1">
+            <Label>Account type</Label>
+            <Select
+              value={values.store_type}
+              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
+                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
+            </p>
+          </div>
+          <div className="col-span-2 space-y-1">
             <Label htmlFor="name">Store name</Label>
             <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
