@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore, resolveTenantSlug } from "@/types/corporateStore";
