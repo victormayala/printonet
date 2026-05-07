@@ -301,7 +301,14 @@ export default function CorporateStores() {
                               />
                             )}
                             <div className="min-w-0">
-                              <div className="font-medium truncate">{s.name}</div>
+                              <div className="font-medium truncate flex items-center gap-2">
+                                <span className="truncate">{s.name}</span>
+                                {s.store_type === "corporate" && (
+                                  <Badge variant="secondary" className="gap-1 shrink-0">
+                                    <Building2 className="h-3 w-3" /> Corporate
+                                  </Badge>
+                                )}
+                              </div>
                               <div className="text-xs text-muted-foreground truncate">{s.contact_email}</div>
                             </div>
                           </div>
