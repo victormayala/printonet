@@ -591,7 +591,7 @@ Deno.serve(async (req) => {
         } catch { continue }
       }
 
-      return jsonResponse({ imported, updated, total: styleIds.length })
+      return jsonResponse({ imported, updated, processed: styleIds.length, remaining_style_ids: remaining, total: allStyleIds.length })
     }
 
     // ============ ACTION: categories ============
