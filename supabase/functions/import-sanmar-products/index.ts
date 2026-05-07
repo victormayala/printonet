@@ -489,8 +489,15 @@ Deno.serve(async (req) => {
     // ============ ACTION: import / sync ============
 
     if (action === 'import' || action === 'sync') {
-      const styleIds = action === 'sync' ? body.style_ids : [style_id]
-      if (!styleIds?.length) return jsonResponse({ error: 'style_id or style_ids required' }, 400)
+      const allStyleIds: string[] = action === 'sync' ? (body.style_ids ?? []) : [style_id]
+      if (!allStyleIds?.length) return jsonResponse({ error: 'style_id or style_ids required' }, 400)
+
+      // Cap per invocation — each style triggers several SOAP calls + DB writes,
+      // and the worker gets killed by the runtime (BOOT_ERROR / 503) if we run
+      // too many serially. Client should chunk large syncs across calls.
+      const MAX_PER_CALL = 5
+      const styleIds = allStyleIds.slice(0, MAX_PER_CALL)
+      const remaining = allStyleIds.slice(MAX_PER_CALL)
 
       const targetUserId = user_id || user.id
       let imported = 0, updated = 0
