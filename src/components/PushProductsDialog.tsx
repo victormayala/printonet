@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Package, Search, Upload, X, Image as ImageIcon } from "lucide-react";
+import { Loader2, Package, Search, Upload, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,12 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore, resolveTenantSlug } from "@/types/corporateStore";
 
 type ViewKey = "front" | "back" | "side1" | "side2";
+const ALL_VIEWS: ViewKey[] = ["front", "back", "side1", "side2"];
 
 type InventoryProductRow = {
   id: string;
@@ -39,24 +40,29 @@ type InventoryProductRow = {
   subcategory_id: string | null;
 };
 
+type Position = { x_pct: number; y_pct: number; width_pct: number; rotation_deg: number };
+type ViewState = { enabled: boolean; position: Position; rowId: string | null };
+
 type LogoState = {
-  // Existing or freshly uploaded logo URL.
   logoUrl: string | null;
-  // If user is uploading a new file we keep it here until push.
   logoFile: File | null;
-  view: ViewKey;
-  position: { x_pct: number; y_pct: number; width_pct: number; rotation_deg: number };
-  // Whether this row already exists in DB (for upsert clarity).
-  rowId: string | null;
+  views: Record<ViewKey, ViewState>;
 };
 
-const DEFAULT_LOGO: LogoState = {
-  logoUrl: null,
-  logoFile: null,
-  view: "front",
-  position: { x_pct: 0.5, y_pct: 0.5, width_pct: 0.25, rotation_deg: 0 },
-  rowId: null,
-};
+const DEFAULT_POS: Position = { x_pct: 0.5, y_pct: 0.5, width_pct: 0.25, rotation_deg: 0 };
+
+function defaultLogoState(): LogoState {
+  return {
+    logoUrl: null,
+    logoFile: null,
+    views: {
+      front: { enabled: false, position: { ...DEFAULT_POS }, rowId: null },
+      back: { enabled: false, position: { ...DEFAULT_POS }, rowId: null },
+      side1: { enabled: false, position: { ...DEFAULT_POS }, rowId: null },
+      side2: { enabled: false, position: { ...DEFAULT_POS }, rowId: null },
+    },
+  };
+}
 
 const VIEW_LABEL: Record<ViewKey, string> = {
   front: "Front",
@@ -72,12 +78,10 @@ function getMockup(p: InventoryProductRow, v: ViewKey): string | null {
   return p.image_side2;
 }
 
-/** Render the mockup with the logo composited at the saved percentage position
- *  to a PNG data URL. Used at push time to bake the logo into the image. */
 async function compositeLogo(
   mockupUrl: string,
   logoUrl: string,
-  pos: LogoState["position"],
+  pos: Position,
 ): Promise<Blob> {
   const loadImg = (src: string) =>
     new Promise<HTMLImageElement>((res, rej) => {
@@ -152,11 +156,13 @@ export function PushProductsDialog({
       if (error || !data) return;
       const next: Record<string, LogoState> = {};
       for (const row of data) {
-        next[row.product_id] = {
-          logoUrl: row.logo_url,
-          logoFile: null,
-          view: row.view as ViewKey,
-          position: row.position as LogoState["position"],
+        const pid = row.product_id;
+        if (!next[pid]) next[pid] = defaultLogoState();
+        next[pid].logoUrl = row.logo_url;
+        const v = row.view as ViewKey;
+        next[pid].views[v] = {
+          enabled: true,
+          position: row.position as Position,
           rowId: row.id,
         };
       }
@@ -187,11 +193,26 @@ export function PushProductsDialog({
     });
   };
 
+  const getLogo = (pid: string): LogoState => logos[pid] ?? defaultLogoState();
+
   const updateLogo = (productId: string, patch: Partial<LogoState>) => {
-    setLogos((prev) => ({
-      ...prev,
-      [productId]: { ...DEFAULT_LOGO, ...prev[productId], ...patch },
-    }));
+    setLogos((prev) => {
+      const cur = prev[productId] ?? defaultLogoState();
+      return { ...prev, [productId]: { ...cur, ...patch } };
+    });
+  };
+
+  const updateView = (productId: string, view: ViewKey, patch: Partial<ViewState>) => {
+    setLogos((prev) => {
+      const cur = prev[productId] ?? defaultLogoState();
+      return {
+        ...prev,
+        [productId]: {
+          ...cur,
+          views: { ...cur.views, [view]: { ...cur.views[view], ...patch } },
+        },
+      };
+    });
   };
 
   const onPickLogoFile = (productId: string, file: File | null) => {
@@ -231,16 +252,16 @@ export function PushProductsDialog({
 
     setPushing(true);
     try {
-      // For corporate stores: persist logo metadata + composite mockup once per
-      // (product, view) and upload the result, then send override URLs.
       if (isCorporate) {
         for (const p of chosen) {
           const state = logos[p.id];
           if (!state) continue;
-          const mockup = getMockup(p, state.view);
-          if (!mockup) continue;
+          const enabledViews = ALL_VIEWS.filter(
+            (v) => state.views[v].enabled && !!getMockup(p, v),
+          );
+          if (enabledViews.length === 0) continue;
 
-          // 1) Upload the raw logo file if user picked a new one.
+          // 1) Upload the raw logo file once if user picked a new one.
           let logoUrl = state.logoUrl;
           if (state.logoFile) {
             const ext = state.logoFile.name.split(".").pop() || "png";
@@ -250,47 +271,64 @@ export function PushProductsDialog({
               .upload(path, state.logoFile, { upsert: true, contentType: state.logoFile.type });
             if (upErr) throw upErr;
             logoUrl = supabase.storage.from("corporate-store-assets").getPublicUrl(path).data.publicUrl;
+            // Mark file as consumed so subsequent loops don't re-upload.
+            state.logoFile = null;
+            state.logoUrl = logoUrl;
           }
           if (!logoUrl) continue;
 
-          // 2) Save / upsert metadata.
-          await supabase.from("corporate_store_product_logos").upsert(
-            {
-              user_id: user.id,
-              store_id: store.id,
-              product_id: p.id,
-              view: state.view,
-              logo_url: logoUrl,
-              position: state.position,
-            },
-            { onConflict: "store_id,product_id,view" },
-          );
+          for (const view of enabledViews) {
+            const mockup = getMockup(p, view)!;
+            const vs = state.views[view];
 
-          // 3) Bake composite using a CORS-friendly URL for the mockup.
-          //    proxy-image returns a base64 data URL we can draw on canvas.
-          let mockupForCanvas = mockup;
-          try {
-            const { data: proxied } = await supabase.functions.invoke("proxy-image", {
-              body: { url: mockup },
-            });
-            const dataUrl = (proxied as { dataUrl?: string } | null)?.dataUrl;
-            if (dataUrl) mockupForCanvas = dataUrl;
-          } catch {
-            /* fall back to direct URL */
+            // 2) Save / upsert metadata for this view.
+            await supabase.from("corporate_store_product_logos").upsert(
+              {
+                user_id: user.id,
+                store_id: store.id,
+                product_id: p.id,
+                view,
+                logo_url: logoUrl,
+                position: vs.position,
+              },
+              { onConflict: "store_id,product_id,view" },
+            );
+
+            // 3) Bake composite using a CORS-friendly URL for the mockup.
+            let mockupForCanvas = mockup;
+            try {
+              const { data: proxied } = await supabase.functions.invoke("proxy-image", {
+                body: { url: mockup },
+              });
+              const dataUrl = (proxied as { dataUrl?: string } | null)?.dataUrl;
+              if (dataUrl) mockupForCanvas = dataUrl;
+            } catch {
+              /* fall back to direct URL */
+            }
+            const blob = await compositeLogo(mockupForCanvas, logoUrl, vs.position);
+
+            const compositePath = `${user.id}/${store.id}/composites/${p.id}-${view}-${Date.now()}.png`;
+            const { error: cErr } = await supabase.storage
+              .from("corporate-store-assets")
+              .upload(compositePath, blob, { upsert: true, contentType: "image/png" });
+            if (cErr) throw cErr;
+            const compUrl = supabase.storage
+              .from("corporate-store-assets")
+              .getPublicUrl(compositePath).data.publicUrl;
+
+            imageOverrides[p.id] = { ...(imageOverrides[p.id] ?? {}), [view]: compUrl };
           }
-          const blob = await compositeLogo(mockupForCanvas, logoUrl, state.position);
 
-          // 4) Upload composite and use its public URL as the override for this view.
-          const compositePath = `${user.id}/${store.id}/composites/${p.id}-${state.view}-${Date.now()}.png`;
-          const { error: cErr } = await supabase.storage
-            .from("corporate-store-assets")
-            .upload(compositePath, blob, { upsert: true, contentType: "image/png" });
-          if (cErr) throw cErr;
-          const compUrl = supabase.storage
-            .from("corporate-store-assets")
-            .getPublicUrl(compositePath).data.publicUrl;
-
-          imageOverrides[p.id] = { ...(imageOverrides[p.id] ?? {}), [state.view]: compUrl };
+          // Remove DB rows for views the user disabled.
+          const disabled = ALL_VIEWS.filter((v) => !state.views[v].enabled);
+          if (disabled.length > 0) {
+            await supabase
+              .from("corporate_store_product_logos")
+              .delete()
+              .eq("store_id", store.id)
+              .eq("product_id", p.id)
+              .in("view", disabled);
+          }
         }
       }
 
@@ -346,7 +384,7 @@ export function PushProductsDialog({
           <DialogTitle>Push products to {store.name}</DialogTitle>
           <DialogDescription>
             {isCorporate
-              ? "Select products and optionally place this corporation's logo on each. The logo is baked into the mockup before pushing — your main catalog stays untouched."
+              ? "Select products and choose which mockup views (Front, Back, Left, Right) should carry the corporation's logo. Each enabled view gets its own position."
               : "Select the products to publish on this store. Existing items with the same id are updated."}
           </DialogDescription>
         </DialogHeader>
@@ -388,8 +426,9 @@ export function PushProductsDialog({
                 {filtered.map((p) => {
                   const checked = selected.has(p.id);
                   const price = Number(p.sale_price ?? p.base_price ?? 0);
-                  const state = logos[p.id] ?? DEFAULT_LOGO;
-                  const mockup = getMockup(p, state.view);
+                  const state = getLogo(p.id);
+                  const enabledCount = ALL_VIEWS.filter((v) => state.views[v].enabled).length;
+                  const availableViews = ALL_VIEWS.filter((v) => !!getMockup(p, v));
                   return (
                     <div key={p.id} className="p-3 hover:bg-muted/40">
                       <label className="flex items-center gap-3 cursor-pointer">
@@ -414,114 +453,118 @@ export function PushProductsDialog({
                       {isCorporate && checked && (
                         <Collapsible defaultOpen className="mt-3 pl-7">
                           <CollapsibleTrigger className="text-xs font-medium text-muted-foreground hover:text-foreground">
-                            Corporate logo {state.logoUrl ? "✓" : "(optional)"}
+                            Corporate logo {state.logoUrl ? `✓ (${enabledCount} view${enabledCount === 1 ? "" : "s"})` : "(optional)"}
                           </CollapsibleTrigger>
                           <CollapsibleContent className="mt-2 space-y-3 rounded border bg-card p-3">
-                            <div className="grid grid-cols-[160px_1fr] gap-3">
-                              {/* Live preview */}
-                              <div className="relative aspect-square rounded border bg-muted overflow-hidden">
-                                {mockup ? (
-                                  <img src={mockup} alt="" className="absolute inset-0 h-full w-full object-contain" />
-                                ) : (
-                                  <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
-                                    No mockup
-                                  </div>
-                                )}
-                                {state.logoUrl && mockup && (
-                                  <img
-                                    src={state.logoUrl}
-                                    alt="logo"
-                                    className="absolute pointer-events-none"
-                                    style={{
-                                      left: `${state.position.x_pct * 100}%`,
-                                      top: `${state.position.y_pct * 100}%`,
-                                      width: `${state.position.width_pct * 100}%`,
-                                      transform: `translate(-50%, -50%) rotate(${state.position.rotation_deg}deg)`,
-                                    }}
-                                  />
-                                )}
-                              </div>
-
-                              <div className="space-y-2">
-                                {/* Logo upload */}
-                                <div className="flex items-center gap-2">
-                                  <label className="inline-flex">
-                                    <input
-                                      type="file"
-                                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                                      className="hidden"
-                                      onChange={(e) => onPickLogoFile(p.id, e.target.files?.[0] ?? null)}
-                                    />
-                                    <Button asChild type="button" size="sm" variant="outline">
-                                      <span><Upload className="h-3 w-3" /> {state.logoUrl ? "Replace logo" : "Upload logo"}</span>
-                                    </Button>
-                                  </label>
-                                  {state.logoUrl && (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => updateLogo(p.id, { logoUrl: null, logoFile: null })}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-
-                                {/* View selector */}
-                                <div className="space-y-1">
-                                  <Label className="text-xs">View</Label>
-                                  <Select
-                                    value={state.view}
-                                    onValueChange={(v) => updateLogo(p.id, { view: v as ViewKey })}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {(["front", "back", "side1", "side2"] as ViewKey[])
-                                        .filter((v) => !!getMockup(p, v))
-                                        .map((v) => (
-                                          <SelectItem key={v} value={v}>
-                                            {VIEW_LABEL[v]}
-                                          </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                {/* Position controls */}
-                                <PositionSlider
-                                  label="Horizontal"
-                                  value={state.position.x_pct}
-                                  onChange={(x) =>
-                                    updateLogo(p.id, {
-                                      position: { ...state.position, x_pct: x },
-                                    })
-                                  }
+                            {/* Logo upload */}
+                            <div className="flex items-center gap-2">
+                              <label className="inline-flex">
+                                <input
+                                  type="file"
+                                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                  className="hidden"
+                                  onChange={(e) => onPickLogoFile(p.id, e.target.files?.[0] ?? null)}
                                 />
-                                <PositionSlider
-                                  label="Vertical"
-                                  value={state.position.y_pct}
-                                  onChange={(y) =>
-                                    updateLogo(p.id, {
-                                      position: { ...state.position, y_pct: y },
-                                    })
-                                  }
-                                />
-                                <PositionSlider
-                                  label="Size"
-                                  value={state.position.width_pct}
-                                  min={0.05}
-                                  max={0.8}
-                                  onChange={(w) =>
-                                    updateLogo(p.id, {
-                                      position: { ...state.position, width_pct: w },
-                                    })
-                                  }
-                                />
-                              </div>
+                                <Button asChild type="button" size="sm" variant="outline">
+                                  <span>
+                                    <Upload className="h-3 w-3 mr-1" />
+                                    {state.logoUrl ? "Replace logo" : "Upload logo"}
+                                  </span>
+                                </Button>
+                              </label>
+                              {state.logoUrl && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => updateLogo(p.id, { logoUrl: null, logoFile: null })}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
+
+                            {/* Per-view enable + position */}
+                            {state.logoUrl && availableViews.length > 0 && (
+                              <Tabs defaultValue={availableViews[0]} className="w-full">
+                                <TabsList className="grid grid-flow-col auto-cols-fr h-8">
+                                  {availableViews.map((v) => (
+                                    <TabsTrigger key={v} value={v} className="text-xs h-6">
+                                      {VIEW_LABEL[v]}
+                                      {state.views[v].enabled && <span className="ml-1 text-primary">●</span>}
+                                    </TabsTrigger>
+                                  ))}
+                                </TabsList>
+                                {availableViews.map((v) => {
+                                  const vs = state.views[v];
+                                  const mockup = getMockup(p, v)!;
+                                  return (
+                                    <TabsContent key={v} value={v} className="mt-2">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Checkbox
+                                          checked={vs.enabled}
+                                          onCheckedChange={(c) =>
+                                            updateView(p.id, v, { enabled: c === true })
+                                          }
+                                        />
+                                        <Label className="text-xs cursor-pointer">
+                                          Add logo to {VIEW_LABEL[v]}
+                                        </Label>
+                                      </div>
+                                      {vs.enabled && (
+                                        <div className="grid grid-cols-[140px_1fr] gap-3">
+                                          <div className="relative aspect-square rounded border bg-muted overflow-hidden">
+                                            <img src={mockup} alt="" className="absolute inset-0 h-full w-full object-contain" />
+                                            <img
+                                              src={state.logoUrl}
+                                              alt="logo"
+                                              className="absolute pointer-events-none"
+                                              style={{
+                                                left: `${vs.position.x_pct * 100}%`,
+                                                top: `${vs.position.y_pct * 100}%`,
+                                                width: `${vs.position.width_pct * 100}%`,
+                                                transform: `translate(-50%, -50%) rotate(${vs.position.rotation_deg}deg)`,
+                                              }}
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <PositionSlider
+                                              label="Horizontal"
+                                              value={vs.position.x_pct}
+                                              onChange={(x) =>
+                                                updateView(p.id, v, {
+                                                  position: { ...vs.position, x_pct: x },
+                                                })
+                                              }
+                                            />
+                                            <PositionSlider
+                                              label="Vertical"
+                                              value={vs.position.y_pct}
+                                              onChange={(y) =>
+                                                updateView(p.id, v, {
+                                                  position: { ...vs.position, y_pct: y },
+                                                })
+                                              }
+                                            />
+                                            <PositionSlider
+                                              label="Size"
+                                              value={vs.position.width_pct}
+                                              min={0.05}
+                                              max={0.8}
+                                              onChange={(w) =>
+                                                updateView(p.id, v, {
+                                                  position: { ...vs.position, width_pct: w },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </TabsContent>
+                                  );
+                                })}
+                              </Tabs>
+                            )}
                           </CollapsibleContent>
                         </Collapsible>
                       )}
