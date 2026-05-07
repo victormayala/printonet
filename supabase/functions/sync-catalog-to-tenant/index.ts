@@ -67,6 +67,15 @@ interface SyncRequest {
   mode?: "full" | "incremental" | "delete";
   removed_skus?: string[];
   prune?: boolean;
+  /**
+   * Per-product image URL overrides keyed by product id, used when a corporate
+   * store needs a logo baked into the mockup before pushing. Each view (front/
+   * back/side1/side2) is replaced with the supplied URL when present.
+   */
+  image_overrides?: Record<
+    string,
+    Partial<{ front: string; back: string; side1: string; side2: string }>
+  >;
 }
 
 function variantPriceCents(p: any): number {
