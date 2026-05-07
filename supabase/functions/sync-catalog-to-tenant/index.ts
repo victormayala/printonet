@@ -279,6 +279,15 @@ Deno.serve(async (req) => {
       ...(override.side1 ? { side1: override.side1 } : {}),
       ...(override.side2 ? { side2: override.side2 } : {}),
     };
+    // Collect every overridden (logo-baked) URL so we can force them to the
+    // front of the gallery AND every per-color gallery — otherwise tenant
+    // storefronts that switch images per color swatch render the supplier's
+    // raw mockup with no logo on it.
+    const overrideUrls: string[] = [];
+    for (const k of ["front", "back", "side1", "side2"] as const) {
+      const u = (override as any)[k];
+      if (typeof u === "string" && u && !overrideUrls.includes(u)) overrideUrls.push(u);
+    }
     pushUrl((imgs as any).front);
     pushUrl((imgs as any).back);
     pushUrl((imgs as any).side1);
