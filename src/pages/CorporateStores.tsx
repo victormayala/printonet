@@ -52,6 +52,7 @@ const formSchema = z.object({
   custom_domain: z.string().trim().max(255).optional().or(z.literal("")),
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be hex like #7c3aed"),
   font_family: z.string().min(1),
+  store_type: z.enum(["corporate", "retail"]).default("retail"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -300,7 +301,14 @@ export default function CorporateStores() {
                               />
                             )}
                             <div className="min-w-0">
-                              <div className="font-medium truncate">{s.name}</div>
+                              <div className="font-medium truncate flex items-center gap-2">
+                                <span className="truncate">{s.name}</span>
+                                {s.store_type === "corporate" && (
+                                  <Badge variant="secondary" className="gap-1 shrink-0">
+                                    <Building2 className="h-3 w-3" /> Corporate
+                                  </Badge>
+                                )}
+                              </div>
                               <div className="text-xs text-muted-foreground truncate">{s.contact_email}</div>
                             </div>
                           </div>
@@ -699,6 +707,24 @@ function StoreFormFields({
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Identity</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-1">
+            <Label>Account type</Label>
+            <Select
+              value={values.store_type}
+              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
+                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
+            </p>
+          </div>
+          <div className="col-span-2 space-y-1">
             <Label htmlFor="name">Store name</Label>
             <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
@@ -814,6 +840,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     custom_domain: "",
     primary_color: "#7c3aed",
     font_family: "Inter",
+    store_type: "retail",
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
@@ -1031,6 +1058,7 @@ function EditStoreDialog({
     custom_domain: store.custom_domain ?? "",
     primary_color: store.primary_color,
     font_family: store.font_family,
+    store_type: store.store_type ?? "retail",
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
@@ -1078,6 +1106,7 @@ function EditStoreDialog({
           custom_domain: parsed.data.custom_domain || null,
           primary_color: parsed.data.primary_color,
           font_family: parsed.data.font_family,
+          store_type: parsed.data.store_type,
           logo_url: newLogoUrl ?? existing.logo_url,
           favicon_url: newFaviconUrl ?? existing.favicon_url,
         })

@@ -56,6 +56,42 @@ export type Database = {
         }
         Relationships: []
       }
+      corporate_store_product_logos: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string
+          position: Json
+          product_id: string
+          store_id: string
+          updated_at: string
+          user_id: string
+          view: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url: string
+          position?: Json
+          product_id: string
+          store_id: string
+          updated_at?: string
+          user_id: string
+          view: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string
+          position?: Json
+          product_id?: string
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+          view?: string
+        }
+        Relationships: []
+      }
       corporate_stores: {
         Row: {
           accent_color: string
@@ -77,6 +113,7 @@ export type Database = {
           status: string
           store_admin_url: string | null
           store_login_url: string | null
+          store_type: string
           tenant_slug: string | null
           updated_at: string
           user_id: string
@@ -104,6 +141,7 @@ export type Database = {
           status?: string
           store_admin_url?: string | null
           store_login_url?: string | null
+          store_type?: string
           tenant_slug?: string | null
           updated_at?: string
           user_id: string
@@ -131,6 +169,7 @@ export type Database = {
           status?: string
           store_admin_url?: string | null
           store_login_url?: string | null
+          store_type?: string
           tenant_slug?: string | null
           updated_at?: string
           user_id?: string

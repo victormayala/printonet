@@ -19,6 +19,7 @@ export type CorporateStore = {
   admin_password: string | null;
   admin_user_id: string | null;
   tenant_slug: string | null;
+  store_type: "corporate" | "retail";
   status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;
   created_at: string;
