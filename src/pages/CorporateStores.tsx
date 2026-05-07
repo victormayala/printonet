@@ -1058,6 +1058,7 @@ function EditStoreDialog({
     custom_domain: store.custom_domain ?? "",
     primary_color: store.primary_color,
     font_family: store.font_family,
+    store_type: store.store_type ?? "retail",
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
@@ -1105,6 +1106,7 @@ function EditStoreDialog({
           custom_domain: parsed.data.custom_domain || null,
           primary_color: parsed.data.primary_color,
           font_family: parsed.data.font_family,
+          store_type: parsed.data.store_type,
           logo_url: newLogoUrl ?? existing.logo_url,
           favicon_url: newFaviconUrl ?? existing.favicon_url,
         })
