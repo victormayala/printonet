@@ -543,7 +543,7 @@ function ProductForm({
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0);
+    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
   };
 
   const applyPricingToAllColors = () => {
@@ -3006,7 +3006,7 @@ function VariantManagerDialog({
   const computeFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
+    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0) + Number(p.dtf_fee || 0);
   };
 
   const applyPricingToAll = () => {
