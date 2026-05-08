@@ -538,8 +538,28 @@ Deno.serve(async (req) => {
     );
   }
 
+  // After a successful sync, also push customizer flags as Woo post_meta so
+  // the Customizer Studio Woo plugin renders the "Customize" button.
+  let flags_result: unknown = null;
+  if (body.customizable && body.customizer_base_url && (mode === "incremental" || mode === "full")) {
+    const flagItems = items
+      .filter((it) => it && (it as any).customizer_url)
+      .map((it) => ({
+        sku: (it as any).sku,
+        name: (it as any).name,
+        customizer_url: (it as any).customizer_url,
+      }));
+    if (flagItems.length) {
+      flags_result = await signedTenantCall("/wp-json/printonet/v1/customizer-flags", {
+        method: "POST",
+        body: { items: flagItems },
+        baseUrlOverride,
+      });
+    }
+  }
+
   return new Response(
-    JSON.stringify({ ...result, ...meta }),
+    JSON.stringify({ ...result, ...meta, flags_result }),
     { status: 200, headers: { ...tenantCors, "Content-Type": "application/json" } },
   );
 });

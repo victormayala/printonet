@@ -3,7 +3,7 @@
  * Plugin Name: Printonet
  * Plugin URI:  https://app.printonet.com
  * Description: Receives store branding (name, color, font, logo, favicon) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
- * Version:     1.2.0
+ * Version:     1.3.0
  * Author:      Printonet
  * Author URI:  https://app.printonet.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.2.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.3.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
 define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
@@ -196,6 +196,58 @@ add_action(
 						],
 						200
 					);
+				},
+			]
+		);
+
+		register_rest_route(
+			'printonet/v1',
+			'/customizer-flags',
+			[
+				'methods'             => 'POST',
+				'permission_callback' => function ( WP_REST_Request $request ) {
+					$token = (string) $request->get_header( 'x_printonet_token' );
+					if ( '' === $token ) {
+						$token = (string) $request->get_header( 'X-Printonet-Token' );
+					}
+					if ( ! printonet_token_is_valid( $token ) ) {
+						return new WP_Error( 'printonet_unauthorized', 'Invalid token', [ 'status' => 401 ] );
+					}
+					return true;
+				},
+				'callback'            => function ( WP_REST_Request $request ) {
+					$body = $request->get_json_params();
+					$items = is_array( $body ) && isset( $body['items'] ) && is_array( $body['items'] ) ? $body['items'] : [];
+					$updated = 0;
+					$missing = [];
+					foreach ( $items as $it ) {
+						$sku  = isset( $it['sku'] ) ? sanitize_text_field( $it['sku'] ) : '';
+						$url  = isset( $it['customizer_url'] ) ? esc_url_raw( $it['customizer_url'] ) : '';
+						$name = isset( $it['name'] ) ? sanitize_text_field( $it['name'] ) : '';
+						if ( '' === $sku || '' === $url ) { continue; }
+						$product_id = function_exists( 'wc_get_product_id_by_sku' ) ? (int) wc_get_product_id_by_sku( $sku ) : 0;
+						if ( ! $product_id ) {
+							// Fallback: lookup posts by _sku meta directly.
+							$q = get_posts( [
+								'post_type'      => [ 'product', 'product_variation' ],
+								'meta_key'       => '_sku',
+								'meta_value'     => $sku,
+								'posts_per_page' => 1,
+								'fields'         => 'ids',
+								'post_status'    => 'any',
+							] );
+							$product_id = ! empty( $q ) ? (int) $q[0] : 0;
+						}
+						if ( ! $product_id ) { $missing[] = $sku; continue; }
+						update_post_meta( $product_id, '_cs_enabled', '1' );
+						update_post_meta( $product_id, '_cs_product_id', $sku );
+						update_post_meta( $product_id, '_cs_customizer_url', $url );
+						if ( '' !== $name ) {
+							update_post_meta( $product_id, '_cs_product_name', $name );
+						}
+						$updated++;
+					}
+					return new WP_REST_Response( [ 'ok' => true, 'updated' => $updated, 'missing' => $missing ], 200 );
 				},
 			]
 		);
