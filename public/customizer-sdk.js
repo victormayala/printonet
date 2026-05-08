@@ -55,6 +55,7 @@
     _config.apiUrl = options.apiUrl || '';
     _config.baseUrl = options.baseUrl || '';
     _config.cartUrl = options.cartUrl || '';
+    _config.storeUrl = options.storeUrl || '';
   }
 
   function open(options) {
