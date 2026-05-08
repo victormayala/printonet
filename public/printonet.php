@@ -3,7 +3,7 @@
  * Plugin Name: Printonet
  * Plugin URI:  https://app.printonet.com
  * Description: Receives store branding (name, color, font, logo, favicon) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
- * Version:     1.3.0
+ * Version:     1.4.0
  * Author:      Printonet
  * Author URI:  https://app.printonet.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.3.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.4.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
 define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
@@ -404,6 +404,111 @@ body, button, input, select, optgroup, textarea, .wp-block-post-title, h1, h2, h
 	},
 	5
 );
+
+/* -------------------------------------------------------------------------
+ * WooCommerce: capture customizer design data on add-to-cart and
+ * persist it to the order line items so print shops see it.
+ * ------------------------------------------------------------------------- */
+
+if ( ! function_exists( 'printonet_sanitize_design_url' ) ) {
+	function printonet_sanitize_design_url( $value ) {
+		$value = is_string( $value ) ? trim( wp_unslash( $value ) ) : '';
+		if ( '' === $value ) {
+			return '';
+		}
+		// Allow data: URLs (base64 PNG) and http(s) URLs.
+		if ( 0 === strpos( $value, 'data:image/' ) ) {
+			return $value;
+		}
+		return esc_url_raw( $value );
+	}
+}
+
+// 1. Read POST/GET fields the customizer SDK sends and attach to cart item.
+add_filter( 'woocommerce_add_cart_item_data', function ( $cart_item_data, $product_id, $variation_id ) {
+	if ( ! empty( $_POST['customizer_session_id'] ) ) {
+		$cart_item_data['customizer_session_id'] = sanitize_text_field( wp_unslash( $_POST['customizer_session_id'] ) );
+	} elseif ( ! empty( $_GET['customizer_session'] ) ) {
+		$cart_item_data['customizer_session_id'] = sanitize_text_field( wp_unslash( $_GET['customizer_session'] ) );
+	}
+	if ( ! empty( $_POST['customizer_design_url'] ) ) {
+		$cart_item_data['customizer_design_url'] = printonet_sanitize_design_url( $_POST['customizer_design_url'] );
+	}
+	if ( ! empty( $_POST['customizer_sides'] ) ) {
+		$raw = wp_unslash( $_POST['customizer_sides'] );
+		if ( is_string( $raw ) ) {
+			$decoded = json_decode( $raw, true );
+			if ( is_array( $decoded ) ) {
+				$cart_item_data['customizer_sides'] = wp_json_encode( $decoded );
+			}
+		}
+	}
+	// Force unique cart line per session so two custom designs of the same product don't merge.
+	if ( ! empty( $cart_item_data['customizer_session_id'] ) ) {
+		$cart_item_data['unique_key'] = md5( 'cs_' . $cart_item_data['customizer_session_id'] );
+	}
+	return $cart_item_data;
+}, 10, 3 );
+
+// 2. Restore the data when WC rebuilds cart items from the session.
+add_filter( 'woocommerce_get_cart_item_from_session', function ( $cart_item, $values ) {
+	foreach ( [ 'customizer_session_id', 'customizer_design_url', 'customizer_sides' ] as $k ) {
+		if ( isset( $values[ $k ] ) ) {
+			$cart_item[ $k ] = $values[ $k ];
+		}
+	}
+	return $cart_item;
+}, 10, 2 );
+
+// 3. Show a thumbnail + "Custom Design" label in the cart/checkout.
+add_filter( 'woocommerce_get_item_data', function ( $item_data, $cart_item ) {
+	if ( ! empty( $cart_item['customizer_session_id'] ) ) {
+		$item_data[] = [
+			'key'     => __( 'Custom Design', 'printonet' ),
+			'value'   => substr( $cart_item['customizer_session_id'], 0, 8 ),
+			'display' => '<code>' . esc_html( substr( $cart_item['customizer_session_id'], 0, 8 ) ) . '</code>',
+		];
+	}
+	return $item_data;
+}, 10, 2 );
+
+add_filter( 'woocommerce_cart_item_thumbnail', function ( $thumbnail, $cart_item, $cart_item_key ) {
+	if ( ! empty( $cart_item['customizer_design_url'] ) ) {
+		return '<img src="' . esc_attr( $cart_item['customizer_design_url'] ) . '" style="width:64px;height:64px;object-fit:contain;background:#f5f5f5;border-radius:6px;" alt="Custom design" />';
+	}
+	return $thumbnail;
+}, 10, 3 );
+
+// 4. Persist to the order line item so admins / print shops can see the design.
+add_action( 'woocommerce_checkout_create_order_line_item', function ( $item, $cart_item_key, $values, $order ) {
+	if ( ! empty( $values['customizer_session_id'] ) ) {
+		$item->add_meta_data( '_customizer_session_id', $values['customizer_session_id'], true );
+	}
+	if ( ! empty( $values['customizer_design_url'] ) ) {
+		$item->add_meta_data( '_customizer_design_url', $values['customizer_design_url'], true );
+	}
+	if ( ! empty( $values['customizer_sides'] ) ) {
+		$item->add_meta_data( '_customizer_sides_json', $values['customizer_sides'], true );
+	}
+}, 10, 4 );
+
+// 5. Render preview in admin order view.
+add_action( 'woocommerce_after_order_itemmeta', function ( $item_id, $item, $product ) {
+	$session_id = $item->get_meta( '_customizer_session_id' );
+	$design_url = $item->get_meta( '_customizer_design_url' );
+	if ( ! $session_id && ! $design_url ) {
+		return;
+	}
+	echo '<div style="margin-top:8px;padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px;">';
+	echo '<strong>🎨 Customizer Studio</strong><br/>';
+	if ( $session_id ) {
+		echo 'Session: <code>' . esc_html( $session_id ) . '</code><br/>';
+	}
+	if ( $design_url ) {
+		echo '<img src="' . esc_attr( $design_url ) . '" style="width:120px;height:120px;object-fit:contain;border:1px solid #ddd;border-radius:4px;background:#f3f4f6;margin-top:4px;" alt="Custom design" />';
+	}
+	echo '</div>';
+}, 10, 3 );
 
 /* -------------------------------------------------------------------------
  * Activation: flush rewrite rules so REST routes are immediately available.
