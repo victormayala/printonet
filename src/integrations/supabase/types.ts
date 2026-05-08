@@ -266,6 +266,7 @@ export type Database = {
           category: string
           category_id: string | null
           created_at: string
+          decoration_methods: string[]
           description: string | null
           dimension_unit: string
           height: number | null
@@ -296,6 +297,7 @@ export type Database = {
           category?: string
           category_id?: string | null
           created_at?: string
+          decoration_methods?: string[]
           description?: string | null
           dimension_unit?: string
           height?: number | null
@@ -326,6 +328,7 @@ export type Database = {
           category?: string
           category_id?: string | null
           created_at?: string
+          decoration_methods?: string[]
           description?: string | null
           dimension_unit?: string
           height?: number | null

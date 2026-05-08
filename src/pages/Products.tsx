@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, ShoppingBag,
@@ -85,7 +86,15 @@ type Product = {
   category_id?: string | null;
   subcategory_id?: string | null;
   inventory?: { unlimited_stock?: boolean; stock?: number | null } | null;
+  decoration_methods?: string[] | null;
 };
+
+type DecorationMethod = "dtg" | "dtf" | "embroidery";
+const DECORATION_METHODS: { value: DecorationMethod; label: string; feeKey: "dtg_fee" | "dtf_fee" | "embroidery_fee" }[] = [
+  { value: "dtg", label: "DTG", feeKey: "dtg_fee" },
+  { value: "dtf", label: "DTF", feeKey: "dtf_fee" },
+  { value: "embroidery", label: "Embroidery", feeKey: "embroidery_fee" },
+];
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
 
@@ -340,7 +349,7 @@ function AddVariantDialog({
       image: image || null,
       colorFrontImage: image || null,
       sizes,
-      pricing: { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+      pricing: { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
     });
     reset();
     onOpenChange(false);
@@ -471,13 +480,18 @@ function ProductForm({
     (product?.print_areas as any) || {}
   );
   const [detecting, setDetecting] = useState<string | null>(null);
+  const [decorationMethods, setDecorationMethods] = useState<DecorationMethod[]>(
+    (product?.decoration_methods as DecorationMethod[] | undefined) ?? []
+  );
+  const toggleDecoration = (m: DecorationMethod) =>
+    setDecorationMethods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
 
   // ============ Variants (Shopify-style inline manager) ============
   const [variants, setVariants] = useState<any[]>(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
     return initial.map((v: any) => ({
       ...v,
-      pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+      pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
     }));
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
@@ -488,7 +502,7 @@ function ProductForm({
     setVariants(
       initial.map((v: any) => ({
         ...v,
-        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
       }))
     );
     setSelectedVariantIdx(0);
@@ -507,7 +521,7 @@ function ProductForm({
   };
   const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
 
-  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: string) => {
+  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee" | "dtf_fee", value: string) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -529,7 +543,7 @@ function ProductForm({
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0);
+    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
   };
 
   const applyPricingToAllColors = () => {
@@ -649,6 +663,7 @@ function ProductForm({
         stock: unlimitedStock ? null : (stockQty.trim() === "" ? 0 : Math.max(0, Math.floor(Number(stockQty) || 0))),
       },
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
+      decoration_methods: decorationMethods,
       ...(productType === "variable" ? {
         variants: variants.map((v) => ({
           ...v,
@@ -656,6 +671,7 @@ function ProductForm({
             margin: Number(v.pricing?.margin) || 0,
             embroidery_fee: Number(v.pricing?.embroidery_fee) || 0,
             dtg_fee: Number(v.pricing?.dtg_fee) || 0,
+            dtf_fee: Number(v.pricing?.dtf_fee) || 0,
           },
           sizes: (v.sizes || []).map((s: any) => ({ ...s, price: Number(s.price) || 0 })),
         })),
@@ -961,24 +977,17 @@ function ProductForm({
                                   className="h-8 mt-1 text-xs"
                                 />
                               </div>
-                              <div>
-                                <Label className="text-[10px]">Embroidery fee ($)</Label>
-                                <Input
-                                  type="number" step="0.01" min="0"
-                                  value={selectedVariant.pricing?.embroidery_fee ?? ""}
-                                  onChange={(e) => updateVariantPricing(selectedVariantIdx, "embroidery_fee", e.target.value)}
-                                  className="h-8 mt-1 text-xs"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-[10px]">DTG fee ($)</Label>
-                                <Input
-                                  type="number" step="0.01" min="0"
-                                  value={selectedVariant.pricing?.dtg_fee ?? ""}
-                                  onChange={(e) => updateVariantPricing(selectedVariantIdx, "dtg_fee", e.target.value)}
-                                  className="h-8 mt-1 text-xs"
-                                />
-                              </div>
+                              {DECORATION_METHODS.filter((m) => decorationMethods.includes(m.value)).map((m) => (
+                                <div key={m.feeKey}>
+                                  <Label className="text-[10px]">{m.label} fee ($)</Label>
+                                  <Input
+                                    type="number" step="0.01" min="0"
+                                    value={selectedVariant.pricing?.[m.feeKey] ?? ""}
+                                    onChange={(e) => updateVariantPricing(selectedVariantIdx, m.feeKey, e.target.value)}
+                                    className="h-8 mt-1 text-xs"
+                                  />
+                                </div>
+                              ))}
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t">
                               <div>
@@ -1157,6 +1166,23 @@ function ProductForm({
         </div>
       </div>
 
+      <div className="space-y-2">
+        <Label>Decoration Methods</Label>
+        <p className="text-xs text-muted-foreground">
+          Select the print/decoration techniques offered for this product. Only the selected methods will show fee fields per variant.
+        </p>
+        <div className="flex flex-wrap gap-4 rounded-lg border p-3 bg-muted/10">
+          {DECORATION_METHODS.map((m) => (
+            <label key={m.value} className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={decorationMethods.includes(m.value)}
+                onCheckedChange={() => toggleDecoration(m.value)}
+              />
+              {m.label}
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
@@ -2939,7 +2965,7 @@ function VariantManagerDialog({
       // Ensure each variant has a pricing object
       const normalized = product.variants.map((v: any) => ({
         ...v,
-        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0 },
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
       }));
       setVariants(normalized);
       setSelectedIdx(0);
@@ -2968,7 +2994,7 @@ function VariantManagerDialog({
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
   };
 
-  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee", value: number) => {
+  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee" | "dtf_fee", value: number) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -2990,7 +3016,7 @@ function VariantManagerDialog({
   const computeFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0);
+    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0) + Number(p.dtf_fee || 0);
   };
 
   const applyPricingToAll = () => {
@@ -3145,32 +3171,23 @@ function VariantManagerDialog({
                             className="h-9 mt-1"
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Embroidery fee ($)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={selected.pricing?.embroidery_fee ?? 0}
-                            onChange={(e) =>
-                              updatePricing(selectedIdx, "embroidery_fee", parseFloat(e.target.value) || 0)
-                            }
-                            className="h-9 mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">DTG fee ($)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={selected.pricing?.dtg_fee ?? 0}
-                            onChange={(e) =>
-                              updatePricing(selectedIdx, "dtg_fee", parseFloat(e.target.value) || 0)
-                            }
-                            className="h-9 mt-1"
-                          />
-                        </div>
+                        {DECORATION_METHODS.filter((m) =>
+                          ((product.decoration_methods as DecorationMethod[] | null | undefined) ?? []).includes(m.value)
+                        ).map((m) => (
+                          <div key={m.feeKey}>
+                            <Label className="text-xs">{m.label} fee ($)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={selected.pricing?.[m.feeKey] ?? 0}
+                              onChange={(e) =>
+                                updatePricing(selectedIdx, m.feeKey, parseFloat(e.target.value) || 0)
+                              }
+                              className="h-9 mt-1"
+                            />
+                          </div>
+                        ))}
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t">
                         <div>

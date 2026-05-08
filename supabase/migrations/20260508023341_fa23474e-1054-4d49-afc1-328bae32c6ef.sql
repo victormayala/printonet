@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory_products ADD COLUMN IF NOT EXISTS decoration_methods text[] NOT NULL DEFAULT '{}';
