@@ -85,7 +85,15 @@ type Product = {
   category_id?: string | null;
   subcategory_id?: string | null;
   inventory?: { unlimited_stock?: boolean; stock?: number | null } | null;
+  decoration_methods?: string[] | null;
 };
+
+type DecorationMethod = "dtg" | "dtf" | "embroidery";
+const DECORATION_METHODS: { value: DecorationMethod; label: string; feeKey: "dtg_fee" | "dtf_fee" | "embroidery_fee" }[] = [
+  { value: "dtg", label: "DTG", feeKey: "dtg_fee" },
+  { value: "dtf", label: "DTF", feeKey: "dtf_fee" },
+  { value: "embroidery", label: "Embroidery", feeKey: "embroidery_fee" },
+];
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
 
