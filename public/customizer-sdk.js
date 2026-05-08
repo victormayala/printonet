@@ -597,6 +597,15 @@
     var formData = new FormData();
     formData.append('product_id', newItem.wcProductId);
     formData.append('quantity', String(newItem.quantity || 1));
+    if (newItem.wcVariationId) {
+      formData.append('variation_id', String(newItem.wcVariationId));
+    }
+    if (newItem.wcAttributes && typeof newItem.wcAttributes === 'object') {
+      Object.keys(newItem.wcAttributes).forEach(function (k) {
+        var key = k.indexOf('attribute_') === 0 ? k : 'attribute_pa_' + k;
+        formData.append(key, String(newItem.wcAttributes[k]));
+      });
+    }
     formData.append('customizer_session_id', newItem.sessionId);
     if (newItem.previewImage) {
       formData.append('customizer_design_url', newItem.previewImage);
@@ -604,10 +613,10 @@
       formData.append('customizer_sides', JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]));
     }
 
-    fetch('/?wc-ajax=add_to_cart', {
+    fetch(_storeUrl('/?wc-ajax=add_to_cart'), {
       method: 'POST',
       body: formData,
-      credentials: 'same-origin',
+      credentials: 'include',
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
