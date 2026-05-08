@@ -1058,8 +1058,22 @@ function cs_render_customize_button( $custom_label = null ) {
 
 	$cs_product_id   = get_post_meta( $product->get_id(), '_cs_product_id', true );
 	$cs_product_name = get_post_meta( $product->get_id(), '_cs_product_name', true );
+	$cs_customizer_url = get_post_meta( $product->get_id(), '_cs_customizer_url', true );
 	$wc_product_id   = $product->get_id();
 	$button_label    = $custom_label ?: get_option( 'cs_button_label', '🎨 Customize This Product' );
+
+	// If this product was synced from Printonet with a store-scoped customizer
+	// URL, render a plain link to that branded customizer page instead of the
+	// SDK widget — that page already creates a session and applies the
+	// corporate store's branding.
+	if ( ! empty( $cs_customizer_url ) ) {
+		echo '<div style="margin:12px 0;">';
+		echo '<a href="' . esc_url( $cs_customizer_url ) . '" class="button alt cs-customize-btn" style="display:block;text-align:center;width:100%;padding:12px 24px;font-size:15px;font-weight:600;background:#111;color:#fff;border:none;border-radius:8px;cursor:pointer;text-decoration:none;">';
+		echo esc_html( $button_label );
+		echo '</a>';
+		echo '</div>';
+		return;
+	}
 
 	$data_attrs = 'data-customizer';
 	$data_attrs .= ' data-wc-product-id="' . esc_attr( $wc_product_id ) . '"';

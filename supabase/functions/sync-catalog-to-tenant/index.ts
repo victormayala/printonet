@@ -465,6 +465,10 @@ Deno.serve(async (req) => {
         ? {
             _printonet_customizable: "yes",
             _printonet_customizer_url: customizerUrl,
+            // Keys the Customizer Studio Woo plugin already reads:
+            _cs_enabled: "1",
+            _cs_product_id: p.id,
+            _cs_customizer_url: customizerUrl,
           }
         : undefined,
       created_at: p.created_at,
