@@ -68,7 +68,10 @@
     _callbacks.onCancel = options.onCancel || function () {};
     _productInfo = options.product;
     _wcProductId = options.wcProductId || null;
+    _wcVariationId = options.wcVariationId || null;
+    _wcAttributes = options.wcAttributes || null;
     _shopifyVariantId = options.shopifyVariantId || null;
+    if (options.storeUrl) _config.storeUrl = options.storeUrl;
 
     var url = _config.apiUrl + '/create-session';
     fetch(url, {
