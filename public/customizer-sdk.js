@@ -367,6 +367,17 @@
       var formData = new FormData();
       formData.append('product_id', _wcProductId);
       formData.append('quantity', '1');
+      // Variable products: WC requires variation_id + attribute_* fields
+      if (_wcVariationId) {
+        formData.append('variation_id', String(_wcVariationId));
+      }
+      if (_wcAttributes && typeof _wcAttributes === 'object') {
+        Object.keys(_wcAttributes).forEach(function (k) {
+          // Accept both 'color' and 'attribute_pa_color' style keys.
+          var key = k.indexOf('attribute_') === 0 ? k : 'attribute_pa_' + k;
+          formData.append(key, String(_wcAttributes[k]));
+        });
+      }
       if (payload.sessionId) formData.append('customizer_session_id', payload.sessionId);
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
@@ -381,10 +392,10 @@
         formData.append('customizer_sides', JSON.stringify(sidesData));
       }
 
-      fetch('/?wc-ajax=add_to_cart', {
+      fetch(_storeUrl('/?wc-ajax=add_to_cart'), {
         method: 'POST',
         body: formData,
-        credentials: 'same-origin',
+        credentials: 'include',
       })
         .then(function (res) { return res.json(); })
         .then(function (data) {
