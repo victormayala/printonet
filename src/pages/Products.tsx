@@ -784,6 +784,23 @@ function ProductForm({
         <Label>Description</Label>
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
       </div>
+      <div className="space-y-2">
+        <Label>Decoration Methods</Label>
+        <p className="text-xs text-muted-foreground">
+          Select the print/decoration techniques offered for this product. Only the selected methods will show fee fields per variant.
+        </p>
+        <div className="flex flex-wrap gap-4 rounded-lg border p-3 bg-muted/10">
+          {DECORATION_METHODS.map((m) => (
+            <label key={m.value} className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={decorationMethods.includes(m.value)}
+                onCheckedChange={() => toggleDecoration(m.value)}
+              />
+              {m.label}
+            </label>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         {IMAGE_SIDES.map(({ key, label, value, setter }) => {
           const printAreaKey = key === "left" ? "side1" : key === "right" ? "side2" : key;
