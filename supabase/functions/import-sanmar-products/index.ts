@@ -495,7 +495,7 @@ Deno.serve(async (req) => {
       // Cap per invocation — each style triggers several SOAP calls + DB writes,
       // and the worker gets killed by the runtime (BOOT_ERROR / 503) if we run
       // too many serially. Client should chunk large syncs across calls.
-      const MAX_PER_CALL = 5
+      const MAX_PER_CALL = 2
       const styleIds = allStyleIds.slice(0, MAX_PER_CALL)
       const remaining = allStyleIds.slice(MAX_PER_CALL)
 
