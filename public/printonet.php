@@ -406,6 +406,36 @@ body, button, input, select, optgroup, textarea, .wp-block-post-title, h1, h2, h
 );
 
 /* -------------------------------------------------------------------------
+ * CORS: allow cross-origin add-to-cart from the customizer SDK so
+ * cookie-based cart sessions persist when the SDK is hosted on
+ * customizerstudio.com / app.printonet.com and the store lives on a
+ * tenant subdomain.
+ * ------------------------------------------------------------------------- */
+
+add_action( 'init', function () {
+	if ( empty( $_SERVER['HTTP_ORIGIN'] ) ) { return; }
+	$origin = (string) $_SERVER['HTTP_ORIGIN'];
+	$allowed = [
+		'https://app.printonet.com',
+		'https://customizerstudio.com',
+		'https://printonet.lovable.app',
+	];
+	$ok = in_array( $origin, $allowed, true )
+		|| preg_match( '#^https://[a-z0-9-]+\.lovable\.app$#i', $origin )
+		|| preg_match( '#^https://[a-z0-9-]+\.lovableproject\.com$#i', $origin );
+	if ( ! $ok ) { return; }
+	header( 'Access-Control-Allow-Origin: ' . $origin );
+	header( 'Vary: Origin' );
+	header( 'Access-Control-Allow-Credentials: true' );
+	header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+	header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With' );
+	if ( 'OPTIONS' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+		status_header( 204 );
+		exit;
+	}
+}, 0 );
+
+/* -------------------------------------------------------------------------
  * WooCommerce: capture customizer design data on add-to-cart and
  * persist it to the order line items so print shops see it.
  * ------------------------------------------------------------------------- */
