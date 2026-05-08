@@ -349,7 +349,7 @@ function AddVariantDialog({
       image: image || null,
       colorFrontImage: image || null,
       sizes,
-      pricing: { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+      pricing: { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
     });
     reset();
     onOpenChange(false);
@@ -491,7 +491,7 @@ function ProductForm({
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
     return initial.map((v: any) => ({
       ...v,
-      pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+      pricing: v.pricing || { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
     }));
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
@@ -502,7 +502,7 @@ function ProductForm({
     setVariants(
       initial.map((v: any) => ({
         ...v,
-        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
       }))
     );
     setSelectedVariantIdx(0);
@@ -521,7 +521,7 @@ function ProductForm({
   };
   const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
 
-  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee" | "dtf_fee", value: string) => {
+  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee", value: string) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -543,7 +543,7 @@ function ProductForm({
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
+    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.embroidery_setup_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
   };
 
   const applyPricingToAllColors = () => {
@@ -670,6 +670,7 @@ function ProductForm({
           pricing: {
             margin: Number(v.pricing?.margin) || 0,
             embroidery_fee: Number(v.pricing?.embroidery_fee) || 0,
+            embroidery_setup_fee: Number(v.pricing?.embroidery_setup_fee) || 0,
             dtg_fee: Number(v.pricing?.dtg_fee) || 0,
             dtf_fee: Number(v.pricing?.dtf_fee) || 0,
           },
@@ -994,17 +995,25 @@ function ProductForm({
                                   className="h-8 mt-1 text-xs"
                                 />
                               </div>
-                              {DECORATION_METHODS.filter((m) => decorationMethods.includes(m.value)).map((m) => (
-                                <div key={m.feeKey}>
-                                  <Label className="text-[10px]">{m.label} fee ($)</Label>
-                                  <Input
-                                    type="number" step="0.01" min="0"
-                                    value={selectedVariant.pricing?.[m.feeKey] ?? ""}
-                                    onChange={(e) => updateVariantPricing(selectedVariantIdx, m.feeKey, e.target.value)}
-                                    className="h-8 mt-1 text-xs"
-                                  />
-                                </div>
-                              ))}
+                              {DECORATION_METHODS.filter((m) => decorationMethods.includes(m.value)).flatMap((m) => {
+                                const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee"; label: string }[] = [
+                                  { key: m.feeKey, label: `${m.label} fee ($)` },
+                                ];
+                                if (m.value === "embroidery") {
+                                  fields.push({ key: "embroidery_setup_fee", label: "Embroidery set-up fee ($)" });
+                                }
+                                return fields.map((f) => (
+                                  <div key={f.key}>
+                                    <Label className="text-[10px]">{f.label}</Label>
+                                    <Input
+                                      type="number" step="0.01" min="0"
+                                      value={selectedVariant.pricing?.[f.key] ?? ""}
+                                      onChange={(e) => updateVariantPricing(selectedVariantIdx, f.key, e.target.value)}
+                                      className="h-8 mt-1 text-xs"
+                                    />
+                                  </div>
+                                ));
+                              })}
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t">
                               <div>
@@ -2964,7 +2973,7 @@ function VariantManagerDialog({
       // Ensure each variant has a pricing object
       const normalized = product.variants.map((v: any) => ({
         ...v,
-        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
       }));
       setVariants(normalized);
       setSelectedIdx(0);
@@ -2993,7 +3002,7 @@ function VariantManagerDialog({
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
   };
 
-  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee" | "dtf_fee", value: number) => {
+  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee", value: number) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -3015,7 +3024,7 @@ function VariantManagerDialog({
   const computeFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0) + Number(p.dtf_fee || 0);
+    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.embroidery_setup_fee || 0) + Number(p.dtg_fee || 0) + Number(p.dtf_fee || 0);
   };
 
   const applyPricingToAll = () => {
@@ -3172,21 +3181,29 @@ function VariantManagerDialog({
                         </div>
                         {DECORATION_METHODS.filter((m) =>
                           ((product.decoration_methods as DecorationMethod[] | null | undefined) ?? []).includes(m.value)
-                        ).map((m) => (
-                          <div key={m.feeKey}>
-                            <Label className="text-xs">{m.label} fee ($)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={selected.pricing?.[m.feeKey] ?? 0}
-                              onChange={(e) =>
-                                updatePricing(selectedIdx, m.feeKey, parseFloat(e.target.value) || 0)
-                              }
-                              className="h-9 mt-1"
-                            />
-                          </div>
-                        ))}
+                        ).flatMap((m) => {
+                          const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee"; label: string }[] = [
+                            { key: m.feeKey, label: `${m.label} fee ($)` },
+                          ];
+                          if (m.value === "embroidery") {
+                            fields.push({ key: "embroidery_setup_fee", label: "Embroidery set-up fee ($)" });
+                          }
+                          return fields.map((f) => (
+                            <div key={f.key}>
+                              <Label className="text-xs">{f.label}</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={selected.pricing?.[f.key] ?? 0}
+                                onChange={(e) =>
+                                  updatePricing(selectedIdx, f.key, parseFloat(e.target.value) || 0)
+                                }
+                                className="h-9 mt-1"
+                              />
+                            </div>
+                          ));
+                        })}
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t">
                         <div>
