@@ -45,6 +45,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
+import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 
 
 function StatusBadge({ status }: { status: CorporateStore["status"] }) {
@@ -505,6 +506,8 @@ export default function CorporateStoreDetails() {
           )}
         </CardContent>
       </Card>
+
+      <StoreCustomizableProducts store={store} />
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
 
