@@ -663,6 +663,7 @@ function ProductForm({
         stock: unlimitedStock ? null : (stockQty.trim() === "" ? 0 : Math.max(0, Math.floor(Number(stockQty) || 0))),
       },
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
+      decoration_methods: decorationMethods,
       ...(productType === "variable" ? {
         variants: variants.map((v) => ({
           ...v,
