@@ -349,7 +349,7 @@ function AddVariantDialog({
       image: image || null,
       colorFrontImage: image || null,
       sizes,
-      pricing: { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+      pricing: { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
     });
     reset();
     onOpenChange(false);
@@ -491,7 +491,7 @@ function ProductForm({
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
     return initial.map((v: any) => ({
       ...v,
-      pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+      pricing: v.pricing || { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
     }));
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
@@ -502,7 +502,7 @@ function ProductForm({
     setVariants(
       initial.map((v: any) => ({
         ...v,
-        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
       }))
     );
     setSelectedVariantIdx(0);
@@ -521,7 +521,7 @@ function ProductForm({
   };
   const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
 
-  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee" | "dtf_fee", value: string) => {
+  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee", value: string) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -543,7 +543,7 @@ function ProductForm({
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
+    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.embroidery_setup_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
   };
 
   const applyPricingToAllColors = () => {
@@ -2964,7 +2964,7 @@ function VariantManagerDialog({
       // Ensure each variant has a pricing object
       const normalized = product.variants.map((v: any) => ({
         ...v,
-        pricing: v.pricing || { margin: 0, embroidery_fee: 0, dtg_fee: 0, dtf_fee: 0 },
+        pricing: v.pricing || { margin: 0, embroidery_fee: 0, embroidery_setup_fee: 0, dtg_fee: 0, dtf_fee: 0 },
       }));
       setVariants(normalized);
       setSelectedIdx(0);
@@ -2993,7 +2993,7 @@ function VariantManagerDialog({
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
   };
 
-  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "dtg_fee" | "dtf_fee", value: number) => {
+  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee", value: number) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -3015,7 +3015,7 @@ function VariantManagerDialog({
   const computeFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.dtg_fee || 0) + Number(p.dtf_fee || 0);
+    return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.embroidery_setup_fee || 0) + Number(p.dtg_fee || 0) + Number(p.dtf_fee || 0);
   };
 
   const applyPricingToAll = () => {
