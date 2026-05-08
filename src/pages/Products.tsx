@@ -1166,24 +1166,6 @@ function ProductForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label>Decoration Methods</Label>
-        <p className="text-xs text-muted-foreground">
-          Select the print/decoration techniques offered for this product. Only the selected methods will show fee fields per variant.
-        </p>
-        <div className="flex flex-wrap gap-4 rounded-lg border p-3 bg-muted/10">
-          {DECORATION_METHODS.map((m) => (
-            <label key={m.value} className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox
-                checked={decorationMethods.includes(m.value)}
-                onCheckedChange={() => toggleDecoration(m.value)}
-              />
-              {m.label}
-            </label>
-          ))}
-        </div>
-      </div>
-
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
         <Label>Active (visible to customers)</Label>
