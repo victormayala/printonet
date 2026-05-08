@@ -32,14 +32,24 @@
 (function (root) {
   'use strict';
 
-  var _config = { apiUrl: '', baseUrl: '', cartUrl: '' };
+  var _config = { apiUrl: '', baseUrl: '', cartUrl: '', storeUrl: '' };
   var _overlay = null;
   var _iframe = null;
   var _callbacks = {};
   var _productInfo = null;
   var _wcProductId = null;
+  var _wcVariationId = null;
+  var _wcAttributes = null; // { color: 'red', size: 'M' } -> attribute_pa_color etc.
   var _shopifyVariantId = null;
   var _summaryOverlay = null;
+
+  // Build a URL for a store-relative path. If storeUrl is configured we hit
+  // the tenant store domain directly (e.g. https://royal.stores.printonet.com),
+  // otherwise we fall back to a same-origin request.
+  function _storeUrl(path) {
+    var base = (_config.storeUrl || '').replace(/\/$/, '');
+    return base ? base + path : path;
+  }
 
   function init(options) {
     _config.apiUrl = options.apiUrl || '';
