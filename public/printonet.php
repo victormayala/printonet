@@ -3,7 +3,7 @@
  * Plugin Name: Printonet
  * Plugin URI:  https://app.printonet.com
  * Description: Receives store branding (name, color, font, logo, favicon) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
- * Version:     1.4.0
+ * Version:     1.5.0
  * Author:      Printonet
  * Author URI:  https://app.printonet.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.4.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.5.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
 define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
@@ -404,6 +404,36 @@ body, button, input, select, optgroup, textarea, .wp-block-post-title, h1, h2, h
 	},
 	5
 );
+
+/* -------------------------------------------------------------------------
+ * CORS: allow cross-origin add-to-cart from the customizer SDK so
+ * cookie-based cart sessions persist when the SDK is hosted on
+ * customizerstudio.com / app.printonet.com and the store lives on a
+ * tenant subdomain.
+ * ------------------------------------------------------------------------- */
+
+add_action( 'init', function () {
+	if ( empty( $_SERVER['HTTP_ORIGIN'] ) ) { return; }
+	$origin = (string) $_SERVER['HTTP_ORIGIN'];
+	$allowed = [
+		'https://app.printonet.com',
+		'https://customizerstudio.com',
+		'https://printonet.lovable.app',
+	];
+	$ok = in_array( $origin, $allowed, true )
+		|| preg_match( '#^https://[a-z0-9-]+\.lovable\.app$#i', $origin )
+		|| preg_match( '#^https://[a-z0-9-]+\.lovableproject\.com$#i', $origin );
+	if ( ! $ok ) { return; }
+	header( 'Access-Control-Allow-Origin: ' . $origin );
+	header( 'Vary: Origin' );
+	header( 'Access-Control-Allow-Credentials: true' );
+	header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+	header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With' );
+	if ( 'OPTIONS' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+		status_header( 204 );
+		exit;
+	}
+}, 0 );
 
 /* -------------------------------------------------------------------------
  * WooCommerce: capture customizer design data on add-to-cart and

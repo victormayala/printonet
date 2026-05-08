@@ -32,19 +32,30 @@
 (function (root) {
   'use strict';
 
-  var _config = { apiUrl: '', baseUrl: '', cartUrl: '' };
+  var _config = { apiUrl: '', baseUrl: '', cartUrl: '', storeUrl: '' };
   var _overlay = null;
   var _iframe = null;
   var _callbacks = {};
   var _productInfo = null;
   var _wcProductId = null;
+  var _wcVariationId = null;
+  var _wcAttributes = null; // { color: 'red', size: 'M' } -> attribute_pa_color etc.
   var _shopifyVariantId = null;
   var _summaryOverlay = null;
+
+  // Build a URL for a store-relative path. If storeUrl is configured we hit
+  // the tenant store domain directly (e.g. https://royal.stores.printonet.com),
+  // otherwise we fall back to a same-origin request.
+  function _storeUrl(path) {
+    var base = (_config.storeUrl || '').replace(/\/$/, '');
+    return base ? base + path : path;
+  }
 
   function init(options) {
     _config.apiUrl = options.apiUrl || '';
     _config.baseUrl = options.baseUrl || '';
     _config.cartUrl = options.cartUrl || '';
+    _config.storeUrl = options.storeUrl || '';
   }
 
   function open(options) {
@@ -57,7 +68,10 @@
     _callbacks.onCancel = options.onCancel || function () {};
     _productInfo = options.product;
     _wcProductId = options.wcProductId || null;
+    _wcVariationId = options.wcVariationId || null;
+    _wcAttributes = options.wcAttributes || null;
     _shopifyVariantId = options.shopifyVariantId || null;
+    if (options.storeUrl) _config.storeUrl = options.storeUrl;
 
     var url = _config.apiUrl + '/create-session';
     fetch(url, {
@@ -353,6 +367,17 @@
       var formData = new FormData();
       formData.append('product_id', _wcProductId);
       formData.append('quantity', '1');
+      // Variable products: WC requires variation_id + attribute_* fields
+      if (_wcVariationId) {
+        formData.append('variation_id', String(_wcVariationId));
+      }
+      if (_wcAttributes && typeof _wcAttributes === 'object') {
+        Object.keys(_wcAttributes).forEach(function (k) {
+          // Accept both 'color' and 'attribute_pa_color' style keys.
+          var key = k.indexOf('attribute_') === 0 ? k : 'attribute_pa_' + k;
+          formData.append(key, String(_wcAttributes[k]));
+        });
+      }
       if (payload.sessionId) formData.append('customizer_session_id', payload.sessionId);
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
@@ -367,10 +392,10 @@
         formData.append('customizer_sides', JSON.stringify(sidesData));
       }
 
-      fetch('/?wc-ajax=add_to_cart', {
+      fetch(_storeUrl('/?wc-ajax=add_to_cart'), {
         method: 'POST',
         body: formData,
-        credentials: 'same-origin',
+        credentials: 'include',
       })
         .then(function (res) { return res.json(); })
         .then(function (data) {
@@ -572,6 +597,15 @@
     var formData = new FormData();
     formData.append('product_id', newItem.wcProductId);
     formData.append('quantity', String(newItem.quantity || 1));
+    if (newItem.wcVariationId) {
+      formData.append('variation_id', String(newItem.wcVariationId));
+    }
+    if (newItem.wcAttributes && typeof newItem.wcAttributes === 'object') {
+      Object.keys(newItem.wcAttributes).forEach(function (k) {
+        var key = k.indexOf('attribute_') === 0 ? k : 'attribute_pa_' + k;
+        formData.append(key, String(newItem.wcAttributes[k]));
+      });
+    }
     formData.append('customizer_session_id', newItem.sessionId);
     if (newItem.previewImage) {
       formData.append('customizer_design_url', newItem.previewImage);
@@ -579,10 +613,10 @@
       formData.append('customizer_sides', JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]));
     }
 
-    fetch('/?wc-ajax=add_to_cart', {
+    fetch(_storeUrl('/?wc-ajax=add_to_cart'), {
       method: 'POST',
       body: formData,
-      credentials: 'same-origin',
+      credentials: 'include',
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
