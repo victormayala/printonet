@@ -480,6 +480,11 @@ function ProductForm({
     (product?.print_areas as any) || {}
   );
   const [detecting, setDetecting] = useState<string | null>(null);
+  const [decorationMethods, setDecorationMethods] = useState<DecorationMethod[]>(
+    (product?.decoration_methods as DecorationMethod[] | undefined) ?? []
+  );
+  const toggleDecoration = (m: DecorationMethod) =>
+    setDecorationMethods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
 
   // ============ Variants (Shopify-style inline manager) ============
   const [variants, setVariants] = useState<any[]>(() => {
