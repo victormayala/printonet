@@ -3181,21 +3181,29 @@ function VariantManagerDialog({
                         </div>
                         {DECORATION_METHODS.filter((m) =>
                           ((product.decoration_methods as DecorationMethod[] | null | undefined) ?? []).includes(m.value)
-                        ).map((m) => (
-                          <div key={m.feeKey}>
-                            <Label className="text-xs">{m.label} fee ($)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={selected.pricing?.[m.feeKey] ?? 0}
-                              onChange={(e) =>
-                                updatePricing(selectedIdx, m.feeKey, parseFloat(e.target.value) || 0)
-                              }
-                              className="h-9 mt-1"
-                            />
-                          </div>
-                        ))}
+                        ).flatMap((m) => {
+                          const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee"; label: string }[] = [
+                            { key: m.feeKey, label: `${m.label} fee ($)` },
+                          ];
+                          if (m.value === "embroidery") {
+                            fields.push({ key: "embroidery_setup_fee", label: "Embroidery set-up fee ($)" });
+                          }
+                          return fields.map((f) => (
+                            <div key={f.key}>
+                              <Label className="text-xs">{f.label}</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={selected.pricing?.[f.key] ?? 0}
+                                onChange={(e) =>
+                                  updatePricing(selectedIdx, f.key, parseFloat(e.target.value) || 0)
+                                }
+                                className="h-9 mt-1"
+                              />
+                            </div>
+                          ));
+                        })}
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t">
                         <div>
