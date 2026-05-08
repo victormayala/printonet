@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { CorporateStore } from "@/types/corporateStore";
+import { CorporateStore, resolveTenantSlug } from "@/types/corporateStore";
 
 type InventoryProduct = {
   id: string;
@@ -26,6 +26,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const { data: products, isLoading: loadingProducts } = useQuery({
     queryKey: ["inventory_products", user?.id],
@@ -122,6 +123,55 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const syncToStore = async () => {
+    const tenantSlug = resolveTenantSlug(store);
+    if (!tenantSlug) {
+      toast({
+        title: "Missing tenant slug",
+        description: "This store has no tenant_slug or site URL configured.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const enabledIds = Array.from(enabledMap.entries())
+      .filter(([, v]) => v.is_active)
+      .map(([pid]) => pid);
+    if (enabledIds.length === 0) {
+      toast({ title: "No products enabled", description: "Toggle at least one product on first.", variant: "destructive" });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
+        body: {
+          tenant_slug: tenantSlug,
+          wp_site_url: store.wp_site_url ?? undefined,
+          product_ids: enabledIds,
+          mode: "incremental",
+          customizable: true,
+          customizer_base_url: window.location.origin,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { ok?: boolean; error?: string; detail?: string };
+      if (res.ok === false || res.error) {
+        throw new Error([res.error, res.detail].filter(Boolean).join(" — ") || "Sync failed");
+      }
+      toast({
+        title: "Synced to store",
+        description: `${enabledIds.length} customizable product${enabledIds.length === 1 ? "" : "s"} pushed to ${store.name}.`,
+      });
+    } catch (e) {
+      toast({
+        title: "Sync failed",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -138,6 +188,16 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           <Badge variant="secondary">
             {enabledCount} enabled
           </Badge>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <Button size="sm" onClick={syncToStore} disabled={syncing || enabledCount === 0}>
+            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            Sync to store
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Pushes enabled products to {store.name} as customizable Woo products.
+          </span>
         </div>
 
         {storefrontUrl && (

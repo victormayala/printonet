@@ -76,6 +76,14 @@ interface SyncRequest {
     string,
     Partial<{ front: string; back: string; side1: string; side2: string }>
   >;
+  /**
+   * When set, every item is flagged as customizable on the tenant and given
+   * a `customizer_url` of `${customizer_base_url}/s/${tenant_slug}/customize/${product_id}`.
+   * The tenant plugin uses this to swap the "Add to cart" button for a
+   * "Customize" button on enabled products.
+   */
+  customizable?: boolean;
+  customizer_base_url?: string;
 }
 
 function variantPriceCents(p: any): number {
@@ -409,6 +417,11 @@ Deno.serve(async (req) => {
         })
       : p.variants;
 
+    const customizerUrl =
+      body.customizable && body.customizer_base_url
+        ? `${body.customizer_base_url.replace(/\/$/, "")}/s/${body.tenant_slug}/customize/${p.id}`
+        : null;
+
     return {
       sku: p.id,
       name: p.name,
@@ -445,6 +458,19 @@ Deno.serve(async (req) => {
         height: p.height,
         unit: p.dimension_unit,
       },
+      // Customizer hook for tenant plugin
+      is_customizable: !!customizerUrl,
+      customizer_url: customizerUrl,
+      meta: customizerUrl
+        ? {
+            _printonet_customizable: "yes",
+            _printonet_customizer_url: customizerUrl,
+            // Keys the Customizer Studio Woo plugin already reads:
+            _cs_enabled: "1",
+            _cs_product_id: p.id,
+            _cs_customizer_url: customizerUrl,
+          }
+        : undefined,
       created_at: p.created_at,
       updated_at: p.updated_at,
     };
