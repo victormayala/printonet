@@ -3154,32 +3154,23 @@ function VariantManagerDialog({
                             className="h-9 mt-1"
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Embroidery fee ($)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={selected.pricing?.embroidery_fee ?? 0}
-                            onChange={(e) =>
-                              updatePricing(selectedIdx, "embroidery_fee", parseFloat(e.target.value) || 0)
-                            }
-                            className="h-9 mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">DTG fee ($)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={selected.pricing?.dtg_fee ?? 0}
-                            onChange={(e) =>
-                              updatePricing(selectedIdx, "dtg_fee", parseFloat(e.target.value) || 0)
-                            }
-                            className="h-9 mt-1"
-                          />
-                        </div>
+                        {DECORATION_METHODS.filter((m) =>
+                          ((product.decoration_methods as DecorationMethod[] | null | undefined) ?? []).includes(m.value)
+                        ).map((m) => (
+                          <div key={m.feeKey}>
+                            <Label className="text-xs">{m.label} fee ($)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={selected.pricing?.[m.feeKey] ?? 0}
+                              onChange={(e) =>
+                                updatePricing(selectedIdx, m.feeKey, parseFloat(e.target.value) || 0)
+                              }
+                              className="h-9 mt-1"
+                            />
+                          </div>
+                        ))}
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t">
                         <div>
