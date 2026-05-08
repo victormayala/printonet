@@ -670,6 +670,7 @@ function ProductForm({
           pricing: {
             margin: Number(v.pricing?.margin) || 0,
             embroidery_fee: Number(v.pricing?.embroidery_fee) || 0,
+            embroidery_setup_fee: Number(v.pricing?.embroidery_setup_fee) || 0,
             dtg_fee: Number(v.pricing?.dtg_fee) || 0,
             dtf_fee: Number(v.pricing?.dtf_fee) || 0,
           },
