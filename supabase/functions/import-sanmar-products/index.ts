@@ -1,8 +1,9 @@
+import { createClient } from 'npm:@supabase/supabase-js@2.45.0'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // SanMar PromoStandards Endpoints
 const PS_PRODUCT_V2 = 'https://ws.sanmar.com:8080/promostandards/ProductDataServiceBindingV2'
