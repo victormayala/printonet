@@ -92,6 +92,39 @@ export type Database = {
         }
         Relationships: []
       }
+      corporate_store_products: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          product_id: string
+          sort_order: number
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product_id: string
+          sort_order?: number
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product_id?: string
+          sort_order?: number
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       corporate_stores: {
         Row: {
           accent_color: string
@@ -190,6 +223,7 @@ export type Database = {
           order_notes: string | null
           product_data: Json
           status: string
+          store_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -203,6 +237,7 @@ export type Database = {
           order_notes?: string | null
           product_data: Json
           status?: string
+          store_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -216,6 +251,7 @@ export type Database = {
           order_notes?: string | null
           product_data?: Json
           status?: string
+          store_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
