@@ -202,6 +202,58 @@ add_action(
 
 		register_rest_route(
 			'printonet/v1',
+			'/customizer-flags',
+			[
+				'methods'             => 'POST',
+				'permission_callback' => function ( WP_REST_Request $request ) {
+					$token = (string) $request->get_header( 'x_printonet_token' );
+					if ( '' === $token ) {
+						$token = (string) $request->get_header( 'X-Printonet-Token' );
+					}
+					if ( ! printonet_token_is_valid( $token ) ) {
+						return new WP_Error( 'printonet_unauthorized', 'Invalid token', [ 'status' => 401 ] );
+					}
+					return true;
+				},
+				'callback'            => function ( WP_REST_Request $request ) {
+					$body = $request->get_json_params();
+					$items = is_array( $body ) && isset( $body['items'] ) && is_array( $body['items'] ) ? $body['items'] : [];
+					$updated = 0;
+					$missing = [];
+					foreach ( $items as $it ) {
+						$sku  = isset( $it['sku'] ) ? sanitize_text_field( $it['sku'] ) : '';
+						$url  = isset( $it['customizer_url'] ) ? esc_url_raw( $it['customizer_url'] ) : '';
+						$name = isset( $it['name'] ) ? sanitize_text_field( $it['name'] ) : '';
+						if ( '' === $sku || '' === $url ) { continue; }
+						$product_id = function_exists( 'wc_get_product_id_by_sku' ) ? (int) wc_get_product_id_by_sku( $sku ) : 0;
+						if ( ! $product_id ) {
+							// Fallback: lookup posts by _sku meta directly.
+							$q = get_posts( [
+								'post_type'      => [ 'product', 'product_variation' ],
+								'meta_key'       => '_sku',
+								'meta_value'     => $sku,
+								'posts_per_page' => 1,
+								'fields'         => 'ids',
+								'post_status'    => 'any',
+							] );
+							$product_id = ! empty( $q ) ? (int) $q[0] : 0;
+						}
+						if ( ! $product_id ) { $missing[] = $sku; continue; }
+						update_post_meta( $product_id, '_cs_enabled', '1' );
+						update_post_meta( $product_id, '_cs_product_id', $sku );
+						update_post_meta( $product_id, '_cs_customizer_url', $url );
+						if ( '' !== $name ) {
+							update_post_meta( $product_id, '_cs_product_name', $name );
+						}
+						$updated++;
+					}
+					return new WP_REST_Response( [ 'ok' => true, 'updated' => $updated, 'missing' => $missing ], 200 );
+				},
+			]
+		);
+
+		register_rest_route(
+			'printonet/v1',
 			'/branding',
 			[
 				'methods'             => 'POST',
