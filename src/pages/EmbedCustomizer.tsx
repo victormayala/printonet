@@ -78,27 +78,47 @@ export default function EmbedCustomizer() {
           console.log("[EmbedCustomizer] Product data:", pd);
           setProductData(pd);
 
-          // Fetch brand config if session has a user_id and no URL brand params
+          // Resolve brand: store_id (My Stores) > user's brand_configs
           const userId = (data as any).user_id;
-          if (userId && !searchParams.get("brandPrimary") && !searchParams.get("brandTheme")) {
-            const { data: brandData } = await supabase
-              .from("brand_configs")
-              .select("*")
-              .eq("user_id", userId)
-              .order("updated_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+          const storeId = (data as any).store_id;
+          if (!searchParams.get("brandPrimary") && !searchParams.get("brandTheme")) {
+            if (storeId) {
+              const { data: storeData } = await supabase
+                .from("corporate_stores")
+                .select("name,logo_url,primary_color,accent_color,font_family")
+                .eq("id", storeId)
+                .maybeSingle();
+              if (storeData) {
+                setDbBrandConfig({
+                  name: storeData.name || DEFAULT_BRAND_CONFIG.name,
+                  logoUrl: storeData.logo_url || DEFAULT_BRAND_CONFIG.logoUrl,
+                  theme: DEFAULT_BRAND_CONFIG.theme,
+                  primaryColor: storeData.primary_color || DEFAULT_BRAND_CONFIG.primaryColor,
+                  accentColor: storeData.accent_color || DEFAULT_BRAND_CONFIG.accentColor,
+                  fontFamily: storeData.font_family || DEFAULT_BRAND_CONFIG.fontFamily,
+                  borderRadius: DEFAULT_BRAND_CONFIG.borderRadius,
+                });
+              }
+            } else if (userId) {
+              const { data: brandData } = await supabase
+                .from("brand_configs")
+                .select("*")
+                .eq("user_id", userId)
+                .order("updated_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            if (brandData) {
-              setDbBrandConfig({
-                name: brandData.name || DEFAULT_BRAND_CONFIG.name,
-                logoUrl: brandData.logo_url || DEFAULT_BRAND_CONFIG.logoUrl,
-                theme: (brandData.theme === "light" || brandData.theme === "dark") ? brandData.theme : DEFAULT_BRAND_CONFIG.theme,
-                primaryColor: brandData.primary_color || DEFAULT_BRAND_CONFIG.primaryColor,
-                accentColor: brandData.accent_color || DEFAULT_BRAND_CONFIG.accentColor,
-                fontFamily: brandData.font_family || DEFAULT_BRAND_CONFIG.fontFamily,
-                borderRadius: brandData.border_radius ?? DEFAULT_BRAND_CONFIG.borderRadius,
-              });
+              if (brandData) {
+                setDbBrandConfig({
+                  name: brandData.name || DEFAULT_BRAND_CONFIG.name,
+                  logoUrl: brandData.logo_url || DEFAULT_BRAND_CONFIG.logoUrl,
+                  theme: (brandData.theme === "light" || brandData.theme === "dark") ? brandData.theme : DEFAULT_BRAND_CONFIG.theme,
+                  primaryColor: brandData.primary_color || DEFAULT_BRAND_CONFIG.primaryColor,
+                  accentColor: brandData.accent_color || DEFAULT_BRAND_CONFIG.accentColor,
+                  fontFamily: brandData.font_family || DEFAULT_BRAND_CONFIG.fontFamily,
+                  borderRadius: brandData.border_radius ?? DEFAULT_BRAND_CONFIG.borderRadius,
+                });
+              }
             }
           }
         }

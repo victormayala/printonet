@@ -23,6 +23,8 @@ import CheckoutReturn from "./pages/CheckoutReturn";
 import Cart from "./pages/Cart";
 import CorporateStores from "./pages/CorporateStores";
 import CorporateStoreDetails from "./pages/CorporateStoreDetails";
+import StoreShop from "./pages/StoreShop";
+import StoreCustomize from "./pages/StoreCustomize";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +61,8 @@ const App = () => (
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout/return" element={<CheckoutReturn />} />
             <Route path="/checkout/:sessionId" element={<Checkout />} />
+            <Route path="/s/:tenantSlug" element={<StoreShop />} />
+            <Route path="/s/:tenantSlug/customize/:productId" element={<StoreCustomize />} />
 
             {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
