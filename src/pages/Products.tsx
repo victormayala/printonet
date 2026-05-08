@@ -977,24 +977,17 @@ function ProductForm({
                                   className="h-8 mt-1 text-xs"
                                 />
                               </div>
-                              <div>
-                                <Label className="text-[10px]">Embroidery fee ($)</Label>
-                                <Input
-                                  type="number" step="0.01" min="0"
-                                  value={selectedVariant.pricing?.embroidery_fee ?? ""}
-                                  onChange={(e) => updateVariantPricing(selectedVariantIdx, "embroidery_fee", e.target.value)}
-                                  className="h-8 mt-1 text-xs"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-[10px]">DTG fee ($)</Label>
-                                <Input
-                                  type="number" step="0.01" min="0"
-                                  value={selectedVariant.pricing?.dtg_fee ?? ""}
-                                  onChange={(e) => updateVariantPricing(selectedVariantIdx, "dtg_fee", e.target.value)}
-                                  className="h-8 mt-1 text-xs"
-                                />
-                              </div>
+                              {DECORATION_METHODS.filter((m) => decorationMethods.includes(m.value)).map((m) => (
+                                <div key={m.feeKey}>
+                                  <Label className="text-[10px]">{m.label} fee ($)</Label>
+                                  <Input
+                                    type="number" step="0.01" min="0"
+                                    value={selectedVariant.pricing?.[m.feeKey] ?? ""}
+                                    onChange={(e) => updateVariantPricing(selectedVariantIdx, m.feeKey, e.target.value)}
+                                    className="h-8 mt-1 text-xs"
+                                  />
+                                </div>
+                              ))}
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t">
                               <div>
