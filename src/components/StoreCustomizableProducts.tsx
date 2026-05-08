@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { CorporateStore } from "@/types/corporateStore";
+import { CorporateStore, resolveTenantSlug } from "@/types/corporateStore";
 
 type InventoryProduct = {
   id: string;
