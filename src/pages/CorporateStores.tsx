@@ -687,6 +687,7 @@ function StoreFormFields({
   setFavicon,
   existing,
   onClearExisting,
+  hideCustomDomain,
 }: {
   values: FormValues;
   setField: <K extends keyof FormValues>(k: K, v: FormValues[K]) => void;
@@ -700,6 +701,7 @@ function StoreFormFields({
     favicon_url: string | null;
   };
   onClearExisting?: (kind: "logo" | "favicon") => void;
+  hideCustomDomain?: boolean;
 }) {
   return (
     <div className="space-y-6 py-2">
