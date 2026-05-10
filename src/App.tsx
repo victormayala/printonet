@@ -24,6 +24,8 @@ import CorporateStores from "./pages/CorporateStores";
 import CorporateStoreDetails from "./pages/CorporateStoreDetails";
 import StoreShop from "./pages/StoreShop";
 import StoreCustomize from "./pages/StoreCustomize";
+import WooPay from "./pages/WooPay";
+import WooPayReturn from "./pages/WooPayReturn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
