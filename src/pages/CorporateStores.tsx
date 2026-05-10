@@ -1201,19 +1201,58 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
             <CardHeader>
               <CardTitle className="text-base">Connect Stripe</CardTitle>
               <CardDescription>
-                Connect Stripe to accept payments on your new store. You can skip this
-                step and connect later from Settings.
+                Connect your Stripe account to accept payments. Customers pay your business
+                directly — Printonet never holds your funds.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <Button asChild>
-                <Link to="/profile?section=payments">
-                  <ExternalLink className="h-4 w-4" /> Connect Stripe
-                </Link>
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Your store is being provisioned in the background while you set this up.
-              </p>
+            <CardContent className="space-y-4">
+              {!provisionedStoreId ? (
+                <div className="flex items-center gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Setting up your store… the Stripe button will unlock in a moment.
+                </div>
+              ) : stripeStatus?.connected ? (
+                <div className="flex items-start gap-2 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Stripe connected</p>
+                    <p className="text-xs opacity-80">
+                      Your store can now accept payments directly to your Stripe account.
+                    </p>
+                  </div>
+                </div>
+              ) : stripeOnboardingOpened ? (
+                <div className="space-y-3">
+                  <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                    Finish onboarding in the new Stripe tab, then click the button below to verify.
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={refreshStripeStatus} disabled={stripeLoading}>
+                      {stripeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      I've finished — check status
+                    </Button>
+                    <Button variant="outline" onClick={startStripeOnboarding} disabled={stripeLoading}>
+                      Reopen Stripe
+                    </Button>
+                  </div>
+                  {stripeStatus && !stripeStatus.connected && (
+                    <p className="text-xs text-muted-foreground">
+                      Stripe still needs more info ({stripeStatus.details_submitted ? "verifying" : "details not submitted"}).
+                      Continue onboarding or check again in a minute.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Button onClick={startStripeOnboarding} disabled={stripeLoading}>
+                    {stripeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                    Connect with Stripe
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Opens Stripe in a new tab. Sign in or create an account to receive payments.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1222,9 +1261,9 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
               Back
             </Button>
             <Button variant="ghost" onClick={() => setStep(4)}>
-              Skip for now
+              {stripeStatus?.connected ? "Continue" : "Skip for now"}
             </Button>
-            <Button onClick={() => setStep(4)}>Continue</Button>
+            {stripeStatus?.connected && <Button onClick={() => setStep(4)}>Continue</Button>}
           </DialogFooter>
         </div>
       )}
