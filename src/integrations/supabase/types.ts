@@ -147,6 +147,11 @@ export type Database = {
           store_admin_url: string | null
           store_login_url: string | null
           store_type: string
+          stripe_account_id: string | null
+          stripe_charges_enabled: boolean
+          stripe_connected_at: string | null
+          stripe_details_submitted: boolean
+          stripe_payouts_enabled: boolean
           tenant_slug: string | null
           updated_at: string
           user_id: string
@@ -175,6 +180,11 @@ export type Database = {
           store_admin_url?: string | null
           store_login_url?: string | null
           store_type?: string
+          stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_connected_at?: string | null
+          stripe_details_submitted?: boolean
+          stripe_payouts_enabled?: boolean
           tenant_slug?: string | null
           updated_at?: string
           user_id: string
@@ -203,6 +213,11 @@ export type Database = {
           store_admin_url?: string | null
           store_login_url?: string | null
           store_type?: string
+          stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_connected_at?: string | null
+          stripe_details_submitted?: boolean
+          stripe_payouts_enabled?: boolean
           tenant_slug?: string | null
           updated_at?: string
           user_id?: string
