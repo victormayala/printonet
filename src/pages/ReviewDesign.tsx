@@ -39,8 +39,10 @@ interface DesignOutput {
   variant?: DesignVariant | null;
   /** Set by complete-session after layers JSON upload */
   designLayersUrl?: string;
+  design_layers_url?: string;
   /** First HTTPS production PNG — set by complete-session */
   printFileUrl?: string;
+  print_file_url?: string;
 }
 
 interface SessionRow {
@@ -195,17 +197,31 @@ export default function ReviewDesign() {
 
   const handleAddToCart = async () => {
     if (addedToCart || sendingToWoo) return;
+
+    let dout: Record<string, unknown> | null = null;
+    if (sessionId) {
+      const { data: fresh } = await supabase
+        .from("customizer_sessions")
+        .select("design_output")
+        .eq("id", sessionId)
+        .maybeSingle();
+      const raw = fresh?.design_output ?? session?.design_output;
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        dout = raw as Record<string, unknown>;
+      }
+    }
+
     const previewSide = sides.find((s) => s.previewPNG) || sides[0];
-    const printFromOutput = designOutput?.printFileUrl?.trim();
-    const layersFromOutput = designOutput?.designLayersUrl?.trim();
+    const printFromOutput = String(dout?.printFileUrl ?? dout?.print_file_url ?? "").trim();
+    const layersFromOutput = String(dout?.designLayersUrl ?? dout?.design_layers_url ?? "").trim();
     const printFromSide =
       sides.find((s) => typeof s.designPNG === "string" && /^https?:\/\//i.test(s.designPNG))?.designPNG ||
       sides.find((s) => s.designPNG)?.designPNG;
     const printFileUrl =
-      (printFromOutput && printFromOutput.length > 0 ? printFromOutput : null) ||
+      (printFromOutput.length > 0 ? printFromOutput : null) ||
       (typeof printFromSide === "string" && /^https?:\/\//i.test(printFromSide) ? printFromSide : null);
     const designLayersUrl =
-      layersFromOutput && layersFromOutput.length > 0 ? layersFromOutput : null;
+      layersFromOutput.length > 0 ? layersFromOutput : null;
     const priceInCents = Math.round(unitPrice * 100);
     const variantWithSize = [variantLabel, selectedSize].filter(Boolean).join(" · ");
 

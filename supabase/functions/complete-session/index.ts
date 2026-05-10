@@ -73,7 +73,17 @@ Deno.serve(async (req) => {
           : {}),
       };
 
-      if (typeof layersJson === "string" && layersJson.length > 0 && layersJson.length <= 12 * 1024 * 1024) {
+      const existingLayers = String(
+        mergedDesignOutput["designLayersUrl"] ??
+          mergedDesignOutput["design_layers_url"] ??
+          "",
+      ).trim();
+      if (
+        existingLayers === "" &&
+        typeof layersJson === "string" &&
+        layersJson.length > 0 &&
+        layersJson.length <= 12 * 1024 * 1024
+      ) {
         try {
           const path = `${sessionId}/layers_${Date.now()}.json`;
           const bytes = new TextEncoder().encode(layersJson);
@@ -81,6 +91,9 @@ Deno.serve(async (req) => {
             .from("design-exports")
             .upload(path, bytes, { contentType: "application/json", upsert: true });
 
+          if (upErr) {
+            console.warn("layersJson storage upload error:", upErr.message);
+          }
           if (upData && !upErr) {
             const publicUrl = supabase.storage
               .from("design-exports")

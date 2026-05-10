@@ -2555,6 +2555,24 @@ export default function DesignStudio({
         })),
       });
 
+      // Browser upload (works when storage policies allow the session). Edge function skips if URL already set.
+      try {
+        if (sessionId && layersJson.length > 0) {
+          const path = `${sessionId}/client_layers_${Date.now()}.json`;
+          const blob = new Blob([layersJson], { type: "application/json" });
+          const { data: upData, error: upErr } = await supabase.storage
+            .from("design-exports")
+            .upload(path, blob, { contentType: "application/json", upsert: true });
+          if (!upErr && upData) {
+            result.designLayersUrl = supabase.storage.from("design-exports").getPublicUrl(upData.path).data.publicUrl;
+          } else if (upErr) {
+            console.warn("Client design layers upload skipped:", upErr.message);
+          }
+        }
+      } catch (e) {
+        console.warn("Client design layers upload failed:", e);
+      }
+
       // If embed mode, complete session via edge function (handles uploads with service role)
       if (embedMode && sessionId) {
         // Build upload list for sides with data URLs that need server-side upload
@@ -2569,9 +2587,12 @@ export default function DesignStudio({
         });
 
         try {
-          const { data: completeData } = await supabase.functions.invoke("complete-session", {
+          const { data: completeData, error: completeErr } = await supabase.functions.invoke("complete-session", {
             body: { sessionId, designOutput: result, uploads, layersJson },
           });
+          if (completeErr) {
+            console.warn("complete-session error:", completeErr.message);
+          }
           // Update result with server-returned URLs
           if (completeData?.designOutput?.sides) {
             result.sides = completeData.designOutput.sides;
@@ -2596,9 +2617,12 @@ export default function DesignStudio({
       } else if (sessionId) {
         // Non-embed mode with session — save and navigate to review
         try {
-          const { data: completeData } = await supabase.functions.invoke("complete-session", {
+          const { data: completeData, error: completeErr } = await supabase.functions.invoke("complete-session", {
             body: { sessionId, designOutput: result, layersJson },
           });
+          if (completeErr) {
+            console.warn("complete-session error:", completeErr.message);
+          }
           const dout = completeData?.designOutput as { designLayersUrl?: string; printFileUrl?: string } | undefined;
           if (dout?.designLayersUrl) result.designLayersUrl = dout.designLayersUrl;
           if (dout?.printFileUrl) result.printFileUrl = dout.printFileUrl;

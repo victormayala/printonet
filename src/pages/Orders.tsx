@@ -35,7 +35,9 @@ type LineItem = {
   quantity?: number;
   sku?: string;
   print_file_url?: string;
+  printFileUrl?: string;
   design_layers_url?: string;
+  designLayersUrl?: string;
   design_preview_url?: string;
   customizer_design_url?: string;
   customizer_session_id?: string;
@@ -45,6 +47,14 @@ function parseLineItems(row: WooOrderRow): LineItem[] {
   const raw = row.line_items;
   if (!Array.isArray(raw)) return [];
   return raw as LineItem[];
+}
+
+function lineDesignLayersUrl(li: LineItem): string {
+  return String(li.design_layers_url || li.designLayersUrl || "").trim();
+}
+
+function linePrintFileUrl(li: LineItem): string {
+  return String(li.print_file_url || li.printFileUrl || "").trim();
 }
 
 /** Loose UUID check for session ids stored on Woo line meta */
@@ -299,8 +309,8 @@ export default function Orders() {
               {filtered.map((row) => {
                 const lines = parseLineItems(row);
                 const filesCount = lines.filter((l) => {
-                  const p = (l.print_file_url || "").trim();
-                  const d = (l.design_layers_url || "").trim();
+                  const p = linePrintFileUrl(l);
+                  const d = lineDesignLayersUrl(l);
                   return p !== "" || d !== "";
                 }).length;
                 const sidCount = orderSessionIds(row).length;
@@ -599,9 +609,9 @@ export default function Orders() {
                         </div>
                       )}
                       <div className="flex flex-wrap gap-2">
-                        {li.print_file_url ? (
+                        {linePrintFileUrl(li) ? (
                           <Button variant="secondary" size="sm" asChild>
-                            <a href={li.print_file_url} target="_blank" rel="noopener noreferrer">
+                            <a href={linePrintFileUrl(li)} target="_blank" rel="noopener noreferrer">
                               <Download className="h-4 w-4 mr-1" />
                               Print file
                             </a>
@@ -609,9 +619,9 @@ export default function Orders() {
                         ) : (
                           <span className="text-muted-foreground text-xs">No print file URL</span>
                         )}
-                        {li.design_layers_url ? (
+                        {lineDesignLayersUrl(li) ? (
                           <Button variant="secondary" size="sm" asChild>
-                            <a href={li.design_layers_url} target="_blank" rel="noopener noreferrer">
+                            <a href={lineDesignLayersUrl(li)} target="_blank" rel="noopener noreferrer">
                               <Layers className="h-4 w-4 mr-1" />
                               Design layers
                             </a>
