@@ -151,6 +151,8 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
     </div>
   );
 }
+
+function LogoField({
   label,
   value,
   existingUrl,
