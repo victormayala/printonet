@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     // 3. Build Stripe Checkout Session on the connected account.
     const params: Record<string, string> = {
       mode: "payment",
-      ui_mode: "embedded",
+      ui_mode: "embedded_page",
     };
 
     // Return URL points back at the MP so we can verify + complete the Woo order.
