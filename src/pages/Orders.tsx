@@ -1,3 +1,4 @@
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -244,7 +245,7 @@ export default function Orders() {
     });
   }, [orders, search, statusFilter, sessionById]);
 
-  const statusValues = Array.from(
+  const statusValues: string[] = Array.from(
     new Set(orders.map((o) => (o.order_status || "").trim()).filter(Boolean)),
   ).sort();
 
