@@ -836,8 +836,50 @@ type SlugCheck = {
   suggestions?: string[];
 };
 
+function StepIndicator({ step, total, labels }: { step: number; total: number; labels: string[] }) {
+  return (
+    <div className="flex items-center justify-between gap-2 mb-2">
+      {labels.map((label, idx) => {
+        const n = idx + 1;
+        const isDone = n < step;
+        const isCurrent = n === step;
+        return (
+          <div key={label} className="flex items-center gap-2 flex-1 min-w-0">
+            <div
+              className={
+                "h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold border " +
+                (isDone
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : isCurrent
+                    ? "bg-primary/10 text-primary border-primary"
+                    : "bg-muted text-muted-foreground border-border")
+              }
+            >
+              {isDone ? <Check className="h-3.5 w-3.5" /> : n}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                className={
+                  "text-xs font-medium truncate " +
+                  (isCurrent || isDone ? "text-foreground" : "text-muted-foreground")
+                }
+              >
+                {label}
+              </div>
+            </div>
+            {idx < total - 1 && (
+              <div className={"h-px flex-1 " + (isDone ? "bg-primary" : "bg-border")} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth();
+  const [step, setStep] = useState(1);
   const [values, setValues] = useState<FormValues>({
     name: "",
     contact_email: "",
@@ -850,10 +892,13 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const [favicon, setFavicon] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Slug-availability state
   const [slugCheck, setSlugCheck] = useState<SlugCheck | null>(null);
   const [chosenSlug, setChosenSlug] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+
+  const [provisionedSiteUrl, setProvisionedSiteUrl] = useState<string | null>(null);
+
+  const STEP_LABELS = ["Create Store", "Choose Domain", "Connect Stripe", "Store Ready"];
 
   const callSlugCheck = async (payload: { store_name?: string; tenant_slug?: string }) => {
     setChecking(true);
@@ -882,23 +927,11 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
 
   const provision = useMutation({
     mutationFn: async () => {
-      const parsed = formSchema.safeParse(values);
-      if (!parsed.success) {
-        const fe: Record<string, string> = {};
-        for (const [k, v] of Object.entries(parsed.error.flatten().fieldErrors)) {
-          if (v?.[0]) fe[k] = v[0];
-        }
-        setErrors(fe);
-        throw new Error("Please fix the highlighted fields");
-      }
-      setErrors({});
       if (!user?.id) throw new Error("Not signed in");
-
-      // Step 1: ensure we have a checked, available slug.
       let finalSlug = chosenSlug;
       if (!finalSlug) {
         const { data, error } = await supabase.functions.invoke("tenant-check-slug", {
-          body: { store_name: parsed.data.name },
+          body: { store_name: values.name },
         });
         if (error) throw error;
         const resp = (data as { response?: SlugCheck })?.response;
@@ -920,20 +953,19 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
 
       const { data, error } = await supabase.functions.invoke("provision-corporate-store", {
         body: {
-          ...parsed.data,
-          custom_domain: parsed.data.custom_domain || null,
+          ...values,
+          custom_domain: values.custom_domain || null,
           logo_url,
           favicon_url,
           tenant_slug: finalSlug,
-          request_id: tempId, // idempotent retries
+          request_id: tempId,
         },
       });
       if (error) throw error;
-      return data;
+      return data as { site_url?: string };
     },
-    onSuccess: () => {
-      toast({ title: "Store provisioning started", description: "Your branded store is being prepared — this can take 1–2 minutes." });
-      onCreated();
+    onSuccess: (data) => {
+      if (data?.site_url) setProvisionedSiteUrl(data.site_url);
     },
     onError: (e: Error) => {
       toast({ title: "Could not create store", description: e.message, variant: "destructive" });
@@ -943,10 +975,46 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) => {
     setValues((p) => ({ ...p, [k]: v }));
     if (k === "name") {
-      // Invalidate slug check whenever the name changes.
       setSlugCheck(null);
       setChosenSlug(null);
     }
+  };
+
+  const validateStep1 = () => {
+    const parsed = formSchema.safeParse(values);
+    if (!parsed.success) {
+      const fe: Record<string, string> = {};
+      for (const [k, v] of Object.entries(parsed.error.flatten().fieldErrors)) {
+        if (v?.[0]) fe[k] = v[0];
+      }
+      setErrors(fe);
+      return false;
+    }
+    setErrors({});
+    return true;
+  };
+
+  const goNextFromStep1 = () => {
+    if (!validateStep1()) return;
+    setStep(2);
+  };
+
+  const goNextFromStep2 = () => {
+    if (!chosenSlug) {
+      toast({ title: "Please confirm a site address", variant: "destructive" });
+      return;
+    }
+    // Fire-and-forget provisioning so Stripe step can run in parallel
+    provision.mutate();
+    setStep(3);
+  };
+
+  const finishOnboarding = () => {
+    toast({
+      title: "Store provisioning started",
+      description: "Your branded store is being prepared — this can take 1–2 minutes.",
+    });
+    onCreated();
   };
 
   const canCheck = values.name.trim().length >= 2 && !checking;
@@ -954,96 +1022,204 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>New corporate store</DialogTitle>
+        <DialogTitle>New store</DialogTitle>
         <DialogDescription>
-          Printonet provisions a fresh, branded WooCommerce store and pushes your colors, fonts, and logos automatically.
+          A clean, guided flow to launch a Printonet-branded WooCommerce store.
         </DialogDescription>
       </DialogHeader>
 
-      <StoreFormFields
-        values={values}
-        setField={setField}
-        errors={errors}
-        logo={logo}
-        setLogo={setLogo}
-        favicon={favicon}
-        setFavicon={setFavicon}
-      />
+      <StepIndicator step={step} total={4} labels={STEP_LABELS} />
 
-      {/* Slug availability */}
-      <div className="rounded-md border p-3 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-sm font-medium">Site address</div>
-            <div className="text-xs text-muted-foreground">
-              We'll generate a URL-friendly slug from your store name.
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!canCheck}
-            onClick={() => callSlugCheck({ store_name: values.name })}
-          >
-            {checking && <Loader2 className="h-3 w-3 animate-spin" />}
-            Check availability
-          </Button>
-        </div>
+      {step === 1 && (
+        <>
+          <StoreFormFields
+            values={values}
+            setField={setField}
+            errors={errors}
+            logo={logo}
+            setLogo={setLogo}
+            favicon={favicon}
+            setFavicon={setFavicon}
+            hideCustomDomain
+          />
+          <DialogFooter>
+            <Button onClick={goNextFromStep1}>Continue</Button>
+          </DialogFooter>
+        </>
+      )}
 
-        {slugCheck && (
-          <div className="space-y-2">
-            {slugCheck.available && chosenSlug ? (
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                <span>
-                  <span className="font-medium">{chosenSlug}</span> is available
-                </span>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>
-                    <span className="font-medium">{slugCheck.tenant_slug}</span> is taken
-                  </span>
+      {step === 2 && (
+        <div className="space-y-5 py-2">
+          <div className="rounded-md border p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">Site address</div>
+                <div className="text-xs text-muted-foreground">
+                  We'll generate a URL-friendly slug from your store name.
                 </div>
-                {slugCheck.suggestions && slugCheck.suggestions.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Pick a suggestion:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {slugCheck.suggestions.map((s) => {
-                        const selected = chosenSlug === s;
-                        return (
-                          <Button
-                            key={s}
-                            type="button"
-                            size="sm"
-                            variant={selected ? "default" : "outline"}
-                            onClick={() => callSlugCheck({ tenant_slug: s })}
-                          >
-                            {s}
-                          </Button>
-                        );
-                      })}
-                    </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canCheck}
+                onClick={() => callSlugCheck({ store_name: values.name })}
+              >
+                {checking && <Loader2 className="h-3 w-3 animate-spin" />}
+                Check availability
+              </Button>
+            </div>
+
+            {slugCheck && (
+              <div className="space-y-2">
+                {slugCheck.available && chosenSlug ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span>
+                      <span className="font-medium">{chosenSlug}</span> is available
+                    </span>
                   </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>
+                        <span className="font-medium">{slugCheck.tenant_slug}</span> is taken
+                      </span>
+                    </div>
+                    {slugCheck.suggestions && slugCheck.suggestions.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-muted-foreground">Pick a suggestion:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {slugCheck.suggestions.map((s) => {
+                            const selected = chosenSlug === s;
+                            return (
+                              <Button
+                                key={s}
+                                type="button"
+                                size="sm"
+                                variant={selected ? "default" : "outline"}
+                                onClick={() => callSlugCheck({ tenant_slug: s })}
+                              >
+                                {s}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-              </>
+              </div>
             )}
           </div>
-        )}
-      </div>
 
-      <DialogFooter>
-        <Button
-          onClick={() => provision.mutate()}
-          disabled={provision.isPending || checking}
-        >
-          {provision.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          Provision store
-        </Button>
-      </DialogFooter>
+          <div className="space-y-1">
+            <Label htmlFor="domain">Custom domain (optional)</Label>
+            <Input
+              id="domain"
+              value={values.custom_domain}
+              onChange={(e) => setField("custom_domain", e.target.value)}
+              placeholder="merch.pepsico.com"
+            />
+            <p className="text-xs text-muted-foreground">
+              Bring your own domain, or skip and use the site address above.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setStep(1)}>
+              Back
+            </Button>
+            <Button onClick={goNextFromStep2} disabled={!chosenSlug}>
+              Continue
+            </Button>
+          </DialogFooter>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="space-y-5 py-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Connect Stripe</CardTitle>
+              <CardDescription>
+                Connect Stripe to accept payments on your new store. You can skip this
+                step and connect later from Settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button asChild>
+                <Link to="/profile?section=payments">
+                  <ExternalLink className="h-4 w-4" /> Connect Stripe
+                </Link>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Your store is being provisioned in the background while you set this up.
+              </p>
+            </CardContent>
+          </Card>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setStep(2)} disabled={provision.isPending}>
+              Back
+            </Button>
+            <Button variant="ghost" onClick={() => setStep(4)}>
+              Skip for now
+            </Button>
+            <Button onClick={() => setStep(4)}>Continue</Button>
+          </DialogFooter>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="space-y-5 py-2">
+          <div className="rounded-md border p-6 text-center space-y-3">
+            <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              {provision.isPending ? (
+                <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              ) : provision.isError ? (
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              ) : (
+                <CheckCircle2 className="h-6 w-6 text-primary" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">
+                {provision.isPending
+                  ? "Setting up your store…"
+                  : provision.isError
+                    ? "Something went wrong"
+                    : "Your store is ready!"}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {provision.isPending
+                  ? "This usually takes 1–2 minutes. You can close this dialog — we'll keep working."
+                  : provision.isError
+                    ? provision.error?.message ?? "Provisioning failed."
+                    : provisionedSiteUrl
+                      ? "Your branded WooCommerce store is live."
+                      : "Your store is being finalized — it will appear in your dashboard shortly."}
+              </p>
+            </div>
+            {provisionedSiteUrl && !provision.isPending && (
+              <a
+                href={provisionedSiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                {provisionedSiteUrl.replace(/^https?:\/\//, "")}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={finishOnboarding}>Go to dashboard</Button>
+          </DialogFooter>
+        </div>
+      )}
     </DialogContent>
   );
 }
