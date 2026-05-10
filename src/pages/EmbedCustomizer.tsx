@@ -232,7 +232,7 @@ export default function EmbedCustomizer() {
         sessionId={sessionId}
         embedProductData={mergedEmbedProduct!}
         brandConfig={effectiveBrand}
-        initialDesignOutput={initialDesignOutput}
+        initialDesignOutput={initialDesignOutput as any}
       />
     </BrandConfigContext.Provider>
   );
