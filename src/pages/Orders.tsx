@@ -18,7 +18,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Search, Download, Eye, Package, Calendar,
-  Filter, ExternalLink, Palette,
+  Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -368,26 +368,111 @@ export default function Orders() {
               </span>
             </DialogTitle>
           </DialogHeader>
-          {selectedOrder && (
+          {selectedOrder && (() => {
+            const payload = (selectedOrder.payload || {}) as Record<string, any>;
+            const amountTotal = typeof payload.amount_total === "number" ? payload.amount_total : null;
+            const customerEmail = payload.customer_email || payload?.tenant_order?.customer_email || null;
+            const stripeSession = payload.stripe_checkout_session_id || null;
+            const stripeAccount = payload.stripe_account_id || null;
+            const sessionIds = orderSessionIds(selectedOrder);
+            const wooViewUrl = `${(selectedOrder.store_url || "").replace(/\/+$/, "")}/wp-admin/post.php?post=${selectedOrder.order_id}&action=edit`;
+
+            const copyToClipboard = (text: string, label: string) => {
+              navigator.clipboard.writeText(text).then(() => {
+                toast({ title: `${label} copied`, description: text });
+              });
+            };
+
+            return (
             <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <span className="text-muted-foreground">Store URL:</span>{" "}
-                  <a
-                    href={selectedOrder.store_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary inline-flex items-center gap-1 break-all"
-                  >
-                    {selectedOrder.store_url}
-                    <ExternalLink className="h-3 w-3 shrink-0" />
-                  </a>
+              {/* Payment summary */}
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <div className="font-medium text-foreground flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Payment summary
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Currency:</span>{" "}
-                  {selectedOrder.currency || "—"}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Total:</span>{" "}
+                    <span className="font-medium text-foreground">
+                      {amountTotal != null
+                        ? `${(amountTotal / 100).toFixed(2)} ${(selectedOrder.currency || "USD").toUpperCase()}`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>{" "}
+                    <Badge variant="secondary" className="text-[10px]">{selectedOrder.order_status || "—"}</Badge>
+                  </div>
+                  {customerEmail && (
+                    <div className="col-span-2 flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-muted-foreground" />
+                      <a href={`mailto:${customerEmail}`} className="text-primary break-all">{customerEmail}</a>
+                    </div>
+                  )}
+                  {stripeSession && (
+                    <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
+                      {stripeSession}
+                    </div>
+                  )}
+                  {stripeAccount && (
+                    <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
+                      Connected acct: {stripeAccount}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={selectedOrder.store_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Store
+                    </a>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={wooViewUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Open in Woo admin
+                    </a>
+                  </Button>
                 </div>
               </div>
+
+              {/* Print URLs — one per linked customizer session */}
+              {sessionIds.length > 0 && (
+                <div className="rounded-md border bg-primary/5 p-3 space-y-2">
+                  <div className="font-medium text-foreground flex items-center gap-2">
+                    <Printer className="h-4 w-4" />
+                    Print URLs
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Send these to your print shop. Each URL opens the printer-ready view with high-res assets and specs.
+                  </p>
+                  <div className="space-y-2">
+                    {sessionIds.map((sid) => {
+                      const printUrl = `${window.location.origin}/print/${sid}`;
+                      return (
+                        <div key={sid} className="flex flex-wrap items-center gap-2 rounded border bg-background p-2">
+                          <code className="flex-1 text-xs font-mono break-all">{printUrl}</code>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(printUrl, "Print URL")}
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy
+                          </Button>
+                          <Button variant="default" size="sm" asChild>
+                            <a href={printUrl} target="_blank" rel="noopener noreferrer">
+                              <Printer className="h-3 w-3 mr-1" />
+                              Open
+                            </a>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Customizer sessions referenced on this paid order */}
               {(() => {
@@ -551,7 +636,9 @@ export default function Orders() {
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
+
         </DialogContent>
       </Dialog>
     </div>
