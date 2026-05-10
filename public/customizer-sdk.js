@@ -32,7 +32,7 @@
 (function (root) {
   'use strict';
 
-  var _config = { apiUrl: '', baseUrl: '', cartUrl: '', storeUrl: '' };
+  var _config = { apiUrl: '', baseUrl: '', cartUrl: '', storeUrl: '', woocommerceSiteUrl: '' };
   var _overlay = null;
   var _iframe = null;
   var _callbacks = {};
@@ -42,6 +42,28 @@
   var _wcAttributes = null; // { color: 'red', size: 'M' } -> attribute_pa_color etc.
   var _shopifyVariantId = null;
   var _summaryOverlay = null;
+  /** After design-complete we close the iframe and remove _handleMessage; review tab posts here — keep listening on the storefront window. */
+  var _reviewTabCartListenerAttached = false;
+
+  function _handleReviewAddToCartPayload(payload) {
+    _addToCart(payload, function () {
+      var evt = new CustomEvent('customizer:addtocart', { detail: payload });
+      document.dispatchEvent(evt);
+      _callbacks.onComplete(payload);
+    });
+  }
+
+  function _attachReviewTabCartListener() {
+    if (_reviewTabCartListenerAttached) return;
+    _reviewTabCartListenerAttached = true;
+    window.addEventListener('message', _handleReviewTabCartMessage);
+  }
+
+  function _handleReviewTabCartMessage(event) {
+    var data = event.data;
+    if (!data || data.source !== 'customizer-studio' || data.type !== 'review-add-to-cart') return;
+    _handleReviewAddToCartPayload(data.payload);
+  }
 
   // Build a URL for a store-relative path. If storeUrl is configured we hit
   // the tenant store domain directly (e.g. https://royal.stores.printonet.com),
@@ -56,6 +78,7 @@
     _config.baseUrl = options.baseUrl || '';
     _config.cartUrl = options.cartUrl || '';
     _config.storeUrl = options.storeUrl || '';
+    _config.woocommerceSiteUrl = options.woocommerceSiteUrl || '';
   }
 
   function open(options) {
@@ -74,13 +97,23 @@
     if (options.storeUrl) _config.storeUrl = options.storeUrl;
 
     var url = _config.apiUrl + '/create-session';
+    var productPayload = Object.assign({}, options.product);
+    if (options.wcVariationId != null && options.wcVariationId !== '') {
+      productPayload.wc_variation_id = options.wcVariationId;
+    }
+    if (options.wcAttributes && typeof options.wcAttributes === 'object') {
+      productPayload.wc_attributes = options.wcAttributes;
+    }
+
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        product: options.product,
+        product: productPayload,
         external_ref: options.externalRef || null,
         user_id: options.userId || null,
+        woocommerce_site_url: options.woocommerceSiteUrl || _config.woocommerceSiteUrl || null,
+        store_id: options.storeId || null,
       }),
     })
       .then(function (res) { return res.json(); })
@@ -104,6 +137,15 @@
           if (options.brand.borderRadius !== undefined) params.set('brandRadius', String(options.brand.borderRadius));
           var qs = params.toString();
           if (qs) embedUrl += (embedUrl.indexOf('?') >= 0 ? '&' : '?') + qs;
+        }
+
+        try {
+          if (productPayload.wc_attributes && typeof productPayload.wc_attributes === 'object') {
+            var sep = embedUrl.indexOf('?') >= 0 ? '&' : '?';
+            embedUrl += sep + 'wcAttributes=' + encodeURIComponent(JSON.stringify(productPayload.wc_attributes));
+          }
+        } catch (wcQsErr) {
+          console.warn('[CustomizerStudio] wcAttributes query failed:', wcQsErr);
         }
 
         _showIframe(embedUrl);
@@ -151,19 +193,23 @@
         : ('/review/' + sid);
       var storeReturnUrl = encodeURIComponent(window.location.href);
       var reviewUrl = reviewBase + '?returnUrl=' + storeReturnUrl;
+      reviewUrl += '&storeOrigin=' + encodeURIComponent(window.location.origin);
       if (_wcProductId) reviewUrl += '&wcProductId=' + encodeURIComponent(_wcProductId);
+      if (_wcVariationId) reviewUrl += '&wcVariationId=' + encodeURIComponent(String(_wcVariationId));
+      if (_wcAttributes && typeof _wcAttributes === 'object') {
+        try {
+          reviewUrl += '&wcAttributes=' + encodeURIComponent(JSON.stringify(_wcAttributes));
+        } catch (e) { /* ignore */ }
+      }
       window.open(reviewUrl, '_blank');
+      _attachReviewTabCartListener();
       _callbacks.onComplete(data.payload);
     } else if (data.type === 'cart-updated') {
       // Update floating cart widget count
       _updateCartWidget(data.payload && data.payload.totalItems || 0);
     } else if (data.type === 'review-add-to-cart') {
-      // Fired from the hosted review page
-      _addToCart(data.payload, function (success) {
-        var evt = new CustomEvent('customizer:addtocart', { detail: data.payload });
-        document.dispatchEvent(evt);
-        _callbacks.onComplete(data.payload);
-      });
+      // Fired from hosted review while iframe overlay is still active (rare)
+      _handleReviewAddToCartPayload(data.payload);
     } else if (data.type === 'design-cancel') {
       _callbacks.onCancel();
       _closeIframe();
@@ -362,20 +408,24 @@
       return;
     }
 
-    // WooCommerce native cart
-    if (_wcProductId) {
+    // WooCommerce native cart (IDs may come from SDK open() or from review page postMessage payload)
+    var wcPid = _wcProductId || (payload && payload.wcProductId) || null;
+    var wcVid = _wcVariationId || (payload && payload.wcVariationId) || null;
+    var wcAttr = _wcAttributes || (payload && payload.wcAttributes) || null;
+
+    if (wcPid) {
       var formData = new FormData();
-      formData.append('product_id', _wcProductId);
-      formData.append('quantity', '1');
+      formData.append('product_id', String(wcPid));
+      formData.append('quantity', String((payload && payload.quantity) || 1));
       // Variable products: WC requires variation_id + attribute_* fields
-      if (_wcVariationId) {
-        formData.append('variation_id', String(_wcVariationId));
+      if (wcVid) {
+        formData.append('variation_id', String(wcVid));
       }
-      if (_wcAttributes && typeof _wcAttributes === 'object') {
-        Object.keys(_wcAttributes).forEach(function (k) {
+      if (wcAttr && typeof wcAttr === 'object') {
+        Object.keys(wcAttr).forEach(function (k) {
           // Accept both 'color' and 'attribute_pa_color' style keys.
           var key = k.indexOf('attribute_') === 0 ? k : 'attribute_pa_' + k;
-          formData.append(key, String(_wcAttributes[k]));
+          formData.append(key, String(wcAttr[k]));
         });
       }
       if (payload.sessionId) formData.append('customizer_session_id', payload.sessionId);
@@ -589,21 +639,25 @@
   }
 
   function _syncToWooCommerce(newItem) {
-    if (!newItem || !newItem.wcProductId || !newItem.sessionId) return;
+    if (!newItem || !newItem.sessionId) return;
+    var syncPid = newItem.wcProductId || _wcProductId;
+    if (!syncPid) return;
 
     var synced = _getSyncedSessions();
     if (synced.indexOf(newItem.sessionId) !== -1) return; // already synced
 
     var formData = new FormData();
-    formData.append('product_id', newItem.wcProductId);
+    formData.append('product_id', String(syncPid));
     formData.append('quantity', String(newItem.quantity || 1));
-    if (newItem.wcVariationId) {
-      formData.append('variation_id', String(newItem.wcVariationId));
+    var syncVid = newItem.wcVariationId || _wcVariationId;
+    if (syncVid) {
+      formData.append('variation_id', String(syncVid));
     }
-    if (newItem.wcAttributes && typeof newItem.wcAttributes === 'object') {
-      Object.keys(newItem.wcAttributes).forEach(function (k) {
+    var syncAttr = newItem.wcAttributes || _wcAttributes;
+    if (syncAttr && typeof syncAttr === 'object') {
+      Object.keys(syncAttr).forEach(function (k) {
         var key = k.indexOf('attribute_') === 0 ? k : 'attribute_pa_' + k;
-        formData.append(key, String(newItem.wcAttributes[k]));
+        formData.append(key, String(syncAttr[k]));
       });
     }
     formData.append('customizer_session_id', newItem.sessionId);

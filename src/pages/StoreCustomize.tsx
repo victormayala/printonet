@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export default function StoreCustomize() {
   const { tenantSlug, productId } = useParams<{ tenantSlug: string; productId: string }>();
+  const [searchParams] = useSearchParams();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +48,28 @@ export default function StoreCustomize() {
           .maybeSingle();
         if (pErr || !product) throw new Error("Product not found");
 
+        // Optional Woo PDP context forwarded in URL by the storefront link/script.
+        const rawAttrs = searchParams.get("wcAttributes");
+        const rawVariationId = searchParams.get("wcVariationId");
+        let wcAttrs: Record<string, string> | undefined;
+        if (rawAttrs) {
+          try {
+            const parsed = JSON.parse(rawAttrs) as unknown;
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              wcAttrs = parsed as Record<string, string>;
+            }
+          } catch {
+            try {
+              const parsed = JSON.parse(decodeURIComponent(rawAttrs)) as unknown;
+              if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                wcAttrs = parsed as Record<string, string>;
+              }
+            } catch {
+              /* ignore malformed wcAttributes */
+            }
+          }
+        }
+
         // 4. Build product_data shape expected by EmbedCustomizer
         const productData = {
           name: product.name,
@@ -59,6 +82,8 @@ export default function StoreCustomize() {
           variants: Array.isArray(product.variants) ? product.variants : [],
           print_areas: product.print_areas ?? undefined,
           product_id: product.id,
+          wc_attributes: wcAttrs ?? undefined,
+          wc_variation_id: rawVariationId ?? undefined,
         };
 
         // 5. Create session attributed to the store. Inherit owner user_id so
@@ -84,7 +109,7 @@ export default function StoreCustomize() {
     return () => {
       cancelled = true;
     };
-  }, [tenantSlug, productId]);
+  }, [tenantSlug, productId, searchParams]);
 
   if (error) {
     return (

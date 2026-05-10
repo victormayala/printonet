@@ -44,6 +44,8 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const ORDERS_CLEAR_FLAG = "printonet_orders_cleared_v1";
+  const ORDERS_CUTOFF_KEY = "printonet_orders_cutoff_iso_v1";
 
   function copyPrintLink(sessionId: string) {
     const url = `${window.location.origin}/print/${sessionId}`;
@@ -54,7 +56,18 @@ export default function Orders() {
   }
 
   useEffect(() => {
-    if (user) fetchSessions();
+    if (!user) return;
+    try {
+      const hasCutoff = !!localStorage.getItem(ORDERS_CUTOFF_KEY);
+      if (!hasCutoff) {
+        localStorage.setItem(ORDERS_CUTOFF_KEY, new Date().toISOString());
+        localStorage.setItem(ORDERS_CLEAR_FLAG, "1");
+        toast({ title: "Old test orders hidden" });
+      }
+    } catch {
+      /* ignore localStorage availability edge cases */
+    }
+    void fetchSessions();
   }, [user]);
 
   async function fetchSessions() {
@@ -68,7 +81,23 @@ export default function Orders() {
     if (error) {
       toast({ title: "Error loading orders", description: error.message, variant: "destructive" });
     } else {
-      setSessions((data as Session[]) || []);
+      const all = (data as Session[]) || [];
+      let cutoffIso: string | null = null;
+      try {
+        cutoffIso = localStorage.getItem(ORDERS_CUTOFF_KEY);
+      } catch {
+        cutoffIso = null;
+      }
+      if (cutoffIso) {
+        const cutoffMs = Date.parse(cutoffIso);
+        const filteredByCutoff = all.filter((row) => {
+          const rowMs = Date.parse(row.created_at);
+          return Number.isFinite(rowMs) && rowMs >= cutoffMs;
+        });
+        setSessions(filteredByCutoff);
+      } else {
+        setSessions(all);
+      }
     }
     setLoading(false);
   }

@@ -1,8 +1,7 @@
-import { Package, Wand2, User, LogOut, Home, ShoppingBag, ShoppingCart, Truck, Building2 } from "lucide-react";
+import { useEffect } from "react";
+import { Package, User, LogOut, Home, ShoppingBag, Truck, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/hooks/useCart";
-import { Badge } from "@/components/ui/badge";
 import logoIcon from "@/assets/printonet-logo-sidebar.svg";
 import logoFull from "@/assets/printonet-logo-sidebar-full.svg";
 
@@ -23,14 +22,22 @@ const navItems = [
   { title: "My Stores", url: "/corporate-stores", icon: Building2 },
   { title: "Suppliers", url: "/suppliers", icon: Truck },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
-  { title: "Customizer", url: "/customizer", icon: Wand2 },
 ];
 
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { signOut } = useAuth();
-  const { totalItems } = useCart();
+
+  useEffect(() => {
+    try {
+      // Platform dashboard no longer uses hosted cart UX.
+      localStorage.removeItem("customizer_cart");
+      localStorage.removeItem("customizer_synced_sessions");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   return (
     <Sidebar collapsible="icon">
@@ -52,7 +59,7 @@ export function DashboardSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url !== "/storefront" && item.url !== "/customizer"}
+                      end
                       className="hover:bg-sidebar-accent"
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                     >
@@ -69,21 +76,6 @@ export function DashboardSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink to="/cart" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
-                <div className="relative">
-                  <ShoppingCart className="h-4 w-4 shrink-0" />
-                  {totalItems > 0 && (
-                    <Badge className="absolute -top-2 -right-3 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center">
-                      {totalItems}
-                    </Badge>
-                  )}
-                </div>
-                {!collapsed && <span>Cart</span>}
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink to="/" className="hover:bg-sidebar-accent" activeClassName="">

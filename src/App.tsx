@@ -9,7 +9,6 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import DesignStudio from "./pages/DesignStudio";
 import EmbedCustomizer from "./pages/EmbedCustomizer";
 import Demo from "./pages/Demo";
-import Customizer from "./pages/Customizer";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import Auth from "./pages/Auth";
@@ -71,12 +70,11 @@ const App = () => (
             <Route path="/corporate-stores/:id" element={<DashboardRoute><CorporateStoreDetails /></DashboardRoute>} />
             <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
-            <Route path="/customizer" element={<DashboardRoute><Customizer initialTab="brand" /></DashboardRoute>} />
-            <Route path="/customizer/brand" element={<DashboardRoute><Customizer initialTab="brand" /></DashboardRoute>} />
-            <Route path="/customizer/developers" element={<DashboardRoute><Customizer initialTab="developers" /></DashboardRoute>} />
-            {/* Legacy redirects */}
-            <Route path="/brand-settings" element={<Navigate to="/customizer/brand" replace />} />
-            <Route path="/developers" element={<Navigate to="/customizer/developers" replace />} />
+            <Route path="/customizer" element={<Navigate to="/corporate-stores" replace />} />
+            <Route path="/customizer/brand" element={<Navigate to="/corporate-stores" replace />} />
+            <Route path="/customizer/developers" element={<Navigate to="/corporate-stores" replace />} />
+            <Route path="/brand-settings" element={<Navigate to="/corporate-stores" replace />} />
+            <Route path="/developers" element={<Navigate to="/corporate-stores" replace />} />
             <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

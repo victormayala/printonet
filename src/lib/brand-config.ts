@@ -27,6 +27,18 @@ export const DEFAULT_BRAND_CONFIG: BrandConfig = {
   borderRadius: 12,
 };
 
+/** Ensure hex is #RRGGBB for CSS var generation */
+export function normalizeHexColor(hex: string | null | undefined, fallback: string): string {
+  if (!hex || typeof hex !== "string") return fallback;
+  let h = hex.trim();
+  if (!h.startsWith("#")) h = `#${h}`;
+  if (/^#[0-9a-fA-F]{6}$/.test(h)) return h.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(h)) {
+    return `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}`.toLowerCase();
+  }
+  return fallback;
+}
+
 export const BrandConfigContext = createContext<BrandConfig>(DEFAULT_BRAND_CONFIG);
 
 export function useBrandConfig() {

@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: Printonet
- * Plugin URI:  https://app.printonet.com
+ * Plugin URI:  https://platform.printonet.com
  * Description: Receives store branding (name, color, font, logo, favicon) from the Printonet dashboard and applies it to this WordPress site. Exposes /wp-json/printonet/v1/health and /wp-json/printonet/v1/branding.
  * Version:     1.5.0
  * Author:      Printonet
- * Author URI:  https://app.printonet.com
+ * Author URI:  https://platform.printonet.com
  * License:     GPL-2.0-or-later
  * Text Domain: printonet
  *
@@ -408,7 +408,7 @@ body, button, input, select, optgroup, textarea, .wp-block-post-title, h1, h2, h
 /* -------------------------------------------------------------------------
  * CORS: allow cross-origin add-to-cart from the customizer SDK so
  * cookie-based cart sessions persist when the SDK is hosted on
- * customizerstudio.com / app.printonet.com and the store lives on a
+ * customizerstudio.com / platform.printonet.com and the store lives on a
  * tenant subdomain.
  * ------------------------------------------------------------------------- */
 
@@ -416,7 +416,7 @@ add_action( 'init', function () {
 	if ( empty( $_SERVER['HTTP_ORIGIN'] ) ) { return; }
 	$origin = (string) $_SERVER['HTTP_ORIGIN'];
 	$allowed = [
-		'https://app.printonet.com',
+		'https://platform.printonet.com',
 		'https://customizerstudio.com',
 		'https://printonet.lovable.app',
 	];

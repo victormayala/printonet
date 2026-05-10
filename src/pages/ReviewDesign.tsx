@@ -3,6 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
+import { transferHostedCartToWoo } from "@/lib/wooCart";
+import {
+  extractWooColorSelection,
+  matchVariantFromWooColor,
+  type WooMatchVariant,
+} from "@/lib/woo-variant-match";
+import { toast } from "@/hooks/use-toast";
 import { CheckCircle, ArrowLeft, Minus, Plus, ShoppingCart } from "lucide-react";
 
 interface DesignSide {
@@ -50,11 +57,16 @@ export default function ReviewDesign() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [sendingToWoo, setSendingToWoo] = useState(false);
+  const [transferDebug, setTransferDebug] = useState("idle");
   const [basePriceFallback, setBasePriceFallback] = useState<number>(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const returnUrl = searchParams.get("returnUrl") || "";
+  const storeOriginParam = searchParams.get("storeOrigin") || "";
   const wcProductId = searchParams.get("wcProductId") || "";
+  const wcVariationId = searchParams.get("wcVariationId") || "";
+  const wcAttributesParam = searchParams.get("wcAttributes") || "";
 
   useEffect(() => {
     if (!sessionId) return;
@@ -89,7 +101,22 @@ export default function ReviewDesign() {
   }, [sessionId]);
 
   const designOutput = session?.design_output as DesignOutput | null;
-  const variant = designOutput?.variant ?? null;
+
+  const variant = useMemo((): DesignVariant | null => {
+    const fromOutput = designOutput?.variant ?? null;
+    if (fromOutput && (fromOutput.hex || fromOutput.colorName || fromOutput.color)) {
+      return fromOutput;
+    }
+    const pd = session?.product_data as Record<string, unknown> | undefined;
+    if (!pd) return null;
+    const variants = pd.variants as WooMatchVariant[] | undefined;
+    const wc = pd.wc_attributes as Record<string, string> | undefined;
+    if (!variants?.length || !wc || typeof wc !== "object") return null;
+    const wooColor = extractWooColorSelection(wc);
+    if (!wooColor) return null;
+    const m = matchVariantFromWooColor(variants, wooColor);
+    return m ? { color: m.color, colorName: m.colorName, hex: m.hex, sizes: m.sizes } : null;
+  }, [session, designOutput]);
   const variantSizes: VariantSize[] = useMemo(
     () => (Array.isArray(variant?.sizes) ? variant!.sizes! : []),
     [variant]
@@ -139,33 +166,99 @@ export default function ReviewDesign() {
   const sides = designOutput?.sides?.filter((s) => s.previewPNG || s.designPNG) || [];
   const isEmbedded = window !== window.parent;
 
-  const handleAddToCart = () => {
+  const resolveStoreOrigin = (): string | undefined => {
+    const fromQuery = storeOriginParam.trim();
+    if (fromQuery.startsWith("http")) {
+      try { return new URL(fromQuery).origin; } catch { /* ignore */ }
+    }
+
+    if (returnUrl.startsWith("http")) {
+      try { return new URL(returnUrl).origin; } catch { /* ignore */ }
+    }
+
+    if (document.referrer && document.referrer.startsWith("http")) {
+      try { return new URL(document.referrer).origin; } catch { /* ignore */ }
+    }
+
+    try {
+      const saved = localStorage.getItem("printonet_last_store_origin") || "";
+      if (saved.startsWith("https://")) return saved;
+    } catch {
+      /* ignore */
+    }
+    return undefined;
+  };
+
+  const handleAddToCart = async () => {
+    if (addedToCart || sendingToWoo) return;
     const previewSide = sides.find((s) => s.previewPNG) || sides[0];
     const priceInCents = Math.round(unitPrice * 100);
     const variantWithSize = [variantLabel, selectedSize].filter(Boolean).join(" · ");
 
-    addItem({
-      sessionId: sessionId!,
-      productName,
-      previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
-      quantity,
-      priceInCents,
-      variant: variantWithSize || undefined,
-      wcProductId: wcProductId || undefined,
-    });
-
-    if (isEmbedded) {
-      const payload = { ...designOutput, quantity, sessionId, selectedSize };
-      window.parent.postMessage(
-        { source: "customizer-studio", type: "review-add-to-cart", payload },
-        "*"
-      );
-      document.dispatchEvent(new CustomEvent("customizer:addtocart", { detail: payload }));
+    let wcAttributes: Record<string, string> | undefined;
+    if (wcAttributesParam) {
+      try {
+        const raw = wcAttributesParam.includes("%") ? decodeURIComponent(wcAttributesParam) : wcAttributesParam;
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          wcAttributes = parsed as Record<string, string>;
+        }
+      } catch {
+        /* ignore invalid wcAttributes query */
+      }
     }
 
-    setAddedToCart(true);
-    const cartUrl = returnUrl ? `/cart?returnUrl=${encodeURIComponent(returnUrl)}` : "/cart";
-    setTimeout(() => navigate(cartUrl), 600);
+    /** Same shape the storefront SDK passes into WooCommerce wc-ajax=add_to_cart */
+    const wooSyncPayload = {
+      ...(designOutput ?? { sides: [] }),
+      quantity,
+      sessionId,
+      selectedSize,
+      ...(wcProductId ? { wcProductId } : {}),
+      ...(wcVariationId ? { wcVariationId } : {}),
+      ...(wcAttributes ? { wcAttributes } : {}),
+    };
+    const storeOrigin = resolveStoreOrigin();
+
+    // Preferred path: send directly to Woo from this screen.
+    if (storeOrigin) {
+      setSendingToWoo(true);
+      setTransferDebug(`attempting transfer to ${storeOrigin}`);
+      const transfer = await transferHostedCartToWoo(storeOrigin, [
+        {
+          wcProductId: wcProductId || undefined,
+          wcVariationId: wcVariationId || undefined,
+          wcAttributes,
+          productName,
+          quantity,
+          sessionId: sessionId || "",
+          previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
+        },
+      ]);
+      if (transfer.ok && transfer.redirectUrl) {
+        setTransferDebug(`transfer ok -> ${transfer.redirectUrl}`);
+        setAddedToCart(true);
+        window.location.href = transfer.redirectUrl;
+        return;
+      }
+      setSendingToWoo(false);
+      setTransferDebug(`transfer failed: ${transfer.error || "unknown_error"}`);
+      toast({
+        variant: "destructive",
+        title: "Direct Woo transfer failed",
+        description: transfer.error || "No redirect URL returned from store.",
+      });
+      return;
+    }
+
+    setTransferDebug("no store origin detected");
+    toast({
+      variant: "destructive",
+      title: "No store origin detected",
+      description: "Cannot send directly to Woo from this screen.",
+    });
+    return;
+
   };
 
   const keepShoppingHref = returnUrl || "/products";
@@ -180,9 +273,20 @@ export default function ReviewDesign() {
             <CheckCircle className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Design Complete!</h1>
-          <p className="text-muted-foreground">
-            {productName}{variantLabel ? ` · ${variantLabel}` : ""}
-          </p>
+          <div className="flex items-center justify-center gap-2 text-muted-foreground flex-wrap">
+            {variant?.hex ? (
+              <span
+                className="h-6 w-6 shrink-0 rounded-full border border-border shadow-sm"
+                style={{ backgroundColor: variant.hex }}
+                title={variantLabel || variant.hex}
+                aria-hidden
+              />
+            ) : null}
+            <p>
+              {productName}
+              {variantLabel ? ` · ${variantLabel}` : ""}
+            </p>
+          </div>
         </div>
 
         {/* Preview grid */}
@@ -273,6 +377,19 @@ export default function ReviewDesign() {
           </div>
         )}
 
+        <div className="px-4 py-3 rounded-lg bg-muted/40 border border-border space-y-1">
+          <p className="text-xs text-muted-foreground">
+            Store origin: <span className="text-foreground">{resolveStoreOrigin() || "not detected"}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Woo product id: <span className="text-foreground">{wcProductId || "none"}</span> · variation id:{" "}
+            <span className="text-foreground">{wcVariationId || "none"}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Transfer debug: <span className="text-foreground">{transferDebug}</span>
+          </p>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-3">
           {isExternal ? (
@@ -283,18 +400,20 @@ export default function ReviewDesign() {
             </Button>
           ) : (
             <Button variant="outline" className="flex-1" asChild>
-              <Link to={`/embed/${sessionId}`}>
+              <Link to={`/embed/${sessionId}?allowCompleted=1`}>
                 <ArrowLeft className="h-4 w-4 mr-2" /> Edit Design
               </Link>
             </Button>
           )}
           <Button
             className="flex-[2]"
-            onClick={handleAddToCart}
-            disabled={addedToCart}
+            onClick={() => void handleAddToCart()}
+            disabled={addedToCart || sendingToWoo}
             variant={addedToCart ? "outline" : "default"}
           >
-            {addedToCart ? (
+            {sendingToWoo ? (
+              <><ShoppingCart className="h-4 w-4 mr-2" /> Sending to store…</>
+            ) : addedToCart ? (
               <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
             ) : (
               <>

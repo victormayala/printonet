@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
       "stores.printonet.com",
       "printonet.com",
       "www.printonet.com",
-      "app.printonet.com",
+      "platform.printonet.com",
     ]);
     const activeStores = (stores ?? []).filter((s: any) => s.status !== "removed");
     if (PLATFORM_HOSTS.has(tenantSlug) && activeStores.length === 1) {

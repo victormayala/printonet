@@ -1,17 +1,140 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Sparkles, Store } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { storeOriginFromReturnUrl, transferHostedCartToWoo } from "@/lib/wooCart";
 
 export default function Cart() {
+  const LAST_STORE_ORIGIN_KEY = "printonet_last_store_origin";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { items, updateQuantity, removeItem, totalCents, totalItems } = useCart();
+  const [wooSyncing, setWooSyncing] = useState(false);
+  const [autoTransferTried, setAutoTransferTried] = useState(false);
+  const [showCartAnyway, setShowCartAnyway] = useState(false);
+  const [manualStoreUrl, setManualStoreUrl] = useState("");
+  const [storedFallbackOrigin, setStoredFallbackOrigin] = useState<string | null>(null);
 
   const returnUrl = searchParams.get("returnUrl") || "";
   const keepShoppingHref = returnUrl || "/products";
   const isExternal = returnUrl.startsWith("http");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LAST_STORE_ORIGIN_KEY);
+      if (saved && saved.startsWith("https://")) {
+        setStoredFallbackOrigin(saved);
+        setManualStoreUrl(saved);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const wooStoreOrigin = useMemo(() => {
+    const fromQuery = storeOriginFromReturnUrl(returnUrl);
+    if (fromQuery) return fromQuery;
+    const fromItem = items.find((i) => i.storeOrigin)?.storeOrigin;
+    if (fromItem) return fromItem;
+    return storedFallbackOrigin || null;
+  }, [returnUrl, items, storedFallbackOrigin]);
+
+  const wooLines = useMemo(() => items.filter((i) => i.wcProductId), [items]);
+  const transferableLines = useMemo(() => items.filter((i) => i.productName), [items]);
+  const canAttemptWooTransfer = Boolean(wooStoreOrigin) && wooLines.length > 0;
+
+  const saveStoreOriginFromInput = () => {
+    const raw = manualStoreUrl.trim();
+    if (!raw) {
+      toast({ variant: "destructive", title: "Enter your store URL", description: "Example: https://royal.stores.printonet.com" });
+      return;
+    }
+    let origin = "";
+    try {
+      origin = new URL(raw).origin;
+    } catch {
+      toast({ variant: "destructive", title: "Invalid URL", description: "Use a full https:// URL for your Woo store." });
+      return;
+    }
+    if (!origin.startsWith("https://")) {
+      toast({ variant: "destructive", title: "HTTPS required", description: "Store URL must use HTTPS." });
+      return;
+    }
+    setStoredFallbackOrigin(origin);
+    setManualStoreUrl(origin);
+    try {
+      localStorage.setItem(LAST_STORE_ORIGIN_KEY, origin);
+    } catch {
+      /* ignore */
+    }
+    toast({ title: "Store URL saved", description: "You can now send these designs to WooCommerce cart." });
+  };
+
+  const handleSendToWooCart = async (): Promise<boolean> => {
+    if (!wooStoreOrigin) {
+      toast({
+        variant: "destructive",
+        title: "No store linked",
+        description: "Open your cart from the store after customizing, or keep shopping from your storefront.",
+      });
+      return false;
+    }
+    if (transferableLines.length === 0) {
+      toast({ variant: "destructive", title: "Nothing to send", description: "No cart items found to transfer." });
+      return false;
+    }
+
+    setWooSyncing(true);
+    try {
+      const syncLines = transferableLines.map((item) => ({
+        wcProductId: item.wcProductId,
+        wcVariationId: item.wcVariationId,
+        wcAttributes: item.wcAttributes,
+        productName: item.productName,
+        quantity: item.quantity,
+        sessionId: item.sessionId,
+        previewImage: item.previewImage,
+      }));
+      const r = await transferHostedCartToWoo(wooStoreOrigin, syncLines);
+      if (!r.ok || !r.redirectUrl) {
+        toast({
+          variant: "destructive",
+          title: "Could not send cart to your store",
+          description:
+            r.error ||
+            "Ensure WordPress has the Printonet Core MU plugin (v0.1.15+) and try again from HTTPS.",
+        });
+        return false;
+      }
+      const target = r.redirectUrl || `${wooStoreOrigin}/cart/`;
+      // Primary navigation path.
+      window.location.assign(target);
+      // Safety fallback in case browser/extensions interfere with first navigation.
+      window.setTimeout(() => {
+        if (window.location.origin === "https://platform.printonet.com") {
+          window.location.href = `${wooStoreOrigin}/cart/`;
+        }
+      }, 1200);
+      return true;
+    } finally {
+      setWooSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (autoTransferTried) return;
+    if (!wooStoreOrigin) return;
+    if (transferableLines.length === 0) return;
+    if (showCartAnyway) return;
+    setAutoTransferTried(true);
+    (async () => {
+      const ok = await handleSendToWooCart();
+      if (!ok) setShowCartAnyway(true);
+    })();
+  }, [autoTransferTried, wooStoreOrigin, transferableLines.length, showCartAnyway]);
 
   const KeepShoppingButton = ({ className = "", variant = "ghost" as const, size = "sm" as const, children }: { className?: string; variant?: any; size?: any; children: React.ReactNode }) =>
     isExternal ? (
@@ -38,6 +161,23 @@ export default function Cart() {
           <KeepShoppingButton variant="default" size="default">
             <Sparkles className="h-4 w-4 mr-2" /> Browse Products
           </KeepShoppingButton>
+        </div>
+      </div>
+    );
+  }
+
+  const autoTransferMode = !showCartAnyway && Boolean(wooStoreOrigin) && transferableLines.length > 0;
+  if (autoTransferMode) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-xl border border-border bg-card p-6 space-y-3 text-center">
+          <h2 className="text-xl font-semibold text-foreground">Sending to your store cart…</h2>
+          <p className="text-sm text-muted-foreground">
+            Redirecting to <span className="text-foreground">{wooStoreOrigin}</span>.
+          </p>
+          <Button variant="outline" onClick={() => setShowCartAnyway(true)}>
+            Stay on platform cart
+          </Button>
         </div>
       </div>
     );
@@ -141,13 +281,44 @@ export default function Cart() {
             <span>Total</span>
             <span>${(totalCents / 100).toFixed(2)}</span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <KeepShoppingButton variant="outline" size="default" className="flex-1">
               <Sparkles className="h-4 w-4 mr-2" /> Keep Customizing
             </KeepShoppingButton>
-            <Button className="flex-[2]" onClick={handleCheckout}>
-              <ShoppingCart className="h-4 w-4 mr-2" /> Checkout · ${(totalCents / 100).toFixed(2)}
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-[2]"
+              disabled={wooSyncing}
+              onClick={() => void handleSendToWooCart()}
+            >
+              <Store className="h-4 w-4 mr-2" />
+              {wooSyncing ? "Sending…" : "Send to store cart (WooCommerce)"}
             </Button>
+            <Button className="flex-[2]" onClick={handleCheckout}>
+              <ShoppingCart className="h-4 w-4 mr-2" /> Pay here · ${(totalCents / 100).toFixed(2)}
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Store URL for Woo transfer (example: <strong className="text-foreground">https://pepsico.stores.printonet.com</strong>).
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={manualStoreUrl}
+                onChange={(e) => setManualStoreUrl(e.target.value)}
+                placeholder="https://your-store.stores.printonet.com"
+                className="flex-1 h-10 rounded-md border border-border bg-background px-3 text-sm"
+              />
+              <Button type="button" variant="secondary" onClick={saveStoreOriginFromInput}>
+                Save Store URL
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Active store: <strong className="text-foreground">{wooStoreOrigin || "not set"}</strong> · Woo-linked items:{" "}
+              <strong className="text-foreground">{wooLines.length}</strong>
+            </p>
           </div>
         </div>
       </div>

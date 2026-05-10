@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sparkles, ArrowLeft, Type, Square, CircleIcon, TriangleIcon,
   Upload, Undo2, Redo2, Trash2, Eye, EyeOff, Lock, Unlock,
-  ChevronUp, ChevronDown, Layers as LayersIcon, Palette, Save,
+  ChevronUp, ChevronDown, Check, Layers as LayersIcon, Palette, Save,
   Copy,
   ShoppingCart, ImageIcon, Sticker,
   Heart, Star, Flame, Zap, Music, Sun, Moon, Cloud,
@@ -39,6 +39,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const GOOGLE_FONTS = [
   "Inter", "Space Grotesk", "Roboto", "Open Sans", "Lato", "Montserrat",
@@ -360,6 +366,7 @@ interface ProductVariant {
   colorName: string;
   hex: string;
   image?: string;
+  gallery?: string[];
   sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }>;
 }
 
@@ -385,17 +392,27 @@ interface EmbedProductData {
   image_back?: string;
   image_side1?: string;
   image_side2?: string;
-  variants?: Array<{ color: string; colorName: string; hex: string; image?: string; sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }> }>;
+  variants?: Array<{ color: string; colorName: string; hex: string; image?: string; gallery?: string[]; sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }> }>;
   print_areas?: Record<string, { x: number; y: number; width: number; height: number }>;
+  wc_attributes?: Record<string, string> | null;
+  wc_variation_id?: string | number | null;
+}
+
+interface InitialDesignOutput {
+  sides?: Array<{ view?: string; canvasJSON?: string; productImage?: string }>;
+  variant?: ProductVariant | null;
 }
 
 import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
+import { extractWooColorSelection, matchVariantFromWooColor } from "@/lib/woo-variant-match";
+import { resolveGalleryImageForView } from "@/lib/variant-gallery";
 
 interface DesignStudioProps {
   embedMode?: boolean;
   sessionId?: string;
   embedProductData?: EmbedProductData;
   brandConfig?: BrandConfig;
+  initialDesignOutput?: InitialDesignOutput | null;
 }
 
 const VIEW_LABELS: Record<ViewSide, string> = {
@@ -405,7 +422,13 @@ const VIEW_LABELS: Record<ViewSide, string> = {
   side2: "Right",
 };
 
-export default function DesignStudio({ embedMode = false, sessionId, embedProductData, brandConfig }: DesignStudioProps) {
+export default function DesignStudio({
+  embedMode = false,
+  sessionId,
+  embedProductData,
+  brandConfig,
+  initialDesignOutput,
+}: DesignStudioProps) {
   const navigate = useNavigate();
   const [dbBrandConfig, setDbBrandConfig] = useState<BrandConfig | null>(null);
   const brand = brandConfig || dbBrandConfig || DEFAULT_BRAND_CONFIG;
@@ -444,7 +467,17 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   // Apply brand CSS vars when brand config changes
   useEffect(() => {
-    const isCustomBrand = brand.primaryColor !== DEFAULT_BRAND_CONFIG.primaryColor ||
+    // Embed receives an explicit brandConfig from EmbedCustomizer — always apply (includes light theme
+    // even when colors match defaults).
+    if (brandConfig) {
+      applyBrandCSS(document.documentElement, brand);
+      return () => {
+        applyBrandCSS(document.documentElement, DEFAULT_BRAND_CONFIG);
+      };
+    }
+
+    const isCustomBrand =
+      brand.primaryColor !== DEFAULT_BRAND_CONFIG.primaryColor ||
       brand.accentColor !== DEFAULT_BRAND_CONFIG.accentColor ||
       brand.theme !== DEFAULT_BRAND_CONFIG.theme ||
       brand.fontFamily !== DEFAULT_BRAND_CONFIG.fontFamily ||
@@ -458,7 +491,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         applyBrandCSS(document.documentElement, DEFAULT_BRAND_CONFIG);
       }
     };
-  }, [brand]);
+  }, [brand, brandConfig]);
 
   const [invProduct, setInvProduct] = useState<InventoryProduct | null>(null);
   const [loading, setLoading] = useState(false);
@@ -472,6 +505,12 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
   const [activeTool, setActiveTool] = useState<string>("text");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const selectedVariantRef = useRef<ProductVariant | null>(null);
+  useEffect(() => {
+    selectedVariantRef.current = selectedVariant;
+  }, [selectedVariant]);
+  const [resolvedViewImages, setResolvedViewImages] = useState<Partial<Record<ViewSide, string | null>>>({});
+
   const [activeView, setActiveView] = useState<ViewSide>("front");
   const [availableViews, setAvailableViews] = useState<ViewSide[]>(["front"]);
   const [layers, setLayers] = useState<any[]>([]);
@@ -660,6 +699,24 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       variants: embedProductData.variants || [],
     };
     setInvProduct(ep);
+    viewStatesRef.current = { front: null, back: null, side1: null, side2: null };
+    setSelectedVariant(null);
+
+    const persistedSides = initialDesignOutput?.sides || [];
+    for (const side of persistedSides) {
+      const v = String(side?.view || "").toLowerCase();
+      const mapped: ViewSide | null =
+        v === "front" ? "front" :
+        v === "back" ? "back" :
+        v === "side1" || v === "left" ? "side1" :
+        v === "side2" || v === "right" ? "side2" :
+        null;
+      if (!mapped) continue;
+      if (typeof side?.canvasJSON === "string" && side.canvasJSON.trim()) {
+        viewStatesRef.current[mapped] = side.canvasJSON;
+      }
+    }
+
     const views: ViewSide[] = [];
     if (ep.image_front) views.push("front");
     if (ep.image_back) views.push("back");
@@ -667,25 +724,228 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     if (ep.image_side2) views.push("side2");
     if (views.length === 0) views.push("front");
     setAvailableViews(views);
-    currentCanvasViewRef.current = views[0];
-    setActiveView(views[0]);
+    const firstWithState = views.find((v) => !!viewStatesRef.current[v]);
+    currentCanvasViewRef.current = firstWithState || views[0];
+    setActiveView(firstWithState || views[0]);
     setLoading(false);
-  }, [embedMode, embedProductData]);
+
+    const outVariant = initialDesignOutput?.variant;
+    if (outVariant && (outVariant.hex || outVariant.colorName || outVariant.color)) {
+      setSelectedVariant({
+        color: outVariant.color || outVariant.colorName || "",
+        colorName: outVariant.colorName || outVariant.color || "",
+        hex: outVariant.hex || "#000000",
+        image: outVariant.image,
+        gallery: Array.isArray(outVariant.gallery) ? outVariant.gallery : undefined,
+        sizes: outVariant.sizes,
+      });
+      return;
+    }
+
+    const wcAttrs = embedProductData.wc_attributes;
+    const variants = ep.variants || [];
+    if (wcAttrs && typeof wcAttrs === "object" && variants.length > 0) {
+      const wooColor = extractWooColorSelection(wcAttrs as Record<string, string>);
+      if (wooColor) {
+        const matched = matchVariantFromWooColor(variants, wooColor);
+        if (matched) {
+          setSelectedVariant({
+            color: matched.color || matched.colorName,
+            colorName: matched.colorName || matched.color,
+            hex: matched.hex,
+            image: matched.image,
+            gallery: Array.isArray((matched as any).gallery) ? ((matched as any).gallery as string[]) : undefined,
+            sizes: matched.sizes,
+          });
+        }
+      }
+    }
+  }, [embedMode, embedProductData, sessionId, initialDesignOutput]);
 
   // Get current background image URL
-  function getCurrentImageUrl(): string | null {
+  function baseImageForView(view: ViewSide): string | null {
     if (!invProduct) return null;
-    // If a variant with an image is selected and we're on the front view, use variant image
-    if (selectedVariant?.image && activeView === "front") {
-      return selectedVariant.image;
-    }
     const map: Record<ViewSide, string | null> = {
       front: invProduct.image_front,
       back: invProduct.image_back,
       side1: invProduct.image_side1,
       side2: invProduct.image_side2,
     };
-    return map[activeView] || null;
+    return map[view] || null;
+  }
+
+  function galleryImageForView(view: ViewSide): string | null {
+    const gallery = selectedVariant?.gallery;
+    if (!Array.isArray(gallery) || gallery.length === 0) return null;
+    return resolveGalleryImageForView(gallery, baseImageForView(view), view);
+  }
+
+  /**
+   * Build a side-view URL using the selected color token when supplier image names follow:
+   *   <product>_<colorToken>_<viewToken>.<ext>
+   * Example: 110373_b_fl.jpg -> 110373_cn_bl.jpg
+   */
+  function colorTokenCandidates(colorLabel: string | undefined, fallbackToken: string): string[] {
+    const out: string[] = [];
+    if (fallbackToken) out.push(fallbackToken.toLowerCase());
+    const label = (colorLabel || "").trim().toLowerCase();
+    if (!label) return Array.from(new Set(out));
+    const words = label.split(/[\s/-]+/).filter(Boolean);
+    if (words.length >= 2) out.push(words.map((w) => w[0]).join(""));
+    if (words.length >= 1) out.push(words[0]);
+    out.push(label.replace(/[^a-z0-9]+/g, ""));
+    return Array.from(new Set(out.filter(Boolean)));
+  }
+
+  function deriveVariantSideUrls(
+    variantFrontUrl: string,
+    targetSideUrl: string,
+    view: ViewSide,
+    colorLabel?: string,
+  ): string[] {
+    try {
+      const vf = variantFrontUrl.match(/^(.*\/[^/_]+)_([^/_]+)_([^/_]+)(\.[a-zA-Z0-9]+)(\?.*)?$/);
+      const ts = targetSideUrl.match(/^(.*\/[^/_]+)_([^/_]+)_([^/_]+)(\.[a-zA-Z0-9]+)(\?.*)?$/);
+      if (!vf) return [];
+      const tokens = colorTokenCandidates(colorLabel, vf[2]);
+      // Probe multiple side tokens because suppliers/themes differ (and source side fields may be wrong).
+      const tokenByView: Record<ViewSide, string[]> = {
+        front: ["fl"],
+        back: ["bl", "bk", "ba", "bb"],
+        side1: ["sl", "lf", "ll"],
+        side2: ["sr", "rl", "rr", "rt"],
+      };
+      const baseToken = ts?.[3] || vf[3] || "fl";
+      const viewTokens = Array.from(new Set([...(tokenByView[view] || []), baseToken]));
+      // Prefer side URL stem (keeps side view switching), swap only color token.
+      if (ts) {
+        const tsExt = ts[4];
+        const tsQuery = ts[5] || "";
+        const urls: string[] = [];
+        for (const token of tokens) {
+          for (const vt of viewTokens) {
+            urls.push(`${ts[1]}_${token}_${vt}${tsExt}${tsQuery}`);
+          }
+        }
+        return urls;
+      }
+      // Fallback: build from variant front stem.
+      const vfExt = vf[4];
+      const vfQuery = vf[5] || "";
+      const urls: string[] = [];
+      for (const token of tokens) {
+        for (const vt of viewTokens) {
+          urls.push(`${vf[1]}_${token}_${vt}${vfExt}${vfQuery}`);
+        }
+      }
+      return urls;
+    } catch {
+      return [];
+    }
+  }
+
+  function imageForViewWithVariant(view: ViewSide): string | null {
+    const fromGallery = galleryImageForView(view);
+    if (fromGallery) return fromGallery;
+    const base = baseImageForView(view);
+    const variantFront = selectedVariant?.image || null;
+    if (!variantFront) return base;
+    if (view === "front") return variantFront;
+    if (!base) return variantFront;
+    const first = deriveVariantSideUrls(
+      variantFront,
+      base,
+      view,
+      selectedVariant?.colorName || selectedVariant?.color,
+    )[0];
+    return first || base;
+  }
+
+  function canLoadImage(url: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  }
+
+  // Resolve best image per view:
+  // 1) real derived side for selected color (if it exists),
+  // 2) selected color front image,
+  // 3) default side image.
+  useEffect(() => {
+    if (!invProduct) return;
+    let cancelled = false;
+
+    (async () => {
+      const next: Partial<Record<ViewSide, string | null>> = {};
+      const views: ViewSide[] = ["front", "back", "side1", "side2"];
+      const variantFront = selectedVariant?.image || null;
+
+      for (const view of views) {
+        const base = baseImageForView(view);
+        if (!base && !variantFront) {
+          next[view] = null;
+          continue;
+        }
+        if (!variantFront) {
+          next[view] = base;
+          continue;
+        }
+        if (view === "front") {
+          next[view] = variantFront;
+          continue;
+        }
+
+        const fromGallery = galleryImageForView(view);
+        if (fromGallery) {
+          next[view] = fromGallery;
+          continue;
+        }
+
+        const rawCandidates: string[] = [];
+        if (base) {
+          rawCandidates.push(
+            ...deriveVariantSideUrls(
+              variantFront,
+              base,
+              view,
+              selectedVariant?.colorName || selectedVariant?.color,
+            ),
+          );
+          rawCandidates.push(...deriveVariantSideUrls(variantFront, base, view));
+        }
+        const candidates = Array.from(new Set(rawCandidates));
+
+        if (candidates.length > 0) {
+          let chosen: string | null = null;
+          for (const c of candidates) {
+            const ok = await canLoadImage(c);
+            if (cancelled) return;
+            if (ok) {
+              chosen = c;
+              break;
+            }
+          }
+          if (cancelled) return;
+          next[view] = chosen || (variantFront || base);
+        } else {
+          next[view] = variantFront || base;
+        }
+      }
+
+      if (!cancelled) setResolvedViewImages(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [invProduct, selectedVariant]);
+
+  function getCurrentImageUrl(): string | null {
+    if (!invProduct) return null;
+    return resolvedViewImages[activeView] ?? imageForViewWithVariant(activeView);
   }
 
   // Get print area for current view (percentage-based)
@@ -937,10 +1197,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
   const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) {
-      console.log("[DesignStudio] Canvas init skipped - refs not ready");
-      return;
-    }
+    if (!canvasRef.current || !containerRef.current) return;
 
     if (fabricRef.current) {
       fabricRef.current.dispose();
@@ -950,8 +1207,6 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
     const container = containerRef.current;
     const w = container.clientWidth;
     const h = container.clientHeight;
-    console.log("[DesignStudio] Canvas init:", { w, h, embedMode, hasProduct: !!invProduct });
-
     const canvas = new FabricCanvas(canvasRef.current, {
       width: w,
       height: h,
@@ -971,7 +1226,11 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       saveViewState();
       updateLayers();
     });
-    canvas.on("object:removed", (e: any) => { if ((e.target as any)?.customName === PRINT_AREA_RECT_NAME) return; saveViewState(); updateLayers(); });
+    canvas.on("object:removed", (e: any) => {
+      if (isLoadingViewRef.current || (e.target as any)?.customName === PRINT_AREA_RECT_NAME) return;
+      saveViewState();
+      updateLayers();
+    });
     canvas.on("object:moving", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "move"); });
     canvas.on("object:scaling", (e: any) => { if (!isLoadingViewRef.current) enforcePrintAreaBounds(e.target, "scale"); });
     canvas.on("mouse:dblclick", (e: any) => {
@@ -981,7 +1240,8 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
       }
     });
 
-    saveState();
+    // Do not persist an initial empty canvas snapshot here.
+    // It can overwrite restored front-view state during Edit Design rehydration.
     setCanvasReady(true);
 
     // Resize observer to keep canvas responsive
@@ -1065,10 +1325,32 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         finalizeViewLoad(emptyState);
       }
     } else {
-      canvas.backgroundImage = undefined;
-      canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
-      updatePrintAreaRect(canvas);
-      canvas.renderAll();
+      const savedState = viewStatesRef.current[activeView];
+      const hasDrawableObjects = canvas
+        .getObjects()
+        .some((obj: any) => (obj as any).customName !== PRINT_AREA_RECT_NAME);
+
+      if (savedState && !hasDrawableObjects && !isLoadingViewRef.current) {
+        const loadRequestId = ++viewLoadRequestRef.current;
+        isLoadingViewRef.current = true;
+        canvas.loadFromJSON(savedState).then(() => {
+          if (viewLoadRequestRef.current !== loadRequestId) return;
+          canvas.getObjects().forEach((obj: any) => {
+            if ((obj as any).customName !== PRINT_AREA_RECT_NAME) rememberLastValidTransform(obj);
+          });
+          canvas.backgroundImage = undefined;
+          canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+          updatePrintAreaRect(canvas);
+          canvas.renderAll();
+          updateLayers();
+          isLoadingViewRef.current = false;
+        });
+      } else {
+        canvas.backgroundImage = undefined;
+        canvas.backgroundColor = hasInventoryBackground ? "rgba(0,0,0,0)" : selectedVariant?.hex || "#ffffff";
+        updatePrintAreaRect(canvas);
+        canvas.renderAll();
+      }
     }
   }, [activeView, invProduct, selectedVariant, canvasReady]);
 
@@ -1978,11 +2260,18 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
 
       const sides: Array<{ view: string; designPNG: string; previewPNG?: string; productImage: string; canvasJSON: string; printArea?: { x: number; y: number; width: number; height: number } }> = [];
 
+      const sv = selectedVariantRef.current;
+      const currentVariant = sv
+        ? {
+            ...sv,
+            image: sv.image || null,
+          }
+        : null;
       const imageMap: Record<string, string | null> = {
-        front: invProduct?.image_front || null,
-        back: invProduct?.image_back || null,
-        side1: invProduct?.image_side1 || null,
-        side2: invProduct?.image_side2 || null,
+        front: resolvedViewImages.front ?? currentVariant?.image ?? invProduct?.image_front ?? null,
+        back: resolvedViewImages.back ?? imageForViewWithVariant("back"),
+        side1: resolvedViewImages.side1 ?? imageForViewWithVariant("side1"),
+        side2: resolvedViewImages.side2 ?? imageForViewWithVariant("side2"),
       };
 
       const loadImageForComposite = async (src: string): Promise<HTMLImageElement> => {
@@ -2129,116 +2418,125 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
         }
       };
 
-      for (const view of availableViews) {
-        const stateJson = viewStatesRef.current[view];
-        if (!stateJson) {
-          sides.push({ view, designPNG: "", previewPNG: "", productImage: imageMap[view] || "", canvasJSON: "{}" });
-          continue;
-        }
+      // Off-screen canvas: never mutate the visible editor during export (avoids flash / layer jumps).
+      const exportW = canvas.getWidth();
+      const exportH = canvas.getHeight();
+      const exportEl = document.createElement("canvas");
+      const exportCanvas = new FabricCanvas(exportEl, {
+        width: exportW,
+        height: exportH,
+        backgroundColor: "#ffffff",
+        selection: false,
+      });
 
-        let cleanedJson = stateJson;
-        if (typeof cleanedJson === "string" && cleanedJson.includes("blob:")) {
-          try {
-            const parsed = JSON.parse(cleanedJson);
-            const replaceBlobUrls = (obj: any) => {
-              if (!obj) return;
-              if (typeof obj === "object") {
-                for (const key of Object.keys(obj)) {
-                  if (typeof obj[key] === "string" && obj[key].startsWith("blob:")) {
-                    obj[key] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
-                  } else if (typeof obj[key] === "object") {
-                    replaceBlobUrls(obj[key]);
+      try {
+        for (const view of availableViews) {
+          const stateJson = viewStatesRef.current[view];
+          if (!stateJson) {
+            sides.push({ view, designPNG: "", previewPNG: "", productImage: imageMap[view] || "", canvasJSON: "{}" });
+            continue;
+          }
+
+          let cleanedJson = stateJson;
+          if (typeof cleanedJson === "string" && cleanedJson.includes("blob:")) {
+            try {
+              const parsed = JSON.parse(cleanedJson);
+              const replaceBlobUrls = (obj: any) => {
+                if (!obj) return;
+                if (typeof obj === "object") {
+                  for (const key of Object.keys(obj)) {
+                    if (typeof obj[key] === "string" && obj[key].startsWith("blob:")) {
+                      obj[key] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
+                    } else if (typeof obj[key] === "object") {
+                      replaceBlobUrls(obj[key]);
+                    }
                   }
                 }
-              }
-            };
-            replaceBlobUrls(parsed);
-            cleanedJson = JSON.stringify(parsed);
-          } catch (e) {
-            console.warn("Failed to clean blob URLs from canvas JSON:", e);
+              };
+              replaceBlobUrls(parsed);
+              cleanedJson = JSON.stringify(parsed);
+            } catch (e) {
+              console.warn("Failed to clean blob URLs from canvas JSON:", e);
+            }
           }
-        }
 
-        await canvas.loadFromJSON(cleanedJson);
-        canvas.backgroundColor = "rgba(0,0,0,0)";
-        canvas.backgroundImage = undefined;
+          await exportCanvas.loadFromJSON(cleanedJson);
+          exportCanvas.backgroundColor = "rgba(0,0,0,0)";
+          exportCanvas.backgroundImage = undefined;
 
-        const paRects = canvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
-        paRects.forEach((o) => canvas.remove(o));
-        canvas.renderAll();
+          const paRects = exportCanvas.getObjects().filter((o: any) => (o as any).customName === PRINT_AREA_RECT_NAME);
+          paRects.forEach((o) => exportCanvas.remove(o));
+          exportCanvas.renderAll();
 
-        const viewKey = view === "side1" ? "side1" : view === "side2" ? "side2" : view;
-        const pa = invProduct?.print_areas?.[viewKey];
-        const cw = canvas.getWidth();
-        const ch = canvas.getHeight();
-        const productImageUrl = imageMap[view] || null;
+          const viewKey = view === "side1" ? "side1" : view === "side2" ? "side2" : view;
+          const pa = invProduct?.print_areas?.[viewKey];
+          const cw = exportCanvas.getWidth();
+          const ch = exportCanvas.getHeight();
+          const productImageUrl = imageMap[view] || null;
 
-        let productImg: HTMLImageElement | null = null;
-        let viewImageBounds: { x: number; y: number; w: number; h: number } | null = null;
-        let productSize: { width: number; height: number } | null = null;
+          let productImg: HTMLImageElement | null = null;
+          let viewImageBounds: { x: number; y: number; w: number; h: number } | null = null;
+          let productSize: { width: number; height: number } | null = null;
 
-        if (productImageUrl) {
-          try {
-            productImg = await loadImageForComposite(productImageUrl);
-            const naturalWidth = productImg.naturalWidth || productImg.width || cw;
-            const naturalHeight = productImg.naturalHeight || productImg.height || ch;
-            productSize = { width: naturalWidth, height: naturalHeight };
-            viewImageBounds = computeImageBounds(cw, ch, naturalWidth, naturalHeight);
-          } catch (productErr) {
-            console.warn(`Failed to load product image for ${view} preview:`, productErr);
+          if (productImageUrl) {
+            try {
+              productImg = await loadImageForComposite(productImageUrl);
+              const naturalWidth = productImg.naturalWidth || productImg.width || cw;
+              const naturalHeight = productImg.naturalHeight || productImg.height || ch;
+              productSize = { width: naturalWidth, height: naturalHeight };
+              viewImageBounds = computeImageBounds(cw, ch, naturalWidth, naturalHeight);
+            } catch (productErr) {
+              console.warn(`Failed to load product image for ${view} preview:`, productErr);
+            }
           }
-        }
 
-        const exportOptions: any = { format: "png", multiplier: 4 };
-        if (pa) {
-          if (viewImageBounds) {
-            exportOptions.left = viewImageBounds.x + (pa.x / 100) * viewImageBounds.w;
-            exportOptions.top = viewImageBounds.y + (pa.y / 100) * viewImageBounds.h;
-            exportOptions.width = (pa.width / 100) * viewImageBounds.w;
-            exportOptions.height = (pa.height / 100) * viewImageBounds.h;
-          } else {
-            exportOptions.left = (pa.x / 100) * cw;
-            exportOptions.top = (pa.y / 100) * ch;
-            exportOptions.width = (pa.width / 100) * cw;
-            exportOptions.height = (pa.height / 100) * ch;
+          const exportOptions: any = { format: "png", multiplier: 4 };
+          if (pa) {
+            if (viewImageBounds) {
+              exportOptions.left = viewImageBounds.x + (pa.x / 100) * viewImageBounds.w;
+              exportOptions.top = viewImageBounds.y + (pa.y / 100) * viewImageBounds.h;
+              exportOptions.width = (pa.width / 100) * viewImageBounds.w;
+              exportOptions.height = (pa.height / 100) * viewImageBounds.h;
+            } else {
+              exportOptions.left = (pa.x / 100) * cw;
+              exportOptions.top = (pa.y / 100) * ch;
+              exportOptions.width = (pa.width / 100) * cw;
+              exportOptions.height = (pa.height / 100) * ch;
+            }
           }
+
+          const dataUrl = exportCanvas.toDataURL(exportOptions);
+          const canonicalOverlayDataUrl = await renderCanonicalOverlay(cleanedJson, viewImageBounds, productSize);
+          const previewDataUrl = await generateCompositePreview(productImg, canonicalOverlayDataUrl);
+
+          // For authenticated users, upload directly; for embed mode, defer to edge function
+          let publicUrl = dataUrl;
+          let previewUrl = previewDataUrl;
+
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            publicUrl = await uploadPng(dataUrl, view);
+            previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
+          }
+
+          sides.push({
+            view,
+            designPNG: publicUrl,
+            previewPNG: previewUrl,
+            productImage: productImageUrl || "",
+            // Persist sanitized JSON so blob: URLs do not break "Edit Design" rehydration.
+            canvasJSON: cleanedJson,
+            printArea: pa || undefined,
+          });
         }
-
-        const dataUrl = canvas.toDataURL(exportOptions);
-        const canonicalOverlayDataUrl = await renderCanonicalOverlay(cleanedJson, viewImageBounds, productSize);
-        const previewDataUrl = await generateCompositePreview(productImg, canonicalOverlayDataUrl);
-
-        // For authenticated users, upload directly; for embed mode, defer to edge function
-        let publicUrl = dataUrl;
-        let previewUrl = previewDataUrl;
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          publicUrl = await uploadPng(dataUrl, view);
-          previewUrl = await uploadPng(previewDataUrl, `${view}_preview`);
-        }
-
-        sides.push({
-          view,
-          designPNG: publicUrl,
-          previewPNG: previewUrl,
-          productImage: productImageUrl || "",
-          canvasJSON: stateJson,
-          printArea: pa || undefined,
-        });
-      }
-
-      // Restore current view
-      const currentState = viewStatesRef.current[activeView];
-      if (currentState) {
-        await canvas.loadFromJSON(currentState);
-        canvas.renderAll();
+      } finally {
+        exportCanvas.dispose();
       }
 
       const result = {
         sessionId,
         sides,
-        variant: selectedVariant || null,
+        variant: selectedVariantRef.current || null,
       };
 
       // If embed mode, complete session via edge function (handles uploads with service role)
@@ -2473,26 +2771,77 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
           {invProduct?.variants && invProduct.variants.length > 0 && (
             <>
               <Separator orientation="vertical" className="h-6 bg-sidebar-border" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-sidebar-foreground/60 mr-0.5">Color:</span>
-                {invProduct.variants.slice(0, 12).map((v, i) => (
-                  <button
-                    key={i}
-                    className={`w-5 h-5 rounded-full border-2 shadow-sm transition-all hover:scale-110 ${
-                      selectedVariant?.hex === v.hex
-                        ? "border-primary ring-1 ring-primary scale-110"
-                        : "border-sidebar-border"
-                    }`}
-                    style={{ backgroundColor: v.hex || '#ccc' }}
-                    title={`${v.color || v.colorName}${v.sizes?.length ? ` (${v.sizes.length} sizes)` : ''}`}
-                    onClick={() => setSelectedVariant(
-                      selectedVariant?.hex === v.hex ? null : { color: v.color || v.colorName, colorName: v.colorName || v.color, hex: v.hex, image: v.image, sizes: v.sizes }
-                    )}
-                  />
-                ))}
-                {invProduct.variants.length > 12 && (
-                  <span className="text-[10px] text-sidebar-foreground/50">+{invProduct.variants.length - 12}</span>
-                )}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-sidebar-foreground/70 whitespace-nowrap">Color:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      className="h-9 min-w-[11rem] max-w-[18rem] justify-between gap-2 border-sidebar-border bg-sidebar-accent px-2 text-sidebar-foreground hover:bg-sidebar-accent/80"
+                    >
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        {selectedVariant ? (
+                          <>
+                            <span
+                              className="h-5 w-5 shrink-0 rounded-full border border-sidebar-border shadow-sm"
+                              style={{ backgroundColor: selectedVariant.hex || "#ccc" }}
+                              aria-hidden
+                            />
+                            <span className="truncate text-left text-sm font-medium">
+                              {selectedVariant.colorName || selectedVariant.color}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="truncate text-left text-sm text-sidebar-foreground/70">
+                            Select color…
+                          </span>
+                        )}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="max-h-72 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto z-[100]"
+                  >
+                    {invProduct.variants.map((v, i) => {
+                      const label = v.colorName || v.color || `Color ${i + 1}`;
+                      const isSelected =
+                        selectedVariant?.hex === v.hex &&
+                        (selectedVariant.colorName || selectedVariant.color) === (v.colorName || v.color || label);
+                      return (
+                        <DropdownMenuItem
+                          key={`${v.hex}-${i}-${label}`}
+                          className="gap-2 cursor-pointer"
+                          onClick={() =>
+                            setSelectedVariant({
+                              color: v.color || v.colorName || label,
+                              colorName: v.colorName || v.color || label,
+                              hex: v.hex,
+                              image: v.image,
+                              gallery: Array.isArray((v as any).gallery) ? ((v as any).gallery as string[]) : undefined,
+                              sizes: v.sizes,
+                            })
+                          }
+                        >
+                          <span
+                            className="h-5 w-5 shrink-0 rounded-full border border-sidebar-border shadow-sm"
+                            style={{ backgroundColor: v.hex || "#ccc" }}
+                            aria-hidden
+                          />
+                          <span className="min-w-0 flex-1 truncate" title={v.sizes?.length ? `${v.sizes.length} sizes available` : undefined}>
+                            {label}
+                          </span>
+                          {isSelected ? (
+                            <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                          ) : null}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </>
           )}
@@ -2504,7 +2853,7 @@ export default function DesignStudio({ embedMode = false, sessionId, embedProduc
                 Cancel
               </Button>
               <Button size="sm" className="gap-1.5" onClick={exportAndComplete} disabled={exporting}>
-                {exporting ? "Exporting..." : "✓ Done"}
+                {exporting ? "Exporting..." : "Save"}
               </Button>
             </>
           ) : (

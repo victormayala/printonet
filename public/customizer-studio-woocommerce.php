@@ -810,7 +810,7 @@ function cs_render_settings_page() {
 				<tr>
 					<th>Base URL</th>
 					<td>
-						<input type="url" name="cs_base_url" value="<?php echo esc_attr( $base_url ); ?>" class="regular-text" placeholder="https://app.printonet.com" />
+						<input type="url" name="cs_base_url" value="<?php echo esc_attr( $base_url ); ?>" class="regular-text" placeholder="https://platform.printonet.com" />
 						<p class="description">Your Customizer Studio hosted URL.</p>
 					</td>
 				</tr>
@@ -1068,7 +1068,7 @@ function cs_render_customize_button( $custom_label = null ) {
 	// corporate store's branding.
 	if ( ! empty( $cs_customizer_url ) ) {
 		echo '<div style="margin:12px 0;">';
-		echo '<a href="' . esc_url( $cs_customizer_url ) . '" class="button alt cs-customize-btn" style="display:block;text-align:center;width:100%;padding:12px 24px;font-size:15px;font-weight:600;background:#111;color:#fff;border:none;border-radius:8px;cursor:pointer;text-decoration:none;">';
+		echo '<a href="' . esc_url( $cs_customizer_url ) . '" data-cs-customizer-link="1" class="button alt cs-customize-btn" style="display:block;text-align:center;width:100%;padding:12px 24px;font-size:15px;font-weight:600;background:#111;color:#fff;border:none;border-radius:8px;cursor:pointer;text-decoration:none;">';
 		echo esc_html( $button_label );
 		echo '</a>';
 		echo '</div>';
@@ -2027,6 +2027,236 @@ add_action( 'wp_footer', function () {
 		})();
 	</script>";
 } );
+
+// Hosted customizer links (cs_customizer_url) open a dedicated page and bypass the SDK loader click handler.
+// Append the currently selected Woo attributes so the opened customizer can mirror PDP color/options.
+add_action( 'wp_footer', function () {
+	if ( ! is_product() ) {
+		return;
+	}
+	?>
+	<script>
+	(function() {
+		'use strict';
+
+		function getForm() {
+			return document.querySelector('form.variations_form.cart') || document.querySelector('form.cart');
+		}
+
+		function collectWooAttributes(form) {
+			var attrs = {};
+			if (!form) return attrs;
+			var fields = form.querySelectorAll('select[name^="attribute_"], input[name^="attribute_"][type="hidden"], input[name^="attribute_"][type="radio"]:checked');
+			fields.forEach(function (el) {
+				var key = (el.name || '').trim();
+				var val = (el.value || '').trim();
+				if (!key || !val) return;
+				attrs[key] = val;
+				if (el.tagName === 'SELECT' && el.selectedIndex >= 0) {
+					var opt = el.options[el.selectedIndex];
+					if (opt && opt.textContent) {
+						var txt = opt.textContent.trim();
+						if (txt) attrs['__display_' + key] = txt;
+					}
+				}
+			});
+			return attrs;
+		}
+
+		document.addEventListener('click', function(e) {
+			var link = e.target && e.target.closest ? e.target.closest('a.cs-customize-btn[data-cs-customizer-link="1"]') : null;
+			if (!link) return;
+
+			var form = getForm();
+			var attrs = collectWooAttributes(form);
+			var vidInput = form ? form.querySelector('input[name="variation_id"], input.variation_id') : null;
+			var vid = vidInput && vidInput.value && vidInput.value !== '0' ? String(vidInput.value) : '';
+
+			try {
+				var url = new URL(link.href, window.location.origin);
+				if (vid) url.searchParams.set('wcVariationId', vid);
+				if (attrs && Object.keys(attrs).length > 0) {
+					url.searchParams.set('wcAttributes', JSON.stringify(attrs));
+				}
+				link.href = url.toString();
+			} catch (err) {
+				// If URL parsing fails, let the link continue without params.
+			}
+		}, true);
+	})();
+	</script>
+	<?php
+}, 90 );
+
+// Universal PDP -> customizer forwarding for variable products.
+// Some themes/plugins use custom links/buttons and bypass data-customizer + loader path entirely.
+add_action( 'wp_footer', function () {
+	if ( ! is_product() ) {
+		return;
+	}
+	?>
+	<script>
+	(function() {
+		'use strict';
+
+		function getForm() {
+			return document.querySelector('form.variations_form.cart') || document.querySelector('form.cart');
+		}
+
+		function collectAttrs(form) {
+			var attrs = {};
+			if (!form) return attrs;
+			var fields = form.querySelectorAll('select[name^="attribute_"], input[name^="attribute_"][type="hidden"], input[name^="attribute_"][type="radio"]:checked');
+			fields.forEach(function (el) {
+				var key = (el.name || '').trim();
+				var val = (el.value || '').trim();
+				if (!key || !val) return;
+				attrs[key] = val;
+				if (el.tagName === 'SELECT' && el.selectedIndex >= 0) {
+					var opt = el.options[el.selectedIndex];
+					if (opt && opt.textContent && opt.textContent.trim()) {
+						attrs['__display_' + key] = opt.textContent.trim();
+					}
+				}
+			});
+
+			function hasColor(a) {
+				return Object.keys(a).some(function(k) {
+					var kl = String(k).toLowerCase();
+					return kl.indexOf('color') !== -1 || kl.indexOf('colour') !== -1;
+				});
+			}
+
+			function detectSwatch() {
+				var selectors = [
+					'.variable-item.selected',
+					'[data-wvstooltip].selected',
+					'[data-value][aria-pressed="true"]',
+					'[role="radio"][aria-checked="true"]',
+					'.swatch.selected',
+					'.swatch-selected',
+					'[data-value].selected'
+				];
+				for (var i = 0; i < selectors.length; i++) {
+					var el = form.querySelector(selectors[i]);
+					if (!el) continue;
+					var value = (el.getAttribute('data-value') || '').trim();
+					var label = (
+						el.getAttribute('data-wvstooltip') ||
+						el.getAttribute('aria-label') ||
+						el.getAttribute('title') ||
+						el.textContent ||
+						''
+					).trim();
+					if (value || label) {
+						return { value: value || label, label: label || value };
+					}
+				}
+				return null;
+			}
+
+			function enrichFromVariationJson(base) {
+				var out = Object.assign({}, base);
+				var vid = currentVariationId(form);
+				if (!vid) return out;
+				var raw = form.getAttribute('data-product_variations');
+				if (!raw) return out;
+				try {
+					var parsed = JSON.parse(raw.indexOf('&quot;') !== -1 ? raw.replace(/&quot;/g, '"') : raw);
+					if (!Array.isArray(parsed)) return out;
+					var row = parsed.find(function(v) { return String(v.variation_id) === String(vid); });
+					if (!row || !row.attributes || typeof row.attributes !== 'object') return out;
+					Object.keys(row.attributes).forEach(function(k) {
+						var val = row.attributes[k];
+						if (val != null && String(val).trim() !== '') {
+							out[k] = String(val).trim();
+						}
+					});
+				} catch (_e) {}
+				return out;
+			}
+
+			attrs = enrichFromVariationJson(attrs);
+			if (!hasColor(attrs)) {
+				var sw = detectSwatch();
+				if (sw && sw.value) {
+					attrs.attribute_pa_color = sw.value;
+					attrs.attribute_color = sw.label || sw.value;
+					attrs.__display_attribute_pa_color = sw.label || sw.value;
+					attrs.__display_attribute_color = sw.label || sw.value;
+				}
+			}
+			return attrs;
+		}
+
+		function currentVariationId(form) {
+			if (!form) return '';
+			var input = form.querySelector('input.variation_id, input[name="variation_id"]');
+			if (!input) return '';
+			var v = (input.value || '').trim();
+			return (v && v !== '0') ? v : '';
+		}
+
+		function appendParamsToUrl(href, attrs, vid) {
+			try {
+				var url = new URL(href, window.location.origin);
+				var path = (url.pathname || '').toLowerCase();
+				// Target only customizer destinations.
+				var isCustomizerPath =
+					path.indexOf('/customize/') !== -1 ||
+					path.indexOf('/embed/') !== -1 ||
+					path.indexOf('/review/') !== -1;
+				if (!isCustomizerPath) return href;
+
+				if (vid) url.searchParams.set('wcVariationId', vid);
+				if (attrs && Object.keys(attrs).length > 0) {
+					url.searchParams.set('wcAttributes', JSON.stringify(attrs));
+				}
+				return url.toString();
+			} catch (_e) {
+				return href;
+			}
+		}
+
+		// Keep data-customizer buttons in sync even when loader runs on the same click.
+		function syncDataCustomizerAttrs(attrs, vid) {
+			document.querySelectorAll('[data-customizer]').forEach(function (btn) {
+				try {
+					if (attrs && Object.keys(attrs).length > 0) {
+						btn.setAttribute('data-wc-attributes', JSON.stringify(attrs));
+					}
+					if (vid) btn.setAttribute('data-wc-variation-id', vid);
+				} catch (_e) {}
+			});
+		}
+
+		// Capture phase so this runs before most theme handlers.
+		document.addEventListener('click', function(e) {
+			var form = getForm();
+			var attrs = collectAttrs(form);
+			var vid = currentVariationId(form);
+			syncDataCustomizerAttrs(attrs, vid);
+
+			var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+			if (!a) return;
+			a.href = appendParamsToUrl(a.href, attrs, vid);
+		}, true);
+
+		// If any script calls window.open for customizer URL, append params there too.
+		try {
+			var _open = window.open;
+			window.open = function(url, target, features) {
+				var form = getForm();
+				var attrs = collectAttrs(form);
+				var vid = currentVariationId(form);
+				var nextUrl = (typeof url === 'string') ? appendParamsToUrl(url, attrs, vid) : url;
+				return _open.call(window, nextUrl, target, features);
+			};
+		} catch (_e) {}
+	})();
+	</script>
+	<?php
+}, 95 );
 
 // Show "Customized" label in cart item details (+ inline preview when we have image data)
 add_filter( 'woocommerce_get_item_data', function ( $item_data, $cart_item ) {
