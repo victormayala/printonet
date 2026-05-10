@@ -1018,10 +1018,11 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         },
       });
       if (error) throw error;
-      return data as { site_url?: string };
+      return data as { site_url?: string; store_id?: string };
     },
     onSuccess: (data) => {
       if (data?.site_url) setProvisionedSiteUrl(data.site_url);
+      if (data?.store_id) setProvisionedStoreId(data.store_id);
     },
     onError: (e: Error) => {
       toast({ title: "Could not create store", description: e.message, variant: "destructive" });
