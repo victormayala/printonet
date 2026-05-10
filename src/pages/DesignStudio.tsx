@@ -2558,7 +2558,7 @@ export default function DesignStudio({
       // Browser upload (works when storage policies allow the session). Edge function skips if URL already set.
       try {
         if (sessionId && layersJson.length > 0) {
-          const path = `${sessionId}/client_layers_${Date.now()}.json`;
+          const path = `${sessionId}/layers.json`;
           const blob = new Blob([layersJson], { type: "application/json" });
           const { data: upData, error: upErr } = await supabase.storage
             .from("design-exports")

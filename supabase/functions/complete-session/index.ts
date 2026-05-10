@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
         layersJson.length <= 12 * 1024 * 1024
       ) {
         try {
-          const path = `${sessionId}/layers_${Date.now()}.json`;
+          const path = `${sessionId}/layers.json`;
           const bytes = new TextEncoder().encode(layersJson);
           const { data: upData, error: upErr } = await supabase.storage
             .from("design-exports")
