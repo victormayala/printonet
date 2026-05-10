@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.5.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.6.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
 define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
