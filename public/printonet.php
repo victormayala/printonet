@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PRINTONET_PLUGIN_VERSION', '1.5.0' );
+define( 'PRINTONET_PLUGIN_VERSION', '1.6.0' );
 define( 'PRINTONET_BRANDING_OPTION', 'printonet_branding' );
 define( 'PRINTONET_ASSET_IDS_OPTION', 'printonet_branding_asset_ids' );
 
@@ -539,6 +539,112 @@ add_action( 'woocommerce_after_order_itemmeta', function ( $item_id, $item, $pro
 	}
 	echo '</div>';
 }, 10, 3 );
+
+/* -------------------------------------------------------------------------
+ * Order paid → POST signed payload (with print files) to the Printonet
+ * Edge Function so the dashboard can render print-ready assets.
+ *
+ * Configure in wp-config.php:
+ *   define('PRINTONET_ORDER_FILES_WEBHOOK_URL', 'https://<project>.supabase.co/functions/v1/printonet-woo-order-files');
+ *   define('PRINTONET_PLATFORM_HMAC_SECRET',   '<same secret as Edge Function>');
+ *   // Optional override; otherwise read from option 'printonet_tenant_slug':
+ *   // define('PRINTONET_TENANT_SLUG', 'royal');
+ * ------------------------------------------------------------------------- */
+
+if ( ! function_exists( 'printonet_get_tenant_slug' ) ) {
+	function printonet_get_tenant_slug() {
+		if ( defined( 'PRINTONET_TENANT_SLUG' ) && PRINTONET_TENANT_SLUG ) {
+			return (string) PRINTONET_TENANT_SLUG;
+		}
+		$opt = get_option( 'printonet_tenant_slug', '' );
+		if ( $opt ) { return (string) $opt; }
+		// Fallback: derive from host (e.g. royal.stores.printonet.com → "royal").
+		$host = wp_parse_url( home_url(), PHP_URL_HOST );
+		if ( $host ) {
+			$parts = explode( '.', $host );
+			return $parts[0] ?? '';
+		}
+		return '';
+	}
+}
+
+if ( ! function_exists( 'printonet_send_order_files' ) ) {
+	function printonet_send_order_files( $order_id ) {
+		if ( ! defined( 'PRINTONET_ORDER_FILES_WEBHOOK_URL' ) || ! defined( 'PRINTONET_PLATFORM_HMAC_SECRET' ) ) {
+			return;
+		}
+		$url    = (string) PRINTONET_ORDER_FILES_WEBHOOK_URL;
+		$secret = (string) PRINTONET_PLATFORM_HMAC_SECRET;
+		if ( '' === $url || '' === $secret ) { return; }
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) { return; }
+
+		$line_items = [];
+		foreach ( $order->get_items() as $item_id => $item ) {
+			$session_id = $item->get_meta( '_customizer_session_id' );
+			$design_url = $item->get_meta( '_customizer_design_url' );
+			$sides_json = $item->get_meta( '_customizer_sides_json' );
+			$sides      = $sides_json ? json_decode( $sides_json, true ) : null;
+			$product    = $item->get_product();
+			$line_items[] = [
+				'item_id'                => (int) $item_id,
+				'product_id'             => $product ? (int) $product->get_id() : 0,
+				'sku'                    => $product ? (string) $product->get_sku() : '',
+				'name'                   => $item->get_name(),
+				'quantity'               => (int) $item->get_quantity(),
+				'total'                  => (string) $item->get_total(),
+				'customizer_session_id'  => $session_id ?: null,
+				'print_file_url'         => $design_url ?: null,
+				'sides'                  => is_array( $sides ) ? $sides : null,
+			];
+		}
+
+		$payload = [
+			'tenant_slug'  => printonet_get_tenant_slug(),
+			'store_url'    => home_url(),
+			'order_id'     => (int) $order->get_id(),
+			'order_number' => (string) $order->get_order_number(),
+			'order_status' => (string) $order->get_status(),
+			'currency'     => (string) $order->get_currency(),
+			'date_paid'    => $order->get_date_paid() ? $order->get_date_paid()->date( 'c' ) : null,
+			'total'        => (string) $order->get_total(),
+			'customer'     => [
+				'email' => (string) $order->get_billing_email(),
+				'name'  => trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ),
+			],
+			'line_items'   => $line_items,
+		];
+
+		$body      = wp_json_encode( $payload );
+		$timestamp = (string) time();
+		$signature = hash_hmac( 'sha256', $timestamp . '.' . $body, $secret );
+
+		$res = wp_remote_post( $url, [
+			'timeout' => 15,
+			'headers' => [
+				'Content-Type'           => 'application/json',
+				'X-Printonet-Timestamp'  => $timestamp,
+				'X-Printonet-Signature'  => $signature,
+			],
+			'body'    => $body,
+		] );
+
+		if ( is_wp_error( $res ) ) {
+			error_log( '[Printonet] order files webhook error: ' . $res->get_error_message() );
+			return;
+		}
+		$code = (int) wp_remote_retrieve_response_code( $res );
+		if ( $code < 200 || $code >= 300 ) {
+			error_log( '[Printonet] order files webhook HTTP ' . $code . ': ' . wp_remote_retrieve_body( $res ) );
+		}
+	}
+}
+
+// Fire when an order becomes paid (covers manual + gateway transitions).
+add_action( 'woocommerce_payment_complete', 'printonet_send_order_files', 20, 1 );
+add_action( 'woocommerce_order_status_processing', 'printonet_send_order_files', 20, 1 );
+add_action( 'woocommerce_order_status_completed', 'printonet_send_order_files', 20, 1 );
 
 /* -------------------------------------------------------------------------
  * Activation: flush rewrite rules so REST routes are immediately available.
