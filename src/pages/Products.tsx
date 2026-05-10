@@ -2622,18 +2622,25 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
     setBrowsing(true);
     setSelectedStyleIds(new Set());
     try {
-      const results = await Promise.all(
-        POPULAR_SANMAR_STYLES.map(async (styleId) => {
-          try {
-            const { data } = await supabase.functions.invoke("import-sanmar-products", {
-              body: { action: "browse", ...creds, search: styleId, page: 1, per_page: 1 },
-            });
-            return data?.styles?.[0] || null;
-          } catch {
-            return null;
-          }
-        })
-      );
+      const results: any[] = [];
+      const batchSize = 3;
+      for (let i = 0; i < POPULAR_SANMAR_STYLES.length; i += batchSize) {
+        const batch = POPULAR_SANMAR_STYLES.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(async (styleId) => {
+            try {
+              const { data } = await supabase.functions.invoke("import-sanmar-products", {
+                body: { action: "browse", ...creds, search: styleId, page: 1, per_page: 1 },
+              });
+              return data?.styles?.[0] || null;
+            } catch {
+              return null;
+            }
+          })
+        );
+        results.push(...batchResults);
+        setCatalogResults(results.filter(Boolean));
+      }
       const styles = results.filter(Boolean);
       setCatalogResults(styles);
       setAppliedSearchQuery("");

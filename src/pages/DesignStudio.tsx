@@ -2536,7 +2536,7 @@ export default function DesignStudio({
       const result: {
         sessionId: string | undefined;
         sides: typeof sides;
-        variant: ReturnType<(typeof selectedVariantRef)["current"]>;
+        variant: ProductVariant | null;
         designLayersUrl?: string;
         printFileUrl?: string;
       } = {
