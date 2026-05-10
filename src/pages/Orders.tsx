@@ -18,7 +18,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Search, Download, Eye, Package, Calendar,
-  Filter, ExternalLink, Palette,
+  Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
