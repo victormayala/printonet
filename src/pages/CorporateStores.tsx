@@ -897,8 +897,64 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const [checking, setChecking] = useState(false);
 
   const [provisionedSiteUrl, setProvisionedSiteUrl] = useState<string | null>(null);
+  const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(null);
+  const [stripeStatus, setStripeStatus] = useState<{
+    connected: boolean;
+    charges_enabled: boolean;
+    details_submitted: boolean;
+  } | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeOnboardingOpened, setStripeOnboardingOpened] = useState(false);
 
   const STEP_LABELS = ["Create Store", "Choose Domain", "Connect Stripe", "Store Ready"];
+
+  const startStripeOnboarding = async () => {
+    if (!provisionedStoreId) {
+      toast({ title: "Store still provisioning", description: "Please wait a moment.", variant: "destructive" });
+      return;
+    }
+    setStripeLoading(true);
+    try {
+      const returnUrl = `${window.location.origin}/corporate-stores?stripe=return&store=${provisionedStoreId}`;
+      const refreshUrl = `${window.location.origin}/corporate-stores?stripe=refresh&store=${provisionedStoreId}`;
+      const { data, error } = await supabase.functions.invoke("stripe-connect-onboard", {
+        body: { storeId: provisionedStoreId, returnUrl, refreshUrl },
+      });
+      if (error) throw error;
+      const url = (data as { url?: string })?.url;
+      if (!url) throw new Error("No onboarding URL returned");
+      window.open(url, "_blank", "noopener,noreferrer");
+      setStripeOnboardingOpened(true);
+    } catch (e) {
+      toast({
+        title: "Could not start Stripe onboarding",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const refreshStripeStatus = async () => {
+    if (!provisionedStoreId) return;
+    setStripeLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("stripe-connect-status", {
+        body: { storeId: provisionedStoreId },
+      });
+      if (error) throw error;
+      setStripeStatus(data as { connected: boolean; charges_enabled: boolean; details_submitted: boolean });
+    } catch (e) {
+      toast({
+        title: "Could not check Stripe status",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setStripeLoading(false);
+    }
+  };
 
   const callSlugCheck = async (payload: { store_name?: string; tenant_slug?: string }) => {
     setChecking(true);
