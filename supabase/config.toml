@@ -62,3 +62,12 @@ verify_jwt = false
 
 [functions.stripe-connect-login-link]
 verify_jwt = false
+
+[functions.woo-checkout-init]
+verify_jwt = false
+
+[functions.woo-checkout-complete]
+verify_jwt = false
+
+[functions.woo-connect-webhook]
+verify_jwt = false

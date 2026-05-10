@@ -24,6 +24,8 @@ import CorporateStores from "./pages/CorporateStores";
 import CorporateStoreDetails from "./pages/CorporateStoreDetails";
 import StoreShop from "./pages/StoreShop";
 import StoreCustomize from "./pages/StoreCustomize";
+import WooPay from "./pages/WooPay";
+import WooPayReturn from "./pages/WooPayReturn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +64,8 @@ const App = () => (
             <Route path="/checkout/:sessionId" element={<Checkout />} />
             <Route path="/s/:tenantSlug" element={<StoreShop />} />
             <Route path="/s/:tenantSlug/customize/:productId" element={<StoreCustomize />} />
+            <Route path="/pay/woo" element={<WooPay />} />
+            <Route path="/pay/woo/return" element={<WooPayReturn />} />
 
             {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
