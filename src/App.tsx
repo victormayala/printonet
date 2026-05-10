@@ -27,6 +27,7 @@ import StoreCustomize from "./pages/StoreCustomize";
 import WooPay from "./pages/WooPay";
 import WooPayReturn from "./pages/WooPayReturn";
 import NotFound from "./pages/NotFound";
+import LayersPreview from "./pages/LayersPreview";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/s/:tenantSlug/customize/:productId" element={<StoreCustomize />} />
             <Route path="/pay/woo" element={<WooPay />} />
             <Route path="/pay/woo/return" element={<WooPayReturn />} />
+            <Route path="/layers-preview" element={<LayersPreview />} />
 
             {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />

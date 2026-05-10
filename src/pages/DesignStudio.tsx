@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group, Path, Pattern, Point } from "fabric";
 import { supabase } from "@/integrations/supabase/client";
+import { buildLayersExportJson } from "@/lib/layersExport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -2545,15 +2546,7 @@ export default function DesignStudio({
         variant: selectedVariantRef.current || null,
       };
 
-      const layersJson = JSON.stringify({
-        v: 1,
-        sessionId,
-        sides: sides.map((s) => ({
-          view: s.view,
-          canvasJSON: s.canvasJSON,
-          printArea: s.printArea,
-        })),
-      });
+      const layersJson = buildLayersExportJson(sessionId, sides);
 
       // Browser upload (works when storage policies allow the session). Edge function skips if URL already set.
       try {

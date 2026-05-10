@@ -57,6 +57,13 @@ function linePrintFileUrl(li: LineItem): string {
   return String(li.print_file_url || li.printFileUrl || "").trim();
 }
 
+/** Opens formatted JSON in-app; avoids browser freezing on huge single-line JSON. */
+function layersJsonViewerHref(publicLayersUrl: string): string {
+  const u = publicLayersUrl.trim();
+  if (!u.startsWith("http")) return u;
+  return `${window.location.origin}/layers-preview?url=${encodeURIComponent(u)}`;
+}
+
 /** Loose UUID check for session ids stored on Woo line meta */
 function looksLikeSessionId(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -621,7 +628,7 @@ export default function Orders() {
                         )}
                         {lineDesignLayersUrl(li) ? (
                           <Button variant="secondary" size="sm" asChild>
-                            <a href={lineDesignLayersUrl(li)} target="_blank" rel="noopener noreferrer">
+                            <a href={layersJsonViewerHref(lineDesignLayersUrl(li))} target="_blank" rel="noopener noreferrer">
                               <Layers className="h-4 w-4 mr-1" />
                               Design layers
                             </a>
