@@ -471,9 +471,8 @@ export default function Orders() {
                       );
                     })}
                   </div>
-            </div>
-            );
-          })()}
+                </div>
+              )}
 
               {/* Customizer sessions referenced on this paid order */}
               {(() => {
