@@ -92,6 +92,66 @@ function StatusBadge({ status }: { status: CorporateStore["status"] }) {
   );
 }
 
+function PaymentsCell({ store }: { store: CorporateStore }) {
+  const [opening, setOpening] = useState(false);
+
+  const openDashboard = async () => {
+    setOpening(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("stripe-connect-login-link", {
+        body: { storeId: store.id },
+      });
+      if (error) throw error;
+      const url = (data as { url?: string })?.url;
+      if (!url) throw new Error("No dashboard URL");
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast({
+        title: "Could not open Stripe dashboard",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  if (!store.stripe_account_id) {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <AlertCircle className="h-3 w-3" /> Not connected
+      </Badge>
+    );
+  }
+  if (!store.stripe_charges_enabled) {
+    return (
+      <div className="space-y-1">
+        <Badge variant="secondary" className="gap-1">
+          <Clock className="h-3 w-3" /> Pending
+        </Badge>
+        <div className="text-xs text-muted-foreground">Finish Stripe onboarding</div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Badge variant="default" className="gap-1">
+        <CheckCircle2 className="h-3 w-3" /> Connected
+      </Badge>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-xs"
+        onClick={openDashboard}
+        disabled={opening}
+      >
+        {opening ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+        <span className="ml-1">Stripe</span>
+      </Button>
+    </div>
+  );
+}
+
 function LogoField({
   label,
   value,
@@ -283,6 +343,7 @@ export default function CorporateStores() {
                     <TableRow>
                       <TableHead>Store</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Payments</TableHead>
                       <TableHead>Site URL</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -322,6 +383,9 @@ export default function CorporateStores() {
                               </div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <PaymentsCell store={s} />
                         </TableCell>
                         <TableCell>
                           {s.wp_site_url ? (

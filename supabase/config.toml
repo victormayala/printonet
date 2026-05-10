@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.stripe-connect-status]
 verify_jwt = false
+
+[functions.stripe-connect-checkout]
+verify_jwt = false
+
+[functions.stripe-connect-login-link]
+verify_jwt = false

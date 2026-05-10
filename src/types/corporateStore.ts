@@ -22,6 +22,10 @@ export type CorporateStore = {
   store_type: "corporate" | "retail";
   status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean;
+  stripe_payouts_enabled: boolean;
+  stripe_details_submitted: boolean;
   created_at: string;
 };
 

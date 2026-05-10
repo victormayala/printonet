@@ -425,6 +425,7 @@ export type Database = {
       orders: {
         Row: {
           amount_total: number | null
+          application_fee_amount: number | null
           created_at: string
           currency: string | null
           customer_email: string | null
@@ -432,12 +433,15 @@ export type Database = {
           id: string
           session_id: string | null
           status: string
+          store_id: string | null
+          stripe_account_id: string | null
           stripe_checkout_id: string | null
           stripe_payment_intent: string | null
           updated_at: string
         }
         Insert: {
           amount_total?: number | null
+          application_fee_amount?: number | null
           created_at?: string
           currency?: string | null
           customer_email?: string | null
@@ -445,12 +449,15 @@ export type Database = {
           id?: string
           session_id?: string | null
           status?: string
+          store_id?: string | null
+          stripe_account_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent?: string | null
           updated_at?: string
         }
         Update: {
           amount_total?: number | null
+          application_fee_amount?: number | null
           created_at?: string
           currency?: string | null
           customer_email?: string | null
@@ -458,6 +465,8 @@ export type Database = {
           id?: string
           session_id?: string | null
           status?: string
+          store_id?: string | null
+          stripe_account_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent?: string | null
           updated_at?: string
