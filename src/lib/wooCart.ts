@@ -10,6 +10,10 @@ export interface WooCartLineInput {
   quantity: number;
   sessionId: string;
   previewImage: string | null;
+  /** High-resolution print-ready file URL (e.g. exported PNG) for Woo line meta → dashboard sync */
+  printFileUrl?: string | null;
+  /** Layered design bundle URL (JSON in storage) for Woo `_printonet_design_layers_url` */
+  designLayersUrl?: string | null;
 }
 
 export interface WooAjaxAddResult {
@@ -44,6 +48,8 @@ export async function transferHostedCartToWoo(
       quantity: Math.max(1, line.quantity || 1),
       session_id: line.sessionId,
       preview_image: line.previewImage || "",
+      print_file_url: (line.printFileUrl && line.printFileUrl.trim()) || "",
+      design_layers_url: (line.designLayersUrl && line.designLayersUrl.trim()) || "",
     })),
   };
 
@@ -103,6 +109,12 @@ export async function wooAjaxAddToCart(storeOrigin: string, line: WooCartLineInp
       "customizer_sides",
       JSON.stringify([{ view: "front", url: line.previewImage, preview_url: line.previewImage }]),
     );
+  }
+  if (line.printFileUrl?.trim()) {
+    fd.append("printonet_print_file_url", line.printFileUrl.trim());
+  }
+  if (line.designLayersUrl?.trim()) {
+    fd.append("printonet_design_layers_url", line.designLayersUrl.trim());
   }
 
   let res: Response;

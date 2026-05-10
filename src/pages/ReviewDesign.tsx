@@ -37,6 +37,10 @@ interface DesignOutput {
   sessionId?: string;
   sides: DesignSide[];
   variant?: DesignVariant | null;
+  /** Set by complete-session after layers JSON upload */
+  designLayersUrl?: string;
+  /** First HTTPS production PNG — set by complete-session */
+  printFileUrl?: string;
 }
 
 interface SessionRow {
@@ -192,6 +196,16 @@ export default function ReviewDesign() {
   const handleAddToCart = async () => {
     if (addedToCart || sendingToWoo) return;
     const previewSide = sides.find((s) => s.previewPNG) || sides[0];
+    const printFromOutput = designOutput?.printFileUrl?.trim();
+    const layersFromOutput = designOutput?.designLayersUrl?.trim();
+    const printFromSide =
+      sides.find((s) => typeof s.designPNG === "string" && /^https?:\/\//i.test(s.designPNG))?.designPNG ||
+      sides.find((s) => s.designPNG)?.designPNG;
+    const printFileUrl =
+      (printFromOutput && printFromOutput.length > 0 ? printFromOutput : null) ||
+      (typeof printFromSide === "string" && /^https?:\/\//i.test(printFromSide) ? printFromSide : null);
+    const designLayersUrl =
+      layersFromOutput && layersFromOutput.length > 0 ? layersFromOutput : null;
     const priceInCents = Math.round(unitPrice * 100);
     const variantWithSize = [variantLabel, selectedSize].filter(Boolean).join(" · ");
 
@@ -233,6 +247,8 @@ export default function ReviewDesign() {
           quantity,
           sessionId: sessionId || "",
           previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
+          printFileUrl: printFileUrl || undefined,
+          designLayersUrl: designLayersUrl || undefined,
         },
       ]);
       if (transfer.ok && transfer.redirectUrl) {

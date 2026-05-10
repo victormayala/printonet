@@ -14,6 +14,8 @@ export interface CartItem {
   /** Woo store origin when shopper arrived from an external storefront (survives cart refresh without query string) */
   storeOrigin?: string;
   shopifyVariantId?: string;
+  printFileUrl?: string;
+  designLayersUrl?: string;
 }
 
 const CART_KEY = "customizer_cart";
@@ -65,6 +67,10 @@ function normalizeCartItem(raw: unknown): CartItem | null {
   const shopifyVariantId =
     toStringOrUndefined(row.shopifyVariantId) || toStringOrUndefined(row.shopify_variant_id);
   const variant = toStringOrUndefined(row.variant);
+  const printFileUrl =
+    toStringOrUndefined(row.printFileUrl) || toStringOrUndefined(row.print_file_url);
+  const designLayersUrl =
+    toStringOrUndefined(row.designLayersUrl) || toStringOrUndefined(row.design_layers_url);
 
   let wcAttributes: Record<string, string> | undefined;
   const attrs = asRecord(row.wcAttributes) || asRecord(row.wc_attributes);
@@ -89,6 +95,8 @@ function normalizeCartItem(raw: unknown): CartItem | null {
     wcAttributes,
     storeOrigin,
     shopifyVariantId,
+    printFileUrl,
+    designLayersUrl,
   };
 }
 

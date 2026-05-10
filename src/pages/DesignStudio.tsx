@@ -2533,11 +2533,27 @@ export default function DesignStudio({
         exportCanvas.dispose();
       }
 
-      const result = {
+      const result: {
+        sessionId: string | undefined;
+        sides: typeof sides;
+        variant: ReturnType<(typeof selectedVariantRef)["current"]>;
+        designLayersUrl?: string;
+        printFileUrl?: string;
+      } = {
         sessionId,
         sides,
         variant: selectedVariantRef.current || null,
       };
+
+      const layersJson = JSON.stringify({
+        v: 1,
+        sessionId,
+        sides: sides.map((s) => ({
+          view: s.view,
+          canvasJSON: s.canvasJSON,
+          printArea: s.printArea,
+        })),
+      });
 
       // If embed mode, complete session via edge function (handles uploads with service role)
       if (embedMode && sessionId) {
@@ -2554,12 +2570,15 @@ export default function DesignStudio({
 
         try {
           const { data: completeData } = await supabase.functions.invoke("complete-session", {
-            body: { sessionId, designOutput: result, uploads },
+            body: { sessionId, designOutput: result, uploads, layersJson },
           });
           // Update result with server-returned URLs
           if (completeData?.designOutput?.sides) {
             result.sides = completeData.designOutput.sides;
           }
+          const dout = completeData?.designOutput as { designLayersUrl?: string; printFileUrl?: string } | undefined;
+          if (dout?.designLayersUrl) result.designLayersUrl = dout.designLayersUrl;
+          if (dout?.printFileUrl) result.printFileUrl = dout.printFileUrl;
         } catch (sessionErr) {
           console.warn("Session completion API call failed:", sessionErr);
         }
@@ -2577,9 +2596,12 @@ export default function DesignStudio({
       } else if (sessionId) {
         // Non-embed mode with session — save and navigate to review
         try {
-          await supabase.functions.invoke("complete-session", {
-            body: { sessionId, designOutput: result },
+          const { data: completeData } = await supabase.functions.invoke("complete-session", {
+            body: { sessionId, designOutput: result, layersJson },
           });
+          const dout = completeData?.designOutput as { designLayersUrl?: string; printFileUrl?: string } | undefined;
+          if (dout?.designLayersUrl) result.designLayersUrl = dout.designLayersUrl;
+          if (dout?.printFileUrl) result.printFileUrl = dout.printFileUrl;
         } catch (sessionErr) {
           console.warn("Session completion API call failed:", sessionErr);
         }

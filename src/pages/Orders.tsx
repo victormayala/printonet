@@ -18,7 +18,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Search, Download, Eye, Package, Calendar,
-  Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail,
+  Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail, Layers,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,6 +35,7 @@ type LineItem = {
   quantity?: number;
   sku?: string;
   print_file_url?: string;
+  design_layers_url?: string;
   design_preview_url?: string;
   customizer_design_url?: string;
   customizer_session_id?: string;
@@ -297,7 +298,11 @@ export default function Orders() {
             <TableBody>
               {filtered.map((row) => {
                 const lines = parseLineItems(row);
-                const filesCount = lines.filter((l) => !!(l.print_file_url || "").trim()).length;
+                const filesCount = lines.filter((l) => {
+                  const p = (l.print_file_url || "").trim();
+                  const d = (l.design_layers_url || "").trim();
+                  return p !== "" || d !== "";
+                }).length;
                 const sidCount = orderSessionIds(row).length;
                 const resolved = resolvedSessionCount(row);
                 return (
@@ -604,6 +609,14 @@ export default function Orders() {
                         ) : (
                           <span className="text-muted-foreground text-xs">No print file URL</span>
                         )}
+                        {li.design_layers_url ? (
+                          <Button variant="secondary" size="sm" asChild>
+                            <a href={li.design_layers_url} target="_blank" rel="noopener noreferrer">
+                              <Layers className="h-4 w-4 mr-1" />
+                              Design layers
+                            </a>
+                          </Button>
+                        ) : null}
                         {li.design_preview_url ? (
                           <Button variant="outline" size="sm" asChild>
                             <a href={li.design_preview_url} target="_blank" rel="noopener noreferrer">

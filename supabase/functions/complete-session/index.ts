@@ -29,7 +29,8 @@ Deno.serve(async (req) => {
     );
 
     if (req.method === "POST") {
-      const { sessionId, designOutput, uploads } = await req.json();
+      const body = await req.json();
+      const { sessionId, designOutput, uploads, layersJson } = body;
 
       if (!sessionId || !designOutput) {
         return new Response(
@@ -66,9 +67,48 @@ Deno.serve(async (req) => {
         }
       }
 
+      let mergedDesignOutput: Record<string, unknown> = {
+        ...(typeof designOutput === "object" && designOutput !== null
+          ? (designOutput as Record<string, unknown>)
+          : {}),
+      };
+
+      if (typeof layersJson === "string" && layersJson.length > 0 && layersJson.length <= 12 * 1024 * 1024) {
+        try {
+          const path = `${sessionId}/layers_${Date.now()}.json`;
+          const bytes = new TextEncoder().encode(layersJson);
+          const { data: upData, error: upErr } = await supabase.storage
+            .from("design-exports")
+            .upload(path, bytes, { contentType: "application/json", upsert: true });
+
+          if (upData && !upErr) {
+            const publicUrl = supabase.storage
+              .from("design-exports")
+              .getPublicUrl(upData.path).data.publicUrl;
+            mergedDesignOutput = { ...mergedDesignOutput, designLayersUrl: publicUrl };
+          }
+        } catch (e) {
+          console.warn("layersJson upload failed:", e);
+        }
+      }
+
+      const sidesArr = mergedDesignOutput["sides"];
+      if (Array.isArray(sidesArr)) {
+        const hit = sidesArr.find(
+          (s: unknown) =>
+            s &&
+            typeof s === "object" &&
+            typeof (s as { designPNG?: string }).designPNG === "string" &&
+            /^https?:\/\//i.test(((s as { designPNG: string }).designPNG || "").trim()),
+        ) as { designPNG?: string } | undefined;
+        if (hit?.designPNG) {
+          mergedDesignOutput = { ...mergedDesignOutput, printFileUrl: hit.designPNG.trim() };
+        }
+      }
+
       const { data, error } = await supabase
         .from("customizer_sessions")
-        .update({ design_output: designOutput, status: "completed" })
+        .update({ design_output: mergedDesignOutput, status: "completed" })
         .eq("id", sessionId)
         .select()
         .single();

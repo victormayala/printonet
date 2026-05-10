@@ -97,6 +97,8 @@ export default function Cart() {
         quantity: item.quantity,
         sessionId: item.sessionId,
         previewImage: item.previewImage,
+        printFileUrl: item.printFileUrl,
+        designLayersUrl: item.designLayersUrl,
       }));
       const r = await transferHostedCartToWoo(wooStoreOrigin, syncLines);
       if (!r.ok || !r.redirectUrl) {

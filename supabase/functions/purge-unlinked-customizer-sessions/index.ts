@@ -1,10 +1,22 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+/**
+ * Daily cleanup: delete customizer_sessions older than 30 days that are not
+ * referenced on any printonet_woo_order_files line item (paid-order sync).
+ *
+ * Schedule (Supabase Dashboard → Edge Functions → Schedules) or external cron:
+ *   POST /functions/v1/purge-unlinked-customizer-sessions
+ *   Header: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
+ *   Optional body: { "days": 30 }
+ *
+ * Alternatively set secret-only mode:
+ *   Header: x-printonet-purge-secret: <PURGE_SESSIONS_SECRET>
+ * (If PURGE_SESSIONS_SECRET is set in Edge secrets, Bearer SRK is not required.)
+ */
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
+const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-printonet-purge-secret",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 Deno.serve(async (req) => {
@@ -13,26 +25,24 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ ok: false, error: "Method not allowed" }), {
+    return new Response(JSON.stringify({ error: "method_not_allowed" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const purgeSecret = Deno.env.get("PURGE_SESSIONS_SECRET");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  const purgeSecret = Deno.env.get("PURGE_SESSIONS_SECRET") ?? "";
 
-  const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || "";
-  const bearer = authHeader.toLowerCase().startsWith("bearer ")
-    ? authHeader.slice(7).trim()
-    : "";
-  const headerSecret = req.headers.get("x-printonet-purge-secret") || "";
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const headerSecret = req.headers.get("x-printonet-purge-secret") ?? "";
 
-  const okBearer = bearer && bearer === serviceRoleKey;
-  const okSecret = purgeSecret && headerSecret && headerSecret === purgeSecret;
-
-  if (!okBearer && !okSecret) {
-    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+  const okService = serviceKey !== "" && bearer === serviceKey;
+  const okSecret = purgeSecret !== "" && headerSecret === purgeSecret;
+  if (!okService && !okSecret) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -40,40 +50,30 @@ Deno.serve(async (req) => {
 
   let days = 30;
   try {
-    const text = await req.text();
-    if (text) {
-      const body = JSON.parse(text);
-      if (typeof body?.days === "number" && Number.isFinite(body.days)) {
-        days = Math.floor(body.days);
-      }
+    const body = await req.json().catch(() => ({}));
+    if (body && typeof body.days === "number" && Number.isFinite(body.days)) {
+      days = Math.floor(body.days);
     }
   } catch {
-    // ignore body parse errors, default to 30
+    /* default days */
   }
 
-  if (days < 7) {
-    return new Response(
-      JSON.stringify({ ok: false, error: "days must be >= 7", days }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
-
-  const { data, error } = await supabase.rpc(
-    "printonet_purge_unlinked_customizer_sessions",
-    { p_days: days }
-  );
+  const supabase = createClient(url, serviceKey);
+  const { data, error } = await supabase.rpc("printonet_purge_unlinked_customizer_sessions", {
+    p_days: days,
+  });
 
   if (error) {
-    return new Response(
-      JSON.stringify({ ok: false, error: error.message, days }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("purge-unlinked-customizer-sessions", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, deleted_count: Number(data) || 0, days }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
+  const deleted = typeof data === "number" ? data : Number(data);
+  return new Response(JSON.stringify({ ok: true, deleted_count: deleted, days }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });
