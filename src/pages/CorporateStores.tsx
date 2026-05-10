@@ -207,16 +207,28 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
         <Badge variant="secondary" className="gap-1">
           <Clock className="h-3 w-3" /> Pending
         </Badge>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-xs"
-          onClick={startOnboarding}
-          disabled={onboarding}
-        >
-          {onboarding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
-          <span className="ml-1">Resume onboarding</span>
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={startOnboarding}
+            disabled={onboarding}
+          >
+            {onboarding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+            <span className="ml-1">Resume onboarding</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={refreshStatus}
+            disabled={refreshing}
+          >
+            {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <span>↻</span>}
+            <span className="ml-1">Refresh</span>
+          </Button>
+        </div>
       </div>
     );
   }
