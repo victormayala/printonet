@@ -457,6 +457,51 @@ export type Database = {
           },
         ]
       }
+      printonet_woo_order_files: {
+        Row: {
+          created_at: string
+          currency: string | null
+          date_paid: string | null
+          id: string
+          line_items: Json
+          order_id: number
+          order_number: string | null
+          order_status: string | null
+          payload: Json
+          store_url: string
+          tenant_slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          date_paid?: string | null
+          id?: string
+          line_items?: Json
+          order_id: number
+          order_number?: string | null
+          order_status?: string | null
+          payload?: Json
+          store_url: string
+          tenant_slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          date_paid?: string | null
+          id?: string
+          line_items?: Json
+          order_id?: number
+          order_number?: string | null
+          order_status?: string | null
+          payload?: Json
+          store_url?: string
+          tenant_slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_categories: {
         Row: {
           created_at: string
