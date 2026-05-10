@@ -18,11 +18,13 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Search, Download, Eye, Package, Calendar,
-  Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail, Layers,
+  Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Database } from "@/integrations/supabase/types";
+import { downloadLayersJsonUrl, deriveLayersDownloadFilename } from "@/lib/layersDownload";
 
 type WooOrderRow = Database["public"]["Tables"]["printonet_woo_order_files"]["Row"];
 type SessionRow = Database["public"]["Tables"]["customizer_sessions"]["Row"];
@@ -138,6 +140,7 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<WooOrderRow | null>(null);
+  const [layersDownloadingUrl, setLayersDownloadingUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -627,12 +630,49 @@ export default function Orders() {
                           <span className="text-muted-foreground text-xs">No print file URL</span>
                         )}
                         {lineDesignLayersUrl(li) ? (
-                          <Button variant="secondary" size="sm" asChild>
-                            <a href={layersJsonViewerHref(lineDesignLayersUrl(li))} target="_blank" rel="noopener noreferrer">
-                              <Layers className="h-4 w-4 mr-1" />
-                              Design layers
-                            </a>
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              type="button"
+                              disabled={layersDownloadingUrl === lineDesignLayersUrl(li)}
+                              onClick={() => {
+                                const url = lineDesignLayersUrl(li);
+                                setLayersDownloadingUrl(url);
+                                void downloadLayersJsonUrl(url)
+                                  .then(() => {
+                                    toast({
+                                      title: "Layers file download",
+                                      description: deriveLayersDownloadFilename(url),
+                                    });
+                                  })
+                                  .catch((e: unknown) => {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Download failed",
+                                      description: e instanceof Error ? e.message : "Could not download layers file",
+                                    });
+                                  })
+                                  .finally(() => setLayersDownloadingUrl(null));
+                              }}
+                            >
+                              {layersDownloadingUrl === lineDesignLayersUrl(li) ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4 mr-1" />
+                              )}
+                              Layers file
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                              <a
+                                href={layersJsonViewerHref(lineDesignLayersUrl(li))}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View JSON
+                              </a>
+                            </Button>
+                          </>
                         ) : null}
                         {li.design_preview_url ? (
                           <Button variant="outline" size="sm" asChild>
