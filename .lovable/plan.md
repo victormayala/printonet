@@ -1,69 +1,89 @@
-
 ## Goal
 
-Distinguish corporate stores (e.g. Pepsi Co.) from retail shop stores in **My Stores**, and let the user attach a per-product corporate logo + position that gets baked into the product images when pushed to that corporate store.
+Enable each shop owner's provisioned store to accept payments that flow **directly into their own Stripe Connect Express account** (created during onboarding). Printonet never touches the funds.
 
-## 1. Mark stores as Corporate vs Retail Shop
+## Where we are today
 
-**DB migration** on `corporate_stores`:
-- Add `store_type text not null default 'retail'` with check constraint `('corporate','retail')`.
+- Onboarding step 3 creates a Stripe Express account per store and stores `stripe_account_id` + capability flags on `corporate_stores`.
+- `stripe-connect-onboard` and `stripe-connect-status` edge functions exist.
+- Customizer sessions, design output, and Woo order files already exist — but checkout currently has no path that charges the merchant's Stripe account.
 
-**UI — `src/pages/CorporateStores.tsx` and `CorporateStoreDetails.tsx`:**
-- Add an "Account type" radio/select in the create + edit form: **Corporate Store** vs **Retail Shop**.
-- Show a small `Corporate` badge next to the store name in the list/details when `store_type === 'corporate'`.
-- Keep the tab name **My Stores** (no rename, per request).
-- Filtering/grouping: optional segmented control at top of My Stores list — *All / Corporate / Retail*.
+## What "connecting payments" means
 
-## 2. Per-product corporate logo + position
+For a customer buying on a shop owner's store, we need a checkout that:
+1. Knows which `corporate_stores.stripe_account_id` to charge.
+2. Creates a Stripe Checkout Session **on behalf of that connected account** (`stripeAccount` header / `on_behalf_of`).
+3. Optionally takes an `application_fee_amount` for Printonet (platform fee).
+4. Returns success → writes an `orders` row + marks the customizer session complete.
 
-**DB migration** — new table `corporate_store_product_logos`:
-- `id`, `user_id`, `store_id` (corporate_stores.id), `product_id` (inventory_products.id)
-- `logo_url text not null` (uploaded to existing `corporate-store-assets` bucket under `{user_id}/{store_id}/products/{product_id}.png`)
-- `view text not null` — one of `front | back | side1 | side2`
-- `position jsonb not null` — `{ x_pct, y_pct, width_pct, rotation_deg }` (percentage-based, matching the existing print-area model)
-- Unique on `(store_id, product_id, view)`.
-- RLS: user owns row when `auth.uid() = user_id`.
+## Plan
 
-**UI — Push to Store dialog (`src/components/PushProductsDialog.tsx`):**
-- When the selected destination store has `store_type = 'corporate'`, reveal a **"Corporate logo"** section per selected product:
-  - Logo upload (reuses existing logo upload pattern from CorporateStores form, 4 MB max, png/jpg/svg/webp).
-  - View selector (Front / Back / Left / Right — only views that exist on the product).
-  - Lightweight visual placer: thumbnail of the chosen mockup with a draggable + resizable logo overlay (canvas or absolute-positioned div). Saves `position` as percentages.
-  - Persists to `corporate_store_product_logos` on confirm.
-- Reuse the saved logo + position next time the same product is pushed to the same corporate store (prefill).
+### 1. Gate the storefront on Stripe readiness
+- In `corporate_stores`, treat a store as "payments-ready" only when `stripe_charges_enabled = true`.
+- Surface state in the dashboard: Connected ✅ / Pending ⏳ / Action required ⚠ with a "Resume Stripe onboarding" button (re-uses `stripe-connect-onboard` to mint a fresh Account Link).
+- Block "Publish store" / hide checkout button on the storefront until `charges_enabled`.
 
-## 3. Bake the logo into product images at push time
+### 2. New edge function: `create-store-checkout`
+Replaces/augments today's checkout creation. Inputs: `storeId`, `sessionId` (customizer session), `lineItems`, `returnUrl`.
 
-**Edge function** — extend `export-to-woocommerce` and `export-to-shopify` (and the `sync-catalog-to-tenant` path used for Printonet multi-tenant Woo):
+Logic:
+- Load `corporate_stores` by `storeId`; require `stripe_charges_enabled`.
+- Build a Stripe Checkout Session with:
+  - `ui_mode: "embedded_page"` (per our standard)
+  - `payment_intent_data: { application_fee_amount, on_behalf_of: acct }` — or pass `{ stripeAccount: acct }` as request option for a **direct charge** model.
+  - `metadata: { customizer_session_id, store_id, user_id }`
+- Return `clientSecret`.
 
-For each (store, product) being pushed:
-1. Look up `corporate_store_product_logos` rows for that pair.
-2. For every matching view, server-side composite the logo onto the corresponding mockup image (`image_front`/`image_back`/`image_side1`/`image_side2`):
-   - Use Deno `ImageScript` (already available in the runtime) — load mockup, load logo, scale logo to `width_pct * mockup.width`, place at `(x_pct, y_pct)` of the mockup, rotate by `rotation_deg`, encode PNG.
-   - Upload the composited PNG to `corporate-store-assets/{user_id}/{store_id}/composites/{product_id}-{view}.png` and use that public URL in the outgoing payload **instead of** the original mockup URL.
-3. Main catalog images stay untouched — only the per-store push uses the branded version.
+Decision needed: **Direct charges** (recommended for Express — funds settle on merchant, simpler liability) vs **Destination charges** (Printonet is merchant of record). See "Open questions".
 
-Idempotency: hash `(logo_url, position, mockup_url)` and reuse the cached composite if the hash file already exists.
+### 3. Platform fee model
+Add a `platform_fee_bps` (or fixed) column on `corporate_stores` (default e.g. 500 = 5%). `create-store-checkout` computes `application_fee_amount = round(total * bps / 10000)`. Printonet receives this on its platform Stripe account automatically.
 
-## 4. Out of scope (explicit)
+### 4. Webhook: `stripe-connect-webhook`
+New endpoint subscribed to **Connect** events (`account.updated`, `checkout.session.completed`, `payment_intent.succeeded/failed`):
+- `account.updated` → sync `charges_enabled` / `payouts_enabled` / `details_submitted`.
+- `checkout.session.completed` → upsert `orders` row, mark `customizer_sessions.status = 'completed'`, attach to Woo/Shopify line item if applicable.
+- Use `PAYMENTS_SANDBOX_WEBHOOK_SECRET` for sig verification; `verify_jwt = false`.
 
-- No locking the logo as a customizer canvas layer (per answer "At push-to-store time" only).
-- No rename of the **My Stores** tab.
-- No changes to retail-store push behavior.
+### 5. Storefront wiring (Customizer Studio + Woo/Shopify SDKs)
+- Floating cart "Checkout" button calls `create-store-checkout` with the active `storeId` (already known via tenant slug → store lookup).
+- Mount `EmbeddedCheckout` on `/checkout` of the tenant store.
+- `/checkout/return?session_id=…` reads order, shows confirmation.
 
-## Files touched
+### 6. Dashboard: Payments tab on each store
+- Show connection status, last payout, link to Stripe Express dashboard via `stripe.accounts.createLoginLink(acct)` (new tiny edge function `stripe-connect-login-link`).
+- Show recent orders for that store (filtered by `metadata.store_id`).
 
-- DB migrations: `corporate_stores.store_type` column + new `corporate_store_product_logos` table + RLS.
-- `src/types/corporateStore.ts` — add `store_type`.
-- `src/pages/CorporateStores.tsx` — type field in create form, badge + filter.
-- `src/pages/CorporateStoreDetails.tsx` — type field in edit form, badge.
-- `src/components/PushProductsDialog.tsx` — corporate logo upload + placement UI per product (only when target is corporate).
-- `supabase/functions/export-to-woocommerce/index.ts`
-- `supabase/functions/export-to-shopify/index.ts`
-- `supabase/functions/sync-catalog-to-tenant/index.ts`
-- New shared helper `supabase/functions/_shared/composite-logo.ts` for ImageScript compositing + caching.
+### 7. Test → Live cutover
+No code change required when you swap `STRIPE_CONNECT_SECRET_KEY` from `sk_test_…` to `sk_live_…`. Existing test Express accounts won't carry over — owners reconnect once in live mode.
 
-## Open follow-ups (decide later, not blocking)
+## Technical details
 
-- Whether the position editor should be a quick "9-point grid + size slider" (faster) vs full free drag (more flexible). Default to **free drag with snap-to-grid**.
-- Whether to also expose the same logo on customer-facing customizer for that store (currently no — push-time only).
+```text
+Customer → Tenant storefront
+   │  POST /functions/v1/create-store-checkout
+   ▼
+Edge fn ── reads corporate_stores.stripe_account_id
+        ── stripe.checkout.sessions.create({...},
+              { stripeAccount: acct })   ← direct charge
+        ── application_fee_amount = platform fee
+   │
+   ▼
+Stripe Embedded Checkout (clientSecret)
+   │
+   ▼ webhook (Connect)
+stripe-connect-webhook → orders + customizer_sessions update
+```
+
+DB additions (migration):
+- `corporate_stores.platform_fee_bps int not null default 500`
+- `orders.store_id uuid`, `orders.stripe_account_id text`, `orders.application_fee_amount int`
+
+## Open questions
+
+1. **Charge model**: Direct charges (merchant of record = shop owner, lowest liability for Printonet — recommended) or Destination charges (Printonet is MoR, more control)?
+2. **Platform fee**: Flat % per store, per-plan tier, or none for now?
+3. **Refunds/disputes**: Should shop owners handle directly via their Express dashboard (recommended) or proxy through Printonet UI?
+4. Which storefront(s) should we wire first — the hosted Customizer Studio checkout, the WooCommerce plugin path, or both?
+
+Answer 1–4 and I'll implement.
