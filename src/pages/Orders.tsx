@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -140,6 +140,7 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<WooOrderRow | null>(null);
+  const [linkedTenantSlugs, setLinkedTenantSlugs] = useState<string[]>([]);
   const [layersDownloadingUrl, setLayersDownloadingUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -163,20 +164,30 @@ export default function Orders() {
       });
       setOrders([]);
       setSessionById({});
+      setLinkedTenantSlugs([]);
       setLoading(false);
       return;
     }
 
-    const slugs = (stores || [])
-      .map((s) => s.tenant_slug)
-      .filter((s): s is string => typeof s === "string" && s.length > 0);
+    const slugs = [
+      ...new Set(
+        (stores || [])
+          .map((s) =>
+            typeof s.tenant_slug === "string" ? s.tenant_slug.trim().toLowerCase() : "",
+          )
+          .filter((s) => s.length > 0),
+      ),
+    ];
 
     if (slugs.length === 0) {
       setOrders([]);
       setSessionById({});
+      setLinkedTenantSlugs([]);
       setLoading(false);
       return;
     }
+
+    setLinkedTenantSlugs(slugs);
 
     const { data, error } = await supabase
       .from("printonet_woo_order_files")
@@ -290,13 +301,43 @@ export default function Orders() {
             ))}
           </div>
         </div>
+      ) : linkedTenantSlugs.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <Package className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-foreground">No corporate stores</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-md">
+              Paid Woo orders are scoped to your stores by tenant slug. Add or open a corporate store so
+              your tenant slug is linked to this account.
+            </p>
+            <Button className="mt-6" asChild>
+              <Link to="/corporate-stores">Corporate stores</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : orders.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <Package className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-foreground">No synced orders yet</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-md">
+              Orders appear here after checkout is paid on WooCommerce and the store webhook ingests the
+              order into the database. Confirm{" "}
+              <code className="text-xs bg-muted px-1 rounded">PRINTONET_ORDER_FILES_WEBHOOK_URL</code>{" "}
+              on the tenant site points at your Supabase Edge function, and check that order meta{" "}
+              <code className="text-xs bg-muted px-1 rounded">_printonet_dashboard_files_sync_at</code>{" "}
+              is set on paid orders.
+            </p>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">No paid orders yet</h3>
+            <h3 className="text-lg font-semibold text-foreground">No orders match</h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-md">
-              After a customer pays on your Woo store, the order appears here. Customizer session details show inside each order when session ids were saved on the line items.
+              Try clearing search or setting status to &quot;All statuses&quot;. You have {orders.length}{" "}
+              synced order{orders.length === 1 ? "" : "s"}.
             </p>
           </CardContent>
         </Card>

@@ -97,10 +97,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  const tenant_slug = String(body?.tenant_slug ?? "").trim();
-  const store_url = String(body?.store_url ?? "").trim();
+  const tenant_slug = String(body?.tenant_slug ?? "")
+    .trim()
+    .toLowerCase();
+  const store_url = String(
+    body?.woocommerce_site_url ?? body?.store_url ?? "",
+  ).trim();
   const order_id = Number(body?.order_id);
-  if (!tenant_slug || !store_url || !Number.isFinite(order_id)) {
+  if (!tenant_slug || !store_url || !Number.isFinite(order_id) || order_id <= 0) {
     return new Response(
       JSON.stringify({ error: "missing_required_fields" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
