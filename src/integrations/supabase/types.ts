@@ -639,7 +639,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      printonet_purge_unlinked_customizer_sessions: {
+        Args: { p_days?: number }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
