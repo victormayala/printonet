@@ -736,11 +736,13 @@ function StoreFormFields({
             <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
             {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="domain">Custom domain (optional)</Label>
-            <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
-            {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
-          </div>
+          {!hideCustomDomain && (
+            <div className="space-y-1">
+              <Label htmlFor="domain">Custom domain (optional)</Label>
+              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
+              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+            </div>
+          )}
         </div>
       </section>
 
