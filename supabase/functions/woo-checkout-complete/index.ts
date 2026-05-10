@@ -8,6 +8,7 @@
 //   stripe_account_id:          string (required)
 
 import { signedTenantCall } from "../_shared/printonet-tenant.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +17,8 @@ const corsHeaders = {
 };
 
 const STRIPE_SECRET = Deno.env.get("STRIPE_CONNECT_SECRET_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 async function stripeGet(path: string, stripeAccount: string) {
   const res = await fetch(`https://api.stripe.com/v1${path}`, {
@@ -81,6 +84,63 @@ export async function completeWooCheckoutSession(
       detail: { status: callRes.status, response: callRes.response },
     };
   }
+
+  // Best-effort: mirror the paid Woo order into printonet_woo_order_files so
+  // it shows up in the Printonet dashboard "Orders" tab without depending on
+  // the tenant WP plugin pushing a webhook.
+  try {
+    const tenantSlug = String(md.tenant_slug || "").trim();
+    if (tenantSlug) {
+      const orderRes = await signedTenantCall(
+        `/wp-json/printonet/v1/order/${encodeURIComponent(orderId)}?order_key=${encodeURIComponent(orderKey)}`,
+        { method: "GET", baseUrlOverride: wpSiteUrl },
+      );
+      const orderData =
+        "ok" in orderRes && orderRes.ok && orderRes.response && typeof orderRes.response === "object"
+          ? (orderRes.response as Record<string, unknown>)
+          : {};
+
+      const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
+        auth: { persistSession: false },
+      });
+
+      const lineItems = Array.isArray((orderData as any).line_items)
+        ? (orderData as any).line_items
+        : [];
+
+      const row = {
+        tenant_slug: tenantSlug,
+        store_url: String(wpSiteUrl).replace(/\/+$/, ""),
+        order_id: Number(orderId),
+        order_number: (orderData as any).order_number
+          ? String((orderData as any).order_number)
+          : String(orderId),
+        order_status: String((orderData as any).status || "processing"),
+        currency: session.currency ? String(session.currency).toUpperCase() : null,
+        date_paid: new Date().toISOString(),
+        line_items: lineItems,
+        payload: {
+          source: "woo-checkout-complete",
+          stripe_checkout_session_id: session.id,
+          stripe_account_id: stripeAccountId,
+          amount_total: session.amount_total,
+          customer_email: session.customer_details?.email || (orderData as any).customer_email || null,
+          tenant_order: orderData,
+        },
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: upsertErr } = await supabase
+        .from("printonet_woo_order_files")
+        .upsert(row, { onConflict: "tenant_slug,store_url,order_id" });
+      if (upsertErr) {
+        console.error("printonet_woo_order_files upsert failed", upsertErr);
+      }
+    }
+  } catch (mirrorErr) {
+    console.error("woo-checkout-complete mirror error", mirrorErr);
+  }
+
   return { ok: true, success_url: successUrl || "" };
 }
 
