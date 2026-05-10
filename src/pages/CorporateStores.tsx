@@ -95,6 +95,48 @@ function StatusBadge({ status }: { status: CorporateStore["status"] }) {
 function PaymentsCell({ store }: { store: CorporateStore }) {
   const [opening, setOpening] = useState(false);
   const [onboarding, setOnboarding] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshStatus = async () => {
+    setRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("stripe-connect-status", {
+        body: { storeId: store.id },
+      });
+      if (error) throw error;
+      const d = data as { connected?: boolean; charges_enabled?: boolean };
+      toast({
+        title: d?.charges_enabled ? "Stripe is connected" : "Still pending",
+        description: d?.charges_enabled
+          ? "Payments are ready."
+          : "Stripe hasn't enabled charges on this account yet.",
+      });
+      // Refresh row from DB
+      window.location.reload();
+    } catch (e) {
+      toast({
+        title: "Could not refresh status",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Auto-sync when a pending store is rendered (e.g., after returning from onboarding)
+  useEffect(() => {
+    if (store.stripe_account_id && !store.stripe_charges_enabled) {
+      supabase.functions
+        .invoke("stripe-connect-status", { body: { storeId: store.id } })
+        .then(({ data }) => {
+          const d = data as { charges_enabled?: boolean } | null;
+          if (d?.charges_enabled) window.location.reload();
+        })
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.id]);
 
   const openDashboard = async () => {
     setOpening(true);
