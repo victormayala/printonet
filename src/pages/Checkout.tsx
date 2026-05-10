@@ -1,5 +1,6 @@
 import { useParams, useSearchParams, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
@@ -15,11 +16,53 @@ export default function Checkout() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<{ name: string; image: string | null; qty: number; price: number }[]>([]);
+  // Store id resolved from any cart item or fallback session — drives Connect routing.
+  const [storeId, setStoreId] = useState<string | null>(null);
+  // Stripe.js promise for the Connect path (loaded with platform pk + stripeAccount).
+  const [connectStripe, setConnectStripe] = useState<Promise<Stripe | null> | null>(null);
 
   const priceOverride = searchParams.get("price");
 
   useEffect(() => {
-    // Build order summary from cart items
+    const ids = items.length > 0 ? items.map((i) => i.sessionId) : sessionId ? [sessionId] : [];
+    if (ids.length === 0) {
+      if (items.length === 0) {
+        setError("No items to checkout.");
+        setLoading(false);
+      }
+      return;
+    }
+
+    supabase
+      .from("customizer_sessions")
+      .select("id, product_data, design_output, store_id")
+      .in("id", ids)
+      .then(({ data }) => {
+        const sid = data?.find((r: any) => r.store_id)?.store_id ?? null;
+        setStoreId(sid);
+
+        if (items.length === 0 && data && data[0]) {
+          const pd = data[0].product_data as any;
+          const dout = data[0].design_output as any;
+          const side = dout?.sides?.find((s: any) => s.previewPNG || s.designPNG);
+          const qty = parseInt(searchParams.get("qty") || "1", 10);
+          const price = priceOverride
+            ? parseInt(priceOverride, 10)
+            : pd?.base_price
+            ? Math.round(pd.base_price * 100)
+            : 1000;
+          setPreviews([
+            {
+              name: pd?.name || "Custom Product",
+              image: side?.previewPNG || side?.designPNG || null,
+              qty,
+              price,
+            },
+          ]);
+        }
+        setLoading(false);
+      });
+
     if (items.length > 0) {
       setPreviews(
         items.map((i) => ({
@@ -27,42 +70,27 @@ export default function Checkout() {
           image: i.previewImage,
           qty: i.quantity,
           price: i.priceInCents,
-        }))
+        })),
       );
-      setLoading(false);
-      return;
     }
-
-    // Fallback: load from session if cart is empty (direct URL access)
-    if (!sessionId) {
-      setError("No items to checkout.");
-      setLoading(false);
-      return;
-    }
-    supabase
-      .from("customizer_sessions")
-      .select("id, product_data, design_output")
-      .eq("id", sessionId)
-      .single()
-      .then(({ data, error: err }) => {
-        if (err || !data) {
-          setError("Session not found.");
-        } else {
-          const pd = data.product_data as any;
-          const dout = data.design_output as any;
-          const side = dout?.sides?.find((s: any) => s.previewPNG || s.designPNG);
-          const qty = parseInt(searchParams.get("qty") || "1", 10);
-          const price = priceOverride ? parseInt(priceOverride, 10) : (pd?.base_price ? Math.round(pd.base_price * 100) : 1000);
-          setPreviews([{
-            name: pd?.name || "Custom Product",
-            image: side?.previewPNG || side?.designPNG || null,
-            qty,
-            price,
-          }]);
-        }
-        setLoading(false);
-      });
   }, [sessionId, items.length]);
+
+  const totalCents = useMemo(
+    () => previews.reduce((sum, p) => sum + p.price * p.qty, 0),
+    [previews],
+  );
+  const productName = useMemo(
+    () =>
+      previews.length === 1
+        ? `${previews[0].name} (x${previews[0].qty})`
+        : `${previews.length} custom items`,
+    [previews],
+  );
+  const cartSessionIds = useMemo(
+    () =>
+      items.length > 0 ? items.map((i) => i.sessionId).join(",") : sessionId || "",
+    [items, sessionId],
+  );
 
   if (loading) {
     return (
@@ -80,15 +108,30 @@ export default function Checkout() {
     );
   }
 
-  const totalCents = previews.reduce((sum, p) => sum + p.price * p.qty, 0);
-  const productName = previews.length === 1
-    ? `${previews[0].name} (x${previews[0].qty})`
-    : `${previews.length} custom items`;
-  const cartSessionIds = items.length > 0
-    ? items.map((i) => i.sessionId).join(",")
-    : sessionId || "";
+  // CONNECT PATH — funds settle directly on the shop owner's Stripe account.
+  const fetchConnectClientSecret = async (): Promise<string> => {
+    const { data, error } = await supabase.functions.invoke("stripe-connect-checkout", {
+      body: {
+        storeId,
+        amountInCents: totalCents,
+        quantity: 1,
+        productName,
+        sessionId: cartSessionIds,
+        returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+      },
+    });
+    if (error || !data?.clientSecret) {
+      throw new Error(error?.message || "Failed to create checkout session");
+    }
+    if (data.publishableKey && data.accountId && !connectStripe) {
+      setConnectStripe(loadStripe(data.publishableKey, { stripeAccount: data.accountId }));
+    }
+    if (items.length > 0) clearCart();
+    return data.clientSecret;
+  };
 
-  const fetchClientSecret = async (): Promise<string> => {
+  // PLATFORM (LOVABLE) PATH — used when a session has no corporate store.
+  const fetchPlatformClientSecret = async (): Promise<string> => {
     const { data, error } = await supabase.functions.invoke("create-checkout", {
       body: {
         amountInCents: totalCents,
@@ -102,10 +145,13 @@ export default function Checkout() {
     if (error || !data?.clientSecret) {
       throw new Error(error?.message || "Failed to create checkout session");
     }
-    // Clear cart after successful session creation
     if (items.length > 0) clearCart();
     return data.clientSecret;
   };
+
+  const useConnect = !!storeId;
+  const stripePromise = useConnect ? connectStripe ?? getStripe() : getStripe();
+  const fetchClientSecret = useConnect ? fetchConnectClientSecret : fetchPlatformClientSecret;
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,7 +164,6 @@ export default function Checkout() {
         </Button>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Order summary */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground">Order Summary</h2>
             {previews.map((item, idx) => (
@@ -145,11 +190,10 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Payment form */}
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">Payment</h2>
             <div className="rounded-xl border border-border overflow-hidden">
-              <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
+              <EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret }}>
                 <EmbeddedCheckout />
               </EmbeddedCheckoutProvider>
             </div>
