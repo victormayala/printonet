@@ -44,3 +44,5 @@ verify_jwt = false
 
 [functions.tenant-catalog-feed]
 verify_jwt = false
+[functions.printonet-woo-order-files]
+verify_jwt = false
