@@ -64,6 +64,8 @@ const App = () => (
             <Route path="/checkout/:sessionId" element={<Checkout />} />
             <Route path="/s/:tenantSlug" element={<StoreShop />} />
             <Route path="/s/:tenantSlug/customize/:productId" element={<StoreCustomize />} />
+            <Route path="/pay/woo" element={<WooPay />} />
+            <Route path="/pay/woo/return" element={<WooPayReturn />} />
 
             {/* Dashboard */}
             <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
