@@ -94,6 +94,7 @@ function StatusBadge({ status }: { status: CorporateStore["status"] }) {
 
 function PaymentsCell({ store }: { store: CorporateStore }) {
   const [opening, setOpening] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
 
   const openDashboard = async () => {
     setOpening(true);
@@ -116,11 +117,46 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
     }
   };
 
+  const startOnboarding = async () => {
+    setOnboarding(true);
+    try {
+      const returnUrl = `${window.location.origin}/corporate-stores?stripe=return&store=${store.id}`;
+      const refreshUrl = `${window.location.origin}/corporate-stores?stripe=refresh&store=${store.id}`;
+      const { data, error } = await supabase.functions.invoke("stripe-connect-onboard", {
+        body: { storeId: store.id, returnUrl, refreshUrl },
+      });
+      if (error) throw error;
+      const url = (data as { url?: string })?.url;
+      if (!url) throw new Error("No onboarding URL");
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast({
+        title: "Could not start Stripe onboarding",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setOnboarding(false);
+    }
+  };
+
   if (!store.stripe_account_id) {
     return (
-      <Badge variant="outline" className="gap-1">
-        <AlertCircle className="h-3 w-3" /> Not connected
-      </Badge>
+      <div className="space-y-1">
+        <Badge variant="outline" className="gap-1">
+          <AlertCircle className="h-3 w-3" /> Not connected
+        </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={startOnboarding}
+          disabled={onboarding}
+        >
+          {onboarding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+          <span className="ml-1">Connect Stripe</span>
+        </Button>
+      </div>
     );
   }
   if (!store.stripe_charges_enabled) {
@@ -129,7 +165,16 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
         <Badge variant="secondary" className="gap-1">
           <Clock className="h-3 w-3" /> Pending
         </Badge>
-        <div className="text-xs text-muted-foreground">Finish Stripe onboarding</div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={startOnboarding}
+          disabled={onboarding}
+        >
+          {onboarding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+          <span className="ml-1">Resume onboarding</span>
+        </Button>
       </div>
     );
   }
