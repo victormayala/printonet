@@ -337,7 +337,7 @@ export type Database = {
           subcategory_id: string | null
           supplier_source: Json | null
           updated_at: string
-          user_id: string | null
+          user_id: string
           variants: Json | null
           weight: number | null
           weight_unit: string
@@ -368,7 +368,7 @@ export type Database = {
           subcategory_id?: string | null
           supplier_source?: Json | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           variants?: Json | null
           weight?: number | null
           weight_unit?: string
@@ -399,7 +399,7 @@ export type Database = {
           subcategory_id?: string | null
           supplier_source?: Json | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           variants?: Json | null
           weight?: number | null
           weight_unit?: string

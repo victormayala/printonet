@@ -684,7 +684,12 @@ function ProductForm({
     if (product) {
       ({ error } = await supabase.from("inventory_products").update(payload).eq("id", product.id));
     } else {
-      ({ error } = await supabase.from("inventory_products").insert(payload));
+      if (!user?.id) {
+        setSaving(false);
+        toast({ title: "You must be signed in to add a product", variant: "destructive" });
+        return;
+      }
+      ({ error } = await supabase.from("inventory_products").insert({ ...payload, user_id: user.id } as any));
     }
 
     setSaving(false);
