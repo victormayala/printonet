@@ -94,13 +94,45 @@ function orderSessionIds(order: WooOrderRow): string[] {
   return [...set];
 }
 
+type SideAsset = {
+  view: string;
+  previewPNG?: string;
+  designPNG?: string;
+  productImage?: string;
+};
+
+function getSideAssetsFromSession(session: SessionRow): SideAsset[] {
+  if (!session.design_output || typeof session.design_output !== "object") return [];
+  const output = session.design_output as Record<string, unknown>;
+  const sides = Array.isArray(output.sides) ? (output.sides as Record<string, unknown>[]) : [];
+  return sides
+    .map((s) => ({
+      view: String(s.view || ""),
+      previewPNG: typeof s.previewPNG === "string" && s.previewPNG.startsWith("http") ? s.previewPNG : undefined,
+      designPNG: typeof s.designPNG === "string" && s.designPNG.startsWith("http") ? s.designPNG : undefined,
+      productImage: typeof s.productImage === "string" && s.productImage.startsWith("http") ? s.productImage : undefined,
+    }))
+    .filter((s) => s.previewPNG || s.designPNG);
+}
+
 function getDesignImagesFromSession(session: SessionRow): string[] {
+  const sides = getSideAssetsFromSession(session);
+  if (sides.length > 0) {
+    return sides.map((s) => s.previewPNG || s.designPNG!).filter(Boolean);
+  }
+  // Fallback: top-level http strings (legacy sessions)
   if (!session.design_output || typeof session.design_output !== "object") return [];
   const output = session.design_output as Record<string, unknown>;
   const images: string[] = [];
   for (const key of Object.keys(output)) {
     const v = output[key];
-    if (typeof v === "string" && v.startsWith("http")) images.push(v);
+    if (
+      typeof v === "string" &&
+      v.startsWith("http") &&
+      /\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(v)
+    ) {
+      images.push(v);
+    }
   }
   return images;
 }
@@ -661,16 +693,29 @@ export default function Orders() {
                         </div>
                       )}
                       <div className="flex flex-wrap gap-2">
-                        {linePrintFileUrl(li) ? (
-                          <Button variant="secondary" size="sm" asChild>
-                            <a href={linePrintFileUrl(li)} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-1" />
-                              Print file
-                            </a>
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">No print file URL</span>
-                        )}
+                        {(() => {
+                          const sideAssets = sess ? getSideAssetsFromSession(sess) : [];
+                          if (sideAssets.length > 0) {
+                            return sideAssets.map((s, i) => (
+                              <Button key={`pf-${i}`} variant="secondary" size="sm" asChild>
+                                <a href={s.designPNG || s.previewPNG} target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Print file ({s.view || `side ${i + 1}`})
+                                </a>
+                              </Button>
+                            ));
+                          }
+                          return linePrintFileUrl(li) ? (
+                            <Button variant="secondary" size="sm" asChild>
+                              <a href={linePrintFileUrl(li)} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4 mr-1" />
+                                Print file
+                              </a>
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">No print file URL</span>
+                          );
+                        })()}
                         {lineDesignLayersUrl(li) ? (
                           <>
                             <Button
