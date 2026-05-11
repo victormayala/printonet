@@ -31,6 +31,10 @@ const BodySchema = z.object({
   weight_unit: z.string().trim().max(8).optional().nullable(),
   dimension_unit: z.string().trim().max(8).optional().nullable(),
   store_type: z.enum(["corporate", "retail"]).optional().nullable(),
+  // When true, only insert the DB row — defer the WordPress site creation
+  // (and slug reservation) until the user finishes the wizard. The finalize
+  // step is handled by the `finalize-corporate-store` function.
+  defer_provisioning: z.boolean().optional().nullable(),
 });
 
 Deno.serve(async (req) => {
