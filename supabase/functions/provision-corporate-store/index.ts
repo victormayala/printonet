@@ -31,6 +31,10 @@ const BodySchema = z.object({
   weight_unit: z.string().trim().max(8).optional().nullable(),
   dimension_unit: z.string().trim().max(8).optional().nullable(),
   store_type: z.enum(["corporate", "retail"]).optional().nullable(),
+  // When true, only insert the DB row — defer the WordPress site creation
+  // (and slug reservation) until the user finishes the wizard. The finalize
+  // step is handled by the `finalize-corporate-store` function.
+  defer_provisioning: z.boolean().optional().nullable(),
 });
 
 Deno.serve(async (req) => {
@@ -140,6 +144,24 @@ Deno.serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Deferred mode: just return the reserved DB row. The WP site (and the
+    // actual slug reservation on the multisite network) is created later via
+    // the `finalize-corporate-store` function. This prevents abandoned wizards
+    // from consuming the chosen store name on the WordPress side.
+    if (body.defer_provisioning) {
+      return new Response(
+        JSON.stringify({
+          store_id: store.id,
+          tenant_slug: body.tenant_slug,
+          deferred: true,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Build the contract payload for the multisite root handler.

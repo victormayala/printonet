@@ -71,3 +71,7 @@ verify_jwt = false
 
 [functions.woo-connect-webhook]
 verify_jwt = false
+
+[functions.finalize-corporate-store]
+verify_jwt = false
+

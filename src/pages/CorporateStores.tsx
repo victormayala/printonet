@@ -1144,6 +1144,9 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
+  // Step 2 → step 3: only RESERVE the store (DB row + tenant_slug). The
+  // actual WordPress site (which is what burns the slug on the multisite
+  // network) is created only at the end of the wizard via `finalize`.
   const provision = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not signed in");
@@ -1178,17 +1181,40 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           favicon_url,
           tenant_slug: finalSlug,
           request_id: tempId,
+          defer_provisioning: true,
         },
       });
       if (error) throw error;
-      return data as { site_url?: string; store_id?: string };
+      return data as { store_id?: string };
     },
     onSuccess: (data) => {
-      if (data?.site_url) setProvisionedSiteUrl(data.site_url);
       if (data?.store_id) setProvisionedStoreId(data.store_id);
     },
     onError: (e: Error) => {
-      toast({ title: "Could not create store", description: e.message, variant: "destructive" });
+      toast({ title: "Could not start setup", description: e.message, variant: "destructive" });
+    },
+  });
+
+  // Final step: actually create the WordPress site. This is when the slug
+  // is registered on the multisite network.
+  const finalize = useMutation({
+    mutationFn: async () => {
+      if (!provisionedStoreId) throw new Error("Store not ready yet");
+      const { data, error } = await supabase.functions.invoke("finalize-corporate-store", {
+        body: { store_id: provisionedStoreId },
+      });
+      if (error) throw error;
+      return data as { site_url?: string };
+    },
+    onSuccess: (data) => {
+      if (data?.site_url) setProvisionedSiteUrl(data.site_url);
+    },
+    onError: (e: Error) => {
+      toast({
+        title: "Could not create store",
+        description: e.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -1432,54 +1458,97 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       )}
 
       {step === 4 && (
-        <div className="space-y-5 py-2">
-          <div className="rounded-md border p-6 text-center space-y-3">
-            <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              {provision.isPending ? (
-                <Loader2 className="h-6 w-6 text-primary animate-spin" />
-              ) : provision.isError ? (
-                <AlertCircle className="h-6 w-6 text-destructive" />
-              ) : (
-                <CheckCircle2 className="h-6 w-6 text-primary" />
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">
-                {provision.isPending
-                  ? "Setting up your store…"
-                  : provision.isError
-                    ? "Something went wrong"
-                    : "Your store is ready!"}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {provision.isPending
-                  ? "This usually takes 1–2 minutes. You can close this dialog — we'll keep working."
-                  : provision.isError
-                    ? provision.error?.message ?? "Provisioning failed."
-                    : provisionedSiteUrl
-                      ? "Your branded WooCommerce store is live."
-                      : "Your store is being finalized — it will appear in your dashboard shortly."}
-              </p>
-            </div>
-            {provisionedSiteUrl && !provision.isPending && (
-              <a
-                href={provisionedSiteUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-              >
-                {provisionedSiteUrl.replace(/^https?:\/\//, "")}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button onClick={finishOnboarding}>Go to dashboard</Button>
-          </DialogFooter>
-        </div>
+        <Step4Finalize
+          finalize={finalize}
+          provisionedSiteUrl={provisionedSiteUrl}
+          provisionedStoreId={provisionedStoreId}
+          onDone={finishOnboarding}
+        />
       )}
     </DialogContent>
+  );
+}
+
+function Step4Finalize({
+  finalize,
+  provisionedSiteUrl,
+  provisionedStoreId,
+  onDone,
+}: {
+  finalize: {
+    mutate: () => void;
+    isPending: boolean;
+    isError: boolean;
+    error: Error | null;
+  };
+  provisionedSiteUrl: string | null;
+  provisionedStoreId: string | null;
+  onDone: () => void;
+}) {
+  // Trigger finalize once when this step mounts and the reserved store_id is ready.
+  const triggered = useRef(false);
+  useEffect(() => {
+    if (triggered.current) return;
+    if (!provisionedStoreId) return;
+    triggered.current = true;
+    finalize.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provisionedStoreId]);
+
+  const isPending = finalize.isPending || (!provisionedStoreId && !finalize.isError);
+  const isError = finalize.isError;
+  return (
+    <div className="space-y-5 py-2">
+      <div className="rounded-md border p-6 text-center space-y-3">
+        <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+          {isPending ? (
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          ) : isError ? (
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          ) : (
+            <CheckCircle2 className="h-6 w-6 text-primary" />
+          )}
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold">
+            {isPending
+              ? "Creating your store…"
+              : isError
+                ? "Something went wrong"
+                : "Your store is ready!"}
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isPending
+              ? "This usually takes 1–2 minutes. You can close this dialog — we'll keep working."
+              : isError
+                ? finalize.error?.message ?? "Provisioning failed."
+                : provisionedSiteUrl
+                  ? "Your branded WooCommerce store is live."
+                  : "Your store is being finalized — it will appear in your dashboard shortly."}
+          </p>
+        </div>
+        {provisionedSiteUrl && !isPending && (
+          <a
+            href={provisionedSiteUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+          >
+            {provisionedSiteUrl.replace(/^https?:\/\//, "")}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+        {isError && (
+          <Button variant="outline" size="sm" onClick={() => finalize.mutate()}>
+            Try again
+          </Button>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button onClick={onDone}>Go to dashboard</Button>
+      </DialogFooter>
+    </div>
   );
 }
 
