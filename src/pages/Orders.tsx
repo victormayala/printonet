@@ -693,16 +693,29 @@ export default function Orders() {
                         </div>
                       )}
                       <div className="flex flex-wrap gap-2">
-                        {linePrintFileUrl(li) ? (
-                          <Button variant="secondary" size="sm" asChild>
-                            <a href={linePrintFileUrl(li)} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-1" />
-                              Print file
-                            </a>
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">No print file URL</span>
-                        )}
+                        {(() => {
+                          const sideAssets = sess ? getSideAssetsFromSession(sess) : [];
+                          if (sideAssets.length > 0) {
+                            return sideAssets.map((s, i) => (
+                              <Button key={`pf-${i}`} variant="secondary" size="sm" asChild>
+                                <a href={s.designPNG || s.previewPNG} target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Print file ({s.view || `side ${i + 1}`})
+                                </a>
+                              </Button>
+                            ));
+                          }
+                          return linePrintFileUrl(li) ? (
+                            <Button variant="secondary" size="sm" asChild>
+                              <a href={linePrintFileUrl(li)} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4 mr-1" />
+                                Print file
+                              </a>
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">No print file URL</span>
+                          );
+                        })()}
                         {lineDesignLayersUrl(li) ? (
                           <>
                             <Button
