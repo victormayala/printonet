@@ -1475,7 +1475,12 @@ function Step4Finalize({
   provisionedStoreId,
   onDone,
 }: {
-  finalize: ReturnType<typeof useMutation<{ site_url?: string }, Error, void>>;
+  finalize: {
+    mutate: () => void;
+    isPending: boolean;
+    isError: boolean;
+    error: Error | null;
+  };
   provisionedSiteUrl: string | null;
   provisionedStoreId: string | null;
   onDone: () => void;
