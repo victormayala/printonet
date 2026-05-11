@@ -133,13 +133,23 @@ Deno.serve(async (req) => {
     }
 
     const currency = (order.currency || "usd").toLowerCase();
-    const items = Array.isArray(order.line_items) && order.line_items.length > 0
+    // IMPORTANT: charge Woo's authoritative `total_in_cents` (includes shipping,
+    // taxes, fees, discounts). If we instead summed `line_items[].price_in_cents`,
+    // Stripe's amount_total would diverge from what the tenant WP plugin expects
+    // in /complete and the order would be rejected with 422 "Amount or currency
+    // does not match order" — leaving the payment stuck "pending" in both
+    // Stripe and Woo. Use a single aggregate line so the totals always match.
+    const itemSummary = Array.isArray(order.line_items) && order.line_items.length > 0
       ? order.line_items
-      : [{
-          name: `Order #${order_id}`,
-          quantity: 1,
-          price_in_cents: order.total_in_cents,
-        }];
+          .map((it) => `${it.quantity}× ${it.name}`)
+          .join(", ")
+          .slice(0, 240)
+      : `Order #${order_id}`;
+    const items = [{
+      name: `Order #${order_id}${itemSummary ? ` — ${itemSummary}` : ""}`.slice(0, 250),
+      quantity: 1,
+      price_in_cents: order.total_in_cents,
+    }];
 
     // 3. Build Stripe Checkout Session on the connected account.
     const params: Record<string, string> = {
