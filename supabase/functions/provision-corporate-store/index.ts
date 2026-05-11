@@ -146,6 +146,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Deferred mode: just return the reserved DB row. The WP site (and the
+    // actual slug reservation on the multisite network) is created later via
+    // the `finalize-corporate-store` function. This prevents abandoned wizards
+    // from consuming the chosen store name on the WordPress side.
+    if (body.defer_provisioning) {
+      return new Response(
+        JSON.stringify({
+          store_id: store.id,
+          tenant_slug: body.tenant_slug,
+          deferred: true,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Build the contract payload for the multisite root handler.
     const wpPayload: Record<string, unknown> = {
       tenant_slug: body.tenant_slug,
