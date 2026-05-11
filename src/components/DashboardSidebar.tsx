@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Package, User, LogOut, Home, ShoppingBag, Truck, Building2 } from "lucide-react";
+import { Package, User, LogOut, ShoppingBag, Truck, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import logoIcon from "@/assets/printonet-logo-sidebar.svg";
@@ -76,14 +76,6 @@ export function DashboardSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink to="/" className="hover:bg-sidebar-accent" activeClassName="">
-                <Home className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>Back to Home</span>}
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink to="/profile" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
