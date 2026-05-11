@@ -1144,6 +1144,9 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
+  // Step 2 → step 3: only RESERVE the store (DB row + tenant_slug). The
+  // actual WordPress site (which is what burns the slug on the multisite
+  // network) is created only at the end of the wizard via `finalize`.
   const provision = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not signed in");
@@ -1178,17 +1181,40 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           favicon_url,
           tenant_slug: finalSlug,
           request_id: tempId,
+          defer_provisioning: true,
         },
       });
       if (error) throw error;
-      return data as { site_url?: string; store_id?: string };
+      return data as { store_id?: string };
     },
     onSuccess: (data) => {
-      if (data?.site_url) setProvisionedSiteUrl(data.site_url);
       if (data?.store_id) setProvisionedStoreId(data.store_id);
     },
     onError: (e: Error) => {
-      toast({ title: "Could not create store", description: e.message, variant: "destructive" });
+      toast({ title: "Could not start setup", description: e.message, variant: "destructive" });
+    },
+  });
+
+  // Final step: actually create the WordPress site. This is when the slug
+  // is registered on the multisite network.
+  const finalize = useMutation({
+    mutationFn: async () => {
+      if (!provisionedStoreId) throw new Error("Store not ready yet");
+      const { data, error } = await supabase.functions.invoke("finalize-corporate-store", {
+        body: { store_id: provisionedStoreId },
+      });
+      if (error) throw error;
+      return data as { site_url?: string };
+    },
+    onSuccess: (data) => {
+      if (data?.site_url) setProvisionedSiteUrl(data.site_url);
+    },
+    onError: (e: Error) => {
+      toast({
+        title: "Could not create store",
+        description: e.message,
+        variant: "destructive",
+      });
     },
   });
 
