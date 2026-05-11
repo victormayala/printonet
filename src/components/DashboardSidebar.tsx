@@ -78,14 +78,6 @@ export function DashboardSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <NavLink to="/" className="hover:bg-sidebar-accent" activeClassName="">
-                <Home className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>Back to Home</span>}
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
               <NavLink to="/profile" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
                 <User className="h-4 w-4 shrink-0" />
                 {!collapsed && <span>Profile</span>}
