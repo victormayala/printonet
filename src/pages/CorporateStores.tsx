@@ -308,6 +308,7 @@ function PlatformFeeCell({ store }: { store: CorporateStore }) {
   );
 }
 
+function LogoField({
   label,
   value,
   existingUrl,
