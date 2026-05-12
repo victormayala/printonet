@@ -147,6 +147,8 @@ Deno.serve(async (req) => {
     }
 
     // Push to the tenant engine so the WP plugin maps host → tenant blog.
+    // Best-effort: if the WP plugin hasn't shipped this endpoint yet, we still
+    // persist the verified DNS state and let the user retry later.
     const result = await signedTenantCall(
       "/wp-json/printonet/v1/update-store-domain",
       {
@@ -159,19 +161,24 @@ Deno.serve(async (req) => {
       },
     );
 
+    let tenantPushed = false;
+    let tenantWarning: string | null = null;
     if ("error" in result) {
-      return json(
-        { error: `${result.error}${result.detail ? `: ${result.detail}` : ""}` },
-        502,
-      );
-    }
-    if (!result.ok) {
+      tenantWarning = `${result.error}${result.detail ? `: ${result.detail}` : ""}`;
+      console.warn("[sync-corporate-store-domain] tenant unreachable", tenantWarning);
+    } else if (!result.ok) {
       const resp = result.response as Record<string, unknown> | null;
-      const msg =
+      tenantWarning =
         (resp && (resp.message as string)) ||
         (resp && (resp.error as string)) ||
         `Tenant engine error (${result.status})`;
-      return json({ error: msg, upstream: result.response }, 502);
+      console.warn(
+        "[sync-corporate-store-domain] tenant non-2xx",
+        result.status,
+        tenantWarning,
+      );
+    } else {
+      tenantPushed = true;
     }
 
     await admin
