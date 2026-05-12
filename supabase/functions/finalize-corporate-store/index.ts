@@ -202,6 +202,8 @@ Deno.serve(async (req) => {
       );
     }
 
+    const dnsCheck = await verifyCustomDomainDns(store.custom_domain);
+
     await admin
       .from("corporate_stores")
       .update({
@@ -216,6 +218,8 @@ Deno.serve(async (req) => {
         tenant_slug: canonicalSlug,
         status: "active",
         error_message: null,
+        dns_verified: dnsCheck.verified,
+        dns_checked_at: store.custom_domain ? new Date().toISOString() : null,
       })
       .eq("id", store.id);
 
