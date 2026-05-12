@@ -1,51 +1,69 @@
-## Goal
-Charge a 2.5% platform fee to Printonet on every transaction processed through a corporate store's connected Stripe account.
 
-## Why it's not working today
-Both checkout-creation edge functions create the Stripe Checkout Session as a **direct charge** on the merchant's account (via the `Stripe-Account` header), but neither passes `application_fee_amount`. Without that parameter, 100% of the funds settle on the merchant and Printonet collects nothing — that's the symptom you're seeing.
+## Plans
 
-The fix is to add `application_fee_amount` (in cents) to the session params. For direct charges, this is the supported way to route a cut to the platform automatically on every successful payment.
+| Plan | Monthly | Included stores | Extra store | Transaction fee | Notable unlocks |
+|---|---|---|---|---|---|
+| **Starter** | $39 | 1 | $20/mo | 2.5% | Custom domain, Stripe Connect, hosted Customizer Studio checkout |
+| **Growth** | $99 | 3 | $20/mo | 1.5% | Everything in Starter + remove Printonet badge, push-to-Shopify/Woo, AI design assistant, design template library |
+| **Pro** | $249 | 10 | $20/mo | **0.5%** *(suggested — confirm)* | Everything in Growth + priority support, white-label SDK loader, higher AI quota, multi-seat (future) |
 
-## Plan
+A user **must have an active subscription** to operate any corporate store. Without one, existing stores go into a `paused` state (read-only / checkout disabled) — they're never deleted.
 
-### 1. Add a configurable fee rate (default 2.5%)
-- Add column `corporate_stores.platform_fee_bps integer not null default 250` (250 basis points = 2.5%). Per-store override later if needed.
-- Migration only; no UI change required now.
+> **Confirm before build:** Pro's transaction fee. The progression 2.5 → 1.5 → 0.5 makes the upgrade compelling. If you'd rather keep Pro at 1% (or 0%), say so and I'll adjust.
 
-### 2. Patch `supabase/functions/stripe-connect-checkout/index.ts` (hosted Customizer Studio checkout)
-- Select `platform_fee_bps` from `corporate_stores`.
-- Compute `feeCents = Math.floor((amountInCents * quantity) * bps / 10000)`.
-- Add to params:
-  - `payment_intent_data[application_fee_amount] = feeCents`
-- Stamp `metadata[platform_fee_bps]` for reporting.
+## What gets built
 
-### 3. Patch `supabase/functions/woo-checkout-init/index.ts` (WooCommerce plugin checkout)
-- Same selection + computation against `order.total_in_cents`.
-- Add `payment_intent_data[application_fee_amount]`.
-- Stamp metadata.
+### 1. Stripe products (sandbox auto-syncs to live on publish)
+Created via `payments--batch_create_product`:
+- `printonet_starter` → `starter_monthly` $39/mo
+- `printonet_growth` → `growth_monthly` $99/mo
+- `printonet_pro` → `pro_monthly` $249/mo
+- `printonet_extra_store` → `extra_store_monthly` $20/mo (quantity-based add-on, used as a second line item)
 
-### 4. Persist the fee on completion
-- In `woo-checkout-complete` and the existing `payments-webhook` / `stripe-connect-webhook` paths, write `orders.application_fee_amount` from the PaymentIntent. (The `orders` table already has the column — currently always null.)
+Tax codes: `txcd_10103001` (SaaS — electronic services).
 
-### 5. Sanity checks
-- Minimum: skip fee if `amountInCents < ~50¢` worth of fee (Stripe rejects fees larger than the charge minus Stripe processing).
-- Test mode: confirm with a $10 sandbox checkout that:
-  - Merchant Express account receives net amount
-  - Platform account sees a `application_fee` of $0.25
-  - `orders.application_fee_amount = 25`
+### 2. Database (one migration)
+- New table `subscriptions` (per the standard Stripe-on-Lovable schema): `user_id`, `stripe_subscription_id`, `stripe_customer_id`, `product_id`, `price_id`, `status`, `current_period_start/end`, `cancel_at_period_end`, `environment`, plus a new `extra_store_quantity int default 0` column for the seat add-on.
+- `has_active_subscription(uuid, text)` security-definer helper.
+- Trigger on `corporate_stores`: on INSERT, count the user's existing stores; if `count + 1 > tier_included_stores + extra_store_quantity`, raise. (Fee column already exists.)
+- Function `apply_plan_fee_to_user_stores(user_id, bps)` to bulk-update `corporate_stores.platform_fee_bps` when the plan changes. Runs from the webhook.
+- Allow super_admin override (existing `protect_corporate_stores_platform_fee` trigger already handles this).
+
+### 3. Edge functions
+- `create-checkout` — accepts `priceId` (`starter_monthly` | `growth_monthly` | `pro_monthly`) plus optional `extraStores` quantity. Resolves Customer via `resolveOrCreateCustomer`, creates an embedded subscription session with two line items (plan + extra-store seats), stamps `userId` on Customer + Subscription metadata.
+- `create-portal-session` — Stripe Billing Portal (cancel / change card / change quantity).
+- `payments-webhook` — handles `customer.subscription.created/updated/deleted`, upserts the row, then calls `apply_plan_fee_to_user_stores` with the bps for the new plan, and updates `extra_store_quantity` from the subscription item quantity. On `deleted`/`unpaid`, sets all the user's `corporate_stores.status = 'paused'`.
+- All three need `verify_jwt = false` in `supabase/config.toml`.
+
+### 4. Frontend
+- **`src/pages/Pricing.tsx`** — new `/pricing` route. Three tier cards with the table above, "Choose plan" buttons that open embedded Stripe checkout via `useStripeCheckout`. Includes the `<PaymentTestModeBanner />`.
+- **`src/pages/Billing.tsx`** — new `/billing` route. Shows current plan, included/used store count, extra-seat quantity stepper, "Manage billing" (portal), upgrade/downgrade.
+- **`src/hooks/useSubscription.ts`** — reads `subscriptions` table filtered by `environment`, exposes `{ plan, isActive, includedStores, extraStores, totalStoreLimit, feeBps }`.
+- **Sidebar** — add a "Billing" link; show plan badge under the user name.
+- **Gating in `CorporateStores.tsx`**:
+  - "New store" button: if `usedStores >= totalStoreLimit`, open a dialog offering "Upgrade plan" or "Add a store ($20/mo)" — the latter increments the seat quantity via a small `update-extra-stores` edge function.
+  - If `!isActive`, replace the page with a "Reactivate your plan" empty state linking to `/pricing`.
+- **Onboarding nudge** — after signup, if no subscription, redirect to `/pricing` (with skip → trial-less Starter is the only path; no free tier per your spec).
+
+### 5. Stripe go-live
+After implementation, surface `payments--get_go_live_status` so you can complete account verification before publishing.
 
 ## Technical notes
-Direct charge + application fee shape:
-```text
-POST /v1/checkout/sessions
-  Header: Stripe-Account: acct_xxx       (merchant)
-  Body:   payment_intent_data[application_fee_amount]=250    (cents, to platform)
-```
-No change to charge model, return URLs, or webhook subscriptions.
+- Built-in Stripe payments (`enable_stripe_payments`), embedded checkout — not BYOK.
+- Plan → fee mapping lives **server-side only** (in the webhook), so a tampered client can't change fees:
+  ```
+  starter_monthly → 250 bps
+  growth_monthly  → 150 bps
+  pro_monthly     →  50 bps   (or whatever you confirm)
+  ```
+- Extra-store add-on uses Stripe's metered quantity on a separate line item, not a separate subscription, so it renews/cancels with the parent plan.
+- All reads from `subscriptions` filter by `environment = getStripeEnvironment()` to avoid sandbox/live bleed.
+- The `corporate_stores.status = 'paused'` flow already exists; we just trigger it from the webhook on cancel/unpaid.
 
-## Out of scope
-- Per-store custom fee rates UI (column supports it; defer until needed).
-- Subscription-style fees (we only do one-off payments today).
-- Refund/dispute fee reversal logic (Stripe handles application fee refund pro-rata automatically when the charge is refunded).
+## Out of scope (for now)
+- Annual pricing (easy follow-up — add `*_yearly` price IDs).
+- Per-store plans (you chose per-user).
+- Usage-based AI credit metering beyond a simple monthly cap.
+- Tax handling (`managed_payments` / `automatic_tax`) — I'll ask which option you want before wiring checkout, per Stripe docs.
 
-Confirm and I'll implement.
+Confirm Pro's fee (0.5% suggested) and I'll implement.
