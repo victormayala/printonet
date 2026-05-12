@@ -46,10 +46,33 @@ serve(async (req) => {
 async function handleCheckoutCompleted(session: any, env: StripeEnv) {
   console.log("Checkout completed:", session.id, "mode:", session.mode);
 
-  const customizerSessionId = session.metadata?.sessionId;
+  const md = session.metadata || {};
+  const customizerSessionId = md.sessionId || md.customizer_session_id;
   if (!customizerSessionId) {
     console.log("No sessionId in metadata, skipping order creation");
     return;
+  }
+
+  // Pull application fee from the underlying PaymentIntent (Connect direct charges).
+  let applicationFeeAmount: number | null = null;
+  if (session.payment_intent && md.printonet_store_id && session.account) {
+    try {
+      const piRes = await fetch(
+        `https://api.stripe.com/v1/payment_intents/${session.payment_intent}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Deno.env.get("STRIPE_CONNECT_SECRET_KEY") || ""}`,
+            "Stripe-Account": session.account,
+          },
+        },
+      );
+      const pi = await piRes.json();
+      if (typeof pi?.application_fee_amount === "number") {
+        applicationFeeAmount = pi.application_fee_amount;
+      }
+    } catch (e) {
+      console.error("Failed to fetch PI for fee:", e);
+    }
   }
 
   // Create order record
@@ -62,6 +85,9 @@ async function handleCheckoutCompleted(session: any, env: StripeEnv) {
     currency: session.currency,
     status: "paid",
     environment: env,
+    store_id: md.printonet_store_id || null,
+    stripe_account_id: session.account || null,
+    application_fee_amount: applicationFeeAmount,
   });
 
   if (error) {
