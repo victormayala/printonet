@@ -619,22 +619,61 @@ export default function CorporateStoreDetails() {
       </AlertDialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit custom domain</DialogTitle>
             <DialogDescription>
-              Point a domain you own at this store. Leave empty to remove. After saving, configure DNS at your registrar to point to the store.
+              Point a domain you own at this store. Leave the field empty to remove.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="custom-domain">Custom domain</Label>
-            <Input
-              id="custom-domain"
-              value={domainDraft}
-              onChange={(e) => setDomainDraft(e.target.value)}
-              placeholder="merch.yourbrand.com"
-              autoFocus
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="custom-domain">Custom domain</Label>
+              <Input
+                id="custom-domain"
+                value={domainDraft}
+                onChange={(e) => setDomainDraft(e.target.value)}
+                placeholder="merch.yourbrand.com"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Use a subdomain (e.g. <code className="font-mono">shop.yourbrand.com</code>). Root domains are not supported.
+              </p>
+            </div>
+
+            {(() => {
+              const target = (() => {
+                try {
+                  return store.wp_site_url ? new URL(store.wp_site_url).host : null;
+                } catch {
+                  return null;
+                }
+              })();
+              return (
+                <div className="rounded-md border bg-muted/40 p-3 space-y-2 text-sm">
+                  <p className="font-medium">DNS setup</p>
+                  <p className="text-muted-foreground text-xs">
+                    At your domain registrar (GoDaddy, Cloudflare, Namecheap, etc.), add the following record for your subdomain:
+                  </p>
+                  <div className="grid grid-cols-[80px_1fr] gap-x-3 gap-y-1 font-mono text-xs">
+                    <span className="text-muted-foreground">Type</span>
+                    <span>CNAME</span>
+                    <span className="text-muted-foreground">Host</span>
+                    <span>your subdomain (e.g. <span className="font-mono">shop</span>)</span>
+                    <span className="text-muted-foreground">Value</span>
+                    <span className="break-all">{target ?? "<provisioning…>"}</span>
+                    <span className="text-muted-foreground">TTL</span>
+                    <span>Auto / 3600</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    If your DNS provider doesn't allow a CNAME at the level you need, use an A record pointing to the IP that <code className="font-mono">{target ?? "your tenant host"}</code> resolves to.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    DNS changes can take up to 24 hours to propagate. SSL is issued automatically once DNS resolves correctly.
+                  </p>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingDomain}>
