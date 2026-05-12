@@ -385,6 +385,7 @@ function LogoField({
 
 export default function CorporateStores() {
   const { user } = useAuth();
+  const { isSuperAdmin } = useIsSuperAdmin();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
