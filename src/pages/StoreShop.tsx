@@ -15,22 +15,24 @@ type ProductLite = {
   image_front: string | null;
 };
 
-export default function StoreShop() {
+export default function StoreShop({ customDomainHost }: { customDomainHost?: string }) {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [store, setStore] = useState<CorporateStore | null>(null);
   const [products, setProducts] = useState<ProductLite[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!tenantSlug) return;
+    if (!tenantSlug && !customDomainHost) return;
     let cancelled = false;
     (async () => {
-      const { data: s, error: sErr } = await supabase
+      let storeQuery = supabase
         .from("corporate_stores")
         .select("*")
-        .eq("tenant_slug", tenantSlug)
-        .eq("status", "active")
-        .maybeSingle();
+        .eq("status", "active");
+      storeQuery = customDomainHost
+        ? storeQuery.eq("custom_domain", customDomainHost)
+        : storeQuery.eq("tenant_slug", tenantSlug!);
+      const { data: s, error: sErr } = await storeQuery.maybeSingle();
       if (cancelled) return;
       if (sErr || !s) {
         setError("Store not found.");
@@ -62,7 +64,9 @@ export default function StoreShop() {
     return () => {
       cancelled = true;
     };
-  }, [tenantSlug]);
+  }, [tenantSlug, customDomainHost]);
+
+  const productBasePath = customDomainHost ? "" : `/s/${tenantSlug}`;
 
   // Apply store branding
   useEffect(() => {
@@ -139,7 +143,7 @@ export default function StoreShop() {
                     </p>
                   </div>
                   <Button asChild size="sm" className="w-full">
-                    <Link to={`/s/${tenantSlug}/customize/${p.id}`}>
+                    <Link to={`${productBasePath}/customize/${p.id}`}>
                       <Wand2 className="h-3.5 w-3.5" /> Customize
                     </Link>
                   </Button>

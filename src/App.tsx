@@ -31,6 +31,13 @@ import LayersPreview from "./pages/LayersPreview";
 
 const queryClient = new QueryClient();
 
+const currentHost = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+const isPotentialStoreHost =
+  !!currentHost &&
+  !["localhost", "127.0.0.1", "platform.printonet.com", "printonet.lovable.app", "customizerstudio.com"].includes(currentHost) &&
+  !currentHost.endsWith(".lovable.app") &&
+  !currentHost.endsWith(".lovableproject.com");
+
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
@@ -48,7 +55,7 @@ const App = () => (
           <Sonner />
           <Routes>
             {/* Redirect root to auth */}
-            <Route path="/" element={<Navigate to="/auth" replace />} />
+            <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/auth" replace />} />
 
             {/* Auth */}
             <Route path="/auth" element={<Auth />} />
@@ -65,12 +72,13 @@ const App = () => (
             <Route path="/checkout/:sessionId" element={<Checkout />} />
             <Route path="/s/:tenantSlug" element={<StoreShop />} />
             <Route path="/s/:tenantSlug/customize/:productId" element={<StoreCustomize />} />
+            <Route path="/customize/:productId" element={isPotentialStoreHost ? <StoreCustomize customDomainHost={currentHost} /> : <NotFound />} />
             <Route path="/pay/woo" element={<WooPay />} />
             <Route path="/pay/woo/return" element={<WooPayReturn />} />
             <Route path="/layers-preview" element={<LayersPreview />} />
 
             {/* Dashboard */}
-            <Route path="/products" element={<DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
+            <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
             <Route path="/storefront" element={<Navigate to="/corporate-stores?tab=shopify" replace />} />
             <Route path="/corporate-stores" element={<DashboardRoute><CorporateStores /></DashboardRoute>} />
             <Route path="/corporate-stores/:id" element={<DashboardRoute><CorporateStoreDetails /></DashboardRoute>} />
@@ -82,7 +90,7 @@ const App = () => (
             <Route path="/brand-settings" element={<Navigate to="/corporate-stores" replace />} />
             <Route path="/developers" element={<Navigate to="/corporate-stores" replace />} />
             <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <NotFound />} />
           </Routes>
         </TooltipProvider>
       </AuthProvider>

@@ -102,13 +102,14 @@ Deno.serve(async (req) => {
       })
       .eq("id", store.id);
 
-    // Clearing the domain: tell the tenant to detach and we're done.
+    // Clearing the domain: tell the tenant network root to detach and we're done.
     if (!customDomain) {
-      await signedTenantCall("/wp-json/printonet/v1/update-store-domain", {
+      await signedTenantCall("/wp-json/printonet/v1/tenant/config", {
         method: "POST",
         body: {
           tenant_slug: store.tenant_slug,
           custom_domain: null,
+          dns_verified: false,
         },
       });
       return json({ ok: true, dns_verified: false, custom_domain: null });
@@ -146,11 +147,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Push to the tenant engine so the WP plugin maps host → tenant blog.
-    // Best-effort: if the WP plugin hasn't shipped this endpoint yet, we still
-    // persist the verified DNS state and let the user retry later.
+    // Push to the tenant network root so the WP plugin maps host → tenant blog.
+    // The live tenant engine exposes this through /tenant/config; the older
+    // /update-store-domain route is not deployed and returns rest_no_route.
     const result = await signedTenantCall(
-      "/wp-json/printonet/v1/update-store-domain",
+      "/wp-json/printonet/v1/tenant/config",
       {
         method: "POST",
         body: {
