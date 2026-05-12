@@ -617,6 +617,36 @@ export default function CorporateStoreDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit custom domain</DialogTitle>
+            <DialogDescription>
+              Point a domain you own at this store. Leave empty to remove. After saving, configure DNS at your registrar to point to the store.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="custom-domain">Custom domain</Label>
+            <Input
+              id="custom-domain"
+              value={domainDraft}
+              onChange={(e) => setDomainDraft(e.target.value)}
+              placeholder="merch.yourbrand.com"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingDomain}>
+              Cancel
+            </Button>
+            <Button onClick={saveDomain} disabled={savingDomain}>
+              {savingDomain && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
