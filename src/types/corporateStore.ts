@@ -26,6 +26,7 @@ export type CorporateStore = {
   stripe_charges_enabled: boolean;
   stripe_payouts_enabled: boolean;
   stripe_details_submitted: boolean;
+  platform_fee_bps: number;
   created_at: string;
 };
 
