@@ -423,21 +423,28 @@ export default function CorporateStoreDetails() {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Identity */}
         <Card>
-          <CardHeader>
-            <CardTitle>Identity</CardTitle>
-            <CardDescription>Basic store information.</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+            <div>
+              <CardTitle>Identity</CardTitle>
+              <CardDescription>Basic store information.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={openEditDomain}>
+              <Pencil className="h-3.5 w-3.5" /> Edit domain
+            </Button>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="truncate">{store.contact_email}</span>
             </div>
-            {store.custom_domain && (
-              <div className="flex items-center gap-2 text-sm">
-                <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex items-center gap-2 text-sm">
+              <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+              {store.custom_domain ? (
                 <span className="truncate">{store.custom_domain}</span>
-              </div>
-            )}
+              ) : (
+                <span className="text-muted-foreground italic">No custom domain</span>
+              )}
+            </div>
             {store.tenant_slug && (
               <CopyField label="Tenant slug" value={store.tenant_slug} mono />
             )}
