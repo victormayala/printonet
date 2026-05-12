@@ -83,6 +83,8 @@ Deno.serve(async (req) => {
       primary_color: overrides?.primary_color ?? store.primary_color,
       secondary_color: overrides?.secondary_color ?? store.accent_color,
       font_family: overrides?.font_family ?? store.font_family,
+      custom_domain: store.custom_domain ?? null,
+      dns_verified: store.dns_verified === true,
       logo_url:
         overrides?.logo_url !== undefined ? overrides.logo_url : store.logo_url,
       favicon_url:
