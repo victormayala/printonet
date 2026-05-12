@@ -502,7 +502,7 @@ export default function CorporateStores() {
                       <TableHead>Store</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Payments</TableHead>
-                      <TableHead>Platform fee</TableHead>
+                      {isSuperAdmin && <TableHead>Platform fee</TableHead>}
                       <TableHead>Site URL</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -546,9 +546,11 @@ export default function CorporateStores() {
                         <TableCell>
                           <PaymentsCell store={s} />
                         </TableCell>
-                        <TableCell>
-                          <PlatformFeeCell store={s} />
-                        </TableCell>
+                        {isSuperAdmin && (
+                          <TableCell>
+                            <PlatformFeeCell store={s} />
+                          </TableCell>
+                        )}
                         <TableCell>
                           {s.wp_site_url ? (
                             <a
