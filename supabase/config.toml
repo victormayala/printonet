@@ -78,3 +78,9 @@ verify_jwt = false
 [functions.sync-corporate-store-domain]
 verify_jwt = false
 
+
+[functions.subscription-checkout]
+verify_jwt = false
+
+[functions.subscription-portal]
+verify_jwt = false
