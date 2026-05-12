@@ -295,6 +295,7 @@ Deno.serve(async (req) => {
     }
 
     // Same server-side path that reserved the row now flips it to active.
+    const dnsCheck = await verifyCustomDomainDns(body.custom_domain ?? null);
     const { error: updateErr } = await admin
       .from("corporate_stores")
       .update({
@@ -309,6 +310,8 @@ Deno.serve(async (req) => {
         tenant_slug: canonicalSlug,
         status: "active",
         error_message: null,
+        dns_verified: dnsCheck.verified,
+        dns_checked_at: body.custom_domain ? new Date().toISOString() : null,
       })
       .eq("id", store.id);
 
