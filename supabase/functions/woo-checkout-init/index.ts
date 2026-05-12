@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     const { data: store, error: storeErr } = await admin
       .from("corporate_stores")
       .select(
-        "id, name, tenant_slug, stripe_account_id, stripe_charges_enabled, wp_site_url",
+        "id, name, tenant_slug, stripe_account_id, stripe_charges_enabled, wp_site_url, platform_fee_bps",
       )
       .eq("tenant_slug", tenant_slug)
       .maybeSingle();
@@ -197,6 +197,16 @@ Deno.serve(async (req) => {
       params[`metadata[${k}]`] = v;
       params[`payment_intent_data[metadata][${k}]`] = v;
     }
+
+    // Platform fee (direct charge): route a slice of every transaction to
+    // Printonet's platform Stripe account. bps stored per-store.
+    const bps = Math.max(0, Number((store as any).platform_fee_bps ?? 250));
+    const feeCents = Math.floor((order.total_in_cents * bps) / 10000);
+    if (feeCents > 0 && feeCents < order.total_in_cents) {
+      params["payment_intent_data[application_fee_amount]"] = String(feeCents);
+    }
+    params["metadata[platform_fee_bps]"] = String(bps);
+    params["payment_intent_data[metadata][platform_fee_bps]"] = String(bps);
 
     const session = await stripePost(
       "/checkout/sessions",
