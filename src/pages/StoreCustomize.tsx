@@ -8,25 +8,27 @@ import { supabase } from "@/integrations/supabase/client";
  * store, creates a customizer session attributed to the store, and redirects
  * to /embed/:sessionId where store branding will be applied.
  */
-export default function StoreCustomize() {
+export default function StoreCustomize({ customDomainHost }: { customDomainHost?: string }) {
   const { tenantSlug, productId } = useParams<{ tenantSlug: string; productId: string }>();
   const [searchParams] = useSearchParams();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!tenantSlug || !productId) return;
+    if ((!tenantSlug && !customDomainHost) || !productId) return;
     let cancelled = false;
 
     (async () => {
       try {
         // 1. Resolve store
-        const { data: store, error: sErr } = await supabase
+        let storeQuery = supabase
           .from("corporate_stores")
           .select("id,user_id,status")
-          .eq("tenant_slug", tenantSlug)
-          .eq("status", "active")
-          .maybeSingle();
+          .eq("status", "active");
+        storeQuery = customDomainHost
+          ? storeQuery.eq("custom_domain", customDomainHost)
+          : storeQuery.eq("tenant_slug", tenantSlug!);
+        const { data: store, error: sErr } = await storeQuery.maybeSingle();
         if (sErr || !store) throw new Error("Store not found");
 
         // 2. Verify product is enabled for this store
@@ -109,7 +111,7 @@ export default function StoreCustomize() {
     return () => {
       cancelled = true;
     };
-  }, [tenantSlug, productId, searchParams]);
+  }, [tenantSlug, customDomainHost, productId, searchParams]);
 
   if (error) {
     return (
