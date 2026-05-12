@@ -194,6 +194,8 @@ Deno.serve(async (req) => {
       dns_verified: dnsVerified,
       custom_domain: customDomain,
       resolved: resolvedIps,
+      tenant_pushed: tenantPushed,
+      tenant_warning: tenantWarning,
     });
   } catch (e) {
     console.error("sync-corporate-store-domain error", e);
