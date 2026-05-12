@@ -75,3 +75,6 @@ verify_jwt = false
 [functions.finalize-corporate-store]
 verify_jwt = false
 
+[functions.sync-corporate-store-domain]
+verify_jwt = false
+

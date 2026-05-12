@@ -4,7 +4,7 @@
 // wizards from burning store names.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { signedTenantCall } from "../_shared/printonet-tenant.ts";
+import { signedTenantCall, verifyCustomDomainDns } from "../_shared/printonet-tenant.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -202,6 +202,8 @@ Deno.serve(async (req) => {
       );
     }
 
+    const dnsCheck = await verifyCustomDomainDns(store.custom_domain);
+
     await admin
       .from("corporate_stores")
       .update({
@@ -216,6 +218,8 @@ Deno.serve(async (req) => {
         tenant_slug: canonicalSlug,
         status: "active",
         error_message: null,
+        dns_verified: dnsCheck.verified,
+        dns_checked_at: store.custom_domain ? new Date().toISOString() : null,
       })
       .eq("id", store.id);
 

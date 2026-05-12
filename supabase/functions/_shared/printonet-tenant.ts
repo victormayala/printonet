@@ -96,3 +96,35 @@ export async function signedTenantCall(
 
   return { ok: upstream.ok, status: upstream.status, response: parsed, target };
 }
+
+// ---------------------------------------------------------------------------
+// DNS helpers — used by store provisioning to verify a tenant's custom domain
+// resolves to the Printonet stores VPS before we mark it verified.
+// ---------------------------------------------------------------------------
+
+export async function resolveARecords(hostname: string): Promise<string[]> {
+  try {
+    const r = await fetch(
+      `https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=A`,
+      { headers: { Accept: "application/dns-json" } },
+    );
+    if (!r.ok) return [];
+    const data = await r.json();
+    const answers = Array.isArray(data?.Answer) ? data.Answer : [];
+    return answers
+      .filter((a: { type: number; data: string }) => a.type === 1)
+      .map((a: { data: string }) => a.data);
+  } catch {
+    return [];
+  }
+}
+
+export async function verifyCustomDomainDns(
+  hostname: string | null | undefined,
+): Promise<{ verified: boolean; resolved: string[]; expected: string | null }> {
+  const expected = Deno.env.get("PRINTONET_STORE_IPV4")?.trim() || null;
+  if (!hostname) return { verified: false, resolved: [], expected };
+  if (!expected) return { verified: false, resolved: [], expected: null };
+  const resolved = await resolveARecords(hostname);
+  return { verified: resolved.includes(expected), resolved, expected };
+}

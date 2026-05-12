@@ -134,6 +134,8 @@ export type Database = {
           contact_email: string
           created_at: string
           custom_domain: string | null
+          dns_checked_at: string | null
+          dns_verified: boolean
           error_message: string | null
           favicon_url: string | null
           font_family: string
@@ -168,6 +170,8 @@ export type Database = {
           contact_email: string
           created_at?: string
           custom_domain?: string | null
+          dns_checked_at?: string | null
+          dns_verified?: boolean
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
@@ -202,6 +206,8 @@ export type Database = {
           contact_email?: string
           created_at?: string
           custom_domain?: string | null
+          dns_checked_at?: string | null
+          dns_verified?: boolean
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
