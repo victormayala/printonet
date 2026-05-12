@@ -1,89 +1,51 @@
 ## Goal
+Charge a 2.5% platform fee to Printonet on every transaction processed through a corporate store's connected Stripe account.
 
-Enable each shop owner's provisioned store to accept payments that flow **directly into their own Stripe Connect Express account** (created during onboarding). Printonet never touches the funds.
+## Why it's not working today
+Both checkout-creation edge functions create the Stripe Checkout Session as a **direct charge** on the merchant's account (via the `Stripe-Account` header), but neither passes `application_fee_amount`. Without that parameter, 100% of the funds settle on the merchant and Printonet collects nothing — that's the symptom you're seeing.
 
-## Where we are today
-
-- Onboarding step 3 creates a Stripe Express account per store and stores `stripe_account_id` + capability flags on `corporate_stores`.
-- `stripe-connect-onboard` and `stripe-connect-status` edge functions exist.
-- Customizer sessions, design output, and Woo order files already exist — but checkout currently has no path that charges the merchant's Stripe account.
-
-## What "connecting payments" means
-
-For a customer buying on a shop owner's store, we need a checkout that:
-1. Knows which `corporate_stores.stripe_account_id` to charge.
-2. Creates a Stripe Checkout Session **on behalf of that connected account** (`stripeAccount` header / `on_behalf_of`).
-3. Optionally takes an `application_fee_amount` for Printonet (platform fee).
-4. Returns success → writes an `orders` row + marks the customizer session complete.
+The fix is to add `application_fee_amount` (in cents) to the session params. For direct charges, this is the supported way to route a cut to the platform automatically on every successful payment.
 
 ## Plan
 
-### 1. Gate the storefront on Stripe readiness
-- In `corporate_stores`, treat a store as "payments-ready" only when `stripe_charges_enabled = true`.
-- Surface state in the dashboard: Connected ✅ / Pending ⏳ / Action required ⚠ with a "Resume Stripe onboarding" button (re-uses `stripe-connect-onboard` to mint a fresh Account Link).
-- Block "Publish store" / hide checkout button on the storefront until `charges_enabled`.
+### 1. Add a configurable fee rate (default 2.5%)
+- Add column `corporate_stores.platform_fee_bps integer not null default 250` (250 basis points = 2.5%). Per-store override later if needed.
+- Migration only; no UI change required now.
 
-### 2. New edge function: `create-store-checkout`
-Replaces/augments today's checkout creation. Inputs: `storeId`, `sessionId` (customizer session), `lineItems`, `returnUrl`.
+### 2. Patch `supabase/functions/stripe-connect-checkout/index.ts` (hosted Customizer Studio checkout)
+- Select `platform_fee_bps` from `corporate_stores`.
+- Compute `feeCents = Math.floor((amountInCents * quantity) * bps / 10000)`.
+- Add to params:
+  - `payment_intent_data[application_fee_amount] = feeCents`
+- Stamp `metadata[platform_fee_bps]` for reporting.
 
-Logic:
-- Load `corporate_stores` by `storeId`; require `stripe_charges_enabled`.
-- Build a Stripe Checkout Session with:
-  - `ui_mode: "embedded_page"` (per our standard)
-  - `payment_intent_data: { application_fee_amount, on_behalf_of: acct }` — or pass `{ stripeAccount: acct }` as request option for a **direct charge** model.
-  - `metadata: { customizer_session_id, store_id, user_id }`
-- Return `clientSecret`.
+### 3. Patch `supabase/functions/woo-checkout-init/index.ts` (WooCommerce plugin checkout)
+- Same selection + computation against `order.total_in_cents`.
+- Add `payment_intent_data[application_fee_amount]`.
+- Stamp metadata.
 
-Decision needed: **Direct charges** (recommended for Express — funds settle on merchant, simpler liability) vs **Destination charges** (Printonet is merchant of record). See "Open questions".
+### 4. Persist the fee on completion
+- In `woo-checkout-complete` and the existing `payments-webhook` / `stripe-connect-webhook` paths, write `orders.application_fee_amount` from the PaymentIntent. (The `orders` table already has the column — currently always null.)
 
-### 3. Platform fee model
-Add a `platform_fee_bps` (or fixed) column on `corporate_stores` (default e.g. 500 = 5%). `create-store-checkout` computes `application_fee_amount = round(total * bps / 10000)`. Printonet receives this on its platform Stripe account automatically.
+### 5. Sanity checks
+- Minimum: skip fee if `amountInCents < ~50¢` worth of fee (Stripe rejects fees larger than the charge minus Stripe processing).
+- Test mode: confirm with a $10 sandbox checkout that:
+  - Merchant Express account receives net amount
+  - Platform account sees a `application_fee` of $0.25
+  - `orders.application_fee_amount = 25`
 
-### 4. Webhook: `stripe-connect-webhook`
-New endpoint subscribed to **Connect** events (`account.updated`, `checkout.session.completed`, `payment_intent.succeeded/failed`):
-- `account.updated` → sync `charges_enabled` / `payouts_enabled` / `details_submitted`.
-- `checkout.session.completed` → upsert `orders` row, mark `customizer_sessions.status = 'completed'`, attach to Woo/Shopify line item if applicable.
-- Use `PAYMENTS_SANDBOX_WEBHOOK_SECRET` for sig verification; `verify_jwt = false`.
-
-### 5. Storefront wiring (Customizer Studio + Woo/Shopify SDKs)
-- Floating cart "Checkout" button calls `create-store-checkout` with the active `storeId` (already known via tenant slug → store lookup).
-- Mount `EmbeddedCheckout` on `/checkout` of the tenant store.
-- `/checkout/return?session_id=…` reads order, shows confirmation.
-
-### 6. Dashboard: Payments tab on each store
-- Show connection status, last payout, link to Stripe Express dashboard via `stripe.accounts.createLoginLink(acct)` (new tiny edge function `stripe-connect-login-link`).
-- Show recent orders for that store (filtered by `metadata.store_id`).
-
-### 7. Test → Live cutover
-No code change required when you swap `STRIPE_CONNECT_SECRET_KEY` from `sk_test_…` to `sk_live_…`. Existing test Express accounts won't carry over — owners reconnect once in live mode.
-
-## Technical details
-
+## Technical notes
+Direct charge + application fee shape:
 ```text
-Customer → Tenant storefront
-   │  POST /functions/v1/create-store-checkout
-   ▼
-Edge fn ── reads corporate_stores.stripe_account_id
-        ── stripe.checkout.sessions.create({...},
-              { stripeAccount: acct })   ← direct charge
-        ── application_fee_amount = platform fee
-   │
-   ▼
-Stripe Embedded Checkout (clientSecret)
-   │
-   ▼ webhook (Connect)
-stripe-connect-webhook → orders + customizer_sessions update
+POST /v1/checkout/sessions
+  Header: Stripe-Account: acct_xxx       (merchant)
+  Body:   payment_intent_data[application_fee_amount]=250    (cents, to platform)
 ```
+No change to charge model, return URLs, or webhook subscriptions.
 
-DB additions (migration):
-- `corporate_stores.platform_fee_bps int not null default 500`
-- `orders.store_id uuid`, `orders.stripe_account_id text`, `orders.application_fee_amount int`
+## Out of scope
+- Per-store custom fee rates UI (column supports it; defer until needed).
+- Subscription-style fees (we only do one-off payments today).
+- Refund/dispute fee reversal logic (Stripe handles application fee refund pro-rata automatically when the charge is refunded).
 
-## Open questions
-
-1. **Charge model**: Direct charges (merchant of record = shop owner, lowest liability for Printonet — recommended) or Destination charges (Printonet is MoR, more control)?
-2. **Platform fee**: Flat % per store, per-plan tier, or none for now?
-3. **Refunds/disputes**: Should shop owners handle directly via their Express dashboard (recommended) or proxy through Printonet UI?
-4. Which storefront(s) should we wire first — the hosted Customizer Studio checkout, the WooCommerce plugin path, or both?
-
-Answer 1–4 and I'll implement.
+Confirm and I'll implement.

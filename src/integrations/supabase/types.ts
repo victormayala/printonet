@@ -140,6 +140,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          platform_fee_bps: number
           primary_color: string
           provision_request_id: string | null
           secondary_logo_url: string | null
@@ -173,6 +174,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          platform_fee_bps?: number
           primary_color?: string
           provision_request_id?: string | null
           secondary_logo_url?: string | null
@@ -206,6 +208,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          platform_fee_bps?: number
           primary_color?: string
           provision_request_id?: string | null
           secondary_logo_url?: string | null

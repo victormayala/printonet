@@ -1,0 +1,1 @@
+ALTER TABLE public.corporate_stores ADD COLUMN IF NOT EXISTS platform_fee_bps integer NOT NULL DEFAULT 250;
