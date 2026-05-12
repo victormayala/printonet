@@ -210,14 +210,19 @@ export default function CorporateStoreDetails() {
         const msg = ctx?.detail || ctx?.error || error.message;
         throw new Error(msg);
       }
-      toast({
-        title: "Custom domain updated",
-        description: trimmed
-          ? (data as { dns_verified?: boolean })?.dns_verified
+      const result = (data as {
+        dns_verified?: boolean;
+        tenant_pushed?: boolean;
+        tenant_warning?: string | null;
+      }) || {};
+      const description = !trimmed
+        ? undefined
+        : result.tenant_warning
+          ? `Saved in dashboard. Store engine could not be updated: ${result.tenant_warning}`
+          : result.dns_verified
             ? "DNS verified and pushed to the store."
-            : "Saved. Waiting for DNS to propagate."
-          : undefined,
-      });
+            : "Saved. Waiting for DNS to propagate.";
+      toast({ title: "Custom domain updated", description });
       setEditOpen(false);
       queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
