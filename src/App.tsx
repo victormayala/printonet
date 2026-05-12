@@ -28,6 +28,9 @@ import WooPay from "./pages/WooPay";
 import WooPayReturn from "./pages/WooPayReturn";
 import NotFound from "./pages/NotFound";
 import LayersPreview from "./pages/LayersPreview";
+import Pricing from "./pages/Pricing";
+import Billing from "./pages/Billing";
+import BillingReturn from "./pages/BillingReturn";
 
 const queryClient = new QueryClient();
 
