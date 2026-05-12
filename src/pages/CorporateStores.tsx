@@ -251,7 +251,63 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
   );
 }
 
-function LogoField({
+function PlatformFeeCell({ store }: { store: CorporateStore }) {
+  const qc = useQueryClient();
+  const [value, setValue] = useState<string>(
+    (((store.platform_fee_bps ?? 250) / 100)).toString(),
+  );
+  const [saving, setSaving] = useState(false);
+  const initial = ((store.platform_fee_bps ?? 250) / 100).toString();
+
+  const save = async () => {
+    const pct = Number(value);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      toast({ title: "Enter a value between 0 and 100", variant: "destructive" });
+      setValue(initial);
+      return;
+    }
+    const bps = Math.round(pct * 100);
+    if (bps === (store.platform_fee_bps ?? 250)) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("corporate_stores")
+      .update({ platform_fee_bps: bps })
+      .eq("id", store.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Could not save fee", description: error.message, variant: "destructive" });
+      setValue(initial);
+      return;
+    }
+    toast({ title: "Platform fee updated", description: `${pct}% will apply to new checkouts.` });
+    qc.invalidateQueries({ queryKey: ["corporate-stores"] });
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        type="number"
+        inputMode="decimal"
+        step="0.1"
+        min={0}
+        max={100}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") setValue(initial);
+        }}
+        disabled={saving}
+        className="h-8 w-20 text-sm"
+        aria-label="Platform fee percentage"
+      />
+      <span className="text-xs text-muted-foreground">%</span>
+      {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+    </div>
+  );
+}
+
   label,
   value,
   existingUrl,
