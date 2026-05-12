@@ -642,32 +642,55 @@ export default function CorporateStoreDetails() {
             </div>
 
             {(() => {
-              const target = (() => {
+              const cnameTarget = (() => {
                 try {
                   return store.wp_site_url ? new URL(store.wp_site_url).host : null;
                 } catch {
                   return null;
                 }
               })();
+              const SERVER_IP = "177.7.32.229";
+              const domain = domainDraft.trim().toLowerCase();
+              const isApex = domain && domain.split(".").filter(Boolean).length === 2;
               return (
-                <div className="rounded-md border bg-muted/40 p-3 space-y-2 text-sm">
+                <div className="rounded-md border bg-muted/40 p-3 space-y-3 text-sm">
                   <p className="font-medium">DNS setup</p>
                   <p className="text-muted-foreground text-xs">
-                    At your domain registrar (GoDaddy, Cloudflare, Namecheap, etc.), add the following record for your subdomain:
+                    At your domain registrar (GoDaddy, Cloudflare, Namecheap, etc.), add one of the following records:
                   </p>
-                  <div className="grid grid-cols-[80px_1fr] gap-x-3 gap-y-1 font-mono text-xs">
-                    <span className="text-muted-foreground">Type</span>
-                    <span>CNAME</span>
-                    <span className="text-muted-foreground">Host</span>
-                    <span>your subdomain (e.g. <span className="font-mono">shop</span>)</span>
-                    <span className="text-muted-foreground">Value</span>
-                    <span className="break-all">{target ?? "<provisioning…>"}</span>
-                    <span className="text-muted-foreground">TTL</span>
-                    <span>Auto / 3600</span>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold">
+                      Option A — Subdomain {isApex ? "" : "(recommended)"} <span className="text-muted-foreground font-normal">e.g. shop.yourbrand.com</span>
+                    </p>
+                    <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 font-mono text-xs rounded border bg-background p-2">
+                      <span className="text-muted-foreground">Type</span>
+                      <span>CNAME</span>
+                      <span className="text-muted-foreground">Host</span>
+                      <span>your subdomain (e.g. <span>shop</span>)</span>
+                      <span className="text-muted-foreground">Value</span>
+                      <span className="break-all">{cnameTarget ?? "<provisioning…>"}</span>
+                      <span className="text-muted-foreground">TTL</span>
+                      <span>Auto / 3600</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    If your DNS provider doesn't allow a CNAME at the level you need, use an A record pointing to the IP that <code className="font-mono">{target ?? "your tenant host"}</code> resolves to.
-                  </p>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold">
+                      Option B — Root domain {isApex ? "(recommended)" : ""} <span className="text-muted-foreground font-normal">e.g. yourbrand.com</span>
+                    </p>
+                    <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 font-mono text-xs rounded border bg-background p-2">
+                      <span className="text-muted-foreground">Type</span>
+                      <span>A</span>
+                      <span className="text-muted-foreground">Host</span>
+                      <span>@</span>
+                      <span className="text-muted-foreground">Value</span>
+                      <span>{SERVER_IP}</span>
+                      <span className="text-muted-foreground">TTL</span>
+                      <span>Auto / 3600</span>
+                    </div>
+                  </div>
+
                   <p className="text-xs text-muted-foreground">
                     DNS changes can take up to 24 hours to propagate. SSL is issued automatically once DNS resolves correctly.
                   </p>
