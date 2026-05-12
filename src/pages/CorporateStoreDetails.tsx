@@ -19,10 +19,19 @@ import {
   Package,
   Pause,
   PauseCircle,
+  Pencil,
   Play,
   Trash2,
   Type,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
