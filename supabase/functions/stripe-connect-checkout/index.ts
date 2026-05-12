@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: store, error: storeErr } = await admin
       .from("corporate_stores")
-      .select("id, name, stripe_account_id, stripe_charges_enabled")
+      .select("id, name, stripe_account_id, stripe_charges_enabled, platform_fee_bps")
       .eq("id", storeId)
       .single();
     if (storeErr || !store) {
@@ -104,6 +104,18 @@ Deno.serve(async (req) => {
     }
     params["metadata[printonet_store_id]"] = store.id;
     params["payment_intent_data[metadata][printonet_store_id]"] = store.id;
+
+    // Platform fee (direct charge model): a slice of the merchant's charge is
+    // automatically routed to Printonet's platform Stripe account.
+    const qty = Math.max(1, Number(quantity) || 1);
+    const bps = Math.max(0, Number((store as any).platform_fee_bps ?? 250));
+    const grossCents = amountInCents * qty;
+    const feeCents = Math.floor((grossCents * bps) / 10000);
+    if (feeCents > 0 && feeCents < grossCents) {
+      params["payment_intent_data[application_fee_amount]"] = String(feeCents);
+    }
+    params["metadata[platform_fee_bps]"] = String(bps);
+    params["payment_intent_data[metadata][platform_fee_bps]"] = String(bps);
 
     // Direct charge: pass Stripe-Account header so the session is created on
     // the connected account. Funds settle on the merchant.
