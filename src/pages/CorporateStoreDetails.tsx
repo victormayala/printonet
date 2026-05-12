@@ -183,6 +183,43 @@ export default function CorporateStoreDetails() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPause, setConfirmPause] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [domainDraft, setDomainDraft] = useState("");
+  const [savingDomain, setSavingDomain] = useState(false);
+
+  const openEditDomain = () => {
+    setDomainDraft(store?.custom_domain ?? "");
+    setEditOpen(true);
+  };
+
+  const saveDomain = async () => {
+    if (!store) return;
+    const trimmed = domainDraft.trim().toLowerCase();
+    if (trimmed && !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(trimmed)) {
+      toast({ title: "Invalid domain", description: "Enter a domain like merch.yourbrand.com", variant: "destructive" });
+      return;
+    }
+    setSavingDomain(true);
+    try {
+      const { error } = await supabase
+        .from("corporate_stores")
+        .update({ custom_domain: trimmed || null })
+        .eq("id", store.id);
+      if (error) throw error;
+      toast({ title: "Custom domain updated" });
+      setEditOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+    } catch (e) {
+      toast({
+        title: "Could not update domain",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingDomain(false);
+    }
+  };
 
   const { data: store, isLoading, error } = useQuery({
     queryKey: ["corporate_store", id, user?.id],
