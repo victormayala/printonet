@@ -93,6 +93,9 @@ const App = () => (
             <Route path="/brand-settings" element={<Navigate to="/corporate-stores" replace />} />
             <Route path="/developers" element={<Navigate to="/corporate-stores" replace />} />
             <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/billing" element={<DashboardRoute><Billing /></DashboardRoute>} />
+            <Route path="/billing/return" element={<BillingReturn />} />
             <Route path="*" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <NotFound />} />
           </Routes>
         </TooltipProvider>
