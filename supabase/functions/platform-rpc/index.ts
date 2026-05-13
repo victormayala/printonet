@@ -147,6 +147,207 @@ Deno.serve(async (req) => {
         return json(200, { ok: true });
       }
 
+      case "get_store_by_slug": {
+        const slug = String(params.tenant_slug ?? "").trim().toLowerCase();
+        if (!slug) return json(400, { error: "tenant_slug_required" });
+        const { data, error } = await supabase
+          .from("corporate_stores")
+          .select(
+            "id, user_id, name, tenant_slug, status, custom_domain, contact_email, " +
+              "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
+              "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
+              "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold",
+          )
+          .eq("status", "active")
+          .ilike("tenant_slug", slug)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "store_not_found" });
+        return json(200, { store: data });
+      }
+
+      case "list_store_products": {
+        const storeId = String(params.store_id ?? "");
+        if (!storeId) return json(400, { error: "store_id_required" });
+        const { data, error } = await supabase
+          .from("corporate_store_products")
+          .select(
+            "id, store_id, product_id, sort_order, is_active, " +
+              "inventory_products:product_id ( id, name, description, category, base_price, sale_price, " +
+              "image_front, image_back, image_side1, image_side2, variants, decoration_methods, " +
+              "product_type, inventory, status, weight, weight_unit, length, width, height, dimension_unit )",
+          )
+          .eq("store_id", storeId)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+        if (error) throw error;
+        return json(200, { products: data ?? [] });
+      }
+
+      case "get_store_product": {
+        const storeId = String(params.store_id ?? "");
+        const productId = String(params.product_id ?? "");
+        if (!storeId || !productId) {
+          return json(400, { error: "store_id_and_product_id_required" });
+        }
+        const { data, error } = await supabase
+          .from("corporate_store_products")
+          .select(
+            "id, store_id, product_id, sort_order, is_active, " +
+              "inventory_products:product_id ( * )",
+          )
+          .eq("store_id", storeId)
+          .eq("product_id", productId)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "product_not_found" });
+        return json(200, { product: data });
+      }
+
+      case "create_order": {
+        const order = (params.order ?? {}) as Record<string, unknown>;
+        const items = Array.isArray(params.items) ? (params.items as Record<string, unknown>[]) : [];
+        if (!order.store_id) return json(400, { error: "order.store_id_required" });
+        if (items.length === 0) return json(400, { error: "items_required" });
+
+        const { data: insertedOrder, error: orderErr } = await supabase
+          .from("orders")
+          .insert({
+            store_id: order.store_id,
+            session_id: order.session_id ?? null,
+            stripe_checkout_id: order.stripe_checkout_id ?? null,
+            stripe_payment_intent: order.stripe_payment_intent ?? null,
+            stripe_account_id: order.stripe_account_id ?? null,
+            customer_email: order.customer_email ?? null,
+            amount_total: order.amount_total ?? null,
+            application_fee_amount: order.application_fee_amount ?? null,
+            currency: order.currency ?? "usd",
+            status: order.status ?? "pending",
+            environment: order.environment ?? "sandbox",
+          })
+          .select("*")
+          .single();
+        if (orderErr) throw orderErr;
+
+        const itemRows = items.map((it) => ({
+          order_id: insertedOrder.id,
+          store_product_id: it.store_product_id ?? null,
+          inventory_product_id: it.inventory_product_id ?? null,
+          name: it.name,
+          image_url: it.image_url ?? null,
+          unit_amount: it.unit_amount,
+          quantity: it.quantity,
+          currency: it.currency ?? insertedOrder.currency ?? "usd",
+          variant_color: it.variant_color ?? null,
+          variant_size: it.variant_size ?? null,
+          sku: it.sku ?? null,
+        }));
+        const { data: insertedItems, error: itemsErr } = await supabase
+          .from("order_items")
+          .insert(itemRows)
+          .select("*");
+        if (itemsErr) throw itemsErr;
+
+        return json(200, { order: insertedOrder, items: insertedItems });
+      }
+
+      case "update_order": {
+        const orderId = String(params.order_id ?? "");
+        const patch = (params.patch ?? {}) as Record<string, unknown>;
+        if (!orderId) return json(400, { error: "order_id_required" });
+        const allowed = [
+          "status",
+          "amount_total",
+          "application_fee_amount",
+          "currency",
+          "stripe_checkout_id",
+          "stripe_payment_intent",
+          "stripe_account_id",
+          "customer_email",
+          "environment",
+        ];
+        const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        for (const k of allowed) if (k in patch) update[k] = patch[k];
+        const { data, error } = await supabase
+          .from("orders")
+          .update(update)
+          .eq("id", orderId)
+          .select("*")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "order_not_found" });
+        return json(200, { order: data });
+      }
+
+      case "get_order": {
+        const orderId = String(params.order_id ?? "");
+        if (!orderId) return json(400, { error: "order_id_required" });
+        const { data: order, error: orderErr } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("id", orderId)
+          .maybeSingle();
+        if (orderErr) throw orderErr;
+        if (!order) return json(404, { error: "order_not_found" });
+        const { data: items, error: itemsErr } = await supabase
+          .from("order_items")
+          .select("*")
+          .eq("order_id", orderId);
+        if (itemsErr) throw itemsErr;
+        return json(200, { order, items: items ?? [] });
+      }
+
+      case "get_store_shipping_settings": {
+        const storeId = String(params.store_id ?? "");
+        if (!storeId) return json(400, { error: "store_id_required" });
+        const { data, error } = await supabase
+          .from("corporate_stores")
+          .select("id, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "store_not_found" });
+        return json(200, { settings: data });
+      }
+
+      case "update_store_shipping_settings": {
+        const storeId = String(params.store_id ?? "");
+        const patch = (params.patch ?? {}) as Record<string, unknown>;
+        if (!storeId) return json(400, { error: "store_id_required" });
+        const allowed = ["tax_enabled", "shipping_label", "shipping_flat_amount", "free_shipping_threshold"];
+        const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        for (const k of allowed) if (k in patch) update[k] = patch[k];
+        const { data, error } = await supabase
+          .from("corporate_stores")
+          .update(update)
+          .eq("id", storeId)
+          .select("id, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "store_not_found" });
+        return json(200, { settings: data });
+      }
+
+      case "record_webhook_event": {
+        const eventId = String(params.event_id ?? "");
+        const eventType = String(params.type ?? "");
+        if (!eventId || !eventType) {
+          return json(400, { error: "event_id_and_type_required" });
+        }
+        const { error } = await supabase
+          .from("stripe_webhook_events")
+          .insert({ event_id: eventId, type: eventType });
+        if (error) {
+          // 23505 = unique_violation → already processed (idempotent)
+          if ((error as { code?: string }).code === "23505") {
+            return json(200, { recorded: false, duplicate: true });
+          }
+          throw error;
+        }
+        return json(200, { recorded: true, duplicate: false });
+      }
+
       default:
         return json(400, { error: "unknown_op", op });
     }
