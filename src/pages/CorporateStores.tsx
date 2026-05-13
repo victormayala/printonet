@@ -1084,7 +1084,7 @@ function StepIndicator({ step, total, labels }: { step: number; total: number; l
         const isDone = n < step;
         const isCurrent = n === step;
         return (
-          <div key={label} className="flex items-center gap-2 flex-1 min-w-0">
+          <div key={label} className="flex items-center gap-2 shrink-0">
             <div
               className={
                 "h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold border " +
@@ -1097,18 +1097,16 @@ function StepIndicator({ step, total, labels }: { step: number; total: number; l
             >
               {isDone ? <Check className="h-3.5 w-3.5" /> : n}
             </div>
-            <div className="min-w-0 flex-1">
-              <div
-                className={
-                  "text-xs font-medium truncate " +
-                  (isCurrent || isDone ? "text-foreground" : "text-muted-foreground")
-                }
-              >
-                {label}
-              </div>
+            <div
+              className={
+                "text-xs font-medium whitespace-nowrap " +
+                (isCurrent || isDone ? "text-foreground" : "text-muted-foreground")
+              }
+            >
+              {label}
             </div>
             {idx < total - 1 && (
-              <div className={"h-px flex-1 " + (isDone ? "bg-primary" : "bg-border")} />
+              <div className={"h-px flex-1 min-w-4 " + (isDone ? "bg-primary" : "bg-border")} />
             )}
           </div>
         );
