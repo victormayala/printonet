@@ -1084,7 +1084,7 @@ function StepIndicator({ step, total, labels }: { step: number; total: number; l
         const isDone = n < step;
         const isCurrent = n === step;
         return (
-          <div key={label} className="flex items-center gap-2 shrink-0">
+          <div key={label} className={"flex items-center gap-2 " + (idx < total - 1 ? "flex-1" : "shrink-0")}>
             <div
               className={
                 "h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold border " +
@@ -1099,7 +1099,7 @@ function StepIndicator({ step, total, labels }: { step: number; total: number; l
             </div>
             <div
               className={
-                "text-xs font-medium whitespace-nowrap " +
+                "text-xs font-medium whitespace-nowrap shrink-0 " +
                 (isCurrent || isDone ? "text-foreground" : "text-muted-foreground")
               }
             >
