@@ -47,6 +47,18 @@ const FONT_OPTIONS = [
   "Plus Jakarta Sans", "Archivo",
 ];
 
+// Inject Google Fonts stylesheet once so the dropdown previews render in their own typeface.
+if (typeof document !== "undefined" && !document.getElementById("corp-store-font-previews")) {
+  const link = document.createElement("link");
+  link.id = "corp-store-font-previews";
+  link.rel = "stylesheet";
+  link.href =
+    "https://fonts.googleapis.com/css2?" +
+    FONT_OPTIONS.map((f) => `family=${f.replace(/ /g, "+")}:wght@400;600`).join("&") +
+    "&display=swap";
+  document.head.appendChild(link);
+}
+
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   contact_email: z.string().trim().email("Invalid email").max(255),
