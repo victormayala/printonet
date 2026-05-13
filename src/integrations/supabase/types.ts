@@ -154,6 +154,7 @@ export type Database = {
           error_message: string | null
           favicon_url: string | null
           font_family: string
+          free_shipping_threshold: number | null
           id: string
           logo_url: string | null
           name: string
@@ -161,6 +162,8 @@ export type Database = {
           primary_color: string
           provision_request_id: string | null
           secondary_logo_url: string | null
+          shipping_flat_amount: number
+          shipping_label: string
           status: string
           store_admin_url: string | null
           store_login_url: string | null
@@ -170,6 +173,7 @@ export type Database = {
           stripe_connected_at: string | null
           stripe_details_submitted: boolean
           stripe_payouts_enabled: boolean
+          tax_enabled: boolean
           tenant_slug: string | null
           updated_at: string
           user_id: string
@@ -190,6 +194,7 @@ export type Database = {
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
+          free_shipping_threshold?: number | null
           id?: string
           logo_url?: string | null
           name: string
@@ -197,6 +202,8 @@ export type Database = {
           primary_color?: string
           provision_request_id?: string | null
           secondary_logo_url?: string | null
+          shipping_flat_amount?: number
+          shipping_label?: string
           status?: string
           store_admin_url?: string | null
           store_login_url?: string | null
@@ -206,6 +213,7 @@ export type Database = {
           stripe_connected_at?: string | null
           stripe_details_submitted?: boolean
           stripe_payouts_enabled?: boolean
+          tax_enabled?: boolean
           tenant_slug?: string | null
           updated_at?: string
           user_id: string
@@ -226,6 +234,7 @@ export type Database = {
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
+          free_shipping_threshold?: number | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -233,6 +242,8 @@ export type Database = {
           primary_color?: string
           provision_request_id?: string | null
           secondary_logo_url?: string | null
+          shipping_flat_amount?: number
+          shipping_label?: string
           status?: string
           store_admin_url?: string | null
           store_login_url?: string | null
@@ -242,6 +253,7 @@ export type Database = {
           stripe_connected_at?: string | null
           stripe_details_submitted?: boolean
           stripe_payouts_enabled?: boolean
+          tax_enabled?: boolean
           tenant_slug?: string | null
           updated_at?: string
           user_id?: string
@@ -456,8 +468,11 @@ export type Database = {
           name: string
           order_id: string
           quantity: number
+          sku: string | null
           store_product_id: string | null
           unit_amount: number
+          variant_color: string | null
+          variant_size: string | null
         }
         Insert: {
           created_at?: string
@@ -468,8 +483,11 @@ export type Database = {
           name: string
           order_id: string
           quantity: number
+          sku?: string | null
           store_product_id?: string | null
           unit_amount: number
+          variant_color?: string | null
+          variant_size?: string | null
         }
         Update: {
           created_at?: string
@@ -480,8 +498,11 @@ export type Database = {
           name?: string
           order_id?: string
           quantity?: number
+          sku?: string | null
           store_product_id?: string | null
           unit_amount?: number
+          variant_color?: string | null
+          variant_size?: string | null
         }
         Relationships: [
           {
@@ -726,6 +747,24 @@ export type Database = {
           store_url?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      stripe_webhook_events: {
+        Row: {
+          event_id: string
+          received_at: string
+          type: string
+        }
+        Insert: {
+          event_id: string
+          received_at?: string
+          type: string
+        }
+        Update: {
+          event_id?: string
+          received_at?: string
+          type?: string
         }
         Relationships: []
       }
