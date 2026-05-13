@@ -1320,14 +1320,22 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     setStep(2);
   };
 
-  const goNextFromStep2 = () => {
+  const goNextFromStep2 = async () => {
     if (!chosenSlug) {
       toast({ title: "Please confirm a site address", variant: "destructive" });
       return;
     }
-    // Fire-and-forget provisioning so Stripe step can run in parallel
-    provision.mutate();
-    setStep(3);
+    // If already reserved, just continue.
+    if (provisionedStoreId) {
+      setStep(3);
+      return;
+    }
+    try {
+      await provision.mutateAsync();
+      setStep(3);
+    } catch {
+      // Stay on step 2; inline error block below will show details.
+    }
   };
 
   const finishOnboarding = () => {
@@ -1448,12 +1456,27 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
             </p>
           </div>
 
+          {provision.isError && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="font-medium">Couldn't create your store</p>
+                <p className="text-xs opacity-90">
+                  {provision.error instanceof Error
+                    ? provision.error.message
+                    : "Something went wrong. Please try again."}
+                </p>
+              </div>
+            </div>
+          )}
+
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(1)}>
+            <Button variant="outline" onClick={() => setStep(1)} disabled={provision.isPending}>
               Back
             </Button>
-            <Button onClick={goNextFromStep2} disabled={!chosenSlug}>
-              Continue
+            <Button onClick={goNextFromStep2} disabled={!chosenSlug || provision.isPending}>
+              {provision.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {provision.isError ? "Try again" : "Continue"}
             </Button>
           </DialogFooter>
         </div>
