@@ -1320,14 +1320,22 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     setStep(2);
   };
 
-  const goNextFromStep2 = () => {
+  const goNextFromStep2 = async () => {
     if (!chosenSlug) {
       toast({ title: "Please confirm a site address", variant: "destructive" });
       return;
     }
-    // Fire-and-forget provisioning so Stripe step can run in parallel
-    provision.mutate();
-    setStep(3);
+    // If already reserved, just continue.
+    if (provisionedStoreId) {
+      setStep(3);
+      return;
+    }
+    try {
+      await provision.mutateAsync();
+      setStep(3);
+    } catch {
+      // Stay on step 2; inline error block below will show details.
+    }
   };
 
   const finishOnboarding = () => {
