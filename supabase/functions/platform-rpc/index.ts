@@ -367,7 +367,14 @@ Deno.serve(async (req) => {
         return json(400, { error: "unknown_op", op });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return json(500, { error: "rpc_failed", message });
+    const e = err as { message?: string; code?: string; details?: string; hint?: string };
+    const message = e?.message ?? (typeof err === "string" ? err : JSON.stringify(err));
+    return json(500, {
+      error: "rpc_failed",
+      message,
+      code: e?.code,
+      details: e?.details,
+      hint: e?.hint,
+    });
   }
 });
