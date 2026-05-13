@@ -1089,10 +1089,10 @@ function StepIndicator({ step, total, labels }: { step: number; total: number; l
               className={
                 "h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold border " +
                 (isDone
-                  ? "bg-primary text-primary-foreground border-primary"
+                  ? "bg-yellow-400 text-yellow-950 border-yellow-400"
                   : isCurrent
-                    ? "bg-primary/10 text-primary border-primary"
-                    : "bg-muted text-muted-foreground border-border")
+                    ? "bg-yellow-400 text-yellow-950 border-yellow-500"
+                    : "bg-yellow-200 text-yellow-900 border-yellow-300")
               }
             >
               {isDone ? <Check className="h-3.5 w-3.5" /> : n}
