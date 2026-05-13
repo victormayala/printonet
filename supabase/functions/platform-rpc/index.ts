@@ -169,19 +169,31 @@ Deno.serve(async (req) => {
       case "list_store_products": {
         const storeId = String(params.store_id ?? "");
         if (!storeId) return json(400, { error: "store_id_required" });
-        const { data, error } = await supabase
+        const { data: links, error: linksErr } = await supabase
           .from("corporate_store_products")
-          .select(
-            "id, store_id, product_id, sort_order, is_active, " +
-              "inventory_products:product_id ( id, name, description, category, base_price, sale_price, " +
-              "image_front, image_back, image_side1, image_side2, variants, decoration_methods, " +
-              "product_type, inventory, status, weight, weight_unit, length, width, height, dimension_unit )",
-          )
+          .select("id, store_id, product_id, sort_order, is_active")
           .eq("store_id", storeId)
           .eq("is_active", true)
           .order("sort_order", { ascending: true });
-        if (error) throw error;
-        return json(200, { products: data ?? [] });
+        if (linksErr) throw linksErr;
+        const ids = (links ?? []).map((l) => l.product_id);
+        if (ids.length === 0) return json(200, { products: [] });
+        const { data: prods, error: prodsErr } = await supabase
+          .from("inventory_products")
+          .select(
+            "id, name, description, category, base_price, sale_price, " +
+              "image_front, image_back, image_side1, image_side2, variants, decoration_methods, " +
+              "product_type, inventory, status, weight, weight_unit, length, width, height, dimension_unit",
+          )
+          .in("id", ids)
+          .eq("is_active", true);
+        if (prodsErr) throw prodsErr;
+        const byId = new Map((prods ?? []).map((p) => [p.id, p]));
+        const products = (links ?? []).map((l) => ({
+          ...l,
+          inventory_products: byId.get(l.product_id) ?? null,
+        }));
+        return json(200, { products });
       }
 
       case "get_store_product": {
@@ -190,19 +202,22 @@ Deno.serve(async (req) => {
         if (!storeId || !productId) {
           return json(400, { error: "store_id_and_product_id_required" });
         }
-        const { data, error } = await supabase
+        const { data: link, error: linkErr } = await supabase
           .from("corporate_store_products")
-          .select(
-            "id, store_id, product_id, sort_order, is_active, " +
-              "inventory_products:product_id ( * )",
-          )
+          .select("id, store_id, product_id, sort_order, is_active")
           .eq("store_id", storeId)
           .eq("product_id", productId)
           .eq("is_active", true)
           .maybeSingle();
-        if (error) throw error;
-        if (!data) return json(404, { error: "product_not_found" });
-        return json(200, { product: data });
+        if (linkErr) throw linkErr;
+        if (!link) return json(404, { error: "product_not_found" });
+        const { data: prod, error: prodErr } = await supabase
+          .from("inventory_products")
+          .select("*")
+          .eq("id", productId)
+          .maybeSingle();
+        if (prodErr) throw prodErr;
+        return json(200, { product: { ...link, inventory_products: prod } });
       }
 
       case "create_order": {
@@ -352,7 +367,14 @@ Deno.serve(async (req) => {
         return json(400, { error: "unknown_op", op });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return json(500, { error: "rpc_failed", message });
+    const e = err as { message?: string; code?: string; details?: string; hint?: string };
+    const message = e?.message ?? (typeof err === "string" ? err : JSON.stringify(err));
+    return json(500, {
+      error: "rpc_failed",
+      message,
+      code: e?.code,
+      details: e?.details,
+      hint: e?.hint,
+    });
   }
 });
