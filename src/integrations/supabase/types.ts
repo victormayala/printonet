@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _one_shot_reveal: {
+        Row: {
+          consumed_at: string | null
+          key_name: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          key_name: string
+        }
+        Update: {
+          consumed_at?: string | null
+          key_name?: string
+        }
+        Relationships: []
+      }
       brand_configs: {
         Row: {
           accent_color: string
