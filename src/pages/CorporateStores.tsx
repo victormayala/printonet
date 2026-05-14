@@ -820,12 +820,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
             </DropdownMenuItem>
           )}
           {isActive && (
-            <DropdownMenuItem onClick={rebrand}>
-              <RefreshCw className="h-4 w-4" />
-              Re-apply branding
-            </DropdownMenuItem>
-          )}
-          {isActive && (
             <DropdownMenuItem onClick={() => runManage("pause")}>
               <Pause className="h-4 w-4" />
               Pause store
