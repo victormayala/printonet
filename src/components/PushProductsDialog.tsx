@@ -370,7 +370,7 @@ export function PushProductsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col gap-4">
         <DialogHeader>
           <DialogTitle>Push products to {store.name}</DialogTitle>
           <DialogDescription>
