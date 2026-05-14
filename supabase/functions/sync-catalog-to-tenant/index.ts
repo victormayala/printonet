@@ -620,7 +620,12 @@ Deno.serve(async (req) => {
   // After a successful sync, also push customizer flags so the storefront
   // can render the "Customize" button on enabled products.
   let flags_result: unknown = null;
-  if (body.customizable && body.customizer_base_url && (mode === "incremental" || mode === "full")) {
+  const wantsCustomizerFlags =
+    (body.customizable === true ||
+      (Array.isArray(body.customizable_product_ids) && body.customizable_product_ids.length > 0)) &&
+    body.customizer_base_url &&
+    (mode === "incremental" || mode === "full");
+  if (wantsCustomizerFlags) {
     const flagItems = items
       .filter((it) => it && (it as any).customizer_url)
       .map((it) => ({
