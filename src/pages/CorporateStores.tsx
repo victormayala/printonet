@@ -1144,7 +1144,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeOnboardingOpened, setStripeOnboardingOpened] = useState(false);
 
-  const STEP_LABELS = ["Create Store", "Choose Domain", "Connect Stripe", "Store Ready"];
+  const STEP_LABELS = ["Create Store", "Choose Address", "Connect Stripe"];
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
