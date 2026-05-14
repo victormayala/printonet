@@ -133,11 +133,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       });
       return;
     }
-    const enabledIds = Array.from(enabledMap.entries())
+    const allIds = (products ?? []).map((p) => p.id);
+    const customizableIds = Array.from(enabledMap.entries())
       .filter(([, v]) => v.is_active)
       .map(([pid]) => pid);
-    if (enabledIds.length === 0) {
-      toast({ title: "No products enabled", description: "Toggle at least one product on first.", variant: "destructive" });
+    if (allIds.length === 0) {
+      toast({ title: "No products to sync", description: "Add products first.", variant: "destructive" });
       return;
     }
     setSyncing(true);
@@ -146,9 +147,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         body: {
           tenant_slug: tenantSlug,
           custom_domain: store.custom_domain ?? undefined,
-          product_ids: enabledIds,
+          product_ids: allIds,
           mode: "incremental",
-          customizable: true,
+          customizable_product_ids: customizableIds,
           customizer_base_url: window.location.origin,
         },
       });
@@ -159,7 +160,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       }
       toast({
         title: "Synced to store",
-        description: `${enabledIds.length} customizable product${enabledIds.length === 1 ? "" : "s"} pushed to ${store.name}.`,
+        description: `${allIds.length} product${allIds.length === 1 ? "" : "s"} pushed (${customizableIds.length} customizable).`,
       });
     } catch (e) {
       toast({
