@@ -201,28 +201,12 @@ export default function CorporateStoreDetails() {
     }
     setSavingDomain(true);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "sync-corporate-store-domain",
-        { body: { store_id: store.id, custom_domain: trimmed || null } },
-      );
-      if (error) {
-        const ctx = (data as { error?: string; detail?: string } | null) ?? null;
-        const msg = ctx?.detail || ctx?.error || error.message;
-        throw new Error(msg);
-      }
-      const result = (data as {
-        dns_verified?: boolean;
-        tenant_pushed?: boolean;
-        tenant_warning?: string | null;
-      }) || {};
-      const description = !trimmed
-        ? undefined
-        : result.tenant_warning
-          ? `Saved in dashboard. Store engine could not be updated: ${result.tenant_warning}`
-          : result.dns_verified
-            ? "DNS verified and pushed to the store."
-            : "Saved. Waiting for DNS to propagate.";
-      toast({ title: "Custom domain updated", description });
+      const { error } = await supabase
+        .from("corporate_stores")
+        .update({ custom_domain: trimmed || null })
+        .eq("id", store.id);
+      if (error) throw error;
+      toast({ title: "Custom domain updated" });
       setEditOpen(false);
       queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
@@ -255,13 +239,20 @@ export default function CorporateStoreDetails() {
     if (!store) return;
     setBusy(action);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-corporate-store", {
-        body: { store_id: store.id, action },
-      });
-      const errMsg =
-        (error as Error | null)?.message ||
-        (data as { error?: string } | null)?.error;
-      if (errMsg) throw new Error(errMsg);
+      if (action === "delete") {
+        const { error } = await supabase
+          .from("corporate_stores")
+          .delete()
+          .eq("id", store.id);
+        if (error) throw error;
+      } else {
+        const newStatus = action === "pause" ? "paused" : "active";
+        const { error } = await supabase
+          .from("corporate_stores")
+          .update({ status: newStatus, error_message: null })
+          .eq("id", store.id);
+        if (error) throw error;
+      }
       toast({
         title:
           action === "delete"
@@ -613,8 +604,7 @@ export default function CorporateStoreDetails() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{store.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently destroys the WooCommerce subsite and all of its data
-              on the Printonet network. This action cannot be undone.
+              This permanently removes the store and all of its data. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -345,37 +345,15 @@ export function PushProductsDialog({
         .upsert(linkRows, { onConflict: "store_id,product_id" });
       if (linkErr) throw linkErr;
 
-      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
-        body: {
-          tenant_slug: tenantSlug,
-          wp_site_url: store.wp_site_url ?? undefined,
-          product_ids: productIds,
-          image_overrides: imageOverrides,
-        },
-      });
-      if (error) throw new Error(error.message);
-      const res = (data ?? {}) as {
-        ok?: boolean;
-        status?: number;
-        error?: string;
-        detail?: string;
-        response?: { message?: string; code?: string } | string;
-        target?: string;
-      };
-      if (res.ok === false || res.error) {
-        const upstream =
-          typeof res.response === "string"
-            ? res.response
-            : res.response?.message || res.response?.code;
-        throw new Error(
-          [res.error, res.detail, upstream, res.status ? `HTTP ${res.status}` : null, res.target]
-            .filter(Boolean)
-            .join(" — ") || "Sync failed",
-        );
-      }
+      // Note: composite imageOverrides are baked into corporate-store-assets and
+      // available to the hosted storefront via corporate_store_product_logos /
+      // platform-rpc. We no longer push the catalog to an external WordPress
+      // tenant — the linked Lovable storefront reads directly from this DB.
+      void imageOverrides;
+      void tenantSlug;
       toast({
-        title: "Catalog pushed",
-        description: `${chosen.length} product${chosen.length === 1 ? "" : "s"} sent to ${store.name}.`,
+        title: "Products published",
+        description: `${chosen.length} product${chosen.length === 1 ? "" : "s"} added to ${store.name}.`,
       });
       setSelected(new Set());
       onOpenChange(false);

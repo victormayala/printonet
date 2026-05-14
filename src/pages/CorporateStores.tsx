@@ -426,27 +426,9 @@ export default function CorporateStores() {
     },
   });
 
-  // Poll any provisioning rows
-  const provisioningIds = stores.filter((s) => s.status === "provisioning").map((s) => s.id);
-  useEffect(() => {
-    if (provisioningIds.length === 0) return;
-    const interval = setInterval(async () => {
-      await Promise.all(
-        provisioningIds.map(async (id) => {
-          try {
-            await supabase.functions.invoke("check-corporate-store-status", {
-              body: { store_id: id },
-            });
-          } catch (err) {
-            // 404s for stale/deleted rows are expected — just skip.
-            console.warn("status poll failed for", id, err);
-          }
-        }),
-      );
-      queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [provisioningIds.join(","), queryClient, user?.id]);
+  // Provisioning rows used to be polled against the WordPress tenant engine;
+  // new stores are now created in 'active' status directly so no polling is
+  // required. Stale 'provisioning' rows from old flows simply stay as-is.
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -462,7 +444,7 @@ export default function CorporateStores() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">My Stores</h1>
               <p className="text-muted-foreground mt-1">
-                Provision branded WooCommerce stores for corporate clients (e.g. Pepsico employee merch).
+                Provision branded storefronts for corporate clients (e.g. Pepsico employee merch).
               </p>
             </div>
             <Dialog open={open} onOpenChange={setOpen}>
@@ -485,7 +467,7 @@ export default function CorporateStores() {
             <CardHeader>
               <CardTitle>Your stores</CardTitle>
               <CardDescription>
-                Each store is a fully isolated, Printonet-branded WooCommerce site provisioned for you automatically.
+                Each store is a fully isolated, Printonet-branded storefront connected to your hosted catalog.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -574,8 +556,10 @@ export default function CorporateStores() {
                               {s.wp_site_url.replace(/^https?:\/\//, "")}
                               <ExternalLink className="h-3 w-3" />
                             </a>
+                          ) : s.tenant_slug ? (
+                            <span className="text-sm font-mono text-muted-foreground">{s.tenant_slug}</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Pending…</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -755,7 +739,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const [editOpen, setEditOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
-  const [busy, setBusy] = useState<null | "pause" | "resume" | "delete" | "rebrand">(null);
+  const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
 
   const refetch = () =>
     queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
@@ -763,11 +747,20 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const runManage = async (action: "pause" | "resume" | "delete") => {
     setBusy(action);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-corporate-store", {
-        body: { store_id: store.id, action },
-      });
-      const errMsg = (error as Error | null)?.message || (data as { error?: string } | null)?.error;
-      if (errMsg) throw new Error(errMsg);
+      if (action === "delete") {
+        const { error } = await supabase
+          .from("corporate_stores")
+          .delete()
+          .eq("id", store.id);
+        if (error) throw error;
+      } else {
+        const newStatus = action === "pause" ? "paused" : "active";
+        const { error } = await supabase
+          .from("corporate_stores")
+          .update({ status: newStatus, error_message: null })
+          .eq("id", store.id);
+        if (error) throw error;
+      }
       toast({
         title:
           action === "delete"
@@ -789,18 +782,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
     }
   };
 
-  const rebrand = async () => {
-    setBusy("rebrand");
-    const { error } = await supabase.functions.invoke("apply-store-branding", {
-      body: { store_id: store.id },
-    });
-    toast({
-      title: error ? "Re-apply failed" : "Branding re-applied",
-      variant: error ? "destructive" : "default",
-    });
-    setBusy(null);
-  };
-
   const isActive = store.status === "active";
   const isPaused = store.status === "paused";
 
@@ -809,13 +790,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
       <Button asChild variant="outline" size="sm">
         <Link to={`/corporate-stores/${store.id}`}>See details</Link>
       </Button>
-      {store.wp_admin_url && isActive && (
-        <Button asChild variant="outline" size="sm">
-          <a href={store.wp_admin_url} target="_blank" rel="noreferrer">
-            WP Admin
-          </a>
-        </Button>
-      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" disabled={busy !== null}>
@@ -843,12 +817,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4" />
               Edit branding
-            </DropdownMenuItem>
-          )}
-          {isActive && (
-            <DropdownMenuItem onClick={rebrand}>
-              <RefreshCw className="h-4 w-4" />
-              Re-apply branding
             </DropdownMenuItem>
           )}
           {isActive && (
@@ -892,8 +860,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{store.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently destroys the WooCommerce subsite and all of its data
-              on the Printonet network. This action cannot be undone.
+              This permanently removes the store and all of its data. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1134,7 +1101,6 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const [chosenSlug, setChosenSlug] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const [provisionedSiteUrl, setProvisionedSiteUrl] = useState<string | null>(null);
   const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(null);
   const [stripeStatus, setStripeStatus] = useState<{
     connected: boolean;
@@ -1144,7 +1110,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeOnboardingOpened, setStripeOnboardingOpened] = useState(false);
 
-  const STEP_LABELS = ["Create Store", "Choose Domain", "Connect Stripe", "Store Ready"];
+  const STEP_LABELS = ["Create Store", "Choose Address", "Connect Stripe"];
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
@@ -1194,19 +1160,45 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/[\s_]+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 60);
+
   const callSlugCheck = async (payload: { store_name?: string; tenant_slug?: string }) => {
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("tenant-check-slug", {
-        body: payload,
-      });
-      if (error) throw error;
-      const resp = (data as { response?: SlugCheck })?.response;
-      if (!resp || typeof resp.tenant_slug !== "string") {
-        throw new Error("Unexpected response from tenant engine");
+      const baseSlug = payload.tenant_slug
+        ? slugify(payload.tenant_slug)
+        : slugify(payload.store_name ?? "");
+      if (!baseSlug || baseSlug.length < 2) {
+        throw new Error("Please enter a longer store name");
       }
+      // Uniqueness check against our own table — no external tenant engine.
+      const { data: existing, error } = await supabase
+        .from("corporate_stores")
+        .select("tenant_slug")
+        .ilike("tenant_slug", `${baseSlug}%`);
+      if (error) throw error;
+      const taken = new Set(
+        (existing ?? []).map((r) => (r.tenant_slug ?? "").toLowerCase()).filter(Boolean),
+      );
+      const available = !taken.has(baseSlug);
+      const suggestions: string[] = [];
+      if (!available) {
+        for (let i = 2; suggestions.length < 4 && i < 50; i++) {
+          const candidate = `${baseSlug}-${i}`;
+          if (!taken.has(candidate)) suggestions.push(candidate);
+        }
+      }
+      const resp: SlugCheck = { available, tenant_slug: baseSlug, suggestions };
       setSlugCheck(resp);
-      if (resp.available) setChosenSlug(resp.tenant_slug);
+      if (available) setChosenSlug(baseSlug);
       else setChosenSlug(null);
     } catch (e) {
       toast({
@@ -1219,28 +1211,18 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
-  // Step 2 → step 3: only RESERVE the store (DB row + tenant_slug). The
-  // actual WordPress site (which is what burns the slug on the multisite
-  // network) is created only at the end of the wizard via `finalize`.
+  // Step 2 → step 3: insert the corporate_stores row directly. The linked
+  // Lovable storefront serves it via platform-rpc by tenant_slug — no
+  // WordPress provisioning is performed.
   const provision = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not signed in");
       let finalSlug = chosenSlug;
       if (!finalSlug) {
-        const { data, error } = await supabase.functions.invoke("tenant-check-slug", {
-          body: { store_name: values.name },
-        });
-        if (error) throw error;
-        const resp = (data as { response?: SlugCheck })?.response;
-        if (!resp) throw new Error("Slug check failed");
-        if (!resp.available) {
-          setSlugCheck(resp);
-          throw new Error("That name is taken — please pick a suggestion below.");
-        }
-        finalSlug = resp.tenant_slug;
-        setSlugCheck(resp);
-        setChosenSlug(finalSlug);
+        await callSlugCheck({ store_name: values.name });
+        finalSlug = slugify(values.name);
       }
+      if (!finalSlug) throw new Error("Could not derive a site address");
 
       const tempId = crypto.randomUUID();
       const [logo_url, favicon_url] = await Promise.all([
@@ -1248,48 +1230,32 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         favicon ? uploadAsset(user.id, tempId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
-      const { data, error } = await supabase.functions.invoke("provision-corporate-store", {
-        body: {
-          ...values,
+      const { data, error } = await supabase
+        .from("corporate_stores")
+        .insert({
+          user_id: user.id,
+          name: values.name,
+          contact_email: values.contact_email,
           custom_domain: values.custom_domain || null,
+          primary_color: values.primary_color,
+          font_family: values.font_family,
+          store_type: values.store_type,
           logo_url,
           favicon_url,
           tenant_slug: finalSlug,
-          request_id: tempId,
-          defer_provisioning: true,
-        },
-      });
+          provision_request_id: tempId,
+          status: "active",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
-      return data as { store_id?: string };
+      return { store_id: data.id };
     },
     onSuccess: (data) => {
       if (data?.store_id) setProvisionedStoreId(data.store_id);
     },
     onError: (e: Error) => {
       toast({ title: "Could not start setup", description: e.message, variant: "destructive" });
-    },
-  });
-
-  // Final step: actually create the WordPress site. This is when the slug
-  // is registered on the multisite network.
-  const finalize = useMutation({
-    mutationFn: async () => {
-      if (!provisionedStoreId) throw new Error("Store not ready yet");
-      const { data, error } = await supabase.functions.invoke("finalize-corporate-store", {
-        body: { store_id: provisionedStoreId },
-      });
-      if (error) throw error;
-      return data as { site_url?: string };
-    },
-    onSuccess: (data) => {
-      if (data?.site_url) setProvisionedSiteUrl(data.site_url);
-    },
-    onError: (e: Error) => {
-      toast({
-        title: "Could not create store",
-        description: e.message,
-        variant: "destructive",
-      });
     },
   });
 
@@ -1547,106 +1513,14 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
             <Button variant="outline" onClick={() => setStep(2)} disabled={provision.isPending}>
               Back
             </Button>
-            <Button variant="ghost" onClick={() => setStep(4)}>
-              {stripeStatus?.connected ? "Continue" : "Skip for now"}
+            <Button variant="ghost" onClick={finishOnboarding}>
+              {stripeStatus?.connected ? "Finish" : "Skip & finish"}
             </Button>
-            {stripeStatus?.connected && <Button onClick={() => setStep(4)}>Continue</Button>}
+            {stripeStatus?.connected && <Button onClick={finishOnboarding}>Finish</Button>}
           </DialogFooter>
         </div>
       )}
-
-      {step === 4 && (
-        <Step4Finalize
-          finalize={finalize}
-          provisionedSiteUrl={provisionedSiteUrl}
-          provisionedStoreId={provisionedStoreId}
-          onDone={finishOnboarding}
-        />
-      )}
     </DialogContent>
-  );
-}
-
-function Step4Finalize({
-  finalize,
-  provisionedSiteUrl,
-  provisionedStoreId,
-  onDone,
-}: {
-  finalize: {
-    mutate: () => void;
-    isPending: boolean;
-    isError: boolean;
-    error: Error | null;
-  };
-  provisionedSiteUrl: string | null;
-  provisionedStoreId: string | null;
-  onDone: () => void;
-}) {
-  // Trigger finalize once when this step mounts and the reserved store_id is ready.
-  const triggered = useRef(false);
-  useEffect(() => {
-    if (triggered.current) return;
-    if (!provisionedStoreId) return;
-    triggered.current = true;
-    finalize.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provisionedStoreId]);
-
-  const isPending = finalize.isPending || (!provisionedStoreId && !finalize.isError);
-  const isError = finalize.isError;
-  return (
-    <div className="space-y-5 py-2">
-      <div className="rounded-md border p-6 text-center space-y-3">
-        <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-          {isPending ? (
-            <Loader2 className="h-6 w-6 text-primary animate-spin" />
-          ) : isError ? (
-            <AlertCircle className="h-6 w-6 text-destructive" />
-          ) : (
-            <CheckCircle2 className="h-6 w-6 text-primary" />
-          )}
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold">
-            {isPending
-              ? "Creating your store…"
-              : isError
-                ? "Something went wrong"
-                : "Your store is ready!"}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isPending
-              ? "This usually takes 1–2 minutes. You can close this dialog — we'll keep working."
-              : isError
-                ? finalize.error?.message ?? "Provisioning failed."
-                : provisionedSiteUrl
-                  ? "Your branded WooCommerce store is live."
-                  : "Your store is being finalized — it will appear in your dashboard shortly."}
-          </p>
-        </div>
-        {provisionedSiteUrl && !isPending && (
-          <a
-            href={provisionedSiteUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-          >
-            {provisionedSiteUrl.replace(/^https?:\/\//, "")}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        )}
-        {isError && (
-          <Button variant="outline" size="sm" onClick={() => finalize.mutate()}>
-            Try again
-          </Button>
-        )}
-      </div>
-
-      <DialogFooter>
-        <Button onClick={onDone}>Go to dashboard</Button>
-      </DialogFooter>
-    </div>
   );
 }
 
@@ -1719,18 +1593,8 @@ function EditStoreDialog({
         .eq("id", store.id);
       if (updateErr) throw updateErr;
 
-      // Re-apply branding to the live WooCommerce site (best-effort)
-      const { error: brandErr } = await supabase.functions.invoke("apply-store-branding", {
-        body: { store_id: store.id },
-      });
-      if (brandErr) {
-        // Non-fatal — DB is updated; surface a warning toast
-        toast({
-          title: "Saved, but branding push failed",
-          description: brandErr.message,
-          variant: "destructive",
-        });
-      }
+      // Branding lives in the corporate_stores row directly — the linked
+      // Lovable storefront reads from it. No external push needed.
     },
     onSuccess: () => {
       toast({ title: "Branding updated" });
