@@ -643,7 +643,9 @@ export default function CorporateStoreDetails() {
                 autoFocus
               />
               <p className="text-xs text-muted-foreground">
-                Use a subdomain (e.g. <code className="font-mono">shop.yourbrand.com</code>). Root domains are not supported.
+                Use a root domain (e.g. <code className="font-mono">yourbrand.com</code>) or a subdomain
+                (e.g. <code className="font-mono">shop.yourbrand.com</code>). For root domains, use host{" "}
+                <code className="font-mono">@</code> on the A record.
               </p>
             </div>
 
