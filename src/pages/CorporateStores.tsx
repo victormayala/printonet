@@ -1547,106 +1547,14 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
             <Button variant="outline" onClick={() => setStep(2)} disabled={provision.isPending}>
               Back
             </Button>
-            <Button variant="ghost" onClick={() => setStep(4)}>
-              {stripeStatus?.connected ? "Continue" : "Skip for now"}
+            <Button variant="ghost" onClick={finishOnboarding}>
+              {stripeStatus?.connected ? "Finish" : "Skip & finish"}
             </Button>
-            {stripeStatus?.connected && <Button onClick={() => setStep(4)}>Continue</Button>}
+            {stripeStatus?.connected && <Button onClick={finishOnboarding}>Finish</Button>}
           </DialogFooter>
         </div>
       )}
-
-      {step === 4 && (
-        <Step4Finalize
-          finalize={finalize}
-          provisionedSiteUrl={provisionedSiteUrl}
-          provisionedStoreId={provisionedStoreId}
-          onDone={finishOnboarding}
-        />
-      )}
     </DialogContent>
-  );
-}
-
-function Step4Finalize({
-  finalize,
-  provisionedSiteUrl,
-  provisionedStoreId,
-  onDone,
-}: {
-  finalize: {
-    mutate: () => void;
-    isPending: boolean;
-    isError: boolean;
-    error: Error | null;
-  };
-  provisionedSiteUrl: string | null;
-  provisionedStoreId: string | null;
-  onDone: () => void;
-}) {
-  // Trigger finalize once when this step mounts and the reserved store_id is ready.
-  const triggered = useRef(false);
-  useEffect(() => {
-    if (triggered.current) return;
-    if (!provisionedStoreId) return;
-    triggered.current = true;
-    finalize.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provisionedStoreId]);
-
-  const isPending = finalize.isPending || (!provisionedStoreId && !finalize.isError);
-  const isError = finalize.isError;
-  return (
-    <div className="space-y-5 py-2">
-      <div className="rounded-md border p-6 text-center space-y-3">
-        <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-          {isPending ? (
-            <Loader2 className="h-6 w-6 text-primary animate-spin" />
-          ) : isError ? (
-            <AlertCircle className="h-6 w-6 text-destructive" />
-          ) : (
-            <CheckCircle2 className="h-6 w-6 text-primary" />
-          )}
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold">
-            {isPending
-              ? "Creating your store…"
-              : isError
-                ? "Something went wrong"
-                : "Your store is ready!"}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isPending
-              ? "This usually takes 1–2 minutes. You can close this dialog — we'll keep working."
-              : isError
-                ? finalize.error?.message ?? "Provisioning failed."
-                : provisionedSiteUrl
-                  ? "Your branded WooCommerce store is live."
-                  : "Your store is being finalized — it will appear in your dashboard shortly."}
-          </p>
-        </div>
-        {provisionedSiteUrl && !isPending && (
-          <a
-            href={provisionedSiteUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-          >
-            {provisionedSiteUrl.replace(/^https?:\/\//, "")}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        )}
-        {isError && (
-          <Button variant="outline" size="sm" onClick={() => finalize.mutate()}>
-            Try again
-          </Button>
-        )}
-      </div>
-
-      <DialogFooter>
-        <Button onClick={onDone}>Go to dashboard</Button>
-      </DialogFooter>
-    </div>
   );
 }
 
