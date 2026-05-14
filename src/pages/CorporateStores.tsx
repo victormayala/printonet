@@ -1418,7 +1418,9 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
               placeholder="merch.pepsico.com"
             />
             <p className="text-xs text-muted-foreground">
-              Bring your own domain, or skip and use the site address above.
+              Bring your own domain, or skip and use the site address above. To activate it, point an A record to
+              <code className="font-mono mx-1">185.158.133.1</code> and add a <code className="font-mono">_lovable</code>{" "}
+              TXT record, then add the domain in Project Settings → Domains on Lovable.
             </p>
           </div>
 
