@@ -1721,6 +1721,7 @@ function EditStoreDialog({
 
       // Branding lives in the corporate_stores row directly — the linked
       // Lovable storefront reads from it. No external push needed.
+    },
     onSuccess: () => {
       toast({ title: "Branding updated" });
       onSaved();
