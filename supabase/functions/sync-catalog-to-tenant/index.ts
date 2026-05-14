@@ -53,7 +53,10 @@ interface CatalogProduct {
 
 interface SyncRequest {
   tenant_slug: string;
+  /** @deprecated legacy WordPress host. Ignored — kept for backwards compat. */
   wp_site_url?: string;
+  /** Optional custom domain connected to the storefront (e.g. merch.brand.com). */
+  custom_domain?: string;
   products?: CatalogProduct[];
   product_ids?: string[];
   limit?: number;
