@@ -196,8 +196,50 @@ Deno.serve(async (req) => {
     : [];
 
   let products: CatalogProduct[] = [];
+  let categoriesOut: Array<{
+    id: string;
+    name: string;
+    slug?: string;
+    parent_id?: string | null;
+    sort_order?: number;
+    kind?: string;
+  }> = [];
   const hasInlineProducts = Array.isArray(body.products) && body.products.length > 0;
   const hasProductIds = Array.isArray(body.product_ids) && body.product_ids.length > 0;
+
+  const slugify = (s: string) =>
+    String(s ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+
+  const loadCategoriesForUser = async (sb: any, userId: string) => {
+    const [{ data: cats }, { data: links }] = await Promise.all([
+      sb
+        .from("product_categories")
+        .select("id,name,kind,sort_order")
+        .eq("user_id", userId)
+        .order("sort_order", { ascending: true }),
+      sb
+        .from("product_category_links")
+        .select("category_id,subcategory_id,sort_order")
+        .eq("user_id", userId),
+    ]);
+    const parentBySub = new Map<string, string>();
+    (links ?? []).forEach((l: any) => {
+      if (l?.subcategory_id && l?.category_id) parentBySub.set(l.subcategory_id, l.category_id);
+    });
+    return (cats ?? []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      slug: slugify(c.name),
+      parent_id: parentBySub.get(c.id) ?? null,
+      sort_order: Number(c.sort_order ?? 0),
+      kind: c.kind ?? "category",
+    }));
+  };
 
   if (mode === "delete") {
     if (removedSkus.length === 0) {
@@ -248,6 +290,12 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id);
     const catById = new Map<string, { id: string; name: string }>();
     (cats ?? []).forEach((c: any) => catById.set(c.id, c));
+
+    try {
+      categoriesOut = await loadCategoriesForUser(supabase, user.id);
+    } catch (_) {
+      categoriesOut = [];
+    }
 
     products = (rows ?? []).map((p: any) => buildCatalogProduct(p, catById));
   }
@@ -503,6 +551,9 @@ Deno.serve(async (req) => {
     if (removedSkus.length) payload.removed_skus = removedSkus;
   }
 
+  if (categoriesOut.length > 0 && mode !== "delete") {
+    payload.categories = categoriesOut;
+  }
 
   const meta = {
     event_id,
