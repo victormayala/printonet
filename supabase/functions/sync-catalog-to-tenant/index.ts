@@ -551,6 +551,9 @@ Deno.serve(async (req) => {
     if (removedSkus.length) payload.removed_skus = removedSkus;
   }
 
+  if (categoriesOut.length > 0 && mode !== "delete") {
+    payload.categories = categoriesOut;
+  }
 
   const meta = {
     event_id,
