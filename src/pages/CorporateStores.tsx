@@ -860,8 +860,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{store.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently destroys the WooCommerce subsite and all of its data
-              on the Printonet network. This action cannot be undone.
+              This permanently removes the store and all of its data. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
