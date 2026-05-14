@@ -475,8 +475,15 @@ Deno.serve(async (req) => {
         })
       : p.variants;
 
+    const customizableSet =
+      Array.isArray(body.customizable_product_ids) && body.customizable_product_ids.length > 0
+        ? new Set(body.customizable_product_ids)
+        : null;
+    const isCustomizable = customizableSet
+      ? customizableSet.has(p.id)
+      : !!body.customizable;
     const customizerUrl =
-      body.customizable && body.customizer_base_url
+      isCustomizable && body.customizer_base_url
         ? `${body.customizer_base_url.replace(/\/$/, "")}/s/${body.tenant_slug}/customize/${p.id}`
         : null;
 
