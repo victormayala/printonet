@@ -201,28 +201,12 @@ export default function CorporateStoreDetails() {
     }
     setSavingDomain(true);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "sync-corporate-store-domain",
-        { body: { store_id: store.id, custom_domain: trimmed || null } },
-      );
-      if (error) {
-        const ctx = (data as { error?: string; detail?: string } | null) ?? null;
-        const msg = ctx?.detail || ctx?.error || error.message;
-        throw new Error(msg);
-      }
-      const result = (data as {
-        dns_verified?: boolean;
-        tenant_pushed?: boolean;
-        tenant_warning?: string | null;
-      }) || {};
-      const description = !trimmed
-        ? undefined
-        : result.tenant_warning
-          ? `Saved in dashboard. Store engine could not be updated: ${result.tenant_warning}`
-          : result.dns_verified
-            ? "DNS verified and pushed to the store."
-            : "Saved. Waiting for DNS to propagate.";
-      toast({ title: "Custom domain updated", description });
+      const { error } = await supabase
+        .from("corporate_stores")
+        .update({ custom_domain: trimmed || null })
+        .eq("id", store.id);
+      if (error) throw error;
+      toast({ title: "Custom domain updated" });
       setEditOpen(false);
       queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
