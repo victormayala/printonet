@@ -426,27 +426,9 @@ export default function CorporateStores() {
     },
   });
 
-  // Poll any provisioning rows
-  const provisioningIds = stores.filter((s) => s.status === "provisioning").map((s) => s.id);
-  useEffect(() => {
-    if (provisioningIds.length === 0) return;
-    const interval = setInterval(async () => {
-      await Promise.all(
-        provisioningIds.map(async (id) => {
-          try {
-            await supabase.functions.invoke("check-corporate-store-status", {
-              body: { store_id: id },
-            });
-          } catch (err) {
-            // 404s for stale/deleted rows are expected — just skip.
-            console.warn("status poll failed for", id, err);
-          }
-        }),
-      );
-      queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [provisioningIds.join(","), queryClient, user?.id]);
+  // Provisioning rows used to be polled against the WordPress tenant engine;
+  // new stores are now created in 'active' status directly so no polling is
+  // required. Stale 'provisioning' rows from old flows simply stay as-is.
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
