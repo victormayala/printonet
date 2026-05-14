@@ -86,6 +86,13 @@ interface SyncRequest {
    * "Customize" button on enabled products.
    */
   customizable?: boolean;
+  /**
+   * Optional whitelist of product ids that should be flagged as customizable.
+   * When present, only those ids get `is_customizable: true` and a customizer_url,
+   * regardless of `customizable`. Lets the caller push the full catalog while
+   * limiting which products the customizer can interact with.
+   */
+  customizable_product_ids?: string[];
   customizer_base_url?: string;
 }
 
@@ -468,8 +475,15 @@ Deno.serve(async (req) => {
         })
       : p.variants;
 
+    const customizableSet =
+      Array.isArray(body.customizable_product_ids) && body.customizable_product_ids.length > 0
+        ? new Set(body.customizable_product_ids)
+        : null;
+    const isCustomizable = customizableSet
+      ? customizableSet.has(p.id)
+      : !!body.customizable;
     const customizerUrl =
-      body.customizable && body.customizer_base_url
+      isCustomizable && body.customizer_base_url
         ? `${body.customizer_base_url.replace(/\/$/, "")}/s/${body.tenant_slug}/customize/${p.id}`
         : null;
 
@@ -606,7 +620,12 @@ Deno.serve(async (req) => {
   // After a successful sync, also push customizer flags so the storefront
   // can render the "Customize" button on enabled products.
   let flags_result: unknown = null;
-  if (body.customizable && body.customizer_base_url && (mode === "incremental" || mode === "full")) {
+  const wantsCustomizerFlags =
+    (body.customizable === true ||
+      (Array.isArray(body.customizable_product_ids) && body.customizable_product_ids.length > 0)) &&
+    body.customizer_base_url &&
+    (mode === "incremental" || mode === "full");
+  if (wantsCustomizerFlags) {
     const flagItems = items
       .filter((it) => it && (it as any).customizer_url)
       .map((it) => ({

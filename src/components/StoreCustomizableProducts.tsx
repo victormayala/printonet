@@ -133,11 +133,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       });
       return;
     }
-    const enabledIds = Array.from(enabledMap.entries())
+    const allIds = (products ?? []).map((p) => p.id);
+    const customizableIds = Array.from(enabledMap.entries())
       .filter(([, v]) => v.is_active)
       .map(([pid]) => pid);
-    if (enabledIds.length === 0) {
-      toast({ title: "No products enabled", description: "Toggle at least one product on first.", variant: "destructive" });
+    if (allIds.length === 0) {
+      toast({ title: "No products to sync", description: "Add products first.", variant: "destructive" });
       return;
     }
     setSyncing(true);
@@ -146,9 +147,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         body: {
           tenant_slug: tenantSlug,
           custom_domain: store.custom_domain ?? undefined,
-          product_ids: enabledIds,
+          product_ids: allIds,
           mode: "incremental",
-          customizable: true,
+          customizable_product_ids: customizableIds,
           customizer_base_url: window.location.origin,
         },
       });
@@ -159,7 +160,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       }
       toast({
         title: "Synced to store",
-        description: `${enabledIds.length} customizable product${enabledIds.length === 1 ? "" : "s"} pushed to ${store.name}.`,
+        description: `${allIds.length} product${allIds.length === 1 ? "" : "s"} pushed (${customizableIds.length} customizable).`,
       });
     } catch (e) {
       toast({
@@ -191,12 +192,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         </div>
 
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <Button size="sm" onClick={syncToStore} disabled={syncing || enabledCount === 0}>
+          <Button size="sm" onClick={syncToStore} disabled={syncing || (products?.length ?? 0) === 0}>
             {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
             Sync to store
           </Button>
           <span className="text-xs text-muted-foreground">
-            Pushes enabled products to {store.name} as customizable Woo products.
+            Pushes all your products to {store.name}; only the checked ones get the customizer.
           </span>
         </div>
 
