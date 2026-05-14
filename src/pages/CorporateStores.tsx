@@ -1719,19 +1719,8 @@ function EditStoreDialog({
         .eq("id", store.id);
       if (updateErr) throw updateErr;
 
-      // Re-apply branding to the live WooCommerce site (best-effort)
-      const { error: brandErr } = await supabase.functions.invoke("apply-store-branding", {
-        body: { store_id: store.id },
-      });
-      if (brandErr) {
-        // Non-fatal — DB is updated; surface a warning toast
-        toast({
-          title: "Saved, but branding push failed",
-          description: brandErr.message,
-          variant: "destructive",
-        });
-      }
-    },
+      // Branding lives in the corporate_stores row directly — the linked
+      // Lovable storefront reads from it. No external push needed.
     onSuccess: () => {
       toast({ title: "Branding updated" });
       onSaved();
