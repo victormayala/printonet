@@ -291,6 +291,12 @@ Deno.serve(async (req) => {
     const catById = new Map<string, { id: string; name: string }>();
     (cats ?? []).forEach((c: any) => catById.set(c.id, c));
 
+    try {
+      categoriesOut = await loadCategoriesForUser(supabase, user.id);
+    } catch (_) {
+      categoriesOut = [];
+    }
+
     products = (rows ?? []).map((p: any) => buildCatalogProduct(p, catById));
   }
 
