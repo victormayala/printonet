@@ -239,13 +239,20 @@ export default function CorporateStoreDetails() {
     if (!store) return;
     setBusy(action);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-corporate-store", {
-        body: { store_id: store.id, action },
-      });
-      const errMsg =
-        (error as Error | null)?.message ||
-        (data as { error?: string } | null)?.error;
-      if (errMsg) throw new Error(errMsg);
+      if (action === "delete") {
+        const { error } = await supabase
+          .from("corporate_stores")
+          .delete()
+          .eq("id", store.id);
+        if (error) throw error;
+      } else {
+        const newStatus = action === "pause" ? "paused" : "active";
+        const { error } = await supabase
+          .from("corporate_stores")
+          .update({ status: newStatus, error_message: null })
+          .eq("id", store.id);
+        if (error) throw error;
+      }
       toast({
         title:
           action === "delete"
