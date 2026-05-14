@@ -86,6 +86,13 @@ interface SyncRequest {
    * "Customize" button on enabled products.
    */
   customizable?: boolean;
+  /**
+   * Optional whitelist of product ids that should be flagged as customizable.
+   * When present, only those ids get `is_customizable: true` and a customizer_url,
+   * regardless of `customizable`. Lets the caller push the full catalog while
+   * limiting which products the customizer can interact with.
+   */
+  customizable_product_ids?: string[];
   customizer_base_url?: string;
 }
 
