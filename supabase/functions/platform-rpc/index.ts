@@ -147,6 +147,26 @@ Deno.serve(async (req) => {
         return json(200, { ok: true });
       }
 
+      case "get_store_by_domain": {
+        const raw = String(params.custom_domain ?? params.domain ?? "").trim().toLowerCase();
+        const domain = raw.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+        if (!domain) return json(400, { error: "custom_domain_required" });
+        const { data, error } = await supabase
+          .from("corporate_stores")
+          .select(
+            "id, user_id, name, tenant_slug, status, custom_domain, contact_email, " +
+              "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
+              "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
+              "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold",
+          )
+          .eq("status", "active")
+          .ilike("custom_domain", domain)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "store_not_found" });
+        return json(200, { store: data });
+      }
+
       case "get_store_by_slug": {
         const slug = String(params.tenant_slug ?? "").trim().toLowerCase();
         if (!slug) return json(400, { error: "tenant_slug_required" });

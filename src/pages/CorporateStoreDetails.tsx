@@ -648,50 +648,42 @@ export default function CorporateStoreDetails() {
             </div>
 
             {(() => {
-              const cnameTarget = (() => {
-                try {
-                  return store.wp_site_url ? new URL(store.wp_site_url).host : null;
-                } catch {
-                  return null;
-                }
-              })();
-              const SERVER_IP = "177.7.32.229";
+              const SERVER_IP = "185.158.133.1";
               const domain = domainDraft.trim().toLowerCase();
               const isApex = domain && domain.split(".").filter(Boolean).length === 2;
+              const host = !domain ? "@" : isApex ? "@" : domain.split(".")[0];
               return (
                 <div className="rounded-md border bg-muted/40 p-3 space-y-3 text-sm">
                   <p className="font-medium">DNS setup</p>
                   <p className="text-muted-foreground text-xs">
-                    At your domain registrar (GoDaddy, Cloudflare, Namecheap, etc.), add one of the following records:
+                    At your domain registrar (GoDaddy, Cloudflare, Namecheap, etc.), add the following two records.
+                    Then add this same domain in <span className="font-medium">Project Settings → Domains</span> on
+                    Lovable so SSL can be issued.
                   </p>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold">
-                      Option A — Subdomain {isApex ? "" : "(recommended)"} <span className="text-muted-foreground font-normal">e.g. shop.yourbrand.com</span>
-                    </p>
+                    <p className="text-xs font-semibold">1. A record</p>
                     <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 font-mono text-xs rounded border bg-background p-2">
                       <span className="text-muted-foreground">Type</span>
-                      <span>CNAME</span>
+                      <span>A</span>
                       <span className="text-muted-foreground">Host</span>
-                      <span>your subdomain (e.g. <span>shop</span>)</span>
+                      <span>{host}</span>
                       <span className="text-muted-foreground">Value</span>
-                      <span className="break-all">{cnameTarget ?? "<provisioning…>"}</span>
+                      <span>{SERVER_IP}</span>
                       <span className="text-muted-foreground">TTL</span>
                       <span>Auto / 3600</span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold">
-                      Option B — Root domain {isApex ? "(recommended)" : ""} <span className="text-muted-foreground font-normal">e.g. yourbrand.com</span>
-                    </p>
+                    <p className="text-xs font-semibold">2. TXT record (ownership verification)</p>
                     <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 font-mono text-xs rounded border bg-background p-2">
                       <span className="text-muted-foreground">Type</span>
-                      <span>A</span>
+                      <span>TXT</span>
                       <span className="text-muted-foreground">Host</span>
-                      <span>@</span>
+                      <span>_lovable</span>
                       <span className="text-muted-foreground">Value</span>
-                      <span>{SERVER_IP}</span>
+                      <span className="break-all">(provided by Lovable when you add the domain)</span>
                       <span className="text-muted-foreground">TTL</span>
                       <span>Auto / 3600</span>
                     </div>
