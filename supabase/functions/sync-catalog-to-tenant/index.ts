@@ -512,10 +512,26 @@ Deno.serve(async (req) => {
     pruned: shouldPrune,
   };
 
+  // Storefront routing:
+  //   - Path-based default:  https://stores.printonet.com/api/public/<slug>/suppliers/sync
+  //   - Custom domain:       https://<custom_domain>/api/public/<slug>/suppliers/sync
+  // The TanStack storefront exposes /api/public/* — no /wp-json/ on this side.
+  const storefrontDefault =
+    Deno.env.get("PRINTONET_STOREFRONT_BASE_URL")?.replace(/\/+$/, "") ||
+    "https://stores.printonet.com";
+  const customDomain = typeof body.custom_domain === "string" ? body.custom_domain.trim() : "";
+  const baseUrlOverride = customDomain
+    ? `https://${customDomain.replace(/^https?:\/\//i, "").replace(/\/.*$/, "")}`
+    : storefrontDefault;
+  const slugPath = encodeURIComponent(body.tenant_slug);
+  const suppliersPath = `/api/public/${slugPath}/suppliers/sync`;
+  const flagsPath = `/api/public/${slugPath}/customizer-flags`;
+
   if (body.dry_run) {
     return new Response(
       JSON.stringify({
-        path: "/wp-json/printonet/v1/suppliers/sync",
+        path: suppliersPath,
+        base_url: baseUrlOverride,
         ...meta,
         payload_preview: payload,
       }),
@@ -523,12 +539,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  const baseUrlOverride =
-    typeof body.wp_site_url === "string" && /^https?:\/\//i.test(body.wp_site_url)
-      ? body.wp_site_url
-      : undefined;
-
-  const result = await signedTenantCall("/wp-json/printonet/v1/suppliers/sync", {
+  const result = await signedTenantCall(suppliersPath, {
     method: "POST",
     body: payload,
     baseUrlOverride,
@@ -541,8 +552,8 @@ Deno.serve(async (req) => {
     );
   }
 
-  // After a successful sync, also push customizer flags as Woo post_meta so
-  // the Customizer Studio Woo plugin renders the "Customize" button.
+  // After a successful sync, also push customizer flags so the storefront
+  // can render the "Customize" button on enabled products.
   let flags_result: unknown = null;
   if (body.customizable && body.customizer_base_url && (mode === "incremental" || mode === "full")) {
     const flagItems = items
@@ -553,7 +564,7 @@ Deno.serve(async (req) => {
         customizer_url: (it as any).customizer_url,
       }));
     if (flagItems.length) {
-      flags_result = await signedTenantCall("/wp-json/printonet/v1/customizer-flags", {
+      flags_result = await signedTenantCall(flagsPath, {
         method: "POST",
         body: { items: flagItems },
         baseUrlOverride,
