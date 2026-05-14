@@ -192,12 +192,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         </div>
 
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <Button size="sm" onClick={syncToStore} disabled={syncing || enabledCount === 0}>
+          <Button size="sm" onClick={syncToStore} disabled={syncing || (products?.length ?? 0) === 0}>
             {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
             Sync to store
           </Button>
           <span className="text-xs text-muted-foreground">
-            Pushes enabled products to {store.name} as customizable Woo products.
+            Pushes all your products to {store.name}; only the checked ones get the customizer.
           </span>
         </div>
 
