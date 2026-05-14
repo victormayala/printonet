@@ -1134,7 +1134,6 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   const [chosenSlug, setChosenSlug] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const [provisionedSiteUrl, setProvisionedSiteUrl] = useState<string | null>(null);
   const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(null);
   const [stripeStatus, setStripeStatus] = useState<{
     connected: boolean;
