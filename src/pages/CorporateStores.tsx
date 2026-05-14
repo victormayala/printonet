@@ -1194,19 +1194,45 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/[\s_]+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 60);
+
   const callSlugCheck = async (payload: { store_name?: string; tenant_slug?: string }) => {
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("tenant-check-slug", {
-        body: payload,
-      });
-      if (error) throw error;
-      const resp = (data as { response?: SlugCheck })?.response;
-      if (!resp || typeof resp.tenant_slug !== "string") {
-        throw new Error("Unexpected response from tenant engine");
+      const baseSlug = payload.tenant_slug
+        ? slugify(payload.tenant_slug)
+        : slugify(payload.store_name ?? "");
+      if (!baseSlug || baseSlug.length < 2) {
+        throw new Error("Please enter a longer store name");
       }
+      // Uniqueness check against our own table — no external tenant engine.
+      const { data: existing, error } = await supabase
+        .from("corporate_stores")
+        .select("tenant_slug")
+        .ilike("tenant_slug", `${baseSlug}%`);
+      if (error) throw error;
+      const taken = new Set(
+        (existing ?? []).map((r) => (r.tenant_slug ?? "").toLowerCase()).filter(Boolean),
+      );
+      const available = !taken.has(baseSlug);
+      const suggestions: string[] = [];
+      if (!available) {
+        for (let i = 2; suggestions.length < 4 && i < 50; i++) {
+          const candidate = `${baseSlug}-${i}`;
+          if (!taken.has(candidate)) suggestions.push(candidate);
+        }
+      }
+      const resp: SlugCheck = { available, tenant_slug: baseSlug, suggestions };
       setSlugCheck(resp);
-      if (resp.available) setChosenSlug(resp.tenant_slug);
+      if (available) setChosenSlug(baseSlug);
       else setChosenSlug(null);
     } catch (e) {
       toast({
@@ -1219,28 +1245,18 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
-  // Step 2 → step 3: only RESERVE the store (DB row + tenant_slug). The
-  // actual WordPress site (which is what burns the slug on the multisite
-  // network) is created only at the end of the wizard via `finalize`.
+  // Step 2 → step 3: insert the corporate_stores row directly. The linked
+  // Lovable storefront serves it via platform-rpc by tenant_slug — no
+  // WordPress provisioning is performed.
   const provision = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not signed in");
       let finalSlug = chosenSlug;
       if (!finalSlug) {
-        const { data, error } = await supabase.functions.invoke("tenant-check-slug", {
-          body: { store_name: values.name },
-        });
-        if (error) throw error;
-        const resp = (data as { response?: SlugCheck })?.response;
-        if (!resp) throw new Error("Slug check failed");
-        if (!resp.available) {
-          setSlugCheck(resp);
-          throw new Error("That name is taken — please pick a suggestion below.");
-        }
-        finalSlug = resp.tenant_slug;
-        setSlugCheck(resp);
-        setChosenSlug(finalSlug);
+        await callSlugCheck({ store_name: values.name });
+        finalSlug = slugify(values.name);
       }
+      if (!finalSlug) throw new Error("Could not derive a site address");
 
       const tempId = crypto.randomUUID();
       const [logo_url, favicon_url] = await Promise.all([
@@ -1248,48 +1264,32 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         favicon ? uploadAsset(user.id, tempId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
-      const { data, error } = await supabase.functions.invoke("provision-corporate-store", {
-        body: {
-          ...values,
+      const { data, error } = await supabase
+        .from("corporate_stores")
+        .insert({
+          user_id: user.id,
+          name: values.name,
+          contact_email: values.contact_email,
           custom_domain: values.custom_domain || null,
+          primary_color: values.primary_color,
+          font_family: values.font_family,
+          store_type: values.store_type,
           logo_url,
           favicon_url,
           tenant_slug: finalSlug,
-          request_id: tempId,
-          defer_provisioning: true,
-        },
-      });
+          provision_request_id: tempId,
+          status: "active",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
-      return data as { store_id?: string };
+      return { store_id: data.id };
     },
     onSuccess: (data) => {
       if (data?.store_id) setProvisionedStoreId(data.store_id);
     },
     onError: (e: Error) => {
       toast({ title: "Could not start setup", description: e.message, variant: "destructive" });
-    },
-  });
-
-  // Final step: actually create the WordPress site. This is when the slug
-  // is registered on the multisite network.
-  const finalize = useMutation({
-    mutationFn: async () => {
-      if (!provisionedStoreId) throw new Error("Store not ready yet");
-      const { data, error } = await supabase.functions.invoke("finalize-corporate-store", {
-        body: { store_id: provisionedStoreId },
-      });
-      if (error) throw error;
-      return data as { site_url?: string };
-    },
-    onSuccess: (data) => {
-      if (data?.site_url) setProvisionedSiteUrl(data.site_url);
-    },
-    onError: (e: Error) => {
-      toast({
-        title: "Could not create store",
-        description: e.message,
-        variant: "destructive",
-      });
     },
   });
 
