@@ -444,7 +444,7 @@ export default function CorporateStores() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">My Stores</h1>
               <p className="text-muted-foreground mt-1">
-                Provision branded WooCommerce stores for corporate clients (e.g. Pepsico employee merch).
+                Provision branded storefronts for corporate clients (e.g. Pepsico employee merch).
               </p>
             </div>
             <Dialog open={open} onOpenChange={setOpen}>
@@ -467,7 +467,7 @@ export default function CorporateStores() {
             <CardHeader>
               <CardTitle>Your stores</CardTitle>
               <CardDescription>
-                Each store is a fully isolated, Printonet-branded WooCommerce site provisioned for you automatically.
+                Each store is a fully isolated, Printonet-branded storefront connected to your hosted catalog.
               </CardDescription>
             </CardHeader>
             <CardContent>
