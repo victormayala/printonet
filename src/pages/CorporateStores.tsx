@@ -556,8 +556,10 @@ export default function CorporateStores() {
                               {s.wp_site_url.replace(/^https?:\/\//, "")}
                               <ExternalLink className="h-3 w-3" />
                             </a>
+                          ) : s.tenant_slug ? (
+                            <span className="text-sm font-mono text-muted-foreground">{s.tenant_slug}</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Pending…</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
