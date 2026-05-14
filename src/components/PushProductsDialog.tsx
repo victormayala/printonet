@@ -332,6 +332,19 @@ export function PushProductsDialog({
         }
       }
 
+      // Link products to the store so the hosted storefront can list them.
+      const linkRows = productIds.map((pid, idx) => ({
+        user_id: user.id,
+        store_id: store.id,
+        product_id: pid,
+        is_active: true,
+        sort_order: idx,
+      }));
+      const { error: linkErr } = await supabase
+        .from("corporate_store_products")
+        .upsert(linkRows, { onConflict: "store_id,product_id" });
+      if (linkErr) throw linkErr;
+
       const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
         body: {
           tenant_slug: tenantSlug,
