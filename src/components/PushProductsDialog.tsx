@@ -380,8 +380,8 @@ export function PushProductsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 flex-1 min-h-0 flex flex-col">
-          <div className="relative">
+        <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+          <div className="relative shrink-0">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products..."
@@ -391,7 +391,7 @@ export function PushProductsDialog({
             />
           </div>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm shrink-0">
             <button
               type="button"
               onClick={toggleAll}
@@ -403,7 +403,7 @@ export function PushProductsDialog({
             <span className="text-muted-foreground">{selected.size} selected</span>
           </div>
 
-          <ScrollArea className="flex-1 min-h-[300px] rounded border">
+          <ScrollArea className="flex-1 min-h-0 rounded border">
             {isLoading ? (
               <div className="flex items-center justify-center py-12 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading products...
