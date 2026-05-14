@@ -3360,7 +3360,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
       const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
         body: {
           tenant_slug: slug,
-          wp_site_url: store.wp_site_url || undefined,
+          custom_domain: store.custom_domain || undefined,
           limit: 200,
           mode: "full",
           prune: true,
@@ -3565,7 +3565,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
         await supabase.functions.invoke("sync-catalog-to-tenant", {
           body: {
             tenant_slug: slug,
-            wp_site_url: store.wp_site_url || undefined,
+            custom_domain: store.custom_domain || undefined,
             mode: "delete",
             removed_skus: skus,
           },

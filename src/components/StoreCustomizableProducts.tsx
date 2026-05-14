@@ -145,7 +145,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
         body: {
           tenant_slug: tenantSlug,
-          wp_site_url: store.wp_site_url ?? undefined,
+          custom_domain: store.custom_domain ?? undefined,
           product_ids: enabledIds,
           mode: "incremental",
           customizable: true,
