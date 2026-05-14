@@ -651,9 +651,21 @@ export default function CorporateStoreDetails() {
 
             {(() => {
               const SERVER_IP = "185.158.133.1";
-              const domain = domainDraft.trim().toLowerCase();
-              const isApex = domain && domain.split(".").filter(Boolean).length === 2;
-              const host = !domain ? "@" : isApex ? "@" : domain.split(".")[0];
+              // Normalize: strip protocol, paths, leading www., and trim
+              const raw = domainDraft.trim().toLowerCase();
+              const domain = raw
+                .replace(/^https?:\/\//, "")
+                .replace(/\/.*$/, "")
+                .replace(/^www\./, "");
+              // Multi-level public suffixes that should still count as apex
+              const MULTI_TLDS = ["co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp", "com.br", "co.za"];
+              const parts = domain.split(".").filter(Boolean);
+              const endsWithMultiTld = MULTI_TLDS.some((t) => domain.endsWith(`.${t}`));
+              const isApex =
+                !!domain && parts.length >= 2 && (endsWithMultiTld ? parts.length === 3 : parts.length === 2);
+              const subdomain = isApex || parts.length < 2 ? "" : parts.slice(0, endsWithMultiTld ? -3 : -2).join(".");
+              const host = !domain || isApex ? "@" : subdomain || "@";
+              const txtHost = !domain || isApex ? "_lovable" : `_lovable.${subdomain}`;
               return (
                 <div className="rounded-md border bg-muted/40 p-3 space-y-3 text-sm">
                   <p className="font-medium">DNS setup</p>
@@ -683,7 +695,7 @@ export default function CorporateStoreDetails() {
                       <span className="text-muted-foreground">Type</span>
                       <span>TXT</span>
                       <span className="text-muted-foreground">Host</span>
-                      <span>{!domain || isApex ? "_lovable" : `_lovable.${domain.split(".")[0]}`}</span>
+                      <span>{txtHost}</span>
                       <span className="text-muted-foreground">Value</span>
                       <span className="break-all">(provided by Lovable when you add the domain)</span>
                       <span className="text-muted-foreground">TTL</span>
