@@ -715,66 +715,7 @@ export default function CorporateStoreDetails() {
               </p>
             </div>
 
-            {(() => {
-              const SERVER_IP = "185.158.133.1";
-              // Normalize: strip protocol, paths, leading www., and trim
-              const raw = domainDraft.trim().toLowerCase();
-              const domain = raw
-                .replace(/^https?:\/\//, "")
-                .replace(/\/.*$/, "")
-                .replace(/^www\./, "");
-              // Multi-level public suffixes that should still count as apex
-              const MULTI_TLDS = ["co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp", "com.br", "co.za"];
-              const parts = domain.split(".").filter(Boolean);
-              const endsWithMultiTld = MULTI_TLDS.some((t) => domain.endsWith(`.${t}`));
-              const isApex =
-                !!domain && parts.length >= 2 && (endsWithMultiTld ? parts.length === 3 : parts.length === 2);
-              const subdomain = isApex || parts.length < 2 ? "" : parts.slice(0, endsWithMultiTld ? -3 : -2).join(".");
-              const host = !domain || isApex ? "@" : subdomain || "@";
-              const txtHost = !domain || isApex ? "_lovable" : `_lovable.${subdomain}`;
-              return (
-                <div className="rounded-md border bg-muted/40 p-3 space-y-3 text-sm">
-                  <p className="font-medium">DNS setup</p>
-                  <p className="text-muted-foreground text-xs">
-                    At your domain registrar (GoDaddy, Cloudflare, Namecheap, etc.), add the following two records.
-                    Then add this same domain in <span className="font-medium">Project Settings → Domains</span> on
-                    Lovable so SSL can be issued.
-                  </p>
-
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold">1. A record</p>
-                    <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 font-mono text-xs rounded border bg-background p-2">
-                      <span className="text-muted-foreground">Type</span>
-                      <span>A</span>
-                      <span className="text-muted-foreground">Host</span>
-                      <span>{host}</span>
-                      <span className="text-muted-foreground">Value</span>
-                      <span>{SERVER_IP}</span>
-                      <span className="text-muted-foreground">TTL</span>
-                      <span>Auto / 3600</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold">2. TXT record (ownership verification)</p>
-                    <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 font-mono text-xs rounded border bg-background p-2">
-                      <span className="text-muted-foreground">Type</span>
-                      <span>TXT</span>
-                      <span className="text-muted-foreground">Host</span>
-                      <span>{txtHost}</span>
-                      <span className="text-muted-foreground">Value</span>
-                      <span className="break-all">(provided by Lovable when you add the domain)</span>
-                      <span className="text-muted-foreground">TTL</span>
-                      <span>Auto / 3600</span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    DNS changes can take up to 24 hours to propagate. SSL is issued automatically once DNS resolves correctly.
-                  </p>
-                </div>
-              );
-            })()}
+            <DnsPreview domainDraft={domainDraft} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingDomain}>
