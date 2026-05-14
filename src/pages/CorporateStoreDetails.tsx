@@ -1,16 +1,19 @@
 import { useMemo, useState } from "react";
 
 const MULTI_TLDS = ["co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp", "com.br", "co.za"];
+const LOVABLE_DNS_VERIFICATION_VALUE =
+  "lovable_verify=c0a3b6651e14fb5b40fd0fd11b160b1ba3a8cc2fff755b5a79d281e311af2be0";
 
 function DnsPreview({ domainDraft }: { domainDraft: string }) {
   const SERVER_IP = "185.158.133.1";
-  const { host, txtHost } = useMemo(() => {
+  const { host, txtHost, txtValue } = useMemo(() => {
     const raw = (domainDraft || "").trim().toLowerCase();
     const domain = raw
       .replace(/^https?:\/\//, "")
       .replace(/\/.*$/, "")
       .replace(/^www\./, "");
     const parts = domain.split(".").filter(Boolean);
+    const hasDomain = parts.length >= 2;
     const endsWithMultiTld = MULTI_TLDS.some((t) => domain.endsWith(`.${t}`));
     const isApex =
       !!domain && parts.length >= 2 && (endsWithMultiTld ? parts.length === 3 : parts.length === 2);
@@ -19,6 +22,7 @@ function DnsPreview({ domainDraft }: { domainDraft: string }) {
     return {
       host: !domain || isApex ? "@" : subdomain || "@",
       txtHost: !domain || isApex ? "_lovable" : `_lovable.${subdomain}`,
+      txtValue: hasDomain ? LOVABLE_DNS_VERIFICATION_VALUE : "Enter a domain to reveal the verification value",
     };
   }, [domainDraft]);
 
@@ -53,7 +57,7 @@ function DnsPreview({ domainDraft }: { domainDraft: string }) {
           <span className="text-muted-foreground">Host</span>
           <span>{txtHost}</span>
           <span className="text-muted-foreground">Value</span>
-          <span className="break-all">(provided by Lovable when you add the domain)</span>
+          <span className="break-all">{txtValue}</span>
           <span className="text-muted-foreground">TTL</span>
           <span>Auto / 3600</span>
         </div>
