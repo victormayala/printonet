@@ -739,7 +739,7 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const [editOpen, setEditOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
-  const [busy, setBusy] = useState<null | "pause" | "resume" | "delete" | "rebrand">(null);
+  const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
 
   const refetch = () =>
     queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
@@ -747,11 +747,20 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const runManage = async (action: "pause" | "resume" | "delete") => {
     setBusy(action);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-corporate-store", {
-        body: { store_id: store.id, action },
-      });
-      const errMsg = (error as Error | null)?.message || (data as { error?: string } | null)?.error;
-      if (errMsg) throw new Error(errMsg);
+      if (action === "delete") {
+        const { error } = await supabase
+          .from("corporate_stores")
+          .delete()
+          .eq("id", store.id);
+        if (error) throw error;
+      } else {
+        const newStatus = action === "pause" ? "paused" : "active";
+        const { error } = await supabase
+          .from("corporate_stores")
+          .update({ status: newStatus, error_message: null })
+          .eq("id", store.id);
+        if (error) throw error;
+      }
       toast({
         title:
           action === "delete"
@@ -773,18 +782,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
     }
   };
 
-  const rebrand = async () => {
-    setBusy("rebrand");
-    const { error } = await supabase.functions.invoke("apply-store-branding", {
-      body: { store_id: store.id },
-    });
-    toast({
-      title: error ? "Re-apply failed" : "Branding re-applied",
-      variant: error ? "destructive" : "default",
-    });
-    setBusy(null);
-  };
-
   const isActive = store.status === "active";
   const isPaused = store.status === "paused";
 
@@ -793,13 +790,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
       <Button asChild variant="outline" size="sm">
         <Link to={`/corporate-stores/${store.id}`}>See details</Link>
       </Button>
-      {store.wp_admin_url && isActive && (
-        <Button asChild variant="outline" size="sm">
-          <a href={store.wp_admin_url} target="_blank" rel="noreferrer">
-            WP Admin
-          </a>
-        </Button>
-      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" disabled={busy !== null}>
