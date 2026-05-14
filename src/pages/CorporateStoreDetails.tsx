@@ -681,7 +681,7 @@ export default function CorporateStoreDetails() {
                       <span className="text-muted-foreground">Type</span>
                       <span>TXT</span>
                       <span className="text-muted-foreground">Host</span>
-                      <span>_lovable</span>
+                      <span>{!domain || isApex ? "_lovable" : `_lovable.${domain.split(".")[0]}`}</span>
                       <span className="text-muted-foreground">Value</span>
                       <span className="break-all">(provided by Lovable when you add the domain)</span>
                       <span className="text-muted-foreground">TTL</span>
