@@ -41,26 +41,28 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
       }
       setStore(s as CorporateStore);
 
-      const { data: links } = await supabase
-        .from("corporate_store_products")
-        .select("product_id,sort_order")
-        .eq("store_id", s.id)
-        .eq("is_active", true)
-        .order("sort_order");
-
-      const ids = (links ?? []).map((l) => l.product_id);
-      if (ids.length === 0) {
-        setProducts([]);
-        return;
-      }
+      // Show ALL active products owned by the store owner. The
+      // corporate_store_products table only flags which ones are customizable.
       const { data: prods } = await supabase
         .from("inventory_products")
         .select("id,name,category,base_price,image_front")
-        .in("id", ids)
-        .eq("is_active", true);
+        .eq("user_id", s.user_id)
+        .eq("is_active", true)
+        .order("name");
+
       if (cancelled) return;
-      const byId = new Map((prods ?? []).map((p) => [p.id, p as ProductLite]));
-      setProducts(ids.map((id) => byId.get(id)).filter(Boolean) as ProductLite[]);
+      const productList = (prods ?? []) as ProductLite[];
+
+      const { data: links } = await supabase
+        .from("corporate_store_products")
+        .select("product_id")
+        .eq("store_id", s.id)
+        .eq("is_active", true);
+
+      const customizableIds = new Set((links ?? []).map((l) => l.product_id));
+      setProducts(
+        productList.map((p) => ({ ...p, customizable: customizableIds.has(p.id) })),
+      );
     })();
     return () => {
       cancelled = true;
