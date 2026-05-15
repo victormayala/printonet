@@ -602,6 +602,7 @@ function ProductForm({
   const resetSizeToCost = (s: any) => {
     const cost = Number(s?.cost);
     if (cost > 0) return { ...s, price: cost };
+    if (productBaseCost > 0) return { ...s, price: productBaseCost };
     return s;
   };
 
