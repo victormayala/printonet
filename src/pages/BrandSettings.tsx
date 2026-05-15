@@ -420,6 +420,50 @@ export default function BrandSettings() {
                       onChange={handleLogoInputChange}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Dark-mode logo (optional)</Label>
+                    {config.logoDarkUrl ? (
+                      <div className="flex items-center gap-3 rounded-lg border bg-neutral-900 p-3">
+                        <img src={config.logoDarkUrl} alt="Dark-mode logo" className="h-10 max-w-[120px] object-contain" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-neutral-400 truncate">{config.logoDarkUrl.split("/").pop()}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-neutral-400 hover:text-destructive"
+                          onClick={() => updateConfig({ logoDarkUrl: "" })}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setDarkDragOver(true); }}
+                        onDragLeave={() => setDarkDragOver(false)}
+                        onDrop={(e) => { e.preventDefault(); setDarkDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f, "dark"); }}
+                        onClick={() => darkLogoInputRef.current?.click()}
+                        className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${
+                          darkDragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"
+                        }`}
+                      >
+                        {uploadingLogo ? (
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        ) : (
+                          <>
+                            <Moon className="h-6 w-6 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground text-center">
+                              <span className="font-medium text-foreground">Upload dark variant</span>
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">Used when the customizer is in dark mode</p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <input
+                      ref={darkLogoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "dark"); e.target.value = ""; }}
+                    />
+                  </div>
                 </div>
               </div>
 
