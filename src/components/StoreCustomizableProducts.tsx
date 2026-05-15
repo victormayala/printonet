@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Package, Search, ExternalLink, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,12 +28,15 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const { user } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState(false);
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ["corporate_store_products_customizable", store.id],
     enabled: !!user?.id,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<Row[]> => {
       const { data: links, error } = await supabase
         .from("corporate_store_products")
@@ -58,8 +61,15 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     },
   });
 
+  useEffect(() => {
+    const next = Object.fromEntries((rows ?? []).map((r) => [r.id, r.customizable]));
+    setDraft(next);
+  }, [rows]);
+
   const filtered = useMemo(() => {
-    const list = (rows ?? []).filter((r) => !!r.product);
+    const list = (rows ?? [])
+      .filter((r) => !!r.product)
+      .map((r) => ({ ...r, customizable: draft[r.id] ?? r.customizable }));
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
@@ -69,24 +79,53 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     );
   }, [rows, search]);
 
-  const toggle = async (linkId: string, on: boolean) => {
-    setSavingId(linkId);
+  const toggle = (linkId: string, on: boolean) => {
+    setDraft((prev) => ({ ...prev, [linkId]: on }));
+  };
+
+  const changedRows = (rows ?? []).filter((r) => (draft[r.id] ?? r.customizable) !== r.customizable);
+
+  const saveChanges = async () => {
+    if (!user?.id || changedRows.length === 0) return;
+    setSaving(true);
     try {
-      const { error } = await supabase
-        .from("corporate_store_products")
-        .update({ customizable: on })
-        .eq("id", linkId);
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
-      toast({ title: on ? "Customizer enabled" : "Customizer disabled" });
+      const enableIds = changedRows
+        .filter((r) => draft[r.id] === true)
+        .map((r) => r.product_id);
+      const disableIds = changedRows
+        .filter((r) => draft[r.id] !== true)
+        .map((r) => r.product_id);
+
+      if (enableIds.length > 0) {
+        const { error } = await supabase
+          .from("corporate_store_products")
+          .update({ customizable: true })
+          .eq("store_id", store.id)
+          .eq("user_id", user.id)
+          .in("product_id", enableIds);
+        if (error) throw error;
+      }
+
+      if (disableIds.length > 0) {
+        const { error } = await supabase
+          .from("corporate_store_products")
+          .update({ customizable: false })
+          .eq("store_id", store.id)
+          .eq("user_id", user.id)
+          .in("product_id", disableIds);
+        if (error) throw error;
+      }
+
+      await qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
+      toast({ title: `Saved ${changedRows.length} customizer change${changedRows.length === 1 ? "" : "s"}` });
     } catch (e) {
       toast({
-        title: "Could not update",
+        title: "Could not save changes",
         description: e instanceof Error ? e.message : undefined,
         variant: "destructive",
       });
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
   };
 
