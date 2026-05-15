@@ -221,6 +221,7 @@ export default function BrandSettings() {
     const brandObj: Record<string, any> = {};
     if (config.name) brandObj.name = config.name;
     if (config.logoUrl) brandObj.logoUrl = config.logoUrl;
+    if (config.logoDarkUrl) brandObj.logoDarkUrl = config.logoDarkUrl;
     brandObj.theme = config.theme;
     brandObj.primaryColor = config.primaryColor;
     brandObj.accentColor = config.accentColor;
