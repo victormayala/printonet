@@ -3244,7 +3244,7 @@ function VariantManagerDialog({
   );
 }
 
-type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "suppliers";
+type ProductsTab = "products" | "categories" | "shopify" | "suppliers";
 
 export default function Products({ initialTab = "products", showStorefrontTabs = false, hideTabsList = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean; hideTabsList?: boolean } = {}) {
   const { user, signOut } = useAuth();
