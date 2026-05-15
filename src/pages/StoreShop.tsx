@@ -45,28 +45,37 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
       // `customizable` flag on the link decides whether the Customize button shows.
       const { data: links } = await supabase
         .from("corporate_store_products")
-        .select(
-          "product_id,customizable,sort_order,product:inventory_products(id,name,category,base_price,image_front,is_active)",
-        )
+        .select("product_id,customizable,sort_order")
         .eq("store_id", s.id)
         .eq("is_active", true)
         .order("sort_order");
 
+      const productIds = (links ?? []).map((l) => l.product_id);
+      const customizableMap = new Map<string, boolean>(
+        (links ?? []).map((l) => [l.product_id, !!l.customizable]),
+      );
+
+      let prods: Array<{
+        id: string;
+        name: string;
+        category: string | null;
+        base_price: number;
+        image_front: string | null;
+      }> = [];
+      if (productIds.length > 0) {
+        const { data } = await supabase
+          .from("inventory_products")
+          .select("id,name,category,base_price,image_front")
+          .in("id", productIds)
+          .eq("is_active", true);
+        prods = data ?? [];
+      }
+
       if (cancelled) return;
-      const productList: ProductLite[] = (links ?? [])
-        .map((l) => {
-          const p = (l as { product: ProductLite & { is_active: boolean } | null }).product;
-          if (!p || !p.is_active) return null;
-          return {
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            base_price: p.base_price,
-            image_front: p.image_front,
-            customizable: !!(l as { customizable: boolean }).customizable,
-          };
-        })
-        .filter((p): p is ProductLite => !!p);
+      const orderIndex = new Map(productIds.map((id, i) => [id, i]));
+      const productList: ProductLite[] = prods
+        .map((p) => ({ ...p, customizable: customizableMap.get(p.id) ?? false }))
+        .sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
       setProducts(productList);
     })();
     return () => {
