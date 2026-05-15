@@ -158,26 +158,29 @@ export default function EmbedCustomizer() {
           setSessionUsesStore(true);
           const { data: storeData } = await supabase
             .from("corporate_stores")
-            .select("name,logo_url,primary_color,accent_color,font_family,user_id")
+            .select("name,logo_url,customizer_logo_dark_url,primary_color,accent_color,font_family,customizer_theme,customizer_border_radius,user_id")
             .eq("id", storeId)
             .maybeSingle();
 
           if (storeData) {
             const prefs = storeData.user_id ? await fetchLatestBrandConfig(storeData.user_id) : null;
+            const sd = storeData as any;
+            const storeTheme: "light" | "dark" | undefined =
+              sd.customizer_theme === "light" || sd.customizer_theme === "dark" ? sd.customizer_theme : undefined;
             brand = {
               name: storeData.name || DEFAULT_BRAND_CONFIG.name,
               logoUrl: storeData.logo_url?.trim() || DEFAULT_BRAND_CONFIG.logoUrl,
+              logoDarkUrl: sd.customizer_logo_dark_url?.trim() || DEFAULT_BRAND_CONFIG.logoDarkUrl,
               theme:
-                prefs?.theme === "light" || prefs?.theme === "dark"
-                  ? prefs.theme
-                  : DEFAULT_BRAND_CONFIG.theme,
+                storeTheme
+                ?? (prefs?.theme === "light" || prefs?.theme === "dark" ? prefs.theme : DEFAULT_BRAND_CONFIG.theme),
               primaryColor: normalizeHexColor(storeData.primary_color, DEFAULT_BRAND_CONFIG.primaryColor),
               accentColor: normalizeHexColor(storeData.accent_color, DEFAULT_BRAND_CONFIG.accentColor),
               fontFamily: storeData.font_family?.trim() || DEFAULT_BRAND_CONFIG.fontFamily,
               borderRadius:
-                typeof prefs?.border_radius === "number"
-                  ? prefs.border_radius
-                  : DEFAULT_BRAND_CONFIG.borderRadius,
+                typeof sd.customizer_border_radius === "number"
+                  ? sd.customizer_border_radius
+                  : (typeof prefs?.border_radius === "number" ? prefs.border_radius : DEFAULT_BRAND_CONFIG.borderRadius),
             };
           }
         } else if (userId && !searchParams.get("brandPrimary") && !searchParams.get("brandTheme")) {
@@ -186,6 +189,7 @@ export default function EmbedCustomizer() {
             brand = {
               name: brandData.name || DEFAULT_BRAND_CONFIG.name,
               logoUrl: brandData.logo_url || DEFAULT_BRAND_CONFIG.logoUrl,
+              logoDarkUrl: (brandData as any).logo_dark_url || DEFAULT_BRAND_CONFIG.logoDarkUrl,
               theme: brandData.theme === "light" || brandData.theme === "dark" ? brandData.theme : DEFAULT_BRAND_CONFIG.theme,
               primaryColor: normalizeHexColor(brandData.primary_color, DEFAULT_BRAND_CONFIG.primaryColor),
               accentColor: normalizeHexColor(brandData.accent_color, DEFAULT_BRAND_CONFIG.accentColor),
