@@ -88,11 +88,11 @@ const App = () => (
             <Route path="/corporate-stores/:id" element={<DashboardRoute><CorporateStoreDetails /></DashboardRoute>} />
             <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
-            <Route path="/customizer" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/customizer/brand" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/customizer/developers" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/brand-settings" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/developers" element={<Navigate to="/corporate-stores" replace />} />
+            <Route path="/customizer" element={<DashboardRoute><Customizer /></DashboardRoute>} />
+            <Route path="/customizer/brand" element={<Navigate to="/customizer" replace />} />
+            <Route path="/customizer/developers" element={<Navigate to="/customizer" replace />} />
+            <Route path="/brand-settings" element={<Navigate to="/customizer" replace />} />
+            <Route path="/developers" element={<Navigate to="/customizer" replace />} />
             <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/billing" element={<DashboardRoute><Billing /></DashboardRoute>} />
