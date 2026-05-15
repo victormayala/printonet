@@ -3325,7 +3325,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
       .from("store_integrations")
       .select("*")
       .eq("user_id", user?.id || "")
-      .in("platform", ["shopify", "woocommerce"]);
+      .in("platform", ["shopify"]);
     setIntegrations(data || []);
     setLoadingIntegrations(false);
   };
@@ -3333,7 +3333,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const getPushedPlatforms = (product: Product): string[] => {
     const platforms: string[] = [];
     const src = (product as any).supplier_source;
-    if (src?.external_ids?.woocommerce) platforms.push("WooCommerce");
+    // WooCommerce removed
     if (src?.external_ids?.shopify) platforms.push("Shopify");
     return platforms;
   };
@@ -3354,7 +3354,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
       .from("store_integrations")
       .select("*")
       .eq("user_id", user?.id || "")
-      .in("platform", ["shopify", "woocommerce"]);
+      .in("platform", ["shopify"]);
     setIntegrations(data || []);
     setLoadingIntegrations(false);
   };
@@ -3378,17 +3378,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
         try {
           let resp: any;
           let invokeErr: any;
-          if (integration.platform === "woocommerce") {
-            ({ data: resp, error: invokeErr } = await supabase.functions.invoke("export-to-woocommerce", {
-              body: {
-                product_ids: [productId],
-                site_url: integration.store_url,
-                consumer_key: creds.consumer_key,
-                consumer_secret: creds.consumer_secret,
-                user_id: user?.id,
-              },
-            }));
-          } else if (integration.platform === "shopify") {
+          if (integration.platform === "shopify") {
             ({ data: resp, error: invokeErr } = await supabase.functions.invoke("export-to-shopify", {
               body: {
                 product_ids: [productId],
@@ -3468,25 +3458,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     fetchProducts();
   }, []);
 
-  const mirrorDeletesToStores = async (skus: string[]) => {
-    if (!skus.length) return;
-    const targets = corporateStores.filter((s) => s.status === "active");
-    for (const store of targets) {
-      const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
-      if (!slug) continue;
-      try {
-        await supabase.functions.invoke("sync-catalog-to-tenant", {
-          body: {
-            tenant_slug: slug,
-            custom_domain: store.custom_domain || undefined,
-            mode: "delete",
-            removed_skus: skus,
-          },
-        });
-      } catch {
-        // best-effort; surfaced via toast below
-      }
-    }
+  const mirrorDeletesToStores = async (_skus: string[]) => {
+    // Storefront mirror sync removed — handled by new Lovable storefront app.
+    return;
   };
 
   const deleteProduct = async (id: string) => {
