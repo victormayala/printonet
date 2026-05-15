@@ -16,7 +16,7 @@ export default function Customizer() {
       <div>
         <h1 className="font-display text-2xl sm:text-3xl font-bold">Customizer Studio</h1>
         <p className="mt-1 text-muted-foreground">
-          Configure the embeddable customizer's appearance and copy the snippet to install it on your Shopify or WooCommerce store.
+          Configure the embeddable customizer's appearance and copy the snippet to install it on your Shopify store.
         </p>
       </div>
 
@@ -25,7 +25,7 @@ export default function Customizer() {
           <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="text-sm text-foreground">
             These are your <span className="font-medium">account-wide</span> customizer brand settings — used when you embed the
-            customizer on an external Shopify or WooCommerce store via plugin. To override branding for a specific Printonet
+            customizer on an external Shopify store via plugin. To override branding for a specific Printonet
             hosted store, open it from{" "}
             <Link to="/corporate-stores" className="font-medium text-primary hover:underline">My Stores</Link> and edit the
             Customizer tab.

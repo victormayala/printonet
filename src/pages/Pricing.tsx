@@ -22,7 +22,7 @@ const PLAN_FEATURES: Record<PlanKey, string[]> = {
     "3 corporate stores",
     "1.5% transaction fee",
     "Remove Printonet badge",
-    "Push to Shopify & WooCommerce",
+    "Push to Shopify",
     "AI design assistant",
     "Design template library",
     "Add stores at $20/mo each",

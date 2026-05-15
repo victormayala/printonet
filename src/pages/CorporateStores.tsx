@@ -1244,7 +1244,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
       <DialogHeader>
         <DialogTitle>New store</DialogTitle>
         <DialogDescription>
-          A clean, guided flow to launch a Printonet-branded WooCommerce store.
+          A clean, guided flow to launch a Printonet-branded store.
         </DialogDescription>
       </DialogHeader>
 
@@ -1542,7 +1542,7 @@ export function EditStoreDialog({
       <DialogHeader>
         <DialogTitle>Edit "{store.name}"</DialogTitle>
         <DialogDescription>
-          Update branding fields and we'll push the changes to your WooCommerce site automatically.
+          Update your store branding fields below.
         </DialogDescription>
       </DialogHeader>
 
