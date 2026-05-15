@@ -36,25 +36,8 @@ export default function Cart() {
             Design a custom product and add it to your cart to get started.
           </p>
           <KeepShoppingButton variant="default" size="default">
-            <Sparkles className="h-4 w-4 mr-2" /> Browse Products
+            Browse Products
           </KeepShoppingButton>
-        </div>
-      </div>
-    );
-  }
-
-  const autoTransferMode = !showCartAnyway && Boolean(wooStoreOrigin) && transferableLines.length > 0;
-  if (autoTransferMode) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-xl border border-border bg-card p-6 space-y-3 text-center">
-          <h2 className="text-xl font-semibold text-foreground">Sending to your store cart…</h2>
-          <p className="text-sm text-muted-foreground">
-            Redirecting to <span className="text-foreground">{wooStoreOrigin}</span>.
-          </p>
-          <Button variant="outline" onClick={() => setShowCartAnyway(true)}>
-            Stay on platform cart
-          </Button>
         </div>
       </div>
     );
