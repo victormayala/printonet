@@ -572,7 +572,7 @@ function ProductForm({
       ...selectedVariant,
       sizes: (selectedVariant.sizes || []).map(sealSizeCost),
     };
-    const finalPrice = computeVariantFinalPrice(sealedSelected);
+    const finalPrice = Math.round(computeVariantFinalPrice(sealedSelected) * 100) / 100;
     setVariants((prev) =>
       prev.map((v) => ({
         ...v,
@@ -589,7 +589,7 @@ function ProductForm({
   const applyFinalPriceToVariantSizes = (vIdx: number) => {
     const v = variants[vIdx];
     const sealed = { ...v, sizes: (v.sizes || []).map(sealSizeCost) };
-    const finalPrice = computeVariantFinalPrice(sealed);
+    const finalPrice = Math.round(computeVariantFinalPrice(sealed) * 100) / 100;
     setVariants((prev) =>
       prev.map((vv, i) =>
         i === vIdx
@@ -1136,7 +1136,7 @@ function ProductForm({
                                 />
                                 <Input
                                   type="number" step="0.01" min="0"
-                                  value={s.price ?? ""}
+                                  value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
                                   onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
                                   className="h-7 text-xs text-right"
                                 />
@@ -3129,7 +3129,7 @@ function VariantManagerDialog({
     if (!selected?.pricing) return;
     const src = selected.pricing;
     const sealedSelected = { ...selected, sizes: (selected.sizes || []).map(sealSizeCost) };
-    const finalPrice = computeFinalPrice(sealedSelected);
+    const finalPrice = Math.round(computeFinalPrice(sealedSelected) * 100) / 100;
     setVariants((prev) =>
       prev.map((v) => ({
         ...v,
@@ -3143,7 +3143,7 @@ function VariantManagerDialog({
   const applyFinalPriceToVariantSizes = (vIdx: number) => {
     const v = variants[vIdx];
     const sealed = { ...v, sizes: (v.sizes || []).map(sealSizeCost) };
-    const finalPrice = computeFinalPrice(sealed);
+    const finalPrice = Math.round(computeFinalPrice(sealed) * 100) / 100;
     setVariants((prev) =>
       prev.map((vv, i) =>
         i === vIdx
@@ -3396,7 +3396,7 @@ function VariantManagerDialog({
                             type="number"
                             step="0.01"
                             min="0"
-                            value={s.price ?? 0}
+                            value={Number(Number(s.price ?? 0).toFixed(2))}
                             onChange={(e) =>
                               updateSize(selectedIdx, sIdx, { price: parseFloat(e.target.value) || 0 })
                             }
