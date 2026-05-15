@@ -316,7 +316,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <Package className="h-5 w-5" /> Store products
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">{rows.length} in store · {enabledCount} customizable</Badge>
             <Button size="sm" onClick={() => setPushOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Add products
             </Button>
