@@ -599,10 +599,15 @@ function ProductForm({
     );
   };
 
+  // Reset prefers the form's Base price field (the supplier cost the user
+  // controls) over any previously sealed `cost` — earlier versions of the
+  // app could seal an inflated price as cost, so we re-seal here too.
   const resetSizeToCost = (s: any) => {
+    if (productBaseCost > 0) {
+      return { ...s, cost: productBaseCost, price: productBaseCost };
+    }
     const cost = Number(s?.cost);
     if (cost > 0) return { ...s, price: cost };
-    if (productBaseCost > 0) return { ...s, price: productBaseCost };
     return s;
   };
 
