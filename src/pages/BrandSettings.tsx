@@ -542,8 +542,12 @@ export default function BrandSettings() {
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        {config.logoUrl ? (
-                          <img src={config.logoUrl} alt="Logo" className="h-5 max-w-[80px] object-contain" />
+                        {(config.theme === "dark" && config.logoDarkUrl) || config.logoUrl ? (
+                          <img
+                            src={config.theme === "dark" && config.logoDarkUrl ? config.logoDarkUrl : config.logoUrl}
+                            alt="Logo"
+                            className="h-5 max-w-[80px] object-contain"
+                          />
                         ) : (
                           <Sparkles className="h-4 w-4" style={{ color: config.primaryColor }} />
                         )}
