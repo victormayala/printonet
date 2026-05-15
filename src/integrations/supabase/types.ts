@@ -152,6 +152,8 @@ export type Database = {
           contact_email: string
           created_at: string
           custom_domain: string | null
+          customizer_border_radius: number
+          customizer_theme: string
           dns_checked_at: string | null
           dns_verified: boolean
           error_message: string | null
@@ -192,6 +194,8 @@ export type Database = {
           contact_email: string
           created_at?: string
           custom_domain?: string | null
+          customizer_border_radius?: number
+          customizer_theme?: string
           dns_checked_at?: string | null
           dns_verified?: boolean
           error_message?: string | null
@@ -232,6 +236,8 @@ export type Database = {
           contact_email?: string
           created_at?: string
           custom_domain?: string | null
+          customizer_border_radius?: number
+          customizer_theme?: string
           dns_checked_at?: string | null
           dns_verified?: boolean
           error_message?: string | null
