@@ -406,6 +406,7 @@ interface InitialDesignOutput {
 
 import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
 import { resolveGalleryImageForView } from "@/lib/variant-gallery";
+import { extractWooColorSelection, matchVariantFromWooColor } from "@/lib/woo-variant-match";
 
 interface DesignStudioProps {
   embedMode?: boolean;
