@@ -210,7 +210,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           </div>
         ) : (
           <>
-            <label className="flex items-center gap-3 p-2 mb-2 rounded-md border bg-muted/30 cursor-pointer">
+            <div className="flex items-center gap-3 p-2 mb-2 rounded-md border bg-muted/30">
               <Checkbox
                 checked={allEnabled ? true : someEnabled ? "indeterminate" : false}
                 disabled={saving}
@@ -219,14 +219,14 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               <span className="text-sm font-medium">
                 Select all {search ? "(filtered)" : ""} ({filtered.length})
               </span>
-            </label>
+            </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {filtered.map((r) => {
                 const p = r.product!;
                 return (
-                  <label
+                  <div
                     key={r.id}
-                    className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/40 cursor-pointer"
+                    className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/40"
                   >
                     <Checkbox
                       checked={r.customizable}
@@ -246,7 +246,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                         {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
                       </p>
                     </div>
-                  </label>
+                  </div>
                 );
               })}
             </div>
