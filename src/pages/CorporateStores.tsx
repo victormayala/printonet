@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, KeyRound, Copy, Check, Eye, EyeOff, LogIn, Building2, ShoppingBag, Globe } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, Copy, Check, Eye, EyeOff, Building2, ShoppingBag, Globe } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -658,79 +658,6 @@ function PasswordCopyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CredentialsDialog({
-  store,
-  open,
-  onOpenChange,
-}: {
-  store: CorporateStore;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
-  const adminUrl = store.store_admin_url || store.wp_admin_url;
-  const loginUrl =
-    store.store_login_url ||
-    (store.wp_site_url ? `${store.wp_site_url.replace(/\/$/, "")}/wp-login.php` : null);
-  const hasAny =
-    !!adminUrl || !!loginUrl || !!store.admin_username || !!store.admin_password;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Admin credentials — {store.name}</DialogTitle>
-          <DialogDescription>
-            Sign-in details delivered by the multi-tenant platform when this store was provisioned.
-          </DialogDescription>
-        </DialogHeader>
-
-        {!hasAny ? (
-          <div className="text-sm text-muted-foreground py-4">
-            No credentials available yet. They will appear here once the platform finishes provisioning.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {adminUrl && (
-                <Button asChild size="sm">
-                  <a href={adminUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-4 w-4" /> Open WP Admin
-                  </a>
-                </Button>
-              )}
-              {loginUrl && (
-                <Button asChild size="sm" variant="outline">
-                  <a href={loginUrl} target="_blank" rel="noreferrer">
-                    <LogIn className="h-4 w-4" /> Login page
-                  </a>
-                </Button>
-              )}
-            </div>
-
-            {adminUrl && <CopyField label="Admin URL" value={adminUrl} mono />}
-            {loginUrl && <CopyField label="Login URL" value={loginUrl} mono />}
-            {store.admin_username && (
-              <CopyField label="Username" value={store.admin_username} mono />
-            )}
-            {store.admin_password && (
-              <PasswordCopyField label="Password" value={store.admin_password} />
-            )}
-
-            <p className="text-xs text-muted-foreground">
-              Treat these credentials as sensitive. We recommend the store owner change the password after first login.
-            </p>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function StoreActions({ store }: { store: CorporateStore }) {
   const queryClient = useQueryClient();
@@ -738,7 +665,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
-  const [credsOpen, setCredsOpen] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
 
   const refetch = () =>
@@ -803,16 +729,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
               Push products
             </DropdownMenuItem>
           )}
-          {(isActive || isPaused) &&
-            (store.admin_username ||
-              store.admin_password ||
-              store.store_admin_url ||
-              store.store_login_url) && (
-              <DropdownMenuItem onClick={() => setCredsOpen(true)}>
-                <KeyRound className="h-4 w-4" />
-                View credentials
-              </DropdownMenuItem>
-            )}
           {(isActive || isPaused) && (
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4" />
@@ -853,7 +769,6 @@ function StoreActions({ store }: { store: CorporateStore }) {
       </Dialog>
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
-      <CredentialsDialog store={store} open={credsOpen} onOpenChange={setCredsOpen} />
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
