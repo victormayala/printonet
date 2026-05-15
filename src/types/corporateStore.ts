@@ -10,14 +10,6 @@ export type CorporateStore = {
   logo_url: string | null;
   secondary_logo_url: string | null;
   favicon_url: string | null;
-  wp_site_url: string | null;
-  wp_admin_url: string | null;
-  wp_site_id: string | null;
-  store_admin_url: string | null;
-  store_login_url: string | null;
-  admin_username: string | null;
-  admin_password: string | null;
-  admin_user_id: string | null;
   tenant_slug: string | null;
   store_type: "corporate" | "retail";
   status: "provisioning" | "active" | "failed" | "paused";
@@ -30,13 +22,10 @@ export type CorporateStore = {
   created_at: string;
 };
 
+/**
+ * Tenant slug used to identify the store on the hosted Lovable storefront app
+ * (and as the default subdomain). Falls back to null when missing.
+ */
 export function resolveTenantSlug(store: CorporateStore): string | null {
-  if (store.tenant_slug) return store.tenant_slug;
-  const url = store.wp_site_url;
-  if (!url) return null;
-  try {
-    return new URL(url).host.toLowerCase().replace(/^www\./, "");
-  } catch {
-    return null;
-  }
+  return store.tenant_slug ?? null;
 }

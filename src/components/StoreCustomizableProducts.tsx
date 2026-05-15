@@ -96,74 +96,10 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   }, [rows, search]);
 
   const enabledCount = rows.filter((r) => r.customizable).length;
-  const [syncing, setSyncing] = useState(false);
 
-  /**
-   * Push the current set of enabled product ids to the tenant storefront so the
-   * `Customize` button shows up there. The storefront `/customizer-flags`
-   * endpoint is upsert+prune — whatever we send becomes the full set — so we
-   * always send EVERY currently-enabled product id, not just the one that was
-   * just toggled.
-   */
-  const syncFlagsToStorefront = async (enabledIds: string[]) => {
-    const slug =
-      store.tenant_slug ||
-      (store.wp_site_url
-        ? (() => {
-            try {
-              return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, "");
-            } catch {
-              return null;
-            }
-          })()
-        : null);
-    if (!slug) {
-      toast({
-        title: "Storefront not synced",
-        description: "Store has no tenant slug yet.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
-        body: {
-          tenant_slug: slug,
-          custom_domain: store.custom_domain || undefined,
-          mode: "incremental",
-          // Push every active store product so the storefront has full catalog
-          // info, but flag only the enabled ones as customizable.
-          product_ids: rows.map((r) => r.product_id),
-          customizable_product_ids: enabledIds,
-          customizer_base_url: window.location.origin,
-        },
-      });
-      if (error) throw error;
-      const flagsRes = (data as any)?.flags_result;
-      const flagsErr = flagsRes && "error" in flagsRes ? flagsRes.error : null;
-      if (flagsErr) {
-        toast({
-          title: "Storefront flag sync failed",
-          description: String(flagsErr),
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Storefront updated",
-          description: `${enabledIds.length} customizable product${enabledIds.length === 1 ? "" : "s"} pushed to ${slug}.`,
-        });
-      }
-    } catch (e) {
-      toast({
-        title: "Storefront sync failed",
-        description: e instanceof Error ? e.message : String(e),
-        variant: "destructive",
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
+  // Note: customizer flags are read directly by the hosted storefront app from
+  // corporate_store_products in Supabase, so we no longer push catalog flags
+  // anywhere — saving the row is the source of truth.
 
   /**
    * Toggle one row, then re-read it from the DB to prove it stuck.
@@ -200,15 +136,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         title: updated.customizable ? "Customizer enabled" : "Customizer disabled",
         description: row.product.name,
       });
-
-      // Push the new full enabled set to the storefront so the Customize
-      // button actually appears / disappears there. Without this the DB row
-      // changes but the tenant storefront keeps its old flag set.
-      const nextEnabledIds = rows
-        .map((r) => (r.id === row.id ? { ...r, customizable: !!updated.customizable } : r))
-        .filter((r) => r.customizable)
-        .map((r) => r.product_id);
-      void syncFlagsToStorefront(nextEnabledIds);
     } catch (e) {
       // Revert and surface
       await refetch();
@@ -242,14 +169,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           ? `Enabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`
           : `Disabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`,
       });
-
-      // Recompute the full enabled set after the bulk change and push it.
-      const targetSet = new Set(targets.map((t) => t.id));
-      const nextEnabledIds = rows
-        .map((r) => (targetSet.has(r.id) ? { ...r, customizable: next } : r))
-        .filter((r) => r.customizable)
-        .map((r) => r.product_id);
-      void syncFlagsToStorefront(nextEnabledIds);
     } catch (e) {
       toast({
         title: "Bulk update failed",
@@ -281,11 +200,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
 
       qc.setQueryData<Row[]>(queryKey, (prev) => (prev ?? []).filter((r) => r.id !== row.id));
       toast({ title: "Product removed", description: row.product.name });
-
-      const nextEnabledIds = rows
-        .filter((r) => r.id !== row.id && r.customizable)
-        .map((r) => r.product_id);
-      void syncFlagsToStorefront(nextEnabledIds);
     } catch (e) {
       await refetch();
       toast({
@@ -322,21 +236,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             </Button>
             <Button
               size="sm"
-              variant="outline"
-              onClick={() =>
-                syncFlagsToStorefront(
-                  rows.filter((r) => r.customizable).map((r) => r.product_id),
-                )
-              }
-              disabled={syncing || rows.length === 0}
-              title="Re-push the current customizer set to the storefront"
+              variant="ghost"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh from database"
             >
-              {syncing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
-              )}
-              Sync to storefront
+              <RefreshCw className="h-3.5 w-3.5" />
             </Button>
             <Button
               size="sm"

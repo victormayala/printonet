@@ -24,8 +24,6 @@ import CorporateStores from "./pages/CorporateStores";
 import CorporateStoreDetails from "./pages/CorporateStoreDetails";
 import StoreShop from "./pages/StoreShop";
 import StoreCustomize from "./pages/StoreCustomize";
-import WooPay from "./pages/WooPay";
-import WooPayReturn from "./pages/WooPayReturn";
 import NotFound from "./pages/NotFound";
 import LayersPreview from "./pages/LayersPreview";
 import Pricing from "./pages/Pricing";
@@ -77,8 +75,6 @@ const App = () => (
             <Route path="/s/:tenantSlug" element={<StoreShop />} />
             <Route path="/s/:tenantSlug/customize/:productId" element={<StoreCustomize />} />
             <Route path="/customize/:productId" element={isPotentialStoreHost ? <StoreCustomize customDomainHost={currentHost} /> : <NotFound />} />
-            <Route path="/pay/woo" element={<WooPay />} />
-            <Route path="/pay/woo/return" element={<WooPayReturn />} />
             <Route path="/layers-preview" element={<LayersPreview />} />
 
             {/* Dashboard */}

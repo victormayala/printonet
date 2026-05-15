@@ -1,142 +1,17 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Sparkles, Store } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { storeOriginFromReturnUrl, transferHostedCartToWoo } from "@/lib/wooCart";
+import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft } from "lucide-react";
 
 export default function Cart() {
-  const LAST_STORE_ORIGIN_KEY = "printonet_last_store_origin";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { items, updateQuantity, removeItem, totalCents, totalItems } = useCart();
-  const [wooSyncing, setWooSyncing] = useState(false);
-  const [autoTransferTried, setAutoTransferTried] = useState(false);
-  const [showCartAnyway, setShowCartAnyway] = useState(false);
-  const [manualStoreUrl, setManualStoreUrl] = useState("");
-  const [storedFallbackOrigin, setStoredFallbackOrigin] = useState<string | null>(null);
 
   const returnUrl = searchParams.get("returnUrl") || "";
   const keepShoppingHref = returnUrl || "/products";
   const isExternal = returnUrl.startsWith("http");
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LAST_STORE_ORIGIN_KEY);
-      if (saved && saved.startsWith("https://")) {
-        setStoredFallbackOrigin(saved);
-        setManualStoreUrl(saved);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const wooStoreOrigin = useMemo(() => {
-    const fromQuery = storeOriginFromReturnUrl(returnUrl);
-    if (fromQuery) return fromQuery;
-    const fromItem = items.find((i) => i.storeOrigin)?.storeOrigin;
-    if (fromItem) return fromItem;
-    return storedFallbackOrigin || null;
-  }, [returnUrl, items, storedFallbackOrigin]);
-
-  const wooLines = useMemo(() => items.filter((i) => i.wcProductId), [items]);
-  const transferableLines = useMemo(() => items.filter((i) => i.productName), [items]);
-  const canAttemptWooTransfer = Boolean(wooStoreOrigin) && wooLines.length > 0;
-
-  const saveStoreOriginFromInput = () => {
-    const raw = manualStoreUrl.trim();
-    if (!raw) {
-      toast({ variant: "destructive", title: "Enter your store URL", description: "Example: https://royal.stores.printonet.com" });
-      return;
-    }
-    let origin = "";
-    try {
-      origin = new URL(raw).origin;
-    } catch {
-      toast({ variant: "destructive", title: "Invalid URL", description: "Use a full https:// URL for your Woo store." });
-      return;
-    }
-    if (!origin.startsWith("https://")) {
-      toast({ variant: "destructive", title: "HTTPS required", description: "Store URL must use HTTPS." });
-      return;
-    }
-    setStoredFallbackOrigin(origin);
-    setManualStoreUrl(origin);
-    try {
-      localStorage.setItem(LAST_STORE_ORIGIN_KEY, origin);
-    } catch {
-      /* ignore */
-    }
-    toast({ title: "Store URL saved", description: "You can now send these designs to WooCommerce cart." });
-  };
-
-  const handleSendToWooCart = async (): Promise<boolean> => {
-    if (!wooStoreOrigin) {
-      toast({
-        variant: "destructive",
-        title: "No store linked",
-        description: "Open your cart from the store after customizing, or keep shopping from your storefront.",
-      });
-      return false;
-    }
-    if (transferableLines.length === 0) {
-      toast({ variant: "destructive", title: "Nothing to send", description: "No cart items found to transfer." });
-      return false;
-    }
-
-    setWooSyncing(true);
-    try {
-      const syncLines = transferableLines.map((item) => ({
-        wcProductId: item.wcProductId,
-        wcVariationId: item.wcVariationId,
-        wcAttributes: item.wcAttributes,
-        productName: item.productName,
-        quantity: item.quantity,
-        sessionId: item.sessionId,
-        previewImage: item.previewImage,
-        printFileUrl: item.printFileUrl,
-        designLayersUrl: item.designLayersUrl,
-      }));
-      const r = await transferHostedCartToWoo(wooStoreOrigin, syncLines);
-      if (!r.ok || !r.redirectUrl) {
-        toast({
-          variant: "destructive",
-          title: "Could not send cart to your store",
-          description:
-            r.error ||
-            "Ensure WordPress has the Printonet Core MU plugin (v0.1.15+) and try again from HTTPS.",
-        });
-        return false;
-      }
-      const target = r.redirectUrl || `${wooStoreOrigin}/cart/`;
-      // Primary navigation path.
-      window.location.assign(target);
-      // Safety fallback in case browser/extensions interfere with first navigation.
-      window.setTimeout(() => {
-        if (window.location.origin === "https://platform.printonet.com") {
-          window.location.href = `${wooStoreOrigin}/cart/`;
-        }
-      }, 1200);
-      return true;
-    } finally {
-      setWooSyncing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (autoTransferTried) return;
-    if (!wooStoreOrigin) return;
-    if (transferableLines.length === 0) return;
-    if (showCartAnyway) return;
-    setAutoTransferTried(true);
-    (async () => {
-      const ok = await handleSendToWooCart();
-      if (!ok) setShowCartAnyway(true);
-    })();
-  }, [autoTransferTried, wooStoreOrigin, transferableLines.length, showCartAnyway]);
 
   const KeepShoppingButton = ({ className = "", variant = "ghost" as const, size = "sm" as const, children }: { className?: string; variant?: any; size?: any; children: React.ReactNode }) =>
     isExternal ? (

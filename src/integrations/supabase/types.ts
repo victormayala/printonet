@@ -149,17 +149,12 @@ export type Database = {
       corporate_stores: {
         Row: {
           accent_color: string
-          admin_password: string | null
-          admin_user_id: string | null
-          admin_username: string | null
           contact_email: string
           created_at: string
           custom_domain: string | null
           customizer_border_radius: number
           customizer_logo_dark_url: string | null
           customizer_theme: string
-          dns_checked_at: string | null
-          dns_verified: boolean
           error_message: string | null
           favicon_url: string | null
           font_family: string
@@ -169,13 +164,10 @@ export type Database = {
           name: string
           platform_fee_bps: number
           primary_color: string
-          provision_request_id: string | null
           secondary_logo_url: string | null
           shipping_flat_amount: number
           shipping_label: string
           status: string
-          store_admin_url: string | null
-          store_login_url: string | null
           store_type: string
           stripe_account_id: string | null
           stripe_charges_enabled: boolean
@@ -186,23 +178,15 @@ export type Database = {
           tenant_slug: string | null
           updated_at: string
           user_id: string
-          wp_admin_url: string | null
-          wp_site_id: string | null
-          wp_site_url: string | null
         }
         Insert: {
           accent_color?: string
-          admin_password?: string | null
-          admin_user_id?: string | null
-          admin_username?: string | null
           contact_email: string
           created_at?: string
           custom_domain?: string | null
           customizer_border_radius?: number
           customizer_logo_dark_url?: string | null
           customizer_theme?: string
-          dns_checked_at?: string | null
-          dns_verified?: boolean
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
@@ -212,13 +196,10 @@ export type Database = {
           name: string
           platform_fee_bps?: number
           primary_color?: string
-          provision_request_id?: string | null
           secondary_logo_url?: string | null
           shipping_flat_amount?: number
           shipping_label?: string
           status?: string
-          store_admin_url?: string | null
-          store_login_url?: string | null
           store_type?: string
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean
@@ -229,23 +210,15 @@ export type Database = {
           tenant_slug?: string | null
           updated_at?: string
           user_id: string
-          wp_admin_url?: string | null
-          wp_site_id?: string | null
-          wp_site_url?: string | null
         }
         Update: {
           accent_color?: string
-          admin_password?: string | null
-          admin_user_id?: string | null
-          admin_username?: string | null
           contact_email?: string
           created_at?: string
           custom_domain?: string | null
           customizer_border_radius?: number
           customizer_logo_dark_url?: string | null
           customizer_theme?: string
-          dns_checked_at?: string | null
-          dns_verified?: boolean
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
@@ -255,13 +228,10 @@ export type Database = {
           name?: string
           platform_fee_bps?: number
           primary_color?: string
-          provision_request_id?: string | null
           secondary_logo_url?: string | null
           shipping_flat_amount?: number
           shipping_label?: string
           status?: string
-          store_admin_url?: string | null
-          store_login_url?: string | null
           store_type?: string
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean
@@ -272,9 +242,6 @@ export type Database = {
           tenant_slug?: string | null
           updated_at?: string
           user_id?: string
-          wp_admin_url?: string | null
-          wp_site_id?: string | null
-          wp_site_url?: string | null
         }
         Relationships: []
       }
@@ -591,51 +558,6 @@ export type Database = {
           },
         ]
       }
-      printonet_woo_order_files: {
-        Row: {
-          created_at: string
-          currency: string | null
-          date_paid: string | null
-          id: string
-          line_items: Json
-          order_id: number
-          order_number: string | null
-          order_status: string | null
-          payload: Json
-          store_url: string
-          tenant_slug: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          currency?: string | null
-          date_paid?: string | null
-          id?: string
-          line_items?: Json
-          order_id: number
-          order_number?: string | null
-          order_status?: string | null
-          payload?: Json
-          store_url: string
-          tenant_slug: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          currency?: string | null
-          date_paid?: string | null
-          id?: string
-          line_items?: Json
-          order_id?: number
-          order_number?: string | null
-          order_status?: string | null
-          payload?: Json
-          store_url?: string
-          tenant_slug?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       product_categories: {
         Row: {
           created_at: string
@@ -881,10 +803,6 @@ export type Database = {
       printonet_plan_fee_bps: { Args: { p_price_id: string }; Returns: number }
       printonet_plan_included_stores: {
         Args: { p_price_id: string }
-        Returns: number
-      }
-      printonet_purge_unlinked_customizer_sessions: {
-        Args: { p_days?: number }
         Returns: number
       }
       printonet_set_user_stores_status: {

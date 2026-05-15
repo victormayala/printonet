@@ -405,7 +405,6 @@ interface InitialDesignOutput {
 }
 
 import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
-import { extractWooColorSelection, matchVariantFromWooColor } from "@/lib/woo-variant-match";
 import { resolveGalleryImageForView } from "@/lib/variant-gallery";
 
 interface DesignStudioProps {
@@ -744,24 +743,6 @@ export default function DesignStudio({
       return;
     }
 
-    const wcAttrs = embedProductData.wc_attributes;
-    const variants = ep.variants || [];
-    if (wcAttrs && typeof wcAttrs === "object" && variants.length > 0) {
-      const wooColor = extractWooColorSelection(wcAttrs as Record<string, string>);
-      if (wooColor) {
-        const matched = matchVariantFromWooColor(variants, wooColor);
-        if (matched) {
-          setSelectedVariant({
-            color: matched.color || matched.colorName,
-            colorName: matched.colorName || matched.color,
-            hex: matched.hex,
-            image: matched.image,
-            gallery: Array.isArray((matched as any).gallery) ? ((matched as any).gallery as string[]) : undefined,
-            sizes: matched.sizes,
-          });
-        }
-      }
-    }
   }, [embedMode, embedProductData, sessionId, initialDesignOutput]);
 
   // Get current background image URL
