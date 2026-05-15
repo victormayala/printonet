@@ -346,89 +346,101 @@ export default function CorporateStoreDetails() {
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4 min-w-0">
-          {store.logo_url ? (
-            <img
-              src={store.logo_url}
-              alt=""
-              className="h-16 w-16 rounded-md object-contain bg-muted border"
-            />
-          ) : (
-            <div
-              className="h-16 w-16 rounded-md border shrink-0"
-              style={{ background: store.primary_color }}
-            />
-          )}
-          <div className="min-w-0">
-            <h1 className="text-3xl font-bold tracking-tight truncate">{store.name}</h1>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              <StatusBadge status={store.status} />
-              {store.store_type === "corporate" && (
-                <Badge variant="secondary" className="gap-1">
-                  <Package className="h-3 w-3" /> Corporate
-                </Badge>
+      <header className="rounded-2xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start gap-5 min-w-0">
+            {store.logo_url ? (
+              <img
+                src={store.logo_url}
+                alt=""
+                className="h-16 w-16 rounded-xl object-contain bg-muted border shrink-0"
+              />
+            ) : (
+              <div
+                className="h-16 w-16 rounded-xl border shrink-0"
+                style={{ background: store.primary_color }}
+              />
+            )}
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl font-bold tracking-tight truncate">{store.name}</h1>
+                <StatusBadge status={store.status} />
+                {store.store_type === "corporate" && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Package className="h-3 w-3" /> Corporate
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">
+                Created{" "}
+                <span className="text-foreground">
+                  {new Date(store.created_at).toLocaleDateString()}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Primary operations */}
+            {(store.wp_site_url || store.status === "active") && (
+              <div className="flex items-center gap-2 lg:pr-4 lg:border-r lg:border-border">
+                {store.wp_site_url && (
+                  <Button asChild variant="outline">
+                    <a href={store.wp_site_url} target="_blank" rel="noreferrer">
+                      <Globe className="h-4 w-4" /> Visit store
+                    </a>
+                  </Button>
+                )}
+                {store.status === "active" && (
+                  <Button onClick={() => setPushOpen(true)}>
+                    <Package className="h-4 w-4" /> Push products
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Administrative */}
+            <div className="flex items-center gap-2">
+              {store.status === "active" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmPause(true)}
+                  disabled={busy !== null}
+                >
+                  {busy === "pause" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Pause className="h-4 w-4" />
+                  )}
+                  Pause
+                </Button>
               )}
-              <span className="text-sm text-muted-foreground">
-                Created {new Date(store.created_at).toLocaleDateString()}
-              </span>
+              {store.status === "paused" && (
+                <Button
+                  variant="outline"
+                  onClick={() => runManage("resume")}
+                  disabled={busy !== null}
+                >
+                  {busy === "resume" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  Resume
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmDelete(true)}
+                disabled={busy !== null}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap flex-1 justify-end">
-          <div className="flex items-center gap-2 flex-wrap">
-            {store.wp_site_url && (
-              <Button asChild variant="outline">
-                <a href={store.wp_site_url} target="_blank" rel="noreferrer">
-                  <Globe className="h-4 w-4" /> Visit store
-                </a>
-              </Button>
-            )}
-            {store.status === "active" && (
-              <Button onClick={() => setPushOpen(true)}>
-                <Package className="h-4 w-4" /> Push products
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap ml-auto">
-            {store.status === "active" && (
-              <Button
-                variant="outline"
-                onClick={() => setConfirmPause(true)}
-                disabled={busy !== null}
-              >
-                {busy === "pause" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Pause className="h-4 w-4" />
-                )}
-                Pause
-              </Button>
-            )}
-            {store.status === "paused" && (
-              <Button
-                variant="outline"
-                onClick={() => runManage("resume")}
-                disabled={busy !== null}
-              >
-                {busy === "resume" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-                Resume
-              </Button>
-            )}
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmDelete(true)}
-              disabled={busy !== null}
-            >
-              <Trash2 className="h-4 w-4" /> Delete
-            </Button>
-          </div>
-        </div>
-      </div>
+      </header>
 
       {store.error_message && store.status === "failed" && (
         <Card className="border-destructive/40">
