@@ -314,22 +314,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           </div>
         </div>
 
-        {storefrontUrl && (
-          <div className="mt-3 flex items-center gap-2 flex-wrap">
-            <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-xs">
-              {storefrontUrl}
-            </code>
-            <Button size="sm" variant="outline" onClick={copyUrl}>
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copied" : "Copy link"}
-            </Button>
-            <Button size="sm" variant="outline" asChild>
-              <a href={storefrontUrl} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" /> Preview
-              </a>
-            </Button>
-          </div>
-        )}
       </CardHeader>
       <CardContent>
         <div className="relative mb-3">
