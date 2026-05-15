@@ -67,14 +67,16 @@ export default function EmbedCustomizer() {
     const radius = searchParams.get("brandRadius");
     const name = searchParams.get("brandName");
     const logoUrl = searchParams.get("brandLogo");
+    const logoDarkUrl = searchParams.get("brandLogoDark");
 
-    if (!theme && !primary && !accent && !font && !radius && !name && !logoUrl) {
+    if (!theme && !primary && !accent && !font && !radius && !name && !logoUrl && !logoDarkUrl) {
       return null;
     }
 
     return {
       name: name || DEFAULT_BRAND_CONFIG.name,
       logoUrl: logoUrl || DEFAULT_BRAND_CONFIG.logoUrl,
+      logoDarkUrl: logoDarkUrl || DEFAULT_BRAND_CONFIG.logoDarkUrl,
       theme: theme === "light" || theme === "dark" ? theme : DEFAULT_BRAND_CONFIG.theme,
       primaryColor: normalizeHexColor(primary, DEFAULT_BRAND_CONFIG.primaryColor),
       accentColor: normalizeHexColor(accent, DEFAULT_BRAND_CONFIG.accentColor),
