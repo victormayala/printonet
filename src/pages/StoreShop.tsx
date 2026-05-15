@@ -13,6 +13,7 @@ type ProductLite = {
   category: string | null;
   base_price: number;
   image_front: string | null;
+  customizable?: boolean;
 };
 
 export default function StoreShop({ customDomainHost }: { customDomainHost?: string }) {
