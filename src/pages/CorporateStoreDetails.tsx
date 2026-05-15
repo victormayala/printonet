@@ -384,7 +384,7 @@ export default function CorporateStoreDetails() {
     !!adminUrl || !!loginUrl || !!store.admin_username || !!store.admin_password;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
       <div>
         <Button variant="ghost" size="sm" onClick={() => navigate("/corporate-stores")}>
           <ArrowLeft className="h-4 w-4" /> Back to corporate stores
