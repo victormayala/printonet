@@ -104,6 +104,7 @@ export function StoreBrandSettings({ store }: Props) {
       setConfig({
         name: data.name || config.name,
         logoUrl: data.logo_url || "",
+        logoDarkUrl: (data as any).logo_dark_url || "",
         theme: (data.theme === "light" ? "light" : "dark"),
         primaryColor: data.primary_color,
         accentColor: data.accent_color,
@@ -125,12 +126,13 @@ export function StoreBrandSettings({ store }: Props) {
         .from("corporate_stores")
         .update({
           logo_url: config.logoUrl || null,
+          customizer_logo_dark_url: config.logoDarkUrl || null,
           primary_color: config.primaryColor,
           accent_color: config.accentColor,
           font_family: config.fontFamily,
           customizer_theme: config.theme,
           customizer_border_radius: config.borderRadius,
-        })
+        } as any)
         .eq("id", store.id);
       if (error) throw error;
       toast({ title: "Customizer brand updated" });
