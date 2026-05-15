@@ -173,6 +173,24 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     }
   };
 
+  const allEnabled =
+    (filtered?.length ?? 0) > 0 &&
+    filtered.every((p) => enabledMap.get(p.id)?.is_active);
+  const someEnabled =
+    (filtered?.length ?? 0) > 0 &&
+    filtered.some((p) => enabledMap.get(p.id)?.is_active) &&
+    !allEnabled;
+
+  const toggleAll = async (on: boolean) => {
+    for (const p of filtered) {
+      const isOn = !!enabledMap.get(p.id)?.is_active;
+      if (isOn !== on) {
+        // eslint-disable-next-line no-await-in-loop
+        await toggle(p.id, on);
+      }
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -182,8 +200,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               <Package className="h-5 w-5" /> Customizable products
             </CardTitle>
             <CardDescription>
-              Pick which products this store's shoppers can customize. The customizer will use{" "}
-              <span className="font-medium">{store.name}</span>'s branding automatically.
+              Toggle which of this store's products can be personalized in the customizer.
+              All products in your catalog show in the storefront — this only controls the
+              "Customize" button.
             </CardDescription>
           </div>
           <Badge variant="secondary">
@@ -238,6 +257,16 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             No products found. Add products in the Products tab first.
           </div>
         ) : (
+          <>
+            <label className="flex items-center gap-3 p-2 mb-2 rounded-md border bg-muted/30 cursor-pointer">
+              <Checkbox
+                checked={allEnabled ? true : someEnabled ? "indeterminate" : false}
+                onCheckedChange={(v) => toggleAll(!!v)}
+              />
+              <span className="text-sm font-medium">
+                Select all {search ? "(filtered)" : ""} ({filtered.length})
+              </span>
+            </label>
           <div className="grid gap-2 sm:grid-cols-2">
             {filtered.map((p) => {
               const link = enabledMap.get(p.id);
@@ -270,6 +299,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               );
             })}
           </div>
+          </>
         )}
       </CardContent>
     </Card>
