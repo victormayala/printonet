@@ -595,6 +595,34 @@ function ProductForm({
     );
   };
 
+  const resetSizeToCost = (s: any) => {
+    const cost = Number(s?.cost);
+    if (cost > 0) return { ...s, price: cost };
+    return s;
+  };
+
+  const resetVariantPricesToSupplier = (vIdx: number) => {
+    setVariants((prev) =>
+      prev.map((vv, i) =>
+        i === vIdx
+          ? { ...vv, pricing: {}, sizes: (vv.sizes || []).map(resetSizeToCost) }
+          : vv
+      )
+    );
+    toast({ title: "Prices reset to supplier" });
+  };
+
+  const resetAllPricesToSupplier = () => {
+    setVariants((prev) =>
+      prev.map((vv) => ({
+        ...vv,
+        pricing: {},
+        sizes: (vv.sizes || []).map(resetSizeToCost),
+      }))
+    );
+    toast({ title: "All prices reset to supplier" });
+  };
+
   const removeVariant = (idx: number) => {
     setVariants((prev) => prev.filter((_, i) => i !== idx));
     setSelectedVariantIdx((prev) => Math.max(0, Math.min(prev, variants.length - 2)));
@@ -926,9 +954,14 @@ function ProductForm({
                 <Plus className="h-3.5 w-3.5" /> Add variant
               </Button>
               {variants.length > 0 && (
-                <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
-                  Apply pricing to all colors
-                </Button>
+                <>
+                  <Button type="button" size="sm" variant="ghost" onClick={resetAllPricesToSupplier}>
+                    Reset to supplier
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
+                    Apply pricing to all colors
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -1048,9 +1081,14 @@ function ProductForm({
                                 <p className="text-[10px] text-muted-foreground">Final price</p>
                                 <p className="text-xl font-bold text-primary">${computeVariantFinalPrice(selectedVariant).toFixed(2)}</p>
                               </div>
-                              <Button type="button" size="sm" variant="secondary" onClick={() => applyFinalPriceToVariantSizes(selectedVariantIdx)}>
-                                Apply to all sizes
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button type="button" size="sm" variant="ghost" onClick={() => resetVariantPricesToSupplier(selectedVariantIdx)}>
+                                  Reset
+                                </Button>
+                                <Button type="button" size="sm" variant="secondary" onClick={() => applyFinalPriceToVariantSizes(selectedVariantIdx)}>
+                                  Apply to all sizes
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -3100,6 +3138,34 @@ function VariantManagerDialog({
     );
   };
 
+  const resetSizeToCost = (s: any) => {
+    const cost = Number(s?.cost);
+    if (cost > 0) return { ...s, price: cost };
+    return s;
+  };
+
+  const resetVariantPricesToSupplier = (vIdx: number) => {
+    setVariants((prev) =>
+      prev.map((vv, i) =>
+        i === vIdx
+          ? { ...vv, pricing: {}, sizes: (vv.sizes || []).map(resetSizeToCost) }
+          : vv
+      )
+    );
+    toast({ title: "Prices reset to supplier" });
+  };
+
+  const resetAllPricesToSupplier = () => {
+    setVariants((prev) =>
+      prev.map((vv) => ({
+        ...vv,
+        pricing: {},
+        sizes: (vv.sizes || []).map(resetSizeToCost),
+      }))
+    );
+    toast({ title: "All prices reset to supplier" });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const { error } = await supabase
@@ -3126,9 +3192,14 @@ function VariantManagerDialog({
                 {product.category} · {variants.length} color{variants.length !== 1 ? "s" : ""} · Base cost ${baseCost.toFixed(2)}
               </DialogDescription>
             </div>
-            <Button size="sm" variant="outline" onClick={applyPricingToAll} disabled={!selected}>
-              Apply pricing to all colors
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={resetAllPricesToSupplier} disabled={variants.length === 0}>
+                Reset to supplier
+              </Button>
+              <Button size="sm" variant="outline" onClick={applyPricingToAll} disabled={!selected}>
+                Apply pricing to all colors
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -3259,13 +3330,22 @@ function VariantManagerDialog({
                             ${computeFinalPrice(selected).toFixed(2)}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => applyFinalPriceToVariantSizes(selectedIdx)}
-                        >
-                          Apply to all sizes
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => resetVariantPricesToSupplier(selectedIdx)}
+                          >
+                            Reset
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => applyFinalPriceToVariantSizes(selectedIdx)}
+                          >
+                            Apply to all sizes
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
