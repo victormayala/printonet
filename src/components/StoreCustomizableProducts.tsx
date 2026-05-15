@@ -286,6 +286,24 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <Badge variant="secondary">{enabledCount} of {rows.length} enabled</Badge>
             <Button
               size="sm"
+              variant="outline"
+              onClick={() =>
+                syncFlagsToStorefront(
+                  rows.filter((r) => r.customizable).map((r) => r.product_id),
+                )
+              }
+              disabled={syncing || rows.length === 0}
+              title="Re-push the current customizer set to the storefront"
+            >
+              {syncing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Sync to storefront
+            </Button>
+            <Button
+              size="sm"
               variant="ghost"
               onClick={() => refetch()}
               disabled={isFetching}
