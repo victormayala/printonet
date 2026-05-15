@@ -595,6 +595,34 @@ function ProductForm({
     );
   };
 
+  const resetSizeToCost = (s: any) => {
+    const cost = Number(s?.cost);
+    if (cost > 0) return { ...s, price: cost };
+    return s;
+  };
+
+  const resetVariantPricesToSupplier = (vIdx: number) => {
+    setVariants((prev) =>
+      prev.map((vv, i) =>
+        i === vIdx
+          ? { ...vv, pricing: {}, sizes: (vv.sizes || []).map(resetSizeToCost) }
+          : vv
+      )
+    );
+    toast({ title: "Prices reset to supplier" });
+  };
+
+  const resetAllPricesToSupplier = () => {
+    setVariants((prev) =>
+      prev.map((vv) => ({
+        ...vv,
+        pricing: {},
+        sizes: (vv.sizes || []).map(resetSizeToCost),
+      }))
+    );
+    toast({ title: "All prices reset to supplier" });
+  };
+
   const removeVariant = (idx: number) => {
     setVariants((prev) => prev.filter((_, i) => i !== idx));
     setSelectedVariantIdx((prev) => Math.max(0, Math.min(prev, variants.length - 2)));
