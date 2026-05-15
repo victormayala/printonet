@@ -1559,6 +1559,8 @@ export function EditStoreDialog({
         setLogo={setLogo}
         favicon={favicon}
         setFavicon={setFavicon}
+        footerLogo={footerLogo}
+        setFooterLogo={setFooterLogo}
         existing={existing}
         onClearExisting={onClearExisting}
       />
