@@ -239,6 +239,14 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           ? `Enabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`
           : `Disabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`,
       });
+
+      // Recompute the full enabled set after the bulk change and push it.
+      const targetSet = new Set(targets.map((t) => t.id));
+      const nextEnabledIds = rows
+        .map((r) => (targetSet.has(r.id) ? { ...r, customizable: next } : r))
+        .filter((r) => r.customizable)
+        .map((r) => r.product_id);
+      void syncFlagsToStorefront(nextEnabledIds);
     } catch (e) {
       toast({
         title: "Bulk update failed",
