@@ -299,6 +299,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               );
             })}
           </div>
+          </>
         )}
       </CardContent>
     </Card>
