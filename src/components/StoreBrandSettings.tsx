@@ -318,7 +318,15 @@ export function StoreBrandSettings({ store }: Props) {
               <div className="rounded-lg overflow-hidden border shadow-lg" style={{ borderColor: previewBorder, borderRadius: `${config.borderRadius}px` }}>
                 <div className="flex items-center justify-between px-3 py-2 border-b" style={{ background: previewToolbar, color: previewText, borderColor: previewBorder, fontFamily: config.fontFamily }}>
                   <div className="flex items-center gap-2">
-                    {config.logoUrl ? <img src={config.logoUrl} alt="Logo" className="h-5 max-w-[80px] object-contain" /> : <Sparkles className="h-4 w-4" style={{ color: config.primaryColor }} />}
+                    {((config.theme === "dark" && config.logoDarkUrl) || config.logoUrl) ? (
+                      <img
+                        src={config.theme === "dark" && config.logoDarkUrl ? config.logoDarkUrl : config.logoUrl}
+                        alt="Logo"
+                        className="h-5 max-w-[80px] object-contain"
+                      />
+                    ) : (
+                      <Sparkles className="h-4 w-4" style={{ color: config.primaryColor }} />
+                    )}
                     <span className="text-xs font-semibold">{config.name || store.name}</span>
                   </div>
                   <div className="flex items-center gap-1">
