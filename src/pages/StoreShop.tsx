@@ -145,11 +145,17 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
                       ${Number(p.base_price ?? 0).toFixed(2)}
                     </p>
                   </div>
-                  <Button asChild size="sm" className="w-full">
-                    <Link to={`${productBasePath}/customize/${p.id}`}>
-                      <Wand2 className="h-3.5 w-3.5" /> Customize
-                    </Link>
-                  </Button>
+                  {p.customizable ? (
+                    <Button asChild size="sm" className="w-full">
+                      <Link to={`${productBasePath}/customize/${p.id}`}>
+                        <Wand2 className="h-3.5 w-3.5" /> Customize
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="secondary" className="w-full" disabled>
+                      Buy as-is
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
