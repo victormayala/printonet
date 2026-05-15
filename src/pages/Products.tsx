@@ -3138,7 +3138,33 @@ function VariantManagerDialog({
     );
   };
 
-  const handleSave = async () => {
+  const resetSizeToCost = (s: any) => {
+    const cost = Number(s?.cost);
+    if (cost > 0) return { ...s, price: cost };
+    return s;
+  };
+
+  const resetVariantPricesToSupplier = (vIdx: number) => {
+    setVariants((prev) =>
+      prev.map((vv, i) =>
+        i === vIdx
+          ? { ...vv, pricing: {}, sizes: (vv.sizes || []).map(resetSizeToCost) }
+          : vv
+      )
+    );
+    toast({ title: "Prices reset to supplier" });
+  };
+
+  const resetAllPricesToSupplier = () => {
+    setVariants((prev) =>
+      prev.map((vv) => ({
+        ...vv,
+        pricing: {},
+        sizes: (vv.sizes || []).map(resetSizeToCost),
+      }))
+    );
+    toast({ title: "All prices reset to supplier" });
+  };
     setSaving(true);
     const { error } = await supabase
       .from("inventory_products")
