@@ -3,8 +3,10 @@ import { createContext, useContext } from "react";
 export interface BrandConfig {
   /** Display name shown in the toolbar */
   name?: string;
-  /** Logo URL shown in the toolbar */
+  /** Logo URL shown in the toolbar (used for light theme, fallback for dark) */
   logoUrl?: string;
+  /** Optional dark-theme logo URL (light-on-dark variant) */
+  logoDarkUrl?: string;
   /** Light or dark theme */
   theme: "light" | "dark";
   /** Primary brand color (hex) */
@@ -20,12 +22,19 @@ export interface BrandConfig {
 export const DEFAULT_BRAND_CONFIG: BrandConfig = {
   name: "",
   logoUrl: "",
+  logoDarkUrl: "",
   theme: "dark",
   primaryColor: "#7c3aed",
   accentColor: "#e0459b",
   fontFamily: "Inter",
   borderRadius: 12,
 };
+
+/** Pick the right logo URL given the active theme */
+export function activeBrandLogo(config: BrandConfig): string {
+  if (config.theme === "dark" && config.logoDarkUrl) return config.logoDarkUrl;
+  return config.logoUrl || "";
+}
 
 /** Ensure hex is #RRGGBB for CSS var generation */
 export function normalizeHexColor(hex: string | null | undefined, fallback: string): string {
