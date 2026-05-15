@@ -528,11 +528,20 @@ export default function CorporateStoreDetails() {
                       </div>
                     </div>
                   )}
-                  {store.secondary_logo_url && (
+                  {(store.secondary_logo_url || store.logo_url) && (
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Secondary</p>
+                      <p className="text-xs text-muted-foreground">
+                        Footer logo
+                        {!store.secondary_logo_url && (
+                          <span className="ml-1 text-muted-foreground/70">(uses main)</span>
+                        )}
+                      </p>
                       <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
-                        <img src={store.secondary_logo_url} alt="" className="h-full w-full object-contain" />
+                        <img
+                          src={store.secondary_logo_url ?? store.logo_url ?? ""}
+                          alt=""
+                          className="h-full w-full object-contain"
+                        />
                       </div>
                     </div>
                   )}
