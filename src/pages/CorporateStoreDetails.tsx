@@ -384,10 +384,18 @@ export default function CorporateStoreDetails() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {store.wp_site_url && (
+            {store.tenant_slug && (
               <div className="flex items-center gap-2 lg:pr-4 lg:border-r lg:border-border">
                 <Button asChild variant="outline">
-                  <a href={store.wp_site_url} target="_blank" rel="noreferrer">
+                  <a
+                    href={
+                      store.custom_domain
+                        ? `https://${store.custom_domain}`
+                        : `/s/${store.tenant_slug}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     <Globe className="h-4 w-4" /> Visit store
                   </a>
                 </Button>
@@ -486,12 +494,6 @@ export default function CorporateStoreDetails() {
                 </div>
                 {store.tenant_slug && (
                   <CopyField label="Tenant slug" value={store.tenant_slug} mono />
-                )}
-                {store.wp_site_id && (
-                  <CopyField label="Site ID" value={store.wp_site_id} mono />
-                )}
-                {store.wp_site_url && (
-                  <CopyField label="Site URL" value={store.wp_site_url} mono />
                 )}
               </CardContent>
             </Card>

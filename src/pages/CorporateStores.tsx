@@ -436,7 +436,6 @@ export default function CorporateStores() {
         <TabsList className="mb-2 w-full sm:w-auto flex-wrap">
           <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none"><Building2 className="h-4 w-4" /> My Stores</TabsTrigger>
           <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
-          <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stores" className="space-y-6">
@@ -546,14 +545,14 @@ export default function CorporateStores() {
                           </TableCell>
                         )}
                         <TableCell>
-                          {s.wp_site_url ? (
+                          {s.custom_domain ? (
                             <a
-                              href={s.wp_site_url}
+                              href={`https://${s.custom_domain}`}
                               target="_blank"
                               rel="noreferrer"
                               className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                             >
-                              {s.wp_site_url.replace(/^https?:\/\//, "")}
+                              {s.custom_domain}
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : s.tenant_slug ? (
@@ -1173,7 +1172,6 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           logo_url,
           favicon_url,
           tenant_slug: finalSlug,
-          provision_request_id: tempId,
           status: "active",
         })
         .select("id")
