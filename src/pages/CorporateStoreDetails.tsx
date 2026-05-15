@@ -187,44 +187,6 @@ function CopyField({
   );
 }
 
-function PasswordCopyField({ label, value }: { label: string; value: string }) {
-  const [visible, setVisible] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
-    }
-  };
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <div className="flex items-center gap-2">
-        <Input
-          readOnly
-          type={visible ? "text" : "password"}
-          value={value}
-          className="font-mono text-sm"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "Hide password" : "Show password"}
-        >
-          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </Button>
-        <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label="Copy password">
-          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function ColorSwatch({ label, value }: { label: string; value: string }) {
   return (
