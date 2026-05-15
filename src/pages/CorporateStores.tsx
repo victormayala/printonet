@@ -807,6 +807,8 @@ function StoreFormFields({
   setLogo,
   favicon,
   setFavicon,
+  footerLogo,
+  setFooterLogo,
   existing,
   onClearExisting,
   hideCustomDomain,
@@ -818,11 +820,14 @@ function StoreFormFields({
   setLogo: (f: File | null) => void;
   favicon: File | null;
   setFavicon: (f: File | null) => void;
+  footerLogo?: File | null;
+  setFooterLogo?: (f: File | null) => void;
   existing?: {
     logo_url: string | null;
     favicon_url: string | null;
+    secondary_logo_url?: string | null;
   };
-  onClearExisting?: (kind: "logo" | "favicon") => void;
+  onClearExisting?: (kind: "logo" | "favicon" | "footer") => void;
   hideCustomDomain?: boolean;
 }) {
   return (
@@ -930,6 +935,16 @@ function StoreFormFields({
             onClearExisting={onClearExisting ? () => onClearExisting("favicon") : undefined}
             hint="32×32 or 64×64 px, .ico/.png"
           />
+          {setFooterLogo && (
+            <LogoField
+              label="Footer logo (optional)"
+              value={footerLogo ?? null}
+              existingUrl={existing?.secondary_logo_url ?? null}
+              onChange={setFooterLogo}
+              onClearExisting={onClearExisting ? () => onClearExisting("footer") : undefined}
+              hint="Defaults to the main logo if left empty"
+            />
+          )}
         </div>
       </section>
     </div>
@@ -1459,20 +1474,23 @@ export function EditStoreDialog({
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
+  const [footerLogo, setFooterLogo] = useState<File | null>(null);
   const [existing, setExisting] = useState({
     logo_url: store.logo_url,
     favicon_url: store.favicon_url,
+    secondary_logo_url: store.secondary_logo_url,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) =>
     setValues((p) => ({ ...p, [k]: v }));
 
-  const onClearExisting = (kind: "logo" | "favicon") => {
+  const onClearExisting = (kind: "logo" | "favicon" | "footer") => {
     setExisting((p) => ({
       ...p,
       logo_url: kind === "logo" ? null : p.logo_url,
       favicon_url: kind === "favicon" ? null : p.favicon_url,
+      secondary_logo_url: kind === "footer" ? null : p.secondary_logo_url,
     }));
   };
 
@@ -1490,9 +1508,10 @@ export function EditStoreDialog({
       setErrors({});
       if (!user?.id) throw new Error("Not signed in");
 
-      const [newLogoUrl, newFaviconUrl] = await Promise.all([
+      const [newLogoUrl, newFaviconUrl, newFooterLogoUrl] = await Promise.all([
         logo ? uploadAsset(user.id, store.id, logo, "logo") : Promise.resolve(null),
         favicon ? uploadAsset(user.id, store.id, favicon, "favicon") : Promise.resolve(null),
+        footerLogo ? uploadAsset(user.id, store.id, footerLogo, "footer-logo") : Promise.resolve(null),
       ]);
 
       const { error: updateErr } = await supabase
@@ -1506,6 +1525,7 @@ export function EditStoreDialog({
           store_type: parsed.data.store_type,
           logo_url: newLogoUrl ?? existing.logo_url,
           favicon_url: newFaviconUrl ?? existing.favicon_url,
+          secondary_logo_url: newFooterLogoUrl ?? existing.secondary_logo_url,
         })
         .eq("id", store.id);
       if (updateErr) throw updateErr;
@@ -1539,6 +1559,8 @@ export function EditStoreDialog({
         setLogo={setLogo}
         favicon={favicon}
         setFavicon={setFavicon}
+        footerLogo={footerLogo}
+        setFooterLogo={setFooterLogo}
         existing={existing}
         onClearExisting={onClearExisting}
       />
