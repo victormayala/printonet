@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
+
+/**
+ * Customizer selector — rebuilt from scratch.
+ *
+ * Goals:
+ *  - One source of truth: the database. We always render exactly what the DB says.
+ *  - Per-row immediate save. No drafts, no batched UI, no "did it actually save?".
+ *  - After every save we re-read THAT row's value back from the DB and toast it,
+ *    so the user can see in the UI that what they tapped is what got persisted.
+ *  - Bulk enable / disable hits the DB then re-fetches.
+ */
 
 type Row = {
   id: string; // corporate_store_products.id
@@ -21,23 +32,26 @@ type Row = {
     category: string | null;
     base_price: number;
     image_front: string | null;
-  } | null;
+  };
 };
 
 export function StoreCustomizableProducts({ store }: { store: CorporateStore }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [draft, setDraft] = useState<Record<string, boolean>>({});
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { data: rows, isLoading } = useQuery({
-    queryKey: ["corporate_store_products_customizable", store.id],
+  const queryKey = ["store_customizer_flags", store.id];
+
+  const { data: rows = [], isLoading, refetch, isFetching } = useQuery<Row[]>({
+    queryKey,
     enabled: !!user?.id,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
-    queryFn: async (): Promise<Row[]> => {
+    staleTime: 0,
+    queryFn: async () => {
       const { data: links, error } = await supabase
         .from("corporate_store_products")
         .select("id,product_id,customizable")
@@ -52,97 +66,112 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         .in("id", ids);
       if (pErr) throw pErr;
       const pMap = new Map((prods ?? []).map((p) => [p.id, p]));
-      return (links ?? []).map((l) => ({
-        id: l.id,
-        product_id: l.product_id,
-        customizable: !!l.customizable,
-        product: pMap.get(l.product_id) ?? null,
-      })) as Row[];
+      return (links ?? [])
+        .map((l) => {
+          const product = pMap.get(l.product_id);
+          if (!product) return null;
+          return {
+            id: l.id,
+            product_id: l.product_id,
+            customizable: !!l.customizable,
+            product,
+          } as Row;
+        })
+        .filter((r): r is Row => r !== null)
+        .sort((a, b) => a.product.name.localeCompare(b.product.name));
     },
   });
 
-  useEffect(() => {
-    const next = Object.fromEntries((rows ?? []).map((r) => [r.id, r.customizable]));
-    setDraft(next);
-  }, [rows]);
-
   const filtered = useMemo(() => {
-    const list = (rows ?? [])
-      .filter((r) => !!r.product)
-      .map((r) => ({ ...r, customizable: draft[r.id] ?? r.customizable }));
     const q = search.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
+    if (!q) return rows;
+    return rows.filter(
       (r) =>
-        r.product!.name.toLowerCase().includes(q) ||
-        (r.product!.category ?? "").toLowerCase().includes(q),
+        r.product.name.toLowerCase().includes(q) ||
+        (r.product.category ?? "").toLowerCase().includes(q),
     );
   }, [rows, search]);
 
-  const toggle = (linkId: string, on: boolean) => {
-    setDraft((prev) => ({ ...prev, [linkId]: on }));
-  };
+  const enabledCount = rows.filter((r) => r.customizable).length;
 
-  const changedRows = (rows ?? []).filter((r) => (draft[r.id] ?? r.customizable) !== r.customizable);
+  /**
+   * Toggle one row, then re-read it from the DB to prove it stuck.
+   * Updates by primary key so there is no risk of touching a different row.
+   */
+  const toggleOne = async (row: Row, next: boolean) => {
+    if (pendingId) return;
+    setPendingId(row.id);
 
-  const saveChanges = async () => {
-    if (!user?.id || changedRows.length === 0) return;
-    setSaving(true);
+    // Optimistic UI
+    qc.setQueryData<Row[]>(queryKey, (prev) =>
+      (prev ?? []).map((r) => (r.id === row.id ? { ...r, customizable: next } : r)),
+    );
+
     try {
-      const enableIds = changedRows
-        .filter((r) => draft[r.id] === true)
-        .map((r) => r.product_id);
-      const disableIds = changedRows
-        .filter((r) => draft[r.id] !== true)
-        .map((r) => r.product_id);
+      const { data: updated, error } = await supabase
+        .from("corporate_store_products")
+        .update({ customizable: next })
+        .eq("id", row.id)
+        .select("id,customizable")
+        .single();
 
-      if (enableIds.length > 0) {
-        const { error } = await supabase
-          .from("corporate_store_products")
-          .update({ customizable: true })
-          .eq("store_id", store.id)
-          .eq("user_id", user.id)
-          .in("product_id", enableIds);
-        if (error) throw error;
-      }
+      if (error) throw error;
+      if (!updated) throw new Error("Row not updated (RLS or row missing)");
 
-      if (disableIds.length > 0) {
-        const { error } = await supabase
-          .from("corporate_store_products")
-          .update({ customizable: false })
-          .eq("store_id", store.id)
-          .eq("user_id", user.id)
-          .in("product_id", disableIds);
-        if (error) throw error;
-      }
+      // Reconcile with what the DB actually now holds.
+      qc.setQueryData<Row[]>(queryKey, (prev) =>
+        (prev ?? []).map((r) =>
+          r.id === updated.id ? { ...r, customizable: !!updated.customizable } : r,
+        ),
+      );
 
-      await qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
-      toast({ title: `Saved ${changedRows.length} customizer change${changedRows.length === 1 ? "" : "s"}` });
-    } catch (e) {
       toast({
-        title: "Could not save changes",
-        description: e instanceof Error ? e.message : undefined,
+        title: updated.customizable ? "Customizer enabled" : "Customizer disabled",
+        description: row.product.name,
+      });
+    } catch (e) {
+      // Revert and surface
+      await refetch();
+      toast({
+        title: "Could not save",
+        description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setPendingId(null);
     }
   };
 
-  const allEnabled = filtered.length > 0 && filtered.every((r) => r.customizable);
-  const someEnabled =
-    filtered.length > 0 && filtered.some((r) => r.customizable) && !allEnabled;
-
-  const toggleAll = (on: boolean) => {
-    const targets = filtered.filter((r) => r.customizable !== on);
+  const setAllVisible = async (next: boolean) => {
+    if (bulkBusy || !user?.id) return;
+    const targets = filtered.filter((r) => r.customizable !== next);
     if (targets.length === 0) return;
-    setDraft((prev) => ({
-      ...prev,
-      ...Object.fromEntries(targets.map((r) => [r.id, on])),
-    }));
-  };
+    setBulkBusy(true);
 
-  const enabledCount = (rows ?? []).filter((r) => draft[r.id] ?? r.customizable).length;
+    try {
+      const ids = targets.map((r) => r.id);
+      const { error } = await supabase
+        .from("corporate_store_products")
+        .update({ customizable: next })
+        .in("id", ids);
+      if (error) throw error;
+
+      await qc.invalidateQueries({ queryKey });
+      toast({
+        title: next
+          ? `Enabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`
+          : `Disabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`,
+      });
+    } catch (e) {
+      toast({
+        title: "Bulk update failed",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const storefrontUrl = store.tenant_slug
     ? `${window.location.origin}/s/${store.tenant_slug}`
@@ -164,12 +193,22 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               <Package className="h-5 w-5" /> Customizable products
             </CardTitle>
             <CardDescription>
-              Tick a product to enable the "Customize" button on its storefront page.
-              Review your selections, then click Save customizer flags to publish the changes.
-              Use "Push products" to add or remove products from the store catalog itself.
+              Flip a switch to enable the "Customize" button on the storefront.
+              Changes save instantly and the live storefront picks them up on next load.
             </CardDescription>
           </div>
-          <Badge variant="secondary">{enabledCount} customizable</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{enabledCount} of {rows.length} enabled</Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh from database"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </div>
 
         {storefrontUrl && (
@@ -206,33 +245,44 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            No products in this store yet. Use "Push products" to add some.
+            {rows.length === 0
+              ? "No products in this store yet. Use \"Push products\" to add some."
+              : "No products match your search."}
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 p-2 mb-2 rounded-md border bg-muted/30">
-              <Checkbox
-                checked={allEnabled ? true : someEnabled ? "indeterminate" : false}
-                disabled={saving}
-                onCheckedChange={(v) => toggleAll(!!v)}
-              />
+            <div className="flex items-center justify-between gap-3 p-2 mb-2 rounded-md border bg-muted/30">
               <span className="text-sm font-medium">
-                Select all {search ? "(filtered)" : ""} ({filtered.length})
+                {search ? `${filtered.length} match${filtered.length === 1 ? "" : "es"}` : `${filtered.length} product${filtered.length === 1 ? "" : "s"}`}
               </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={bulkBusy || filtered.every((r) => r.customizable)}
+                  onClick={() => setAllVisible(true)}
+                >
+                  Enable all{search ? " (filtered)" : ""}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={bulkBusy || filtered.every((r) => !r.customizable)}
+                  onClick={() => setAllVisible(false)}
+                >
+                  Disable all{search ? " (filtered)" : ""}
+                </Button>
+              </div>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {filtered.map((r) => {
-                const p = r.product!;
+                const p = r.product;
+                const busy = pendingId === r.id;
                 return (
                   <div
                     key={r.id}
                     className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/40"
                   >
-                    <Checkbox
-                      checked={r.customizable}
-                      disabled={saving}
-                      onCheckedChange={(v) => toggle(r.id, !!v)}
-                    />
                     <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0 flex items-center justify-center">
                       {p.image_front ? (
                         <img src={p.image_front} alt="" className="h-full w-full object-cover" />
@@ -246,20 +296,18 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                         {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
                       </p>
                     </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                      <Switch
+                        checked={r.customizable}
+                        disabled={busy || bulkBusy}
+                        onCheckedChange={(v) => toggleOne(r, v)}
+                        aria-label={`Toggle customizer for ${p.name}`}
+                      />
+                    </div>
                   </div>
                 );
               })}
-            </div>
-            <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-3 border-t bg-background/95 py-3">
-              <p className="text-sm text-muted-foreground">
-                {changedRows.length === 0
-                  ? "No unsaved changes"
-                  : `${changedRows.length} unsaved change${changedRows.length === 1 ? "" : "s"}`}
-              </p>
-              <Button onClick={saveChanges} disabled={saving || changedRows.length === 0}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                Save customizer flags
-              </Button>
             </div>
           </>
         )}
