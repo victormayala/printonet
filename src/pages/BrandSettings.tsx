@@ -181,9 +181,10 @@ export default function BrandSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const payload = {
+      const payload: any = {
         name: config.name || null,
         logo_url: config.logoUrl || null,
+        logo_dark_url: config.logoDarkUrl || null,
         theme: config.theme,
         primary_color: config.primaryColor,
         accent_color: config.accentColor,
