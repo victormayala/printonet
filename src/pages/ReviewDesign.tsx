@@ -3,16 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
+import { transferHostedCartToWoo } from "@/lib/wooCart";
+import {
+  extractWooColorSelection,
+  matchVariantFromWooColor,
+  type WooMatchVariant,
+} from "@/lib/woo-variant-match";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle, ArrowLeft, Minus, Plus, ShoppingCart } from "lucide-react";
-
-type WooMatchVariant = {
-  color?: string;
-  colorName?: string;
-  hex?: string;
-  image?: string;
-  sizes?: Array<{ size: string; price: number; qty?: number; sku?: string }>;
-};
 
 interface DesignSide {
   view: string;
@@ -111,8 +109,20 @@ export default function ReviewDesign() {
   const designOutput = session?.design_output as DesignOutput | null;
 
   const variant = useMemo((): DesignVariant | null => {
-    return designOutput?.variant ?? null;
-  }, [designOutput]);
+    const fromOutput = designOutput?.variant ?? null;
+    if (fromOutput && (fromOutput.hex || fromOutput.colorName || fromOutput.color)) {
+      return fromOutput;
+    }
+    const pd = session?.product_data as Record<string, unknown> | undefined;
+    if (!pd) return null;
+    const variants = pd.variants as WooMatchVariant[] | undefined;
+    const wc = pd.wc_attributes as Record<string, string> | undefined;
+    if (!variants?.length || !wc || typeof wc !== "object") return null;
+    const wooColor = extractWooColorSelection(wc);
+    if (!wooColor) return null;
+    const m = matchVariantFromWooColor(variants, wooColor);
+    return m ? { color: m.color, colorName: m.colorName, hex: m.hex, sizes: m.sizes } : null;
+  }, [session, designOutput]);
   const variantSizes: VariantSize[] = useMemo(
     () => (Array.isArray(variant?.sizes) ? variant!.sizes! : []),
     [variant]
@@ -228,20 +238,57 @@ export default function ReviewDesign() {
       }
     }
 
-    // Local hosted cart only. External Woo transfer removed.
-    addItem({
-      sessionId: sessionId || "",
-      productName,
-      variant: variantWithSize,
+    /** Same shape the storefront SDK passes into WooCommerce wc-ajax=add_to_cart */
+    const wooSyncPayload = {
+      ...(designOutput ?? { sides: [] }),
       quantity,
-      previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
-      priceInCents,
-      printFileUrl: printFileUrl || undefined,
-      designLayersUrl: designLayersUrl || undefined,
+      sessionId,
+      selectedSize,
+      ...(wcProductId ? { wcProductId } : {}),
+      ...(wcVariationId ? { wcVariationId } : {}),
+      ...(wcAttributes ? { wcAttributes } : {}),
+    };
+    const storeOrigin = resolveStoreOrigin();
+
+    // Preferred path: send directly to Woo from this screen.
+    if (storeOrigin) {
+      setSendingToWoo(true);
+      setTransferDebug(`attempting transfer to ${storeOrigin}`);
+      const transfer = await transferHostedCartToWoo(storeOrigin, [
+        {
+          wcProductId: wcProductId || undefined,
+          wcVariationId: wcVariationId || undefined,
+          wcAttributes,
+          productName,
+          quantity,
+          sessionId: sessionId || "",
+          previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
+          printFileUrl: printFileUrl || undefined,
+          designLayersUrl: designLayersUrl || undefined,
+        },
+      ]);
+      if (transfer.ok && transfer.redirectUrl) {
+        setTransferDebug(`transfer ok -> ${transfer.redirectUrl}`);
+        setAddedToCart(true);
+        window.location.href = transfer.redirectUrl;
+        return;
+      }
+      setSendingToWoo(false);
+      setTransferDebug(`transfer failed: ${transfer.error || "unknown_error"}`);
+      toast({
+        variant: "destructive",
+        title: "Direct Woo transfer failed",
+        description: transfer.error || "No redirect URL returned from store.",
+      });
+      return;
+    }
+
+    setTransferDebug("no store origin detected");
+    toast({
+      variant: "destructive",
+      title: "No store origin detected",
+      description: "Cannot send directly to Woo from this screen.",
     });
-    setAddedToCart(true);
-    setTransferDebug("added to local cart");
-    toast({ title: "Added to cart", description: productName });
     return;
 
   };

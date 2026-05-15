@@ -406,6 +406,7 @@ interface InitialDesignOutput {
 
 import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
 import { resolveGalleryImageForView } from "@/lib/variant-gallery";
+import { extractWooColorSelection, matchVariantFromWooColor } from "@/lib/woo-variant-match";
 
 interface DesignStudioProps {
   embedMode?: boolean;
@@ -743,6 +744,25 @@ export default function DesignStudio({
       return;
     }
 
+    // WooCommerce embed: pre-select the variant matching the customer's color choice from the cart attributes
+    const wcAttrs = (embedProductData as any)?.wc_attributes;
+    const variants = ep.variants || [];
+    if (wcAttrs && typeof wcAttrs === "object" && variants.length > 0) {
+      const wooColor = extractWooColorSelection(wcAttrs as Record<string, string>);
+      if (wooColor) {
+        const matched = matchVariantFromWooColor(variants as any, wooColor);
+        if (matched) {
+          setSelectedVariant({
+            color: matched.color || matched.colorName,
+            colorName: matched.colorName || matched.color,
+            hex: matched.hex,
+            image: (matched as any).image,
+            gallery: Array.isArray((matched as any).gallery) ? ((matched as any).gallery as string[]) : undefined,
+            sizes: (matched as any).sizes,
+          } as any);
+        }
+      }
+    }
   }, [embedMode, embedProductData, sessionId, initialDesignOutput]);
 
   // Get current background image URL
