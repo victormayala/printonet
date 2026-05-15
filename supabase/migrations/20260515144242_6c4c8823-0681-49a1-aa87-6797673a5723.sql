@@ -1,0 +1,1 @@
+ALTER TABLE public.corporate_store_products ADD COLUMN IF NOT EXISTS customizable boolean NOT NULL DEFAULT false;

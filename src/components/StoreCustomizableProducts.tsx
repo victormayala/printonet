@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, Upload } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,15 +9,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { CorporateStore, resolveTenantSlug } from "@/types/corporateStore";
+import { CorporateStore } from "@/types/corporateStore";
 
-type InventoryProduct = {
-  id: string;
-  name: string;
-  category: string | null;
-  base_price: number;
-  image_front: string | null;
-  is_active: boolean;
+type Row = {
+  id: string; // corporate_store_products.id
+  product_id: string;
+  customizable: boolean;
+  product: {
+    id: string;
+    name: string;
+    category: string | null;
+    base_price: number;
+    image_front: string | null;
+  } | null;
 };
 
 export function StoreCustomizableProducts({ store }: { store: CorporateStore }) {
@@ -26,70 +30,43 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
-  const { data: products, isLoading: loadingProducts } = useQuery({
-    queryKey: ["inventory_products", user?.id],
+  const { data: rows, isLoading } = useQuery({
+    queryKey: ["corporate_store_products_customizable", store.id],
     enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("inventory_products")
-        .select("id,name,category,base_price,image_front,is_active")
-        .eq("user_id", user!.id)
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return (data ?? []) as InventoryProduct[];
-    },
-  });
-
-  const { data: links, isLoading: loadingLinks } = useQuery({
-    queryKey: ["corporate_store_products", store.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<Row[]> => {
       const { data, error } = await supabase
         .from("corporate_store_products")
-        .select("id,product_id,is_active")
-        .eq("store_id", store.id);
+        .select(
+          "id,product_id,customizable,product:inventory_products(id,name,category,base_price,image_front)",
+        )
+        .eq("store_id", store.id)
+        .eq("is_active", true);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as Row[];
     },
   });
 
-  const enabledMap = useMemo(() => {
-    const m = new Map<string, { id: string; is_active: boolean }>();
-    (links ?? []).forEach((l) => m.set(l.product_id, { id: l.id, is_active: l.is_active }));
-    return m;
-  }, [links]);
+  const filtered = useMemo(() => {
+    const list = (rows ?? []).filter((r) => !!r.product);
+    const q = search.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(
+      (r) =>
+        r.product!.name.toLowerCase().includes(q) ||
+        (r.product!.category ?? "").toLowerCase().includes(q),
+    );
+  }, [rows, search]);
 
-  const toggle = async (productId: string, on: boolean) => {
-    if (!user?.id) return;
-    setSavingId(productId);
+  const toggle = async (linkId: string, on: boolean) => {
+    setSavingId(linkId);
     try {
-      const existing = enabledMap.get(productId);
-      if (on) {
-        if (existing) {
-          const { error } = await supabase
-            .from("corporate_store_products")
-            .update({ is_active: true })
-            .eq("id", existing.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from("corporate_store_products").insert({
-            store_id: store.id,
-            product_id: productId,
-            user_id: user.id,
-            is_active: true,
-          });
-          if (error) throw error;
-        }
-      } else if (existing) {
-        const { error } = await supabase
-          .from("corporate_store_products")
-          .delete()
-          .eq("id", existing.id);
-        if (error) throw error;
-      }
-      qc.invalidateQueries({ queryKey: ["corporate_store_products", store.id] });
+      const { error } = await supabase
+        .from("corporate_store_products")
+        .update({ customizable: on })
+        .eq("id", linkId);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
     } catch (e) {
       toast({
         title: "Could not update",
@@ -101,16 +78,36 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     }
   };
 
-  const filtered = useMemo(() => {
-    if (!products) return [];
-    const q = search.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(
-      (p) => p.name.toLowerCase().includes(q) || (p.category ?? "").toLowerCase().includes(q),
-    );
-  }, [products, search]);
+  const allEnabled = filtered.length > 0 && filtered.every((r) => r.customizable);
+  const someEnabled =
+    filtered.length > 0 && filtered.some((r) => r.customizable) && !allEnabled;
 
-  const enabledCount = Array.from(enabledMap.values()).filter((l) => l.is_active).length;
+  const toggleAll = async (on: boolean) => {
+    const targets = filtered.filter((r) => r.customizable !== on);
+    if (targets.length === 0) return;
+    setSavingId("__bulk__");
+    try {
+      const { error } = await supabase
+        .from("corporate_store_products")
+        .update({ customizable: on })
+        .in(
+          "id",
+          targets.map((r) => r.id),
+        );
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
+    } catch (e) {
+      toast({
+        title: "Could not update",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const enabledCount = (rows ?? []).filter((r) => r.customizable).length;
 
   const storefrontUrl = store.tenant_slug
     ? `${window.location.origin}/s/${store.tenant_slug}`
@@ -123,74 +120,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const syncToStore = async () => {
-    const tenantSlug = resolveTenantSlug(store);
-    if (!tenantSlug) {
-      toast({
-        title: "Missing tenant slug",
-        description: "This store has no tenant_slug or site URL configured.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const allIds = (products ?? []).map((p) => p.id);
-    const customizableIds = Array.from(enabledMap.entries())
-      .filter(([, v]) => v.is_active)
-      .map(([pid]) => pid);
-    if (allIds.length === 0) {
-      toast({ title: "No products to sync", description: "Add products first.", variant: "destructive" });
-      return;
-    }
-    setSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
-        body: {
-          tenant_slug: tenantSlug,
-          custom_domain: store.custom_domain ?? undefined,
-          product_ids: allIds,
-          mode: "incremental",
-          customizable_product_ids: customizableIds,
-          customizer_base_url: window.location.origin,
-        },
-      });
-      if (error) throw new Error(error.message);
-      const res = (data ?? {}) as { ok?: boolean; error?: string; detail?: string };
-      if (res.ok === false || res.error) {
-        throw new Error([res.error, res.detail].filter(Boolean).join(" — ") || "Sync failed");
-      }
-      toast({
-        title: "Synced to store",
-        description: `${allIds.length} product${allIds.length === 1 ? "" : "s"} pushed (${customizableIds.length} customizable).`,
-      });
-    } catch (e) {
-      toast({
-        title: "Sync failed",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const allEnabled =
-    (filtered?.length ?? 0) > 0 &&
-    filtered.every((p) => enabledMap.get(p.id)?.is_active);
-  const someEnabled =
-    (filtered?.length ?? 0) > 0 &&
-    filtered.some((p) => enabledMap.get(p.id)?.is_active) &&
-    !allEnabled;
-
-  const toggleAll = async (on: boolean) => {
-    for (const p of filtered) {
-      const isOn = !!enabledMap.get(p.id)?.is_active;
-      if (isOn !== on) {
-        // eslint-disable-next-line no-await-in-loop
-        await toggle(p.id, on);
-      }
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -200,24 +129,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               <Package className="h-5 w-5" /> Customizable products
             </CardTitle>
             <CardDescription>
-              Toggle which of this store's products can be personalized in the customizer.
-              All products in your catalog show in the storefront — this only controls the
-              "Customize" button.
+              Of the products already pushed to this store, choose which ones get a
+              "Customize" button. Use "Push products" to add or remove products from
+              the store itself.
             </CardDescription>
           </div>
-          <Badge variant="secondary">
-            {enabledCount} enabled
-          </Badge>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <Button size="sm" onClick={syncToStore} disabled={syncing || (products?.length ?? 0) === 0}>
-            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            Sync to store
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            Pushes all your products to {store.name}; only the checked ones get the customizer.
-          </span>
+          <Badge variant="secondary">{enabledCount} customizable</Badge>
         </div>
 
         {storefrontUrl && (
@@ -248,13 +165,13 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           />
         </div>
 
-        {loadingProducts || loadingLinks ? (
+        {isLoading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Loading…
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            No products found. Add products in the Products tab first.
+            No products in this store yet. Use "Push products" to add some.
           </div>
         ) : (
           <>
@@ -267,38 +184,37 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                 Select all {search ? "(filtered)" : ""} ({filtered.length})
               </span>
             </label>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {filtered.map((p) => {
-              const link = enabledMap.get(p.id);
-              const enabled = !!link?.is_active;
-              return (
-                <label
-                  key={p.id}
-                  className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/40 cursor-pointer"
-                >
-                  <Checkbox
-                    checked={enabled}
-                    disabled={savingId === p.id}
-                    onCheckedChange={(v) => toggle(p.id, !!v)}
-                  />
-                  <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                    {p.image_front ? (
-                      <img src={p.image_front} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
-                    </p>
-                  </div>
-                  {savingId === p.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                </label>
-              );
-            })}
-          </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {filtered.map((r) => {
+                const p = r.product!;
+                return (
+                  <label
+                    key={r.id}
+                    className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/40 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={r.customizable}
+                      disabled={savingId === r.id || savingId === "__bulk__"}
+                      onCheckedChange={(v) => toggle(r.id, !!v)}
+                    />
+                    <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0 flex items-center justify-center">
+                      {p.image_front ? (
+                        <img src={p.image_front} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{p.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
+                      </p>
+                    </div>
+                    {savingId === r.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  </label>
+                );
+              })}
+            </div>
           </>
         )}
       </CardContent>

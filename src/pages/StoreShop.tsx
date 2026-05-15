@@ -41,28 +41,42 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
       }
       setStore(s as CorporateStore);
 
-      // Show ALL active products owned by the store owner. The
-      // corporate_store_products table only flags which ones are customizable.
-      const { data: prods } = await supabase
-        .from("inventory_products")
-        .select("id,name,category,base_price,image_front")
-        .eq("user_id", s.user_id)
-        .eq("is_active", true)
-        .order("name");
-
-      if (cancelled) return;
-      const productList = (prods ?? []) as ProductLite[];
-
+      // Only show products that have been pushed to this store. The
+      // `customizable` flag on the link decides whether the Customize button shows.
       const { data: links } = await supabase
         .from("corporate_store_products")
-        .select("product_id")
+        .select("product_id,customizable,sort_order")
         .eq("store_id", s.id)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("sort_order");
 
-      const customizableIds = new Set((links ?? []).map((l) => l.product_id));
-      setProducts(
-        productList.map((p) => ({ ...p, customizable: customizableIds.has(p.id) })),
+      const productIds = (links ?? []).map((l) => l.product_id);
+      const customizableMap = new Map<string, boolean>(
+        (links ?? []).map((l) => [l.product_id, !!l.customizable]),
       );
+
+      let prods: Array<{
+        id: string;
+        name: string;
+        category: string | null;
+        base_price: number;
+        image_front: string | null;
+      }> = [];
+      if (productIds.length > 0) {
+        const { data } = await supabase
+          .from("inventory_products")
+          .select("id,name,category,base_price,image_front")
+          .in("id", productIds)
+          .eq("is_active", true);
+        prods = data ?? [];
+      }
+
+      if (cancelled) return;
+      const orderIndex = new Map(productIds.map((id, i) => [id, i]));
+      const productList: ProductLite[] = prods
+        .map((p) => ({ ...p, customizable: customizableMap.get(p.id) ?? false }))
+        .sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
+      setProducts(productList);
     })();
     return () => {
       cancelled = true;
