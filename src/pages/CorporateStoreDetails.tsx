@@ -124,6 +124,7 @@ import { CorporateStore } from "@/types/corporateStore";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
+import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
 function StatusBadge({ status }: { status: CorporateStore["status"] }) {
@@ -216,6 +217,7 @@ export default function CorporateStoreDetails() {
   const [editOpen, setEditOpen] = useState(false);
   const [domainDraft, setDomainDraft] = useState("");
   const [savingDomain, setSavingDomain] = useState(false);
+  const [editBrandingOpen, setEditBrandingOpen] = useState(false);
 
   const openEditDomain = () => {
     setDomainDraft(store?.custom_domain ?? "");
@@ -495,9 +497,14 @@ export default function CorporateStoreDetails() {
 
         {/* Branding */}
         <Card>
-          <CardHeader>
-            <CardTitle>Branding</CardTitle>
-            <CardDescription>Theme tokens applied to the storefront.</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+            <div>
+              <CardTitle>Branding</CardTitle>
+              <CardDescription>Theme tokens applied to the storefront.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setEditBrandingOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" /> Edit branding
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -550,6 +557,17 @@ export default function CorporateStoreDetails() {
       <StoreCustomizerSettings storeName={store.name} />
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
+
+      <Dialog open={editBrandingOpen} onOpenChange={setEditBrandingOpen}>
+        <EditStoreDialog
+          store={store}
+          onSaved={() => {
+            setEditBrandingOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
+            queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+          }}
+        />
+      </Dialog>
 
       <AlertDialog open={confirmPause} onOpenChange={setConfirmPause}>
         <AlertDialogContent>
