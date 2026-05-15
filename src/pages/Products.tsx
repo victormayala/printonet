@@ -3153,10 +3153,14 @@ function VariantManagerDialog({
     );
   };
 
+  // Reset prefers product.base_price (the supplier cost) over any previously
+  // sealed `cost` — older edits could seal an inflated price as cost.
   const resetSizeToCost = (s: any) => {
+    if (productBasePrice > 0) {
+      return { ...s, cost: productBasePrice, price: productBasePrice };
+    }
     const cost = Number(s?.cost);
     if (cost > 0) return { ...s, price: cost };
-    if (productBasePrice > 0) return { ...s, price: productBasePrice };
     return s;
   };
 
