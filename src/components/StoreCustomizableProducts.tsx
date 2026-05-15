@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus } from "lucide-react";
+import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pushOpen, setPushOpen] = useState(false);
 
   const queryKey = ["store_customizer_flags", store.id];
 
@@ -274,10 +276,13 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       <CardHeader>
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" /> Customizable products
+            <Package className="h-5 w-5" /> Store products
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">{enabledCount} of {rows.length} enabled</Badge>
+            <Badge variant="secondary">{rows.length} in store · {enabledCount} customizable</Badge>
+            <Button size="sm" onClick={() => setPushOpen(true)}>
+              <Plus className="h-3.5 w-3.5" /> Add products
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -308,8 +313,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           </div>
         </div>
         <CardDescription>
-          Flip a switch to enable the "Customize" button on the storefront.
-          Changes save instantly and the live storefront picks them up on next load.
+          Products listed below have been pushed to this store. Use <span className="font-medium text-foreground">Add products</span> to send more from your inventory.
+          Flip a switch to enable the "Customize" button on the storefront — changes save instantly.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -328,10 +333,17 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Loading…
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            {rows.length === 0
-              ? "No products in this store yet. Use \"Push products\" to add some."
-              : "No products match your search."}
+          <div className="py-10 text-center text-sm text-muted-foreground space-y-3">
+            {rows.length === 0 ? (
+              <>
+                <p>No products in this store yet.</p>
+                <Button size="sm" onClick={() => setPushOpen(true)}>
+                  <Plus className="h-3.5 w-3.5" /> Add products
+                </Button>
+              </>
+            ) : (
+              <p>No products match your search.</p>
+            )}
           </div>
         ) : (
           <>
@@ -396,6 +408,14 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           </>
         )}
       </CardContent>
+      <PushProductsDialog
+        store={store}
+        open={pushOpen}
+        onOpenChange={(v) => {
+          setPushOpen(v);
+          if (!v) qc.invalidateQueries({ queryKey });
+        }}
+      />
     </Card>
   );
 }
