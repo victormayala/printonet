@@ -383,6 +383,239 @@ Deno.serve(async (req) => {
         return json(200, { recorded: true, duplicate: false });
       }
 
+      case "upsert_customer": {
+        const storeId = String(params.store_id ?? "");
+        const authUserId = String(params.auth_user_id ?? "");
+        const email = String(params.email ?? "").trim().toLowerCase();
+        if (!storeId || !authUserId || !email) {
+          return json(400, { error: "store_id_auth_user_id_email_required" });
+        }
+        const patch: Record<string, unknown> = {
+          store_id: storeId,
+          auth_user_id: authUserId,
+          email,
+          updated_at: new Date().toISOString(),
+        };
+        if (params.full_name !== undefined) patch.full_name = params.full_name;
+        if (params.phone !== undefined) patch.phone = params.phone;
+        const { data, error } = await supabase
+          .from("customer_profiles")
+          .upsert(patch, { onConflict: "store_id,auth_user_id" })
+          .select("*")
+          .single();
+        if (error) throw error;
+        return json(200, { customer: data });
+      }
+
+      case "list_customers": {
+        const storeId = String(params.store_id ?? "");
+        if (!storeId) return json(400, { error: "store_id_required" });
+        const search = String(params.search ?? "").trim().toLowerCase();
+        const limit = Math.min(Number(params.limit ?? 200), 1000);
+        let q = supabase
+          .from("customer_profiles")
+          .select("*")
+          .eq("store_id", storeId)
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        if (search) q = q.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
+        const { data, error } = await q;
+        if (error) throw error;
+        return json(200, { customers: data ?? [] });
+      }
+
+      case "get_customer": {
+        const customerId = String(params.customer_id ?? "");
+        const storeId = String(params.store_id ?? "");
+        const authUserId = String(params.auth_user_id ?? "");
+        let q = supabase.from("customer_profiles").select("*");
+        if (customerId) q = q.eq("id", customerId);
+        else if (storeId && authUserId) q = q.eq("store_id", storeId).eq("auth_user_id", authUserId);
+        else return json(400, { error: "customer_id_or_store_and_auth_user_required" });
+        const { data, error } = await q.maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "customer_not_found" });
+        return json(200, { customer: data });
+      }
+
+      case "set_customer_disabled": {
+        const customerId = String(params.customer_id ?? "");
+        const disabled = Boolean(params.disabled);
+        if (!customerId) return json(400, { error: "customer_id_required" });
+        const { data, error } = await supabase
+          .from("customer_profiles")
+          .update({ disabled_at: disabled ? new Date().toISOString() : null })
+          .eq("id", customerId)
+          .select("*")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "customer_not_found" });
+        return json(200, { customer: data });
+      }
+
+      case "delete_customer": {
+        const customerId = String(params.customer_id ?? "");
+        if (!customerId) return json(400, { error: "customer_id_required" });
+        const { error } = await supabase
+          .from("customer_profiles")
+          .delete()
+          .eq("id", customerId);
+        if (error) throw error;
+        return json(200, { ok: true });
+      }
+
+      case "list_customer_addresses": {
+        const customerId = String(params.customer_id ?? "");
+        if (!customerId) return json(400, { error: "customer_id_required" });
+        const { data, error } = await supabase
+          .from("customer_addresses")
+          .select("*")
+          .eq("customer_id", customerId)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return json(200, { addresses: data ?? [] });
+      }
+
+      case "upsert_customer_address": {
+        const address = (params.address ?? {}) as Record<string, unknown>;
+        const id = address.id ? String(address.id) : null;
+        const customerId = String(address.customer_id ?? "");
+        const storeId = String(address.store_id ?? "");
+        if (!customerId || !storeId) return json(400, { error: "customer_id_and_store_id_required" });
+        if (!id && !address.line1) return json(400, { error: "line1_required" });
+
+        const allowed = [
+          "label", "full_name", "line1", "line2", "city", "region",
+          "postal_code", "country", "phone", "is_default_shipping", "is_default_billing",
+        ];
+        const row: Record<string, unknown> = {
+          customer_id: customerId,
+          store_id: storeId,
+          updated_at: new Date().toISOString(),
+        };
+        for (const k of allowed) if (k in address) row[k] = address[k];
+
+        // If this address is being marked as default, clear others first.
+        if (row.is_default_shipping === true) {
+          await supabase
+            .from("customer_addresses")
+            .update({ is_default_shipping: false })
+            .eq("customer_id", customerId);
+        }
+        if (row.is_default_billing === true) {
+          await supabase
+            .from("customer_addresses")
+            .update({ is_default_billing: false })
+            .eq("customer_id", customerId);
+        }
+
+        let result;
+        if (id) {
+          result = await supabase
+            .from("customer_addresses")
+            .update(row)
+            .eq("id", id)
+            .select("*")
+            .maybeSingle();
+        } else {
+          result = await supabase
+            .from("customer_addresses")
+            .insert(row)
+            .select("*")
+            .single();
+        }
+        if (result.error) throw result.error;
+        return json(200, { address: result.data });
+      }
+
+      case "delete_customer_address": {
+        const addressId = String(params.address_id ?? "");
+        if (!addressId) return json(400, { error: "address_id_required" });
+        const { error } = await supabase
+          .from("customer_addresses")
+          .delete()
+          .eq("id", addressId);
+        if (error) throw error;
+        return json(200, { ok: true });
+      }
+
+      case "list_customer_orders": {
+        const customerId = String(params.customer_id ?? "");
+        const storeId = String(params.store_id ?? "");
+        const limit = Math.min(Number(params.limit ?? 100), 500);
+        if (!customerId && !storeId) return json(400, { error: "customer_id_or_store_id_required" });
+
+        let email: string | null = null;
+        if (customerId) {
+          const { data: cust, error: custErr } = await supabase
+            .from("customer_profiles")
+            .select("email, store_id")
+            .eq("id", customerId)
+            .maybeSingle();
+          if (custErr) throw custErr;
+          if (!cust) return json(404, { error: "customer_not_found" });
+          email = cust.email;
+        }
+        let q = supabase
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        if (storeId) q = q.eq("store_id", storeId);
+        if (email) q = q.ilike("customer_email", email);
+        const { data: orders, error } = await q;
+        if (error) throw error;
+
+        const ids = (orders ?? []).map((o) => o.id);
+        let items: Record<string, unknown>[] = [];
+        if (ids.length > 0) {
+          const { data: itemRows, error: itemsErr } = await supabase
+            .from("order_items")
+            .select("*")
+            .in("order_id", ids);
+          if (itemsErr) throw itemsErr;
+          items = itemRows ?? [];
+        }
+        return json(200, { orders: orders ?? [], items });
+      }
+
+      case "customer_order_counts": {
+        const storeId = String(params.store_id ?? "");
+        const customerIds = Array.isArray(params.customer_ids) ? params.customer_ids as string[] : [];
+        if (!storeId) return json(400, { error: "store_id_required" });
+        if (customerIds.length === 0) return json(200, { counts: {} });
+
+        const { data: customers, error: cErr } = await supabase
+          .from("customer_profiles")
+          .select("id, email")
+          .in("id", customerIds);
+        if (cErr) throw cErr;
+        const emails = (customers ?? []).map((c) => c.email).filter(Boolean) as string[];
+        if (emails.length === 0) return json(200, { counts: {} });
+
+        const { data: orders, error: oErr } = await supabase
+          .from("orders")
+          .select("customer_email, amount_total")
+          .eq("store_id", storeId)
+          .in("customer_email", emails);
+        if (oErr) throw oErr;
+
+        const byEmail: Record<string, { count: number; total: number }> = {};
+        for (const o of orders ?? []) {
+          const k = (o.customer_email ?? "").toLowerCase();
+          if (!k) continue;
+          if (!byEmail[k]) byEmail[k] = { count: 0, total: 0 };
+          byEmail[k].count += 1;
+          byEmail[k].total += o.amount_total ?? 0;
+        }
+        const counts: Record<string, { count: number; total: number }> = {};
+        for (const c of customers ?? []) {
+          const k = (c.email ?? "").toLowerCase();
+          counts[c.id] = byEmail[k] ?? { count: 0, total: 0 };
+        }
+        return json(200, { counts });
+      }
+
       default:
         return json(400, { error: "unknown_op", op });
     }
