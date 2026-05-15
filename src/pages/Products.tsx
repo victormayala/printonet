@@ -513,11 +513,15 @@ function ProductForm({
 
   // Per-variant base cost = min non-zero SKU price; falls back to product base price.
   // Lets switching colors reflect actual cost (e.g. 2XL or color upcharges).
-  // Stable per-size cost: prefer explicit `cost`, fall back to current `price`
-  // (used before the user has applied pricing for the first time).
+  // Stable per-size cost: prefer explicit `cost` snapshot, then the form's
+  // base price, then current `price` as a last resort. The form's "Base price"
+  // field is treated as the authoritative supplier cost when no per-size cost
+  // has been sealed yet, so applying margin/fees never inflates the displayed
+  // base cost.
   const sizeCost = (s: any): number => {
     const c = Number(s?.cost);
     if (c > 0) return c;
+    if (productBaseCost > 0) return productBaseCost;
     return Number(s?.price) || 0;
   };
   const variantBaseCost = (v: any): number => {
