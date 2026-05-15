@@ -336,12 +336,6 @@ export default function CorporateStoreDetails() {
     );
   }
 
-  const adminUrl = store.store_admin_url || store.wp_admin_url;
-  const loginUrl =
-    store.store_login_url ||
-    (store.wp_site_url ? `${store.wp_site_url.replace(/\/$/, "")}/wp-login.php` : null);
-  const hasCreds =
-    !!adminUrl || !!loginUrl || !!store.admin_username || !!store.admin_password;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
@@ -387,13 +381,6 @@ export default function CorporateStoreDetails() {
               <Button asChild variant="outline">
                 <a href={store.wp_site_url} target="_blank" rel="noreferrer">
                   <Globe className="h-4 w-4" /> Visit store
-                </a>
-              </Button>
-            )}
-            {adminUrl && (
-              <Button asChild variant="outline">
-                <a href={adminUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-4 w-4" /> Open WP Admin
                 </a>
               </Button>
             )}
@@ -545,58 +532,6 @@ export default function CorporateStoreDetails() {
         </Card>
       </div>
 
-      {/* Credentials */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5" /> Admin credentials
-          </CardTitle>
-          <CardDescription>
-            Sign-in details delivered by the multi-tenant platform when this store was provisioned.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!hasCreds ? (
-            <div className="text-sm text-muted-foreground">
-              No credentials available yet. They will appear here once the platform finishes provisioning.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {adminUrl && (
-                  <Button asChild size="sm">
-                    <a href={adminUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-4 w-4" /> Open WP Admin
-                    </a>
-                  </Button>
-                )}
-                {loginUrl && (
-                  <Button asChild size="sm" variant="outline">
-                    <a href={loginUrl} target="_blank" rel="noreferrer">
-                      <LogIn className="h-4 w-4" /> Login page
-                    </a>
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {adminUrl && <CopyField label="Admin URL" value={adminUrl} mono />}
-                {loginUrl && <CopyField label="Login URL" value={loginUrl} mono />}
-                {store.admin_username && (
-                  <CopyField label="Username" value={store.admin_username} mono />
-                )}
-                {store.admin_password && (
-                  <PasswordCopyField label="Password" value={store.admin_password} />
-                )}
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Treat these credentials as sensitive. We recommend the store owner change the password after first login.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <StoreCustomizableProducts store={store} />
 
