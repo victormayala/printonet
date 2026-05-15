@@ -570,7 +570,7 @@ export default function CorporateStoreDetails() {
         </TabsContent>
       </Tabs>
 
-      <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
+      
 
       <Dialog open={editBrandingOpen} onOpenChange={setEditBrandingOpen}>
         <EditStoreDialog
