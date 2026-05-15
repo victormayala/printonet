@@ -403,7 +403,7 @@ export default function CorporateStores() {
   const [open, setOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
+  const activeTab = tabParam === "shopify" ? tabParam : "stores";
   const setActiveTab = (v: string) => {
     if (v === "stores") {
       searchParams.delete("tab");
@@ -577,9 +577,6 @@ export default function CorporateStores() {
           <Products initialTab="shopify" showStorefrontTabs hideTabsList />
         </TabsContent>
 
-        <TabsContent value="woocommerce" forceMount className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 data-[state=inactive]:hidden">
-          <Products initialTab="woocommerce" showStorefrontTabs hideTabsList />
-        </TabsContent>
       </Tabs>
     </div>
   );
