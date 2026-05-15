@@ -572,6 +572,10 @@ export default function CorporateStoreDetails() {
         <TabsContent value="customizer" className="mt-0">
           <StoreCustomizerSettings store={store} />
         </TabsContent>
+
+        <TabsContent value="customers" className="mt-0">
+          <StoreCustomers storeId={store.id} />
+        </TabsContent>
       </Tabs>
 
       
