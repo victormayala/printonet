@@ -41,28 +41,33 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
       }
       setStore(s as CorporateStore);
 
-      // Show ALL active products owned by the store owner. The
-      // corporate_store_products table only flags which ones are customizable.
-      const { data: prods } = await supabase
-        .from("inventory_products")
-        .select("id,name,category,base_price,image_front")
-        .eq("user_id", s.user_id)
-        .eq("is_active", true)
-        .order("name");
-
-      if (cancelled) return;
-      const productList = (prods ?? []) as ProductLite[];
-
+      // Only show products that have been pushed to this store. The
+      // `customizable` flag on the link decides whether the Customize button shows.
       const { data: links } = await supabase
         .from("corporate_store_products")
-        .select("product_id")
+        .select(
+          "product_id,customizable,sort_order,product:inventory_products(id,name,category,base_price,image_front,is_active)",
+        )
         .eq("store_id", s.id)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("sort_order");
 
-      const customizableIds = new Set((links ?? []).map((l) => l.product_id));
-      setProducts(
-        productList.map((p) => ({ ...p, customizable: customizableIds.has(p.id) })),
-      );
+      if (cancelled) return;
+      const productList: ProductLite[] = (links ?? [])
+        .map((l) => {
+          const p = (l as { product: ProductLite & { is_active: boolean } | null }).product;
+          if (!p || !p.is_active) return null;
+          return {
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            base_price: p.base_price,
+            image_front: p.image_front,
+            customizable: !!(l as { customizable: boolean }).customizable,
+          };
+        })
+        .filter((p): p is ProductLite => !!p);
+      setProducts(productList);
     })();
     return () => {
       cancelled = true;
