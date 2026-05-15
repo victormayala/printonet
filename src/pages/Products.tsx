@@ -3941,9 +3941,6 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             <ShopifyImport onDone={fetchProducts} />
           </TabsContent>
 
-          <TabsContent value="woocommerce" forceMount className="data-[state=inactive]:hidden">
-            <WooCommerceImport onDone={fetchProducts} />
-          </TabsContent>
 
           <TabsContent value="suppliers" forceMount className="data-[state=inactive]:hidden">
             <Tabs defaultValue="ssactivewear" className="w-full">
