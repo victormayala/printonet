@@ -110,6 +110,7 @@ export type Database = {
       corporate_store_products: {
         Row: {
           created_at: string
+          customizable: boolean
           id: string
           is_active: boolean
           product_id: string
@@ -120,6 +121,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customizable?: boolean
           id?: string
           is_active?: boolean
           product_id: string
@@ -130,6 +132,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customizable?: boolean
           id?: string
           is_active?: boolean
           product_id?: string
