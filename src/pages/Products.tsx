@@ -1081,9 +1081,14 @@ function ProductForm({
                                 <p className="text-[10px] text-muted-foreground">Final price</p>
                                 <p className="text-xl font-bold text-primary">${computeVariantFinalPrice(selectedVariant).toFixed(2)}</p>
                               </div>
-                              <Button type="button" size="sm" variant="secondary" onClick={() => applyFinalPriceToVariantSizes(selectedVariantIdx)}>
-                                Apply to all sizes
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button type="button" size="sm" variant="ghost" onClick={() => resetVariantPricesToSupplier(selectedVariantIdx)}>
+                                  Reset
+                                </Button>
+                                <Button type="button" size="sm" variant="secondary" onClick={() => applyFinalPriceToVariantSizes(selectedVariantIdx)}>
+                                  Apply to all sizes
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
