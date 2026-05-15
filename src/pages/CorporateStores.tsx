@@ -436,6 +436,7 @@ export default function CorporateStores() {
         <TabsList className="mb-2 w-full sm:w-auto flex-wrap">
           <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none"><Building2 className="h-4 w-4" /> My Stores</TabsTrigger>
           <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
+          <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stores" className="space-y-6">
