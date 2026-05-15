@@ -31,6 +31,7 @@ import LayersPreview from "./pages/LayersPreview";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import BillingReturn from "./pages/BillingReturn";
+import Customizer from "./pages/Customizer";
 
 const queryClient = new QueryClient();
 
