@@ -124,6 +124,7 @@ import { CorporateStore } from "@/types/corporateStore";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
+import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
 function StatusBadge({ status }: { status: CorporateStore["status"] }) {
