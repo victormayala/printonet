@@ -25,6 +25,7 @@ interface Props {
   store: CorporateStore & {
     customizer_theme?: string;
     customizer_border_radius?: number;
+    customizer_logo_dark_url?: string | null;
   };
 }
 
@@ -34,10 +35,12 @@ export function StoreBrandSettings({ store }: Props) {
   const { toast } = useToast();
   const previewRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const darkLogoInputRef = useRef<HTMLInputElement>(null);
 
   const initial: BrandConfig = {
     name: store.name || "",
     logoUrl: store.logo_url || "",
+    logoDarkUrl: (store as any).customizer_logo_dark_url || "",
     theme: ((store as any).customizer_theme === "light" ? "light" : "dark") as BrandConfig["theme"],
     primaryColor: store.primary_color || DEFAULT_BRAND_CONFIG.primaryColor,
     accentColor: store.accent_color || DEFAULT_BRAND_CONFIG.accentColor,
@@ -47,8 +50,9 @@ export function StoreBrandSettings({ store }: Props) {
 
   const [config, setConfig] = useState<BrandConfig>(initial);
   const [saving, setSaving] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState<"light" | "dark" | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [darkDragOver, setDarkDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
 
   useEffect(() => {
@@ -59,7 +63,7 @@ export function StoreBrandSettings({ store }: Props) {
 
   function update(p: Partial<BrandConfig>) { setConfig((prev) => ({ ...prev, ...p })); }
 
-  const handleLogoUpload = useCallback(async (file: File) => {
+  const handleLogoUpload = useCallback(async (file: File, variant: "light" | "dark" = "light") => {
     if (!file.type.startsWith("image/")) {
       toast({ title: "Invalid file", description: "Please upload an image (PNG, JPG, SVG)", variant: "destructive" });
       return;
@@ -68,19 +72,20 @@ export function StoreBrandSettings({ store }: Props) {
       toast({ title: "File too large", description: "Logo must be under 5MB", variant: "destructive" });
       return;
     }
-    setUploadingLogo(true);
+    setUploadingLogo(variant);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const path = `${user?.id}/stores/${store.id}/logo_${Date.now()}.${ext}`;
+      const path = `${user?.id}/stores/${store.id}/logo_${variant}_${Date.now()}.${ext}`;
       const { data, error } = await supabase.storage.from("brand-assets").upload(path, file, { contentType: file.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("brand-assets").getPublicUrl(data.path);
-      update({ logoUrl: urlData.publicUrl });
-      toast({ title: "Logo uploaded" });
+      if (variant === "dark") update({ logoDarkUrl: urlData.publicUrl });
+      else update({ logoUrl: urlData.publicUrl });
+      toast({ title: variant === "dark" ? "Dark-mode logo uploaded" : "Logo uploaded" });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
-      setUploadingLogo(false);
+      setUploadingLogo(null);
     }
   }, [toast, user?.id, store.id]);
 
