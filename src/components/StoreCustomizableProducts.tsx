@@ -93,6 +93,74 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   }, [rows, search]);
 
   const enabledCount = rows.filter((r) => r.customizable).length;
+  const [syncing, setSyncing] = useState(false);
+
+  /**
+   * Push the current set of enabled product ids to the tenant storefront so the
+   * `Customize` button shows up there. The storefront `/customizer-flags`
+   * endpoint is upsert+prune — whatever we send becomes the full set — so we
+   * always send EVERY currently-enabled product id, not just the one that was
+   * just toggled.
+   */
+  const syncFlagsToStorefront = async (enabledIds: string[]) => {
+    const slug =
+      store.tenant_slug ||
+      (store.wp_site_url
+        ? (() => {
+            try {
+              return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, "");
+            } catch {
+              return null;
+            }
+          })()
+        : null);
+    if (!slug) {
+      toast({
+        title: "Storefront not synced",
+        description: "Store has no tenant slug yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
+        body: {
+          tenant_slug: slug,
+          custom_domain: store.custom_domain || undefined,
+          mode: "incremental",
+          // Push every active store product so the storefront has full catalog
+          // info, but flag only the enabled ones as customizable.
+          product_ids: rows.map((r) => r.product_id),
+          customizable_product_ids: enabledIds,
+          customizer_base_url: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      const flagsRes = (data as any)?.flags_result;
+      const flagsErr = flagsRes && "error" in flagsRes ? flagsRes.error : null;
+      if (flagsErr) {
+        toast({
+          title: "Storefront flag sync failed",
+          description: String(flagsErr),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Storefront updated",
+          description: `${enabledIds.length} customizable product${enabledIds.length === 1 ? "" : "s"} pushed to ${slug}.`,
+        });
+      }
+    } catch (e) {
+      toast({
+        title: "Storefront sync failed",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   /**
    * Toggle one row, then re-read it from the DB to prove it stuck.
