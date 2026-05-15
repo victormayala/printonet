@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.import-shopify-products]
 verify_jwt = false
 
+[functions.import-woocommerce-products]
+verify_jwt = false
+
 [functions.upscale-design]
 verify_jwt = false
 
@@ -27,10 +30,25 @@ verify_jwt = false
 [functions.import-ssactivewear-products]
 verify_jwt = false
 
+[functions.export-to-woocommerce]
+verify_jwt = false
+
 [functions.export-to-shopify]
 verify_jwt = false
 
 [functions.import-sanmar-products]
+verify_jwt = false
+
+[functions.apply-store-branding]
+verify_jwt = false
+
+[functions.tenant-catalog-feed]
+verify_jwt = false
+
+[functions.printonet-woo-order-files]
+verify_jwt = false
+
+[functions.purge-unlinked-customizer-sessions]
 verify_jwt = false
 
 [functions.stripe-connect-onboard]
@@ -44,6 +62,22 @@ verify_jwt = false
 
 [functions.stripe-connect-login-link]
 verify_jwt = false
+
+[functions.woo-checkout-init]
+verify_jwt = false
+
+[functions.woo-checkout-complete]
+verify_jwt = false
+
+[functions.woo-connect-webhook]
+verify_jwt = false
+
+[functions.finalize-corporate-store]
+verify_jwt = false
+
+[functions.sync-corporate-store-domain]
+verify_jwt = false
+
 
 [functions.subscription-checkout]
 verify_jwt = false

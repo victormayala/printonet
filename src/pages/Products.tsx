@@ -1538,7 +1538,196 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
   );
 }
 
-// WooCommerceImport removed (WordPress integration deprecated)
+function WooCommerceImport({ onDone }: { onDone: () => void }) {
+  const { user } = useAuth();
+  const [siteUrl, setSiteUrl] = useState("");
+  const [consumerKey, setConsumerKey] = useState("");
+  const [consumerSecret, setConsumerSecret] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [integration, setIntegration] = useState<any>(null);
+  const [loadingIntegration, setLoadingIntegration] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const fetchIntegration = async () => {
+    if (!user) return;
+    setLoadingIntegration(true);
+    const { data } = await supabase
+      .from("store_integrations")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("platform", "woocommerce")
+      .maybeSingle();
+    setIntegration(data);
+    if (data) {
+      setSiteUrl(data.store_url);
+      setConsumerKey((data.credentials as any)?.consumer_key || "");
+      setConsumerSecret((data.credentials as any)?.consumer_secret || "");
+    }
+    setLoadingIntegration(false);
+  };
+
+  useEffect(() => { fetchIntegration(); }, [user]);
+
+  const handleConnect = async () => {
+    if (!siteUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()) {
+      toast({ title: "All fields are required", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const integrationPayload = {
+        user_id: user?.id,
+        platform: "woocommerce" as const,
+        store_url: siteUrl.trim().replace(/\/$/, ""),
+        credentials: { consumer_key: consumerKey.trim(), consumer_secret: consumerSecret.trim() },
+      };
+
+      if (integration) {
+        await supabase.from("store_integrations").update(integrationPayload).eq("id", integration.id);
+      } else {
+        await supabase.from("store_integrations").insert(integrationPayload);
+      }
+
+      const { data, error } = await supabase.functions.invoke("import-woocommerce-products", {
+        body: {
+          site_url: siteUrl.trim().replace(/\/$/, ""),
+          consumer_key: consumerKey.trim(),
+          consumer_secret: consumerSecret.trim(),
+          user_id: user?.id,
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Connected! Imported ${data.imported_count} products from WooCommerce` });
+      await fetchIntegration();
+      onDone();
+    } catch (err: any) {
+      toast({ title: "WooCommerce import failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!integration) return;
+    setSyncing(true);
+    try {
+      const creds = integration.credentials;
+      const { data, error } = await supabase.functions.invoke("import-woocommerce-products", {
+        body: {
+          site_url: integration.store_url,
+          consumer_key: creds.consumer_key,
+          consumer_secret: creds.consumer_secret,
+          user_id: user?.id,
+          is_sync: true,
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Synced! ${data.imported_count} new, ${data.updated_count} updated out of ${data.total} products` });
+      await fetchIntegration();
+      onDone();
+    } catch (err: any) {
+      toast({ title: "Sync failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!integration) return;
+    setDisconnecting(true);
+    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    setIntegration(null);
+    setSiteUrl("");
+    setConsumerKey("");
+    setConsumerSecret("");
+    setDisconnecting(false);
+    toast({ title: "WooCommerce disconnected" });
+  };
+
+  if (loadingIntegration) {
+    return <SupplierTabSkeleton />;
+  }
+
+  if (integration) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Globe className="h-5 w-5" /> WooCommerce Connected
+            </CardTitle>
+            <CardDescription>
+              Connected to <strong>{integration.store_url}</strong>
+              {integration.last_synced_at && (
+                <> · Last synced {new Date(integration.last_synced_at).toLocaleDateString()} at {new Date(integration.last_synced_at).toLocaleTimeString()}</>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3">
+            <Button onClick={handleSync} disabled={syncing} className="gap-2">
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync Products
+            </Button>
+            <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="gap-2 text-destructive hover:text-destructive">
+              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
+              Disconnect
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-dashed">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">How to get your WooCommerce credentials</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Log in to your <strong className="text-foreground">WordPress Admin</strong> dashboard</li>
+            <li>Go to <strong className="text-foreground">WooCommerce → Settings → Advanced → REST API</strong></li>
+            <li>Click <strong className="text-foreground">Add key</strong> and fill in a description (e.g. "Customizer Studio")</li>
+            <li>Set <strong className="text-foreground">Permissions</strong> to <code className="text-xs bg-muted px-1.5 py-0.5 rounded">Read</code></li>
+            <li>Click <strong className="text-foreground">Generate API key</strong></li>
+            <li>Copy the <strong className="text-foreground">Consumer Key</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">ck_</code>) and <strong className="text-foreground">Consumer Secret</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">cs_</code>)</li>
+          </ol>
+          <p>Your <strong className="text-foreground">Site URL</strong> is your WordPress domain, e.g. <code className="text-xs bg-muted px-1.5 py-0.5 rounded">https://your-store.com</code></p>
+          <p className="text-xs text-muted-foreground/70">Note: Your site must have SSL (HTTPS) enabled for the REST API to work.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Globe className="h-5 w-5" /> Connect WooCommerce</CardTitle>
+          <CardDescription>Enter your WordPress site URL and WooCommerce REST API credentials. Credentials will be saved for future syncs.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>WordPress Site URL</Label>
+            <Input value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} placeholder="https://your-store.com" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Consumer Key</Label>
+              <Input value={consumerKey} onChange={(e) => setConsumerKey(e.target.value)} placeholder="ck_..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Consumer Secret</Label>
+              <Input value={consumerSecret} onChange={(e) => setConsumerSecret(e.target.value)} type="password" placeholder="cs_..." />
+            </div>
+          </div>
+          <Button onClick={handleConnect} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+            Connect & Import
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function SSActivewearImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
@@ -3244,7 +3433,7 @@ function VariantManagerDialog({
   );
 }
 
-type ProductsTab = "products" | "categories" | "shopify" | "suppliers";
+type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "suppliers";
 
 export default function Products({ initialTab = "products", showStorefrontTabs = false, hideTabsList = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean; hideTabsList?: boolean } = {}) {
   const { user, signOut } = useAuth();
@@ -3295,9 +3484,42 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     setLoadingStores(false);
   };
 
-  const syncToStore = async (_store: any) => {
-    // Storefront sync removed — new Lovable storefront app handles its own catalog sync.
-    return;
+  const syncToStore = async (store: any) => {
+    const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
+    if (!slug) {
+      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: "Missing tenant slug / site URL" } }));
+      return;
+    }
+    setSyncingStoreId(store.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
+        body: {
+          tenant_slug: slug,
+          custom_domain: store.custom_domain || undefined,
+          limit: 200,
+          mode: "full",
+          prune: true,
+        },
+      });
+      if (error) throw error;
+      const ok = (data as any)?.ok !== false && !(data as any)?.error;
+      const count = (data as any)?.product_count;
+      setStoreSyncResults((p) => ({
+        ...p,
+        [store.id]: {
+          ok,
+          message: ok ? `Synced ${count ?? 0} products` : ((data as any)?.detail || (data as any)?.error || "Sync failed"),
+          count,
+        },
+      }));
+      if (ok) toast({ title: `Synced to ${store.name}`, description: `${count ?? 0} products pushed.` });
+      else toast({ title: `Failed to sync ${store.name}`, description: (data as any)?.detail || (data as any)?.error || "Unknown error", variant: "destructive" });
+    } catch (err: any) {
+      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: err?.message || "Sync failed" } }));
+      toast({ title: `Failed to sync ${store.name}`, description: err?.message, variant: "destructive" });
+    } finally {
+      setSyncingStoreId(null);
+    }
   };
 
   const syncToAllStores = async () => {
@@ -3325,7 +3547,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
       .from("store_integrations")
       .select("*")
       .eq("user_id", user?.id || "")
-      .in("platform", ["shopify"]);
+      .in("platform", ["shopify", "woocommerce"]);
     setIntegrations(data || []);
     setLoadingIntegrations(false);
   };
@@ -3333,7 +3555,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const getPushedPlatforms = (product: Product): string[] => {
     const platforms: string[] = [];
     const src = (product as any).supplier_source;
-    // WooCommerce removed
+    if (src?.external_ids?.woocommerce) platforms.push("WooCommerce");
     if (src?.external_ids?.shopify) platforms.push("Shopify");
     return platforms;
   };
@@ -3354,7 +3576,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
       .from("store_integrations")
       .select("*")
       .eq("user_id", user?.id || "")
-      .in("platform", ["shopify"]);
+      .in("platform", ["shopify", "woocommerce"]);
     setIntegrations(data || []);
     setLoadingIntegrations(false);
   };
@@ -3378,7 +3600,17 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
         try {
           let resp: any;
           let invokeErr: any;
-          if (integration.platform === "shopify") {
+          if (integration.platform === "woocommerce") {
+            ({ data: resp, error: invokeErr } = await supabase.functions.invoke("export-to-woocommerce", {
+              body: {
+                product_ids: [productId],
+                site_url: integration.store_url,
+                consumer_key: creds.consumer_key,
+                consumer_secret: creds.consumer_secret,
+                user_id: user?.id,
+              },
+            }));
+          } else if (integration.platform === "shopify") {
             ({ data: resp, error: invokeErr } = await supabase.functions.invoke("export-to-shopify", {
               body: {
                 product_ids: [productId],
@@ -3458,9 +3690,25 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     fetchProducts();
   }, []);
 
-  const mirrorDeletesToStores = async (_skus: string[]) => {
-    // Storefront mirror sync removed — handled by new Lovable storefront app.
-    return;
+  const mirrorDeletesToStores = async (skus: string[]) => {
+    if (!skus.length) return;
+    const targets = corporateStores.filter((s) => s.status === "active");
+    for (const store of targets) {
+      const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
+      if (!slug) continue;
+      try {
+        await supabase.functions.invoke("sync-catalog-to-tenant", {
+          body: {
+            tenant_slug: slug,
+            custom_domain: store.custom_domain || undefined,
+            mode: "delete",
+            removed_skus: skus,
+          },
+        });
+      } catch {
+        // best-effort; surfaced via toast below
+      }
+    }
   };
 
   const deleteProduct = async (id: string) => {
@@ -3548,14 +3796,14 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           {hideTabsList ? null : showStorefrontTabs ? (
             <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
               <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
-              
+              <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
             </TabsList>
           ) : (
             <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
               <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Package className="h-4 w-4" /> Products</TabsTrigger>
               <TabsTrigger value="categories" className="gap-2 flex-1 sm:flex-none"><LayoutGrid className="h-4 w-4" /> Categories</TabsTrigger>
               <TabsTrigger value="shopify" className="sr-only">Shopify</TabsTrigger>
-              
+              <TabsTrigger value="woocommerce" className="sr-only">WooCommerce</TabsTrigger>
               <TabsTrigger value="suppliers" className="sr-only">Suppliers</TabsTrigger>
             </TabsList>
           )}
@@ -3720,7 +3968,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                   <Card className="flex flex-col items-center py-16 text-center">
                     <Package className="h-12 w-12 text-muted-foreground mb-4" />
                     <p className="font-medium mb-1">No products yet</p>
-                    <p className="text-sm text-muted-foreground mb-4">Add products manually or import from Shopify.</p>
+                    <p className="text-sm text-muted-foreground mb-4">Add products manually or import from Shopify / WooCommerce.</p>
                     <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2">
                       <Plus className="h-4 w-4" /> Add Your First Product
                     </Button>
@@ -3915,6 +4163,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             <ShopifyImport onDone={fetchProducts} />
           </TabsContent>
 
+          <TabsContent value="woocommerce" forceMount className="data-[state=inactive]:hidden">
+            <WooCommerceImport onDone={fetchProducts} />
+          </TabsContent>
 
           <TabsContent value="suppliers" forceMount className="data-[state=inactive]:hidden">
             <Tabs defaultValue="ssactivewear" className="w-full">
@@ -3958,7 +4209,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             ) : integrations.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <Store className="h-10 w-10 mx-auto text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify store first.</p>
+                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify or WooCommerce store first.</p>
               </div>
             ) : pushResults ? (
               <div className="space-y-3">
@@ -4114,7 +4365,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                     <div key={store.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{store.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{store.tenant_slug || "—"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{store.wp_site_url || store.tenant_slug || "—"}</p>
                         {result && (
                           <p className={`text-xs mt-1 ${result.ok ? "text-green-600" : "text-destructive"}`}>{result.message}</p>
                         )}
