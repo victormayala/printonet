@@ -122,8 +122,8 @@ export default function BrandSettings() {
     setConfig((prev) => ({ ...prev, ...partial }));
   }
 
-  // Logo upload handler
-  const handleLogoUpload = useCallback(async (file: File) => {
+  // Logo upload handler — variant: "light" (regular) or "dark"
+  const handleLogoUpload = useCallback(async (file: File, variant: "light" | "dark" = "light") => {
     if (!file.type.startsWith("image/")) {
       toast({ title: "Invalid file", description: "Please upload an image file (PNG, JPG, SVG)", variant: "destructive" });
       return;
@@ -136,7 +136,7 @@ export default function BrandSettings() {
     setUploadingLogo(true);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const fileName = `logo_${Date.now()}.${ext}`;
+      const fileName = `logo_${variant}_${Date.now()}.${ext}`;
       const { data, error } = await supabase.storage
         .from("brand-assets")
         .upload(fileName, file, { contentType: file.type });
@@ -147,8 +147,9 @@ export default function BrandSettings() {
         .from("brand-assets")
         .getPublicUrl(data.path);
 
-      updateConfig({ logoUrl: urlData.publicUrl });
-      toast({ title: "Logo uploaded" });
+      if (variant === "dark") updateConfig({ logoDarkUrl: urlData.publicUrl });
+      else updateConfig({ logoUrl: urlData.publicUrl });
+      toast({ title: variant === "dark" ? "Dark-mode logo uploaded" : "Logo uploaded" });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
