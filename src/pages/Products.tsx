@@ -3548,14 +3548,14 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           {hideTabsList ? null : showStorefrontTabs ? (
             <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
               <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none"><ShoppingBag className="h-4 w-4" /> Shopify</TabsTrigger>
-              <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none"><Globe className="h-4 w-4" /> WooCommerce</TabsTrigger>
+              
             </TabsList>
           ) : (
             <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
               <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Package className="h-4 w-4" /> Products</TabsTrigger>
               <TabsTrigger value="categories" className="gap-2 flex-1 sm:flex-none"><LayoutGrid className="h-4 w-4" /> Categories</TabsTrigger>
               <TabsTrigger value="shopify" className="sr-only">Shopify</TabsTrigger>
-              <TabsTrigger value="woocommerce" className="sr-only">WooCommerce</TabsTrigger>
+              
               <TabsTrigger value="suppliers" className="sr-only">Suppliers</TabsTrigger>
             </TabsList>
           )}
@@ -3720,7 +3720,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                   <Card className="flex flex-col items-center py-16 text-center">
                     <Package className="h-12 w-12 text-muted-foreground mb-4" />
                     <p className="font-medium mb-1">No products yet</p>
-                    <p className="text-sm text-muted-foreground mb-4">Add products manually or import from Shopify / WooCommerce.</p>
+                    <p className="text-sm text-muted-foreground mb-4">Add products manually or import from Shopify.</p>
                     <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2">
                       <Plus className="h-4 w-4" /> Add Your First Product
                     </Button>
@@ -3958,7 +3958,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             ) : integrations.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <Store className="h-10 w-10 mx-auto text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify or WooCommerce store first.</p>
+                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify store first.</p>
               </div>
             ) : pushResults ? (
               <div className="space-y-3">
@@ -4114,7 +4114,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                     <div key={store.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{store.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{store.wp_site_url || store.tenant_slug || "—"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{store.tenant_slug || "—"}</p>
                         {result && (
                           <p className={`text-xs mt-1 ${result.ok ? "text-green-600" : "text-destructive"}`}>{result.message}</p>
                         )}
