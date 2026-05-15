@@ -465,6 +465,7 @@ export type Database = {
           id: string
           image_url: string | null
           inventory_product_id: string | null
+          metadata: Json
           name: string
           order_id: string
           quantity: number
@@ -480,6 +481,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           inventory_product_id?: string | null
+          metadata?: Json
           name: string
           order_id: string
           quantity: number
@@ -495,6 +497,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           inventory_product_id?: string | null
+          metadata?: Json
           name?: string
           order_id?: string
           quantity?: number
