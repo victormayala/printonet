@@ -1441,7 +1441,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   );
 }
 
-function EditStoreDialog({
+export function EditStoreDialog({
   store,
   onSaved,
 }: {
