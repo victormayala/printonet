@@ -403,7 +403,7 @@ export default function CorporateStores() {
   const [open, setOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab = tabParam === "shopify" ? tabParam : "stores";
+  const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
   const setActiveTab = (v: string) => {
     if (v === "stores") {
       searchParams.delete("tab");
