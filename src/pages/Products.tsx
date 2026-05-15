@@ -589,7 +589,7 @@ function ProductForm({
   const applyFinalPriceToVariantSizes = (vIdx: number) => {
     const v = variants[vIdx];
     const sealed = { ...v, sizes: (v.sizes || []).map(sealSizeCost) };
-    const finalPrice = computeVariantFinalPrice(sealed);
+    const finalPrice = Math.round(computeVariantFinalPrice(sealed) * 100) / 100;
     setVariants((prev) =>
       prev.map((vv, i) =>
         i === vIdx
