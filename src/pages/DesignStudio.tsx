@@ -452,6 +452,7 @@ export default function DesignStudio({
           setDbBrandConfig({
             name: data.name || "",
             logoUrl: data.logo_url || "",
+            logoDarkUrl: (data as any).logo_dark_url || "",
             theme: (data.theme === "light" ? "light" : "dark") as "light" | "dark",
             primaryColor: data.primary_color,
             accentColor: data.accent_color,
