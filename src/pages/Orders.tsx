@@ -178,9 +178,16 @@ export default function Orders() {
 
     const sessionIds = Array.from(
       new Set(
-        enriched
-          .map((o) => o.session_id)
-          .filter((v): v is string => typeof v === "string" && v.length > 0),
+        enriched.flatMap((o) => {
+          const ids: string[] = [];
+          if (typeof o.session_id === "string" && o.session_id) ids.push(o.session_id);
+          for (const it of o.items) {
+            const meta = (it as { metadata?: Record<string, unknown> | null }).metadata;
+            const sid = meta && typeof meta === "object" ? (meta as Record<string, unknown>).customizer_session_id : null;
+            if (typeof sid === "string" && sid) ids.push(sid);
+          }
+          return ids;
+        }),
       ),
     );
 
@@ -570,30 +577,83 @@ export default function Orders() {
                   {selectedOrder.items.length === 0 ? (
                     <div className="p-3 text-xs text-muted-foreground">No line items.</div>
                   ) : (
-                    selectedOrder.items.map((li) => (
-                      <div key={li.id} className="p-3 space-y-2 flex gap-3">
-                        {li.image_url ? (
-                          <img
-                            src={li.image_url}
-                            alt=""
-                            className="h-16 w-16 shrink-0 rounded border bg-muted object-contain"
-                          />
-                        ) : null}
-                        <div className="flex-1 space-y-1">
-                          <div className="font-medium">{li.name}</div>
-                          <div className="text-muted-foreground text-xs flex flex-wrap gap-x-3 gap-y-1">
-                            {li.sku ? <span>SKU: {li.sku}</span> : null}
-                            {li.variant_color ? <span>Color: {li.variant_color}</span> : null}
-                            {li.variant_size ? <span>Size: {li.variant_size}</span> : null}
-                            <span>Qty: {li.quantity}</span>
-                            <span>{formatMoney(li.unit_amount, li.currency)} ea</span>
+                    selectedOrder.items.map((li) => {
+                      const meta = ((li as { metadata?: Record<string, unknown> | null }).metadata || {}) as Record<string, unknown>;
+                      const liSid = typeof meta.customizer_session_id === "string" ? (meta.customizer_session_id as string) : "";
+                      const liPrint = typeof meta.print_file_url === "string" ? (meta.print_file_url as string) : "";
+                      const liPreview = typeof meta.design_preview_url === "string" ? (meta.design_preview_url as string) : "";
+                      const liLayers = typeof meta.design_layers_url === "string" ? (meta.design_layers_url as string) : "";
+                      const hasMeta = liSid || liPrint || liPreview || liLayers;
+                      return (
+                        <div key={li.id} className="p-3 space-y-2">
+                          <div className="flex gap-3">
+                            {li.image_url ? (
+                              <img
+                                src={li.image_url}
+                                alt=""
+                                className="h-16 w-16 shrink-0 rounded border bg-muted object-contain"
+                              />
+                            ) : null}
+                            <div className="flex-1 space-y-1">
+                              <div className="font-medium">{li.name}</div>
+                              <div className="text-muted-foreground text-xs flex flex-wrap gap-x-3 gap-y-1">
+                                {li.sku ? <span>SKU: {li.sku}</span> : null}
+                                {li.variant_color ? <span>Color: {li.variant_color}</span> : null}
+                                {li.variant_size ? <span>Size: {li.variant_size}</span> : null}
+                                <span>Qty: {li.quantity}</span>
+                                <span>{formatMoney(li.unit_amount, li.currency)} ea</span>
+                              </div>
+                            </div>
+                            <div className="text-sm font-medium whitespace-nowrap">
+                              {formatMoney((li.unit_amount || 0) * (li.quantity || 0), li.currency)}
+                            </div>
                           </div>
+                          {hasMeta && (
+                            <div className="rounded border bg-muted/30 p-2 space-y-1 text-xs">
+                              {liSid && (
+                                <div className="font-mono text-[10px] text-muted-foreground break-all">
+                                  Session: {liSid}
+                                </div>
+                              )}
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                {liPreview && (
+                                  <Button variant="outline" size="sm" asChild>
+                                    <a href={liPreview} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      Preview
+                                    </a>
+                                  </Button>
+                                )}
+                                {liPrint && (
+                                  <Button variant="secondary" size="sm" asChild>
+                                    <a href={liPrint} target="_blank" rel="noopener noreferrer">
+                                      <Download className="h-3 w-3 mr-1" />
+                                      Print file
+                                    </a>
+                                  </Button>
+                                )}
+                                {liLayers && (
+                                  <Button variant="outline" size="sm" asChild>
+                                    <a href={liLayers} target="_blank" rel="noopener noreferrer">
+                                      <Download className="h-3 w-3 mr-1" />
+                                      Layers
+                                    </a>
+                                  </Button>
+                                )}
+                                {liSid && (
+                                  <Button variant="default" size="sm" asChild>
+                                    <a href={`${window.location.origin}/print/${liSid}`} target="_blank" rel="noopener noreferrer">
+                                      <Printer className="h-3 w-3 mr-1" />
+                                      Open print URL
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-sm font-medium whitespace-nowrap">
-                          {formatMoney((li.unit_amount || 0) * (li.quantity || 0), li.currency)}
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
