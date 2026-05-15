@@ -434,25 +434,43 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                         {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-                      <Switch
-                        checked={r.customizable}
-                        disabled={busy || bulkBusy}
-                        onCheckedChange={(v) => toggleOne(r, v)}
-                        aria-label={`Toggle customizer for ${p.name}`}
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        disabled={busy || bulkBusy}
-                        onClick={() => removeOne(r)}
-                        aria-label={`Remove ${p.name} from store`}
-                        title="Remove from store"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted/60">
+                              <span className="text-xs text-muted-foreground hidden sm:inline">
+                                {r.customizable ? "Customizable" : "Not customizable"}
+                              </span>
+                              <Switch
+                                checked={r.customizable}
+                                disabled={busy || bulkBusy}
+                                onCheckedChange={(v) => toggleOne(r, v)}
+                                aria-label={`Toggle customizer for ${p.name}`}
+                              />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {r.customizable ? "Disable customizer for this product" : "Enable customizer for this product"}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              disabled={busy || bulkBusy}
+                              onClick={() => removeOne(r)}
+                              aria-label={`Remove ${p.name} from store`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Remove from store</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
                 );
