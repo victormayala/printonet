@@ -516,7 +516,7 @@ export default function CorporateStoreDetails() {
               <Type className="h-4 w-4 text-muted-foreground shrink-0" />
               <span>{store.font_family}</span>
             </div>
-            {(store.logo_url || store.favicon_url) && (
+            {(store.logo_url || store.secondary_logo_url || store.favicon_url) && (
               <>
                 <Separator />
                 <div className="grid grid-cols-3 gap-3">
@@ -525,6 +525,23 @@ export default function CorporateStoreDetails() {
                       <p className="text-xs text-muted-foreground">Logo</p>
                       <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
                         <img src={store.logo_url} alt="" className="h-full w-full object-contain" />
+                      </div>
+                    </div>
+                  )}
+                  {(store.secondary_logo_url || store.logo_url) && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        Footer logo
+                        {!store.secondary_logo_url && (
+                          <span className="ml-1 text-muted-foreground/70">(uses main)</span>
+                        )}
+                      </p>
+                      <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
+                        <img
+                          src={store.secondary_logo_url ?? store.logo_url ?? ""}
+                          alt=""
+                          className="h-full w-full object-contain"
+                        />
                       </div>
                     </div>
                   )}
