@@ -133,33 +133,16 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const someEnabled =
     filtered.length > 0 && filtered.some((r) => r.customizable) && !allEnabled;
 
-  const toggleAll = async (on: boolean) => {
+  const toggleAll = (on: boolean) => {
     const targets = filtered.filter((r) => r.customizable !== on);
     if (targets.length === 0) return;
-    setSavingId("__bulk__");
-    try {
-      const { error } = await supabase
-        .from("corporate_store_products")
-        .update({ customizable: on })
-        .in(
-          "id",
-          targets.map((r) => r.id),
-        );
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
-      toast({ title: on ? `Enabled customizer on ${targets.length} products` : `Disabled customizer on ${targets.length} products` });
-    } catch (e) {
-      toast({
-        title: "Could not update",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
-    } finally {
-      setSavingId(null);
-    }
+    setDraft((prev) => ({
+      ...prev,
+      ...Object.fromEntries(targets.map((r) => [r.id, on])),
+    }));
   };
 
-  const enabledCount = (rows ?? []).filter((r) => r.customizable).length;
+  const enabledCount = (rows ?? []).filter((r) => draft[r.id] ?? r.customizable).length;
 
   const storefrontUrl = store.tenant_slug
     ? `${window.location.origin}/s/${store.tenant_slug}`
@@ -182,8 +165,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             </CardTitle>
             <CardDescription>
               Tick a product to enable the "Customize" button on its storefront page.
-              Changes save automatically — no need to click save. Use "Push products" to add
-              or remove products from the store catalog itself.
+              Review your selections, then click Save customizer flags to publish the changes.
+              Use "Push products" to add or remove products from the store catalog itself.
             </CardDescription>
           </div>
           <Badge variant="secondary">{enabledCount} customizable</Badge>
@@ -230,6 +213,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <label className="flex items-center gap-3 p-2 mb-2 rounded-md border bg-muted/30 cursor-pointer">
               <Checkbox
                 checked={allEnabled ? true : someEnabled ? "indeterminate" : false}
+                disabled={saving}
                 onCheckedChange={(v) => toggleAll(!!v)}
               />
               <span className="text-sm font-medium">
@@ -246,7 +230,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                   >
                     <Checkbox
                       checked={r.customizable}
-                      disabled={savingId === r.id || savingId === "__bulk__"}
+                      disabled={saving}
                       onCheckedChange={(v) => toggle(r.id, !!v)}
                     />
                     <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0 flex items-center justify-center">
@@ -262,10 +246,20 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                         {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
                       </p>
                     </div>
-                    {savingId === r.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   </label>
                 );
               })}
+            </div>
+            <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-3 border-t bg-background/95 py-3">
+              <p className="text-sm text-muted-foreground">
+                {changedRows.length === 0
+                  ? "No unsaved changes"
+                  : `${changedRows.length} unsaved change${changedRows.length === 1 ? "" : "s"}`}
+              </p>
+              <Button onClick={saveChanges} disabled={saving || changedRows.length === 0}>
+                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                Save customizer flags
+              </Button>
             </div>
           </>
         )}
