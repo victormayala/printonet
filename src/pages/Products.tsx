@@ -3330,13 +3330,22 @@ function VariantManagerDialog({
                             ${computeFinalPrice(selected).toFixed(2)}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => applyFinalPriceToVariantSizes(selectedIdx)}
-                        >
-                          Apply to all sizes
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => resetVariantPricesToSupplier(selectedIdx)}
+                          >
+                            Reset
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => applyFinalPriceToVariantSizes(selectedIdx)}
+                          >
+                            Apply to all sizes
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
