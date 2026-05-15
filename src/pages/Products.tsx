@@ -3165,6 +3165,8 @@ function VariantManagerDialog({
     );
     toast({ title: "All prices reset to supplier" });
   };
+
+  const handleSave = async () => {
     setSaving(true);
     const { error } = await supabase
       .from("inventory_products")
