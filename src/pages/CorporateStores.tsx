@@ -935,16 +935,6 @@ function StoreFormFields({
             onClearExisting={onClearExisting ? () => onClearExisting("favicon") : undefined}
             hint="32×32 or 64×64 px, .ico/.png"
           />
-          {setFooterLogo && (
-            <LogoField
-              label="Footer logo (optional)"
-              value={footerLogo ?? null}
-              existingUrl={existing?.secondary_logo_url ?? null}
-              onChange={setFooterLogo}
-              onClearExisting={onClearExisting ? () => onClearExisting("footer") : undefined}
-              hint="Defaults to the main logo if left empty"
-            />
-          )}
         </div>
       </section>
     </div>
