@@ -513,11 +513,15 @@ function ProductForm({
 
   // Per-variant base cost = min non-zero SKU price; falls back to product base price.
   // Lets switching colors reflect actual cost (e.g. 2XL or color upcharges).
-  // Stable per-size cost: prefer explicit `cost`, fall back to current `price`
-  // (used before the user has applied pricing for the first time).
+  // Stable per-size cost: prefer explicit `cost` snapshot, then the form's
+  // base price, then current `price` as a last resort. The form's "Base price"
+  // field is treated as the authoritative supplier cost when no per-size cost
+  // has been sealed yet, so applying margin/fees never inflates the displayed
+  // base cost.
   const sizeCost = (s: any): number => {
     const c = Number(s?.cost);
     if (c > 0) return c;
+    if (productBaseCost > 0) return productBaseCost;
     return Number(s?.price) || 0;
   };
   const variantBaseCost = (v: any): number => {
@@ -598,6 +602,7 @@ function ProductForm({
   const resetSizeToCost = (s: any) => {
     const cost = Number(s?.cost);
     if (cost > 0) return { ...s, price: cost };
+    if (productBaseCost > 0) return { ...s, price: productBaseCost };
     return s;
   };
 
@@ -3059,20 +3064,25 @@ function VariantManagerDialog({
 
   const selected = variants[selectedIdx];
 
-  // Derive per-variant base cost from its SKU prices (min non-zero), so switching
-  // colors reflects the actual cost (e.g. 2XL upcharge), with product.base_price as fallback.
+  // Stable per-variant base cost: prefer explicit per-size `cost` snapshot,
+  // then product.base_price (supplier cost), then current `price`. The product
+  // base price is treated as authoritative supplier cost so applying margin/fees
+  // never inflates the displayed base cost.
+  const productBasePrice = Number(product.base_price) || 0;
   const variantBaseCost = (v: any): number => {
     const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
     const costs = sizes
       .map((s: any) => {
         const c = Number(s?.cost);
-        return c > 0 ? c : Number(s?.price) || 0;
+        if (c > 0) return c;
+        if (productBasePrice > 0) return productBasePrice;
+        return Number(s?.price) || 0;
       })
       .filter((n: number) => n > 0);
     if (costs.length > 0) return Math.min(...costs);
-    return Number(product.base_price) || 0;
+    return productBasePrice;
   };
-  const baseCost = selected ? variantBaseCost(selected) : Number(product.base_price) || 0;
+  const baseCost = selected ? variantBaseCost(selected) : productBasePrice;
 
   const updateVariant = (idx: number, patch: any) => {
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
@@ -3141,6 +3151,7 @@ function VariantManagerDialog({
   const resetSizeToCost = (s: any) => {
     const cost = Number(s?.cost);
     if (cost > 0) return { ...s, price: cost };
+    if (productBasePrice > 0) return { ...s, price: productBasePrice };
     return s;
   };
 
