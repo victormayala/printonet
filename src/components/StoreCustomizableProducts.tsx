@@ -35,15 +35,26 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     queryKey: ["corporate_store_products_customizable", store.id],
     enabled: !!user?.id,
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase
+      const { data: links, error } = await supabase
         .from("corporate_store_products")
-        .select(
-          "id,product_id,customizable,product:inventory_products(id,name,category,base_price,image_front)",
-        )
+        .select("id,product_id,customizable")
         .eq("store_id", store.id)
         .eq("is_active", true);
       if (error) throw error;
-      return (data ?? []) as unknown as Row[];
+      const ids = (links ?? []).map((l) => l.product_id);
+      if (ids.length === 0) return [];
+      const { data: prods, error: pErr } = await supabase
+        .from("inventory_products")
+        .select("id,name,category,base_price,image_front")
+        .in("id", ids);
+      if (pErr) throw pErr;
+      const pMap = new Map((prods ?? []).map((p) => [p.id, p]));
+      return (links ?? []).map((l) => ({
+        id: l.id,
+        product_id: l.product_id,
+        customizable: !!l.customizable,
+        product: pMap.get(l.product_id) ?? null,
+      })) as Row[];
     },
   });
 
