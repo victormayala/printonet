@@ -807,6 +807,8 @@ function StoreFormFields({
   setLogo,
   favicon,
   setFavicon,
+  footerLogo,
+  setFooterLogo,
   existing,
   onClearExisting,
   hideCustomDomain,
@@ -818,11 +820,14 @@ function StoreFormFields({
   setLogo: (f: File | null) => void;
   favicon: File | null;
   setFavicon: (f: File | null) => void;
+  footerLogo?: File | null;
+  setFooterLogo?: (f: File | null) => void;
   existing?: {
     logo_url: string | null;
     favicon_url: string | null;
+    secondary_logo_url?: string | null;
   };
-  onClearExisting?: (kind: "logo" | "favicon") => void;
+  onClearExisting?: (kind: "logo" | "favicon" | "footer") => void;
   hideCustomDomain?: boolean;
 }) {
   return (
