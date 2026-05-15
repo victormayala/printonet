@@ -178,9 +178,16 @@ export default function Orders() {
 
     const sessionIds = Array.from(
       new Set(
-        enriched
-          .map((o) => o.session_id)
-          .filter((v): v is string => typeof v === "string" && v.length > 0),
+        enriched.flatMap((o) => {
+          const ids: string[] = [];
+          if (typeof o.session_id === "string" && o.session_id) ids.push(o.session_id);
+          for (const it of o.items) {
+            const meta = (it as { metadata?: Record<string, unknown> | null }).metadata;
+            const sid = meta && typeof meta === "object" ? (meta as Record<string, unknown>).customizer_session_id : null;
+            if (typeof sid === "string" && sid) ids.push(sid);
+          }
+          return ids;
+        }),
       ),
     );
 
