@@ -509,7 +509,6 @@ export default function CorporateStoreDetails() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <ColorSwatch label="Primary color" value={store.primary_color} />
-              <ColorSwatch label="Accent color" value={store.accent_color} />
             </div>
             <Separator />
             <div className="flex items-center gap-2 text-sm">
