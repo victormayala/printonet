@@ -431,7 +431,7 @@ export default function CorporateStores() {
   // required. Stale 'provisioning' rows from old flows simply stay as-is.
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-2 w-full sm:w-auto flex-wrap">
           <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none"><Building2 className="h-4 w-4" /> My Stores</TabsTrigger>
