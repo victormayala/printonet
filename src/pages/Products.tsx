@@ -3151,6 +3151,7 @@ function VariantManagerDialog({
   const resetSizeToCost = (s: any) => {
     const cost = Number(s?.cost);
     if (cost > 0) return { ...s, price: cost };
+    if (productBasePrice > 0) return { ...s, price: productBasePrice };
     return s;
   };
 
