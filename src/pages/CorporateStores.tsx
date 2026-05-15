@@ -1474,20 +1474,23 @@ export function EditStoreDialog({
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
+  const [footerLogo, setFooterLogo] = useState<File | null>(null);
   const [existing, setExisting] = useState({
     logo_url: store.logo_url,
     favicon_url: store.favicon_url,
+    secondary_logo_url: store.secondary_logo_url,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const setField = <K extends keyof FormValues>(k: K, v: FormValues[K]) =>
     setValues((p) => ({ ...p, [k]: v }));
 
-  const onClearExisting = (kind: "logo" | "favicon") => {
+  const onClearExisting = (kind: "logo" | "favicon" | "footer") => {
     setExisting((p) => ({
       ...p,
       logo_url: kind === "logo" ? null : p.logo_url,
       favicon_url: kind === "favicon" ? null : p.favicon_url,
+      secondary_logo_url: kind === "footer" ? null : p.secondary_logo_url,
     }));
   };
 
