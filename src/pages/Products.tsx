@@ -513,10 +513,17 @@ function ProductForm({
 
   // Per-variant base cost = min non-zero SKU price; falls back to product base price.
   // Lets switching colors reflect actual cost (e.g. 2XL or color upcharges).
+  // Stable per-size cost: prefer explicit `cost`, fall back to current `price`
+  // (used before the user has applied pricing for the first time).
+  const sizeCost = (s: any): number => {
+    const c = Number(s?.cost);
+    if (c > 0) return c;
+    return Number(s?.price) || 0;
+  };
   const variantBaseCost = (v: any): number => {
     const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
-    const prices = sizes.map((s: any) => Number(s?.price) || 0).filter((n: number) => n > 0);
-    if (prices.length > 0) return Math.min(...prices);
+    const costs = sizes.map(sizeCost).filter((n: number) => n > 0);
+    if (costs.length > 0) return Math.min(...costs);
     return productBaseCost;
   };
   const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
@@ -546,15 +553,30 @@ function ProductForm({
     return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.embroidery_setup_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
   };
 
+  // Snapshot cost from current price the first time we overwrite price,
+  // so subsequent applies don't treat the previous final price as the new cost.
+  const sealSizeCost = (s: any) => ({
+    ...s,
+    cost: Number(s?.cost) > 0 ? Number(s.cost) : (Number(s?.price) || 0),
+  });
+
   const applyPricingToAllColors = () => {
     if (!selectedVariant?.pricing) return;
     const src = selectedVariant.pricing;
-    const finalPrice = computeVariantFinalPrice(selectedVariant);
+    // Snapshot costs on the source variant first so finalPrice uses the original cost.
+    const sealedSelected = {
+      ...selectedVariant,
+      sizes: (selectedVariant.sizes || []).map(sealSizeCost),
+    };
+    const finalPrice = computeVariantFinalPrice(sealedSelected);
     setVariants((prev) =>
       prev.map((v) => ({
         ...v,
         pricing: { ...src },
-        sizes: (v.sizes || []).map((s: any) => ({ ...s, price: finalPrice })),
+        sizes: (v.sizes || []).map((s: any) => {
+          const sealed = sealSizeCost(s);
+          return { ...sealed, price: finalPrice };
+        }),
       }))
     );
     toast({ title: "Pricing applied to all colors" });
@@ -562,11 +584,12 @@ function ProductForm({
 
   const applyFinalPriceToVariantSizes = (vIdx: number) => {
     const v = variants[vIdx];
-    const finalPrice = computeVariantFinalPrice(v);
+    const sealed = { ...v, sizes: (v.sizes || []).map(sealSizeCost) };
+    const finalPrice = computeVariantFinalPrice(sealed);
     setVariants((prev) =>
       prev.map((vv, i) =>
         i === vIdx
-          ? { ...vv, sizes: (vv.sizes || []).map((s: any) => ({ ...s, price: finalPrice })) }
+          ? { ...vv, sizes: (vv.sizes || []).map((s: any) => ({ ...sealSizeCost(s), price: finalPrice })) }
           : vv
       )
     );
@@ -3002,10 +3025,13 @@ function VariantManagerDialog({
   // colors reflects the actual cost (e.g. 2XL upcharge), with product.base_price as fallback.
   const variantBaseCost = (v: any): number => {
     const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
-    const prices = sizes
-      .map((s: any) => Number(s?.price) || 0)
+    const costs = sizes
+      .map((s: any) => {
+        const c = Number(s?.cost);
+        return c > 0 ? c : Number(s?.price) || 0;
+      })
       .filter((n: number) => n > 0);
-    if (prices.length > 0) return Math.min(...prices);
+    if (costs.length > 0) return Math.min(...costs);
     return Number(product.base_price) || 0;
   };
   const baseCost = selected ? variantBaseCost(selected) : Number(product.base_price) || 0;
@@ -3039,15 +3065,23 @@ function VariantManagerDialog({
     return cost + Number(p.margin || 0) + Number(p.embroidery_fee || 0) + Number(p.embroidery_setup_fee || 0) + Number(p.dtg_fee || 0) + Number(p.dtf_fee || 0);
   };
 
+  // Snapshot the original cost into `cost` before overwriting `price`,
+  // otherwise repeated applies stack margin + fees on top of the previous final.
+  const sealSizeCost = (s: any) => ({
+    ...s,
+    cost: Number(s?.cost) > 0 ? Number(s.cost) : (Number(s?.price) || 0),
+  });
+
   const applyPricingToAll = () => {
     if (!selected?.pricing) return;
     const src = selected.pricing;
-    const finalPrice = computeFinalPrice(selected);
+    const sealedSelected = { ...selected, sizes: (selected.sizes || []).map(sealSizeCost) };
+    const finalPrice = computeFinalPrice(sealedSelected);
     setVariants((prev) =>
       prev.map((v) => ({
         ...v,
         pricing: { ...src },
-        sizes: (v.sizes || []).map((s: any) => ({ ...s, price: finalPrice })),
+        sizes: (v.sizes || []).map((s: any) => ({ ...sealSizeCost(s), price: finalPrice })),
       }))
     );
     toast({ title: "Pricing applied to all colors" });
@@ -3055,11 +3089,12 @@ function VariantManagerDialog({
 
   const applyFinalPriceToVariantSizes = (vIdx: number) => {
     const v = variants[vIdx];
-    const finalPrice = computeFinalPrice(v);
+    const sealed = { ...v, sizes: (v.sizes || []).map(sealSizeCost) };
+    const finalPrice = computeFinalPrice(sealed);
     setVariants((prev) =>
       prev.map((vv, i) =>
         i === vIdx
-          ? { ...vv, sizes: (vv.sizes || []).map((s: any) => ({ ...s, price: finalPrice })) }
+          ? { ...vv, sizes: (vv.sizes || []).map((s: any) => ({ ...sealSizeCost(s), price: finalPrice })) }
           : vv
       )
     );
