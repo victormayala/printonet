@@ -954,6 +954,9 @@ function ProductForm({
                 <Plus className="h-3.5 w-3.5" /> Add variant
               </Button>
               {variants.length > 0 && (
+                <Button type="button" size="sm" variant="ghost" onClick={resetAllPricesToSupplier} disabled={variants.length === 0}>
+                  Reset to supplier
+                </Button>
                 <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
                   Apply pricing to all colors
                 </Button>
