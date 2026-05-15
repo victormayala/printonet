@@ -119,6 +119,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
@@ -458,111 +459,124 @@ export default function CorporateStoreDetails() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Identity */}
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-            <div>
-              <CardTitle>Identity</CardTitle>
-              <CardDescription>Basic store information.</CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={openEditDomain}>
-              <Pencil className="h-3.5 w-3.5" /> Edit domain
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="truncate">{store.contact_email}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-              {store.custom_domain ? (
-                <span className="truncate">{store.custom_domain}</span>
-              ) : (
-                <span className="text-muted-foreground italic">No custom domain</span>
-              )}
-            </div>
-            {store.tenant_slug && (
-              <CopyField label="Tenant slug" value={store.tenant_slug} mono />
-            )}
-            {store.wp_site_id && (
-              <CopyField label="Site ID" value={store.wp_site_id} mono />
-            )}
-            {store.wp_site_url && (
-              <CopyField label="Site URL" value={store.wp_site_url} mono />
-            )}
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="customizer">Customizer</TabsTrigger>
+        </TabsList>
 
-        {/* Branding */}
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-            <div>
-              <CardTitle>Branding</CardTitle>
-              <CardDescription>Theme tokens applied to the storefront.</CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setEditBrandingOpen(true)}>
-              <Pencil className="h-3.5 w-3.5" /> Edit branding
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <ColorSwatch label="Primary color" value={store.primary_color} />
-            </div>
-            <Separator />
-            <div className="flex items-center gap-2 text-sm">
-              <Type className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span>{store.font_family}</span>
-            </div>
-            {(store.logo_url || store.secondary_logo_url || store.favicon_url) && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-3 gap-3">
-                  {store.logo_url && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Logo</p>
-                      <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
-                        <img src={store.logo_url} alt="" className="h-full w-full object-contain" />
-                      </div>
-                    </div>
-                  )}
-                  {(store.secondary_logo_url || store.logo_url) && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        Footer logo
-                        {!store.secondary_logo_url && (
-                          <span className="ml-1 text-muted-foreground/70">(uses main)</span>
-                        )}
-                      </p>
-                      <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
-                        <img
-                          src={store.secondary_logo_url ?? store.logo_url ?? ""}
-                          alt=""
-                          className="h-full w-full object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {store.favicon_url && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Favicon</p>
-                      <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
-                        <img src={store.favicon_url} alt="" className="h-full w-full object-contain" />
-                      </div>
-                    </div>
+        <TabsContent value="overview" className="space-y-6 mt-0">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Identity */}
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                <div>
+                  <CardTitle>Identity</CardTitle>
+                  <CardDescription>Basic store information.</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={openEditDomain}>
+                  <Pencil className="h-3.5 w-3.5" /> Edit domain
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{store.contact_email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                  {store.custom_domain ? (
+                    <span className="truncate">{store.custom_domain}</span>
+                  ) : (
+                    <span className="text-muted-foreground italic">No custom domain</span>
                   )}
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                {store.tenant_slug && (
+                  <CopyField label="Tenant slug" value={store.tenant_slug} mono />
+                )}
+                {store.wp_site_id && (
+                  <CopyField label="Site ID" value={store.wp_site_id} mono />
+                )}
+                {store.wp_site_url && (
+                  <CopyField label="Site URL" value={store.wp_site_url} mono />
+                )}
+              </CardContent>
+            </Card>
 
+            {/* Branding */}
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                <div>
+                  <CardTitle>Branding</CardTitle>
+                  <CardDescription>Theme tokens applied to the storefront.</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setEditBrandingOpen(true)}>
+                  <Pencil className="h-3.5 w-3.5" /> Edit branding
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <ColorSwatch label="Primary color" value={store.primary_color} />
+                </div>
+                <Separator />
+                <div className="flex items-center gap-2 text-sm">
+                  <Type className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{store.font_family}</span>
+                </div>
+                {(store.logo_url || store.secondary_logo_url || store.favicon_url) && (
+                  <>
+                    <Separator />
+                    <div className="grid grid-cols-3 gap-3">
+                      {store.logo_url && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Logo</p>
+                          <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
+                            <img src={store.logo_url} alt="" className="h-full w-full object-contain" />
+                          </div>
+                        </div>
+                      )}
+                      {(store.secondary_logo_url || store.logo_url) && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            Footer logo
+                            {!store.secondary_logo_url && (
+                              <span className="ml-1 text-muted-foreground/70">(uses main)</span>
+                            )}
+                          </p>
+                          <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
+                            <img
+                              src={store.secondary_logo_url ?? store.logo_url ?? ""}
+                              alt=""
+                              className="h-full w-full object-contain"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {store.favicon_url && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Favicon</p>
+                          <div className="h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
+                            <img src={store.favicon_url} alt="" className="h-full w-full object-contain" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-      <StoreCustomizableProducts store={store} />
+        <TabsContent value="products" className="mt-0">
+          <StoreCustomizableProducts store={store} />
+        </TabsContent>
 
-      <StoreCustomizerSettings storeName={store.name} />
+        <TabsContent value="customizer" className="mt-0">
+          <StoreCustomizerSettings storeName={store.name} />
+        </TabsContent>
+      </Tabs>
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
 
