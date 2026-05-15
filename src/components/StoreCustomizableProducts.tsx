@@ -78,6 +78,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         .eq("id", linkId);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
+      toast({ title: on ? "Customizer enabled" : "Customizer disabled" });
     } catch (e) {
       toast({
         title: "Could not update",
@@ -107,6 +108,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         );
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
+      toast({ title: on ? `Enabled customizer on ${targets.length} products` : `Disabled customizer on ${targets.length} products` });
     } catch (e) {
       toast({
         title: "Could not update",
@@ -140,9 +142,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               <Package className="h-5 w-5" /> Customizable products
             </CardTitle>
             <CardDescription>
-              Of the products already pushed to this store, choose which ones get a
-              "Customize" button. Use "Push products" to add or remove products from
-              the store itself.
+              Tick a product to enable the "Customize" button on its storefront page.
+              Changes save automatically — no need to click save. Use "Push products" to add
+              or remove products from the store catalog itself.
             </CardDescription>
           </div>
           <Badge variant="secondary">{enabledCount} customizable</Badge>
