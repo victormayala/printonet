@@ -228,18 +228,6 @@ export default function ReviewDesign() {
       }
     }
 
-    /** Same shape the storefront SDK passes into WooCommerce wc-ajax=add_to_cart */
-    const wooSyncPayload = {
-      ...(designOutput ?? { sides: [] }),
-      quantity,
-      sessionId,
-      selectedSize,
-      ...(wcProductId ? { wcProductId } : {}),
-      ...(wcVariationId ? { wcVariationId } : {}),
-      ...(wcAttributes ? { wcAttributes } : {}),
-    };
-    const storeOrigin = resolveStoreOrigin();
-
     // Local hosted cart only. External Woo transfer removed.
     addItem({
       sessionId: sessionId || "",
@@ -247,7 +235,7 @@ export default function ReviewDesign() {
       variant: variantWithSize,
       quantity,
       previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
-      priceCents: priceInCents,
+      priceInCents,
       printFileUrl: printFileUrl || undefined,
       designLayersUrl: designLayersUrl || undefined,
     });
