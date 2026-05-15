@@ -245,6 +245,107 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_addresses: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          customer_id: string
+          full_name: string | null
+          id: string
+          is_default_billing: boolean
+          is_default_shipping: boolean
+          label: string | null
+          line1: string
+          line2: string | null
+          phone: string | null
+          postal_code: string | null
+          region: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          customer_id: string
+          full_name?: string | null
+          id?: string
+          is_default_billing?: boolean
+          is_default_shipping?: boolean
+          label?: string | null
+          line1: string
+          line2?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          region?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          customer_id?: string
+          full_name?: string | null
+          id?: string
+          is_default_billing?: boolean
+          is_default_shipping?: boolean
+          label?: string | null
+          line1?: string
+          line2?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          region?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_profiles: {
+        Row: {
+          auth_user_id: string
+          created_at: string
+          disabled_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id: string
+          created_at?: string
+          disabled_at?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string
+          created_at?: string
+          disabled_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customizer_sessions: {
         Row: {
           created_at: string
