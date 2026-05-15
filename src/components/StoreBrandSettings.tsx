@@ -218,35 +218,71 @@ export function StoreBrandSettings({ store }: Props) {
 
           <div className="rounded-xl border bg-card p-5 space-y-4">
             <div className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-primary" /><h4 className="font-semibold text-sm">Logo</h4></div>
-            {config.logoUrl ? (
-              <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
-                <img src={config.logoUrl} alt="Brand logo" className="h-10 max-w-[120px] object-contain" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground truncate">{config.logoUrl.split("/").pop()}</p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Default logo</Label>
+              {config.logoUrl ? (
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
+                  <img src={config.logoUrl} alt="Brand logo" className="h-10 max-w-[120px] object-contain" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground truncate">{config.logoUrl.split("/").pop()}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => update({ logoUrl: "" })}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => update({ logoUrl: "" })}>
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f); }}
-                onClick={() => logoInputRef.current?.click()}
-                className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"}`}
-              >
-                {uploadingLogo ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
-                  <>
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground text-center"><span className="font-medium text-foreground">Click to upload</span> or drag and drop</p>
-                    <p className="text-[10px] text-muted-foreground">PNG, JPG or SVG · Max 5MB</p>
-                  </>
-                )}
-              </div>
-            )}
-            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }} />
+              ) : (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f, "light"); }}
+                  onClick={() => logoInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"}`}
+                >
+                  {uploadingLogo === "light" ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
+                    <>
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground text-center"><span className="font-medium text-foreground">Click to upload</span> or drag and drop</p>
+                      <p className="text-[10px] text-muted-foreground">PNG, JPG or SVG · Max 5MB</p>
+                    </>
+                  )}
+                </div>
+              )}
+              <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "light"); e.target.value = ""; }} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Dark-mode logo (optional)</Label>
+              {config.logoDarkUrl ? (
+                <div className="flex items-center gap-3 rounded-lg border bg-neutral-900 p-3">
+                  <img src={config.logoDarkUrl} alt="Dark-mode logo" className="h-10 max-w-[120px] object-contain" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-neutral-400 truncate">{config.logoDarkUrl.split("/").pop()}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-neutral-400 hover:text-destructive" onClick={() => update({ logoDarkUrl: "" })}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDarkDragOver(true); }}
+                  onDragLeave={() => setDarkDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDarkDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f, "dark"); }}
+                  onClick={() => darkLogoInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${darkDragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"}`}
+                >
+                  {uploadingLogo === "dark" ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
+                    <>
+                      <Moon className="h-6 w-6 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground text-center"><span className="font-medium text-foreground">Upload dark variant</span></p>
+                      <p className="text-[10px] text-muted-foreground">Used when the customizer is in dark mode</p>
+                    </>
+                  )}
+                </div>
+              )}
+              <input ref={darkLogoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "dark"); e.target.value = ""; }} />
+            </div>
           </div>
 
           <div className="rounded-xl border bg-card p-5 space-y-4">
