@@ -146,7 +146,7 @@ export default function ProfileSettings() {
                   Copy
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Use this in your WooCommerce plugin settings for branding to appear.</p>
+              <p className="text-xs text-muted-foreground">Use this for store branding to appear in the customizer.</p>
             </div>
 
             {/* Email (read-only) */}
