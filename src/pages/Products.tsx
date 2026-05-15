@@ -3295,42 +3295,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     setLoadingStores(false);
   };
 
-  const syncToStore = async (store: any) => {
-    const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
-    if (!slug) {
-      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: "Missing tenant slug / site URL" } }));
-      return;
-    }
-    setSyncingStoreId(store.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
-        body: {
-          tenant_slug: slug,
-          custom_domain: store.custom_domain || undefined,
-          limit: 200,
-          mode: "full",
-          prune: true,
-        },
-      });
-      if (error) throw error;
-      const ok = (data as any)?.ok !== false && !(data as any)?.error;
-      const count = (data as any)?.product_count;
-      setStoreSyncResults((p) => ({
-        ...p,
-        [store.id]: {
-          ok,
-          message: ok ? `Synced ${count ?? 0} products` : ((data as any)?.detail || (data as any)?.error || "Sync failed"),
-          count,
-        },
-      }));
-      if (ok) toast({ title: `Synced to ${store.name}`, description: `${count ?? 0} products pushed.` });
-      else toast({ title: `Failed to sync ${store.name}`, description: (data as any)?.detail || (data as any)?.error || "Unknown error", variant: "destructive" });
-    } catch (err: any) {
-      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: err?.message || "Sync failed" } }));
-      toast({ title: `Failed to sync ${store.name}`, description: err?.message, variant: "destructive" });
-    } finally {
-      setSyncingStoreId(null);
-    }
+  const syncToStore = async (_store: any) => {
+    // Storefront sync removed — new Lovable storefront app handles its own catalog sync.
+    return;
   };
 
   const syncToAllStores = async () => {
