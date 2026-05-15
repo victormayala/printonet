@@ -176,6 +176,20 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
           </div>
         )}
       </main>
+
+      <footer className="border-t mt-12">
+        <div className="max-w-6xl mx-auto px-4 py-8 flex items-center justify-center gap-3">
+          {(store.secondary_logo_url || store.logo_url) ? (
+            <img
+              src={store.secondary_logo_url ?? store.logo_url ?? ""}
+              alt={store.name}
+              className="h-8 w-auto opacity-80"
+            />
+          ) : (
+            <span className="text-sm font-medium">{store.name}</span>
+          )}
+        </div>
+      </footer>
     </div>
   );
 }
