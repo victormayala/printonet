@@ -92,6 +92,7 @@ export default function BrandSettings() {
           setConfig({
             name: data.name || "",
             logoUrl: data.logo_url || "",
+            logoDarkUrl: (data as any).logo_dark_url || "",
             theme: (data.theme === "light" ? "light" : "dark"),
             primaryColor: data.primary_color,
             accentColor: data.accent_color,
