@@ -20,79 +20,20 @@ import { toast } from "@/hooks/use-toast";
 import {
   Search, Download, Eye, Package, Calendar,
   Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail,
-  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Database } from "@/integrations/supabase/types";
-import { downloadLayersJsonUrl, deriveLayersDownloadFilename } from "@/lib/layersDownload";
 
-type WooOrderRow = Database["public"]["Tables"]["printonet_woo_order_files"]["Row"];
+type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
+type OrderItemRow = Database["public"]["Tables"]["order_items"]["Row"];
 type SessionRow = Database["public"]["Tables"]["customizer_sessions"]["Row"];
+type StoreRow = { id: string; name: string | null; tenant_slug: string | null };
 
-type LineItem = {
-  order_item_id?: number;
-  product_id?: number;
-  variation_id?: number;
-  name?: string;
-  quantity?: number;
-  sku?: string;
-  print_file_url?: string;
-  printFileUrl?: string;
-  design_layers_url?: string;
-  designLayersUrl?: string;
-  design_preview_url?: string;
-  customizer_design_url?: string;
-  customizer_session_id?: string;
+type EnrichedOrder = OrderRow & {
+  items: OrderItemRow[];
+  store?: StoreRow;
 };
-
-function parseLineItems(row: WooOrderRow): LineItem[] {
-  const raw = row.line_items;
-  if (!Array.isArray(raw)) return [];
-  return raw as LineItem[];
-}
-
-function lineDesignLayersUrl(li: LineItem): string {
-  return String(li.design_layers_url || li.designLayersUrl || "").trim();
-}
-
-function linePrintFileUrl(li: LineItem): string {
-  return String(li.print_file_url || li.printFileUrl || "").trim();
-}
-
-/** Opens formatted JSON in-app; avoids browser freezing on huge single-line JSON. */
-function layersJsonViewerHref(publicLayersUrl: string): string {
-  const u = publicLayersUrl.trim();
-  if (!u.startsWith("http")) return u;
-  return `${window.location.origin}/layers-preview?url=${encodeURIComponent(u)}`;
-}
-
-/** Loose UUID check for session ids stored on Woo line meta */
-function looksLikeSessionId(s: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    s.trim(),
-  );
-}
-
-function collectSessionIdsFromOrders(orderRows: WooOrderRow[]): string[] {
-  const set = new Set<string>();
-  for (const o of orderRows) {
-    for (const li of parseLineItems(o)) {
-      const id = (li.customizer_session_id || "").trim();
-      if (id && looksLikeSessionId(id)) set.add(id);
-    }
-  }
-  return [...set];
-}
-
-function orderSessionIds(order: WooOrderRow): string[] {
-  const set = new Set<string>();
-  for (const li of parseLineItems(order)) {
-    const id = (li.customizer_session_id || "").trim();
-    if (id && looksLikeSessionId(id)) set.add(id);
-  }
-  return [...set];
-}
 
 type SideAsset = {
   view: string;
@@ -120,7 +61,6 @@ function getDesignImagesFromSession(session: SessionRow): string[] {
   if (sides.length > 0) {
     return sides.map((s) => s.previewPNG || s.designPNG!).filter(Boolean);
   }
-  // Fallback: top-level http strings (legacy sessions)
   if (!session.design_output || typeof session.design_output !== "object") return [];
   const output = session.design_output as Record<string, unknown>;
   const images: string[] = [];
@@ -137,56 +77,33 @@ function getDesignImagesFromSession(session: SessionRow): string[] {
   return images;
 }
 
-const SESSION_FETCH_CHUNK = 120;
-
-async function fetchCustomizerSessionsByIds(ids: string[]): Promise<Record<string, SessionRow>> {
-  const out: Record<string, SessionRow> = {};
-  if (ids.length === 0) return out;
-
-  for (let i = 0; i < ids.length; i += SESSION_FETCH_CHUNK) {
-    const chunk = ids.slice(i, i + SESSION_FETCH_CHUNK);
-    const { data, error } = await supabase
-      .from("customizer_sessions")
-      .select("*")
-      .in("id", chunk);
-
-    if (error) {
-      toast({
-        title: "Could not load customizer sessions",
-        description: error.message,
-        variant: "destructive",
-      });
-      continue;
-    }
-    for (const row of data || []) {
-      out[row.id] = row as SessionRow;
-    }
-  }
-  return out;
+function formatMoney(cents: number | null | undefined, currency: string | null | undefined) {
+  if (cents == null) return "—";
+  const cur = (currency || "USD").toUpperCase();
+  return `${(cents / 100).toFixed(2)} ${cur}`;
 }
 
 export default function Orders() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<WooOrderRow[]>([]);
+  const [orders, setOrders] = useState<EnrichedOrder[]>([]);
+  const [stores, setStores] = useState<StoreRow[]>([]);
   const [sessionById, setSessionById] = useState<Record<string, SessionRow>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedOrder, setSelectedOrder] = useState<WooOrderRow | null>(null);
-  const [linkedTenantSlugs, setLinkedTenantSlugs] = useState<string[]>([]);
-  const [layersDownloadingUrl, setLayersDownloadingUrl] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<EnrichedOrder | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    void fetchPaidOrders();
+    void fetchOrders();
   }, [user]);
 
-  async function fetchPaidOrders() {
+  async function fetchOrders() {
     setLoading(true);
 
-    const { data: stores, error: storesErr } = await supabase
+    const { data: storesData, error: storesErr } = await supabase
       .from("corporate_stores")
-      .select("id, tenant_slug")
+      .select("id, name, tenant_slug")
       .eq("user_id", user!.id);
 
     if (storesErr) {
@@ -196,58 +113,96 @@ export default function Orders() {
         variant: "destructive",
       });
       setOrders([]);
+      setStores([]);
       setSessionById({});
-      setLinkedTenantSlugs([]);
       setLoading(false);
       return;
     }
 
-    const slugs = [
-      ...new Set(
-        (stores || [])
-          .map((s) =>
-            typeof s.tenant_slug === "string" ? s.tenant_slug.trim().toLowerCase() : "",
-          )
-          .filter((s) => s.length > 0),
-      ),
-    ];
+    const storeRows = (storesData || []) as StoreRow[];
+    setStores(storeRows);
 
-    if (slugs.length === 0) {
+    if (storeRows.length === 0) {
       setOrders([]);
       setSessionById({});
-      setLinkedTenantSlugs([]);
       setLoading(false);
       return;
     }
 
-    setLinkedTenantSlugs(slugs);
+    const storeIds = storeRows.map((s) => s.id);
 
-    const { data, error } = await supabase
-      .from("printonet_woo_order_files")
+    const { data: orderRows, error: ordersErr } = await supabase
+      .from("orders")
       .select("*")
-      .in("tenant_slug", slugs)
-      .order("updated_at", { ascending: false });
+      .in("store_id", storeIds)
+      .order("created_at", { ascending: false });
 
-    if (error) {
+    if (ordersErr) {
       toast({
-        title: "Error loading paid orders",
-        description:
-          error.message ||
-          "Ensure printonet_woo_order_files exists and RLS allows your corporate stores.",
+        title: "Error loading orders",
+        description: ordersErr.message,
         variant: "destructive",
       });
       setOrders([]);
       setSessionById({});
-    } else {
-      const rows = (data as WooOrderRow[]) || [];
-      setOrders(rows);
-      const sessionIds = collectSessionIdsFromOrders(rows);
-      if (sessionIds.length > 0) {
-        const map = await fetchCustomizerSessionsByIds(sessionIds);
-        setSessionById(map);
-      } else {
-        setSessionById({});
+      setLoading(false);
+      return;
+    }
+
+    const orderIds = (orderRows || []).map((o) => o.id);
+    let itemsByOrder: Record<string, OrderItemRow[]> = {};
+    if (orderIds.length > 0) {
+      const { data: itemRows, error: itemsErr } = await supabase
+        .from("order_items")
+        .select("*")
+        .in("order_id", orderIds);
+      if (itemsErr) {
+        toast({
+          title: "Error loading line items",
+          description: itemsErr.message,
+          variant: "destructive",
+        });
       }
+      for (const it of (itemRows || []) as OrderItemRow[]) {
+        (itemsByOrder[it.order_id] ||= []).push(it);
+      }
+    }
+
+    const storeMap = new Map(storeRows.map((s) => [s.id, s]));
+    const enriched: EnrichedOrder[] = (orderRows || []).map((o) => ({
+      ...(o as OrderRow),
+      items: itemsByOrder[o.id] || [],
+      store: o.store_id ? storeMap.get(o.store_id) : undefined,
+    }));
+    setOrders(enriched);
+
+    const sessionIds = Array.from(
+      new Set(
+        enriched
+          .map((o) => o.session_id)
+          .filter((v): v is string => typeof v === "string" && v.length > 0),
+      ),
+    );
+
+    if (sessionIds.length > 0) {
+      const { data: sessRows, error: sessErr } = await supabase
+        .from("customizer_sessions")
+        .select("*")
+        .in("id", sessionIds);
+      if (sessErr) {
+        toast({
+          title: "Could not load customizer sessions",
+          description: sessErr.message,
+          variant: "destructive",
+        });
+        setSessionById({});
+      } else {
+        const map: Record<string, SessionRow> = {};
+        for (const s of (sessRows || []) as SessionRow[]) map[s.id] = s;
+        setSessionById(map);
+      }
+    } else {
+      setSessionById({});
     }
 
     setLoading(false);
@@ -255,43 +210,41 @@ export default function Orders() {
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
-      const q = search.toLowerCase();
-      const lines = parseLineItems(o);
-      const sessionProductMatch = lines.some((li) => {
-        const sid = (li.customizer_session_id || "").trim();
-        if (!sid || !sessionById[sid]) return false;
-        const name = (sessionById[sid].product_data as { name?: string } | null)?.name || "";
-        return name.toLowerCase().includes(q);
-      });
+      const q = search.toLowerCase().trim();
       const matchesSearch =
         !q ||
-        String(o.order_number ?? "").toLowerCase().includes(q) ||
-        String(o.order_id).includes(q) ||
-        o.tenant_slug.toLowerCase().includes(q) ||
-        lines.some((li) => (li.name || "").toLowerCase().includes(q)) ||
-        sessionProductMatch;
-      const st = (o.order_status || "").toLowerCase();
+        o.id.toLowerCase().includes(q) ||
+        (o.customer_email || "").toLowerCase().includes(q) ||
+        (o.store?.name || "").toLowerCase().includes(q) ||
+        (o.store?.tenant_slug || "").toLowerCase().includes(q) ||
+        (o.stripe_payment_intent || "").toLowerCase().includes(q) ||
+        o.items.some(
+          (i) =>
+            (i.name || "").toLowerCase().includes(q) ||
+            (i.sku || "").toLowerCase().includes(q),
+        );
       const matchesStatus =
-        statusFilter === "all" || st === statusFilter.toLowerCase();
+        statusFilter === "all" || (o.status || "").toLowerCase() === statusFilter.toLowerCase();
       return matchesSearch && matchesStatus;
     });
-  }, [orders, search, statusFilter, sessionById]);
+  }, [orders, search, statusFilter]);
 
   const statusValues: string[] = Array.from(
-    new Set(orders.map((o) => (o.order_status || "").trim()).filter(Boolean)),
+    new Set(orders.map((o) => (o.status || "").trim()).filter(Boolean)),
   ).sort();
 
-  function resolvedSessionCount(row: WooOrderRow): number {
-    const ids = orderSessionIds(row);
-    return ids.filter((id) => sessionById[id]).length;
-  }
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: `${label} copied`, description: text });
+    });
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Orders</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Paid WooCommerce orders (synced from your stores). Linked customizer sessions load when a line item includes a session id.
+          Paid orders from your storefront. Linked customizer sessions load when an order has a session id.
         </p>
       </div>
 
@@ -299,7 +252,7 @@ export default function Orders() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search order #, tenant, product, or session product…"
+            placeholder="Search order id, email, store, product, or SKU…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -334,14 +287,13 @@ export default function Orders() {
             ))}
           </div>
         </div>
-      ) : linkedTenantSlugs.length === 0 ? (
+      ) : stores.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold text-foreground">No corporate stores</h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-md">
-              Paid Woo orders are scoped to your stores by tenant slug. Add or open a corporate store so
-              your tenant slug is linked to this account.
+              Orders are scoped to your stores. Add or open a corporate store first.
             </p>
             <Button className="mt-6" asChild>
               <Link to="/corporate-stores">Corporate stores</Link>
@@ -352,14 +304,9 @@ export default function Orders() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">No synced orders yet</h3>
+            <h3 className="text-lg font-semibold text-foreground">No orders yet</h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-md">
-              Orders appear here after checkout is paid on WooCommerce and the store webhook ingests the
-              order into the database. Confirm{" "}
-              <code className="text-xs bg-muted px-1 rounded">PRINTONET_ORDER_FILES_WEBHOOK_URL</code>{" "}
-              on the tenant site points at your Supabase Edge function, and check that order meta{" "}
-              <code className="text-xs bg-muted px-1 rounded">_printonet_dashboard_files_sync_at</code>{" "}
-              is set on paid orders.
+              Orders appear here as soon as a buyer completes checkout on your storefront.
             </p>
           </CardContent>
         </Card>
@@ -370,7 +317,7 @@ export default function Orders() {
             <h3 className="text-lg font-semibold text-foreground">No orders match</h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-md">
               Try clearing search or setting status to &quot;All statuses&quot;. You have {orders.length}{" "}
-              synced order{orders.length === 1 ? "" : "s"}.
+              order{orders.length === 1 ? "" : "s"}.
             </p>
           </CardContent>
         </Card>
@@ -380,64 +327,44 @@ export default function Orders() {
             <TableHeader>
               <TableRow>
                 <TableHead>Order</TableHead>
-                <TableHead>Tenant</TableHead>
                 <TableHead>Store</TableHead>
+                <TableHead>Customer</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Paid</TableHead>
-                <TableHead>Lines</TableHead>
-                <TableHead>Sessions</TableHead>
+                <TableHead>Placed</TableHead>
+                <TableHead>Items</TableHead>
+                <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((row) => {
-                const lines = parseLineItems(row);
-                const filesCount = lines.filter((l) => {
-                  const p = linePrintFileUrl(l);
-                  const d = lineDesignLayersUrl(l);
-                  return p !== "" || d !== "";
-                }).length;
-                const sidCount = orderSessionIds(row).length;
-                const resolved = resolvedSessionCount(row);
+                const itemQty = row.items.reduce((s, i) => s + (i.quantity || 0), 0);
                 return (
-                  <TableRow key={`${row.tenant_slug}-${row.store_url}-${row.order_id}`}>
-                    <TableCell className="font-medium">
-                      #{row.order_number || row.order_id}
+                  <TableRow key={row.id}>
+                    <TableCell className="font-mono text-xs">
+                      {row.id.slice(0, 8)}…
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm font-mono">
-                      {row.tenant_slug}
+                    <TableCell className="text-sm">
+                      {row.store?.name || row.store?.tenant_slug || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs max-w-[200px] truncate">
-                      {row.store_url}
+                      {row.customer_email || "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{row.order_status || "—"}</Badge>
+                      <Badge variant="secondary">{row.status || "—"}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                      {row.date_paid ? (
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 shrink-0" />
-                          {format(new Date(row.date_paid), "MMM d, yyyy")}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 shrink-0" />
+                        {format(new Date(row.created_at), "MMM d, yyyy")}
+                      </span>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {lines.length}
-                      {filesCount > 0 ? (
-                        <span className="text-foreground"> · {filesCount} file(s)</span>
-                      ) : null}
+                      {row.items.length} line{row.items.length === 1 ? "" : "s"}
+                      {itemQty > 0 ? <span className="text-foreground"> · {itemQty} qty</span> : null}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {sidCount === 0 ? (
-                        "—"
-                      ) : (
-                        <span className="inline-flex items-center gap-1">
-                          <Palette className="h-3.5 w-3.5" />
-                          {resolved}/{sidCount}
-                        </span>
-                      )}
+                    <TableCell className="text-right text-sm font-medium">
+                      {formatMoney(row.amount_total, row.currency)}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -461,341 +388,217 @@ export default function Orders() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Order #{selectedOrder?.order_number || selectedOrder?.order_id}{" "}
+              Order{" "}
+              <span className="font-mono text-base">
+                {selectedOrder?.id.slice(0, 8)}…
+              </span>{" "}
               <span className="text-muted-foreground font-normal text-base">
-                ({selectedOrder?.tenant_slug})
+                ({selectedOrder?.store?.name || selectedOrder?.store?.tenant_slug || "store"})
               </span>
             </DialogTitle>
           </DialogHeader>
           {selectedOrder && (() => {
-            const payload = (selectedOrder.payload || {}) as Record<string, any>;
-            const amountTotal = typeof payload.amount_total === "number" ? payload.amount_total : null;
-            const customerEmail = payload.customer_email || payload?.tenant_order?.customer_email || null;
-            const stripeSession = payload.stripe_checkout_session_id || null;
-            const stripeAccount = payload.stripe_account_id || null;
-            const sessionIds = orderSessionIds(selectedOrder);
-            const wooViewUrl = `${(selectedOrder.store_url || "").replace(/\/+$/, "")}/wp-admin/post.php?post=${selectedOrder.order_id}&action=edit`;
-
-            const copyToClipboard = (text: string, label: string) => {
-              navigator.clipboard.writeText(text).then(() => {
-                toast({ title: `${label} copied`, description: text });
-              });
-            };
+            const sid = selectedOrder.session_id || "";
+            const sess = sid ? sessionById[sid] : null;
+            const printUrl = sid ? `${window.location.origin}/print/${sid}` : "";
 
             return (
-            <div className="space-y-4 text-sm">
-              {/* Payment summary */}
-              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-                <div className="font-medium text-foreground flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Payment summary
-                </div>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Total:</span>{" "}
-                    <span className="font-medium text-foreground">
-                      {amountTotal != null
-                        ? `${(amountTotal / 100).toFixed(2)} ${(selectedOrder.currency || "USD").toUpperCase()}`
-                        : "—"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Status:</span>{" "}
-                    <Badge variant="secondary" className="text-[10px]">{selectedOrder.order_status || "—"}</Badge>
-                  </div>
-                  {customerEmail && (
-                    <div className="col-span-2 flex items-center gap-1.5">
-                      <Mail className="h-3 w-3 text-muted-foreground" />
-                      <a href={`mailto:${customerEmail}`} className="text-primary break-all">{customerEmail}</a>
-                    </div>
-                  )}
-                  {stripeSession && (
-                    <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
-                      {stripeSession}
-                    </div>
-                  )}
-                  {stripeAccount && (
-                    <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
-                      Connected acct: {stripeAccount}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={selectedOrder.store_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Store
-                    </a>
-                  </Button>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={wooViewUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Open in Woo admin
-                    </a>
-                  </Button>
-                </div>
-              </div>
-
-              {/* Print URLs — one per linked customizer session */}
-              {sessionIds.length > 0 && (
-                <div className="rounded-md border bg-primary/5 p-3 space-y-2">
+              <div className="space-y-4 text-sm">
+                {/* Payment summary */}
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
                   <div className="font-medium text-foreground flex items-center gap-2">
-                    <Printer className="h-4 w-4" />
-                    Print URLs
+                    <CreditCard className="h-4 w-4" />
+                    Payment summary
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Send these to your print shop. Each URL opens the printer-ready view with high-res assets and specs.
-                  </p>
-                  <div className="space-y-2">
-                    {sessionIds.map((sid) => {
-                      const printUrl = `${window.location.origin}/print/${sid}`;
-                      return (
-                        <div key={sid} className="flex flex-wrap items-center gap-2 rounded border bg-background p-2">
-                          <code className="flex-1 text-xs font-mono break-all">{printUrl}</code>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyToClipboard(printUrl, "Print URL")}
-                          >
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copy
-                          </Button>
-                          <Button variant="default" size="sm" asChild>
-                            <a href={printUrl} target="_blank" rel="noopener noreferrer">
-                              <Printer className="h-3 w-3 mr-1" />
-                              Open
-                            </a>
-                          </Button>
-                        </div>
-                      );
-                    })}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Total:</span>{" "}
+                      <span className="font-medium text-foreground">
+                        {formatMoney(selectedOrder.amount_total, selectedOrder.currency)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Status:</span>{" "}
+                      <Badge variant="secondary" className="text-[10px]">{selectedOrder.status || "—"}</Badge>
+                    </div>
+                    {selectedOrder.application_fee_amount != null && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Platform fee:</span>{" "}
+                        <span className="text-foreground">
+                          {formatMoney(selectedOrder.application_fee_amount, selectedOrder.currency)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedOrder.customer_email && (
+                      <div className="col-span-2 flex items-center gap-1.5">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <a href={`mailto:${selectedOrder.customer_email}`} className="text-primary break-all">
+                          {selectedOrder.customer_email}
+                        </a>
+                      </div>
+                    )}
+                    {selectedOrder.stripe_payment_intent && (
+                      <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
+                        PI: {selectedOrder.stripe_payment_intent}
+                      </div>
+                    )}
+                    {selectedOrder.stripe_checkout_id && (
+                      <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
+                        CS: {selectedOrder.stripe_checkout_id}
+                      </div>
+                    )}
+                    {selectedOrder.stripe_account_id && (
+                      <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
+                        Connected acct: {selectedOrder.stripe_account_id}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
 
-              {/* Customizer sessions referenced on this paid order */}
-              {(() => {
-                const ids = orderSessionIds(selectedOrder);
-                if (ids.length === 0) return null;
-                return (
+                {/* Print URL */}
+                {sid && (
+                  <div className="rounded-md border bg-primary/5 p-3 space-y-2">
+                    <div className="font-medium text-foreground flex items-center gap-2">
+                      <Printer className="h-4 w-4" />
+                      Print URL
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Send this to your print shop. Opens the printer-ready view with high-res assets and specs.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 rounded border bg-background p-2">
+                      <code className="flex-1 text-xs font-mono break-all">{printUrl}</code>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(printUrl, "Print URL")}>
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
+                      <Button variant="default" size="sm" asChild>
+                        <a href={printUrl} target="_blank" rel="noopener noreferrer">
+                          <Printer className="h-3 w-3 mr-1" />
+                          Open
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Customizer session */}
+                {sid && (
                   <div className="space-y-2 rounded-md border bg-muted/30 p-3">
                     <div className="font-medium text-foreground flex items-center gap-2">
                       <Palette className="h-4 w-4" />
-                      Customizer sessions (paid order)
+                      Customizer session
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Loaded from Supabase when line items include <span className="font-mono">customizer_session_id</span>.
-                    </p>
-                    <div className="space-y-3">
-                      {ids.map((sid) => {
-                        const sess = sessionById[sid];
-                        if (!sess) {
-                          return (
-                            <div key={sid} className="text-xs text-muted-foreground font-mono break-all">
-                              Session {sid}: not found or still loading.
-                            </div>
-                          );
-                        }
-                        const pname =
-                          (sess.product_data as { name?: string } | null)?.name || "Customizer session";
-                        const imgs = getDesignImagesFromSession(sess);
-                        return (
-                          <div key={sid} className="rounded-md border bg-background p-3 space-y-2">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
-                                <div className="font-medium">{pname}</div>
-                                <div className="text-xs text-muted-foreground font-mono">{sid}</div>
-                                <Badge variant="outline" className="mt-1 text-[10px]">
-                                  {sess.status}
-                                </Badge>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                <Button variant="outline" size="sm" asChild>
-                                  <a
-                                    href={`${window.location.origin}/embed/${sid}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <ExternalLink className="h-3 w-3 mr-1" />
-                                    Open embed
-                                  </a>
-                                </Button>
-                                <Button variant="outline" size="sm" asChild>
-                                  <a
-                                    href={`${window.location.origin}/review/${sid}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    Review
-                                  </a>
-                                </Button>
-                              </div>
-                            </div>
-                            {(sess.customer_name || sess.customer_email) && (
-                              <div className="text-xs text-muted-foreground">
-                                {sess.customer_name && <span>{sess.customer_name}</span>}
-                                {sess.customer_name && sess.customer_email && " · "}
-                                {sess.customer_email && <span>{sess.customer_email}</span>}
-                              </div>
-                            )}
-                            {imgs.length > 0 && (
-                              <div className="grid grid-cols-3 gap-2 pt-1">
-                                {imgs.slice(0, 6).map((url, i) => (
-                                  <a
-                                    key={i}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="aspect-square rounded border bg-muted overflow-hidden"
-                                  >
-                                    <img src={url} alt="" className="w-full h-full object-contain" />
-                                  </a>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div className="border rounded-md divide-y">
-                {parseLineItems(selectedOrder).map((li, idx) => {
-                  const sid = (li.customizer_session_id || "").trim();
-                  const sess = sid && sessionById[sid] ? sessionById[sid] : null;
-                  return (
-                    <div key={li.order_item_id ?? idx} className="p-3 space-y-2">
-                      <div className="font-medium">{li.name || `Line ${idx + 1}`}</div>
-                      <div className="text-muted-foreground text-xs flex flex-wrap gap-x-3 gap-y-1">
-                        {li.sku ? <span>SKU: {li.sku}</span> : null}
-                        {li.quantity != null ? <span>Qty: {li.quantity}</span> : null}
-                        {sid ? (
-                          <span className="font-mono">
-                            Session: {sess ? sess.status : sid.slice(0, 8) + "…"}
-                          </span>
-                        ) : null}
+                    {!sess ? (
+                      <div className="text-xs text-muted-foreground font-mono break-all">
+                        Session {sid}: not found.
                       </div>
-                      {sess && getDesignImagesFromSession(sess).length > 0 && (
-                        <div className="flex gap-2 overflow-x-auto pb-1">
-                          {getDesignImagesFromSession(sess).slice(0, 4).map((url, i) => (
-                            <a
-                              key={i}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="h-14 w-14 shrink-0 rounded border bg-muted overflow-hidden"
-                            >
-                              <img src={url} alt="" className="w-full h-full object-cover" />
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        {(() => {
-                          const sideAssets = sess ? getSideAssetsFromSession(sess) : [];
-                          if (sideAssets.length > 0) {
-                            return sideAssets.map((s, i) => (
-                              <Button key={`pf-${i}`} variant="secondary" size="sm" asChild>
-                                <a href={s.designPNG || s.previewPNG} target="_blank" rel="noopener noreferrer">
-                                  <Download className="h-4 w-4 mr-1" />
-                                  Print file ({s.view || `side ${i + 1}`})
-                                </a>
-                              </Button>
-                            ));
-                          }
-                          return linePrintFileUrl(li) ? (
-                            <Button variant="secondary" size="sm" asChild>
-                              <a href={linePrintFileUrl(li)} target="_blank" rel="noopener noreferrer">
-                                <Download className="h-4 w-4 mr-1" />
-                                Print file
+                    ) : (
+                      <div className="rounded-md border bg-background p-3 space-y-2">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <div className="font-medium">
+                              {(sess.product_data as { name?: string } | null)?.name || "Customizer session"}
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">{sid}</div>
+                            <Badge variant="outline" className="mt-1 text-[10px]">
+                              {sess.status}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={`${window.location.origin}/embed/${sid}`} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Open embed
                               </a>
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">No print file URL</span>
-                          );
-                        })()}
-                        {lineDesignLayersUrl(li) ? (
-                          <>
-                            <Button
-                              size="sm"
-                              type="button"
-                              disabled={layersDownloadingUrl === lineDesignLayersUrl(li)}
-                              onClick={() => {
-                                const url = lineDesignLayersUrl(li);
-                                setLayersDownloadingUrl(url);
-                                void downloadLayersJsonUrl(url)
-                                  .then(() => {
-                                    toast({
-                                      title: "Layers file download",
-                                      description: deriveLayersDownloadFilename(url),
-                                    });
-                                  })
-                                  .catch((e: unknown) => {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "Download failed",
-                                      description: e instanceof Error ? e.message : "Could not download layers file",
-                                    });
-                                  })
-                                  .finally(() => setLayersDownloadingUrl(null));
-                              }}
-                            >
-                              {layersDownloadingUrl === lineDesignLayersUrl(li) ? (
-                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                              ) : (
-                                <Download className="h-4 w-4 mr-1" />
-                              )}
-                              Layers file
                             </Button>
                             <Button variant="outline" size="sm" asChild>
-                              <a
-                                href={layersJsonViewerHref(lineDesignLayersUrl(li))}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View JSON
+                              <a href={`${window.location.origin}/review/${sid}`} target="_blank" rel="noopener noreferrer">
+                                Review
                               </a>
                             </Button>
-                          </>
-                        ) : null}
-                        {li.design_preview_url ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={li.design_preview_url} target="_blank" rel="noopener noreferrer">
-                              Preview
-                            </a>
-                          </Button>
-                        ) : null}
-                        {li.customizer_design_url ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={li.customizer_design_url} target="_blank" rel="noopener noreferrer">
-                              Design asset
-                            </a>
-                          </Button>
-                        ) : null}
-                        {sid && looksLikeSessionId(sid) ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <a
-                              href={`${window.location.origin}/embed/${sid}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <Palette className="h-3 w-3 mr-1" />
-                              Session
-                            </a>
-                          </Button>
-                        ) : null}
+                          </div>
+                        </div>
+                        {(sess.customer_name || sess.customer_email) && (
+                          <div className="text-xs text-muted-foreground">
+                            {sess.customer_name && <span>{sess.customer_name}</span>}
+                            {sess.customer_name && sess.customer_email && " · "}
+                            {sess.customer_email && <span>{sess.customer_email}</span>}
+                          </div>
+                        )}
+                        {(() => {
+                          const imgs = getDesignImagesFromSession(sess);
+                          if (imgs.length === 0) return null;
+                          return (
+                            <div className="grid grid-cols-3 gap-2 pt-1">
+                              {imgs.slice(0, 6).map((url, i) => (
+                                <a
+                                  key={i}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="aspect-square rounded border bg-muted overflow-hidden"
+                                >
+                                  <img src={url} alt="" className="w-full h-full object-contain" />
+                                </a>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                        {(() => {
+                          const sides = getSideAssetsFromSession(sess);
+                          if (sides.length === 0) return null;
+                          return (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {sides.map((s, i) => (
+                                <Button key={i} variant="secondary" size="sm" asChild>
+                                  <a href={s.designPNG || s.previewPNG} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-1" />
+                                    Print file ({s.view || `side ${i + 1}`})
+                                  </a>
+                                </Button>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                )}
+
+                {/* Line items */}
+                <div className="border rounded-md divide-y">
+                  {selectedOrder.items.length === 0 ? (
+                    <div className="p-3 text-xs text-muted-foreground">No line items.</div>
+                  ) : (
+                    selectedOrder.items.map((li) => (
+                      <div key={li.id} className="p-3 space-y-2 flex gap-3">
+                        {li.image_url ? (
+                          <img
+                            src={li.image_url}
+                            alt=""
+                            className="h-16 w-16 shrink-0 rounded border bg-muted object-contain"
+                          />
+                        ) : null}
+                        <div className="flex-1 space-y-1">
+                          <div className="font-medium">{li.name}</div>
+                          <div className="text-muted-foreground text-xs flex flex-wrap gap-x-3 gap-y-1">
+                            {li.sku ? <span>SKU: {li.sku}</span> : null}
+                            {li.variant_color ? <span>Color: {li.variant_color}</span> : null}
+                            {li.variant_size ? <span>Size: {li.variant_size}</span> : null}
+                            <span>Qty: {li.quantity}</span>
+                            <span>{formatMoney(li.unit_amount, li.currency)} ea</span>
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium whitespace-nowrap">
+                          {formatMoney((li.unit_amount || 0) * (li.quantity || 0), li.currency)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
             );
           })()}
-
         </DialogContent>
       </Dialog>
     </div>
