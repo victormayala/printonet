@@ -385,7 +385,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           <>
             <div className="flex items-center justify-between gap-3 p-2 mb-2 rounded-md border bg-muted/30">
               <span className="text-sm font-medium">
-                {search ? `${filtered.length} match${filtered.length === 1 ? "" : "es"}` : `${filtered.length} product${filtered.length === 1 ? "" : "s"}`}
+                {rows.length} in store · {enabledCount} customizable
+                {search && (
+                  <span className="ml-2 text-muted-foreground font-normal">
+                    · {filtered.length} match{filtered.length === 1 ? "" : "es"}
+                  </span>
+                )}
               </span>
               <div className="flex gap-2">
                 <Button
