@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2 } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -260,6 +260,43 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     }
   };
 
+  const removeOne = async (row: Row) => {
+    if (pendingId) return;
+    if (!confirm(`Remove "${row.product.name}" from this store? Customers will no longer see it.`)) return;
+    setPendingId(row.id);
+    try {
+      // Clean up corporate logo overrides for this product (if any).
+      await supabase
+        .from("corporate_store_product_logos")
+        .delete()
+        .eq("store_id", store.id)
+        .eq("product_id", row.product_id);
+
+      const { error } = await supabase
+        .from("corporate_store_products")
+        .delete()
+        .eq("id", row.id);
+      if (error) throw error;
+
+      qc.setQueryData<Row[]>(queryKey, (prev) => (prev ?? []).filter((r) => r.id !== row.id));
+      toast({ title: "Product removed", description: row.product.name });
+
+      const nextEnabledIds = rows
+        .filter((r) => r.id !== row.id && r.customizable)
+        .map((r) => r.product_id);
+      void syncFlagsToStorefront(nextEnabledIds);
+    } catch (e) {
+      await refetch();
+      toast({
+        title: "Could not remove",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setPendingId(null);
+    }
+  };
+
   const storefrontUrl = store.tenant_slug
     ? `${window.location.origin}/s/${store.tenant_slug}`
     : null;
@@ -400,6 +437,17 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                         onCheckedChange={(v) => toggleOne(r, v)}
                         aria-label={`Toggle customizer for ${p.name}`}
                       />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        disabled={busy || bulkBusy}
+                        onClick={() => removeOne(r)}
+                        aria-label={`Remove ${p.name} from store`}
+                        title="Remove from store"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
                 );
