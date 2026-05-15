@@ -143,42 +143,11 @@ export default function Cart() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <KeepShoppingButton variant="outline" size="default" className="flex-1">
-              <Sparkles className="h-4 w-4 mr-2" /> Keep Customizing
+              Keep Customizing
             </KeepShoppingButton>
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-[2]"
-              disabled={wooSyncing}
-              onClick={() => void handleSendToWooCart()}
-            >
-              <Store className="h-4 w-4 mr-2" />
-              {wooSyncing ? "Sending…" : "Send to store cart (WooCommerce)"}
-            </Button>
             <Button className="flex-[2]" onClick={handleCheckout}>
               <ShoppingCart className="h-4 w-4 mr-2" /> Pay here · ${(totalCents / 100).toFixed(2)}
             </Button>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">
-              Store URL for Woo transfer (example: <strong className="text-foreground">https://pepsico.stores.printonet.com</strong>).
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={manualStoreUrl}
-                onChange={(e) => setManualStoreUrl(e.target.value)}
-                placeholder="https://your-store.stores.printonet.com"
-                className="flex-1 h-10 rounded-md border border-border bg-background px-3 text-sm"
-              />
-              <Button type="button" variant="secondary" onClick={saveStoreOriginFromInput}>
-                Save Store URL
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Active store: <strong className="text-foreground">{wooStoreOrigin || "not set"}</strong> · Woo-linked items:{" "}
-              <strong className="text-foreground">{wooLines.length}</strong>
-            </p>
           </div>
         </div>
       </div>
