@@ -70,6 +70,8 @@ export default function BrandSettings() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const darkLogoInputRef = useRef<HTMLInputElement>(null);
+  const [darkDragOver, setDarkDragOver] = useState(false);
   const { toast } = useToast();
 
   // Load existing brand config from database on mount
