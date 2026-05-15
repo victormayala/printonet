@@ -3192,9 +3192,14 @@ function VariantManagerDialog({
                 {product.category} · {variants.length} color{variants.length !== 1 ? "s" : ""} · Base cost ${baseCost.toFixed(2)}
               </DialogDescription>
             </div>
-            <Button size="sm" variant="outline" onClick={applyPricingToAll} disabled={!selected}>
-              Apply pricing to all colors
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={resetAllPricesToSupplier} disabled={variants.length === 0}>
+                Reset to supplier
+              </Button>
+              <Button size="sm" variant="outline" onClick={applyPricingToAll} disabled={!selected}>
+                Apply pricing to all colors
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
