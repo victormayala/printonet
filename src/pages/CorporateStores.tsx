@@ -1508,9 +1508,10 @@ export function EditStoreDialog({
       setErrors({});
       if (!user?.id) throw new Error("Not signed in");
 
-      const [newLogoUrl, newFaviconUrl] = await Promise.all([
+      const [newLogoUrl, newFaviconUrl, newFooterLogoUrl] = await Promise.all([
         logo ? uploadAsset(user.id, store.id, logo, "logo") : Promise.resolve(null),
         favicon ? uploadAsset(user.id, store.id, favicon, "favicon") : Promise.resolve(null),
+        footerLogo ? uploadAsset(user.id, store.id, footerLogo, "footer-logo") : Promise.resolve(null),
       ]);
 
       const { error: updateErr } = await supabase
@@ -1524,6 +1525,7 @@ export function EditStoreDialog({
           store_type: parsed.data.store_type,
           logo_url: newLogoUrl ?? existing.logo_url,
           favicon_url: newFaviconUrl ?? existing.favicon_url,
+          secondary_logo_url: newFooterLogoUrl ?? existing.secondary_logo_url,
         })
         .eq("id", store.id);
       if (updateErr) throw updateErr;
