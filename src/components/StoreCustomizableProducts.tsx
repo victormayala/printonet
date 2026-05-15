@@ -78,6 +78,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         .eq("id", linkId);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["corporate_store_products_customizable", store.id] });
+      toast({ title: on ? "Customizer enabled" : "Customizer disabled" });
     } catch (e) {
       toast({
         title: "Could not update",
