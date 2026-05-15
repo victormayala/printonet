@@ -217,6 +217,7 @@ export default function CorporateStoreDetails() {
   const [editOpen, setEditOpen] = useState(false);
   const [domainDraft, setDomainDraft] = useState("");
   const [savingDomain, setSavingDomain] = useState(false);
+  const [editBrandingOpen, setEditBrandingOpen] = useState(false);
 
   const openEditDomain = () => {
     setDomainDraft(store?.custom_domain ?? "");
