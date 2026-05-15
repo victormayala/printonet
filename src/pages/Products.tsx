@@ -1136,7 +1136,7 @@ function ProductForm({
                                 />
                                 <Input
                                   type="number" step="0.01" min="0"
-                                  value={s.price ?? ""}
+                                  value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
                                   onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
                                   className="h-7 text-xs text-right"
                                 />
@@ -3396,7 +3396,7 @@ function VariantManagerDialog({
                             type="number"
                             step="0.01"
                             min="0"
-                            value={s.price ?? 0}
+                            value={Number(Number(s.price ?? 0).toFixed(2))}
                             onChange={(e) =>
                               updateSize(selectedIdx, sIdx, { price: parseFloat(e.target.value) || 0 })
                             }
