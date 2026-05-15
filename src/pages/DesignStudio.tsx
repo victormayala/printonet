@@ -2749,9 +2749,11 @@ export default function DesignStudio({
               className="h-6 max-w-[120px] object-contain"
             />
           ) : (
-            <Sparkles className="h-5 w-5 text-primary" />
+            <>
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="font-display font-semibold text-sm">{brand.name || productName}</span>
+            </>
           )}
-          <span className="font-display font-semibold text-sm">{brand.name || productName}</span>
         </div>
 
         <div className="flex items-center gap-2">
