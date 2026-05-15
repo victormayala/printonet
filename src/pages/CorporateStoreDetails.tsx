@@ -125,6 +125,7 @@ import { CorporateStore } from "@/types/corporateStore";
 
 import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
+import { StoreCustomers } from "@/components/StoreCustomers";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
@@ -464,6 +465,7 @@ export default function CorporateStoreDetails() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="customizer">Customizer</TabsTrigger>
+          <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-0">
@@ -569,6 +571,10 @@ export default function CorporateStoreDetails() {
 
         <TabsContent value="customizer" className="mt-0">
           <StoreCustomizerSettings store={store} />
+        </TabsContent>
+
+        <TabsContent value="customers" className="mt-0">
+          <StoreCustomers storeId={store.id} />
         </TabsContent>
       </Tabs>
 
