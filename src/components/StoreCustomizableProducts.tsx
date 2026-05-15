@@ -257,6 +257,16 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             No products found. Add products in the Products tab first.
           </div>
         ) : (
+          <>
+            <label className="flex items-center gap-3 p-2 mb-2 rounded-md border bg-muted/30 cursor-pointer">
+              <Checkbox
+                checked={allEnabled ? true : someEnabled ? "indeterminate" : false}
+                onCheckedChange={(v) => toggleAll(!!v)}
+              />
+              <span className="text-sm font-medium">
+                Select all {search ? "(filtered)" : ""} ({filtered.length})
+              </span>
+            </label>
           <div className="grid gap-2 sm:grid-cols-2">
             {filtered.map((p) => {
               const link = enabledMap.get(p.id);
