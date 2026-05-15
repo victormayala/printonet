@@ -197,6 +197,15 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         title: updated.customizable ? "Customizer enabled" : "Customizer disabled",
         description: row.product.name,
       });
+
+      // Push the new full enabled set to the storefront so the Customize
+      // button actually appears / disappears there. Without this the DB row
+      // changes but the tenant storefront keeps its old flag set.
+      const nextEnabledIds = rows
+        .map((r) => (r.id === row.id ? { ...r, customizable: !!updated.customizable } : r))
+        .filter((r) => r.customizable)
+        .map((r) => r.product_id);
+      void syncFlagsToStorefront(nextEnabledIds);
     } catch (e) {
       // Revert and surface
       await refetch();
