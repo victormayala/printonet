@@ -558,6 +558,17 @@ export default function CorporateStoreDetails() {
 
       <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
 
+      <Dialog open={editBrandingOpen} onOpenChange={setEditBrandingOpen}>
+        <EditStoreDialog
+          store={store}
+          onSaved={() => {
+            setEditBrandingOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["corporate_store", id, user?.id] });
+            queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+          }}
+        />
+      </Dialog>
+
       <AlertDialog open={confirmPause} onOpenChange={setConfirmPause}>
         <AlertDialogContent>
           <AlertDialogHeader>
