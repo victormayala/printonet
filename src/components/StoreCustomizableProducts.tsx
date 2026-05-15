@@ -272,16 +272,10 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" /> Customizable products
-            </CardTitle>
-            <CardDescription>
-              Flip a switch to enable the "Customize" button on the storefront.
-              Changes save instantly and the live storefront picks them up on next load.
-            </CardDescription>
-          </div>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" /> Customizable products
+          </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{enabledCount} of {rows.length} enabled</Badge>
             <Button
@@ -313,7 +307,10 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             </Button>
           </div>
         </div>
-
+        <CardDescription>
+          Flip a switch to enable the "Customize" button on the storefront.
+          Changes save instantly and the live storefront picks them up on next load.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="relative mb-3">
