@@ -70,6 +70,8 @@ export default function BrandSettings() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const darkLogoInputRef = useRef<HTMLInputElement>(null);
+  const [darkDragOver, setDarkDragOver] = useState(false);
   const { toast } = useToast();
 
   // Load existing brand config from database on mount
@@ -92,6 +94,7 @@ export default function BrandSettings() {
           setConfig({
             name: data.name || "",
             logoUrl: data.logo_url || "",
+            logoDarkUrl: (data as any).logo_dark_url || "",
             theme: (data.theme === "light" ? "light" : "dark"),
             primaryColor: data.primary_color,
             accentColor: data.accent_color,
@@ -121,8 +124,8 @@ export default function BrandSettings() {
     setConfig((prev) => ({ ...prev, ...partial }));
   }
 
-  // Logo upload handler
-  const handleLogoUpload = useCallback(async (file: File) => {
+  // Logo upload handler — variant: "light" (regular) or "dark"
+  const handleLogoUpload = useCallback(async (file: File, variant: "light" | "dark" = "light") => {
     if (!file.type.startsWith("image/")) {
       toast({ title: "Invalid file", description: "Please upload an image file (PNG, JPG, SVG)", variant: "destructive" });
       return;
@@ -135,7 +138,7 @@ export default function BrandSettings() {
     setUploadingLogo(true);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const fileName = `logo_${Date.now()}.${ext}`;
+      const fileName = `logo_${variant}_${Date.now()}.${ext}`;
       const { data, error } = await supabase.storage
         .from("brand-assets")
         .upload(fileName, file, { contentType: file.type });
@@ -146,8 +149,9 @@ export default function BrandSettings() {
         .from("brand-assets")
         .getPublicUrl(data.path);
 
-      updateConfig({ logoUrl: urlData.publicUrl });
-      toast({ title: "Logo uploaded" });
+      if (variant === "dark") updateConfig({ logoDarkUrl: urlData.publicUrl });
+      else updateConfig({ logoUrl: urlData.publicUrl });
+      toast({ title: variant === "dark" ? "Dark-mode logo uploaded" : "Logo uploaded" });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
@@ -179,9 +183,10 @@ export default function BrandSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const payload = {
+      const payload: any = {
         name: config.name || null,
         logo_url: config.logoUrl || null,
+        logo_dark_url: config.logoDarkUrl || null,
         theme: config.theme,
         primary_color: config.primaryColor,
         accent_color: config.accentColor,
@@ -218,6 +223,7 @@ export default function BrandSettings() {
     const brandObj: Record<string, any> = {};
     if (config.name) brandObj.name = config.name;
     if (config.logoUrl) brandObj.logoUrl = config.logoUrl;
+    if (config.logoDarkUrl) brandObj.logoDarkUrl = config.logoDarkUrl;
     brandObj.theme = config.theme;
     brandObj.primaryColor = config.primaryColor;
     brandObj.accentColor = config.accentColor;
@@ -414,6 +420,50 @@ export default function BrandSettings() {
                       onChange={handleLogoInputChange}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Dark-mode logo (optional)</Label>
+                    {config.logoDarkUrl ? (
+                      <div className="flex items-center gap-3 rounded-lg border bg-neutral-900 p-3">
+                        <img src={config.logoDarkUrl} alt="Dark-mode logo" className="h-10 max-w-[120px] object-contain" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-neutral-400 truncate">{config.logoDarkUrl.split("/").pop()}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-neutral-400 hover:text-destructive"
+                          onClick={() => updateConfig({ logoDarkUrl: "" })}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setDarkDragOver(true); }}
+                        onDragLeave={() => setDarkDragOver(false)}
+                        onDrop={(e) => { e.preventDefault(); setDarkDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f, "dark"); }}
+                        onClick={() => darkLogoInputRef.current?.click()}
+                        className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${
+                          darkDragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"
+                        }`}
+                      >
+                        {uploadingLogo ? (
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        ) : (
+                          <>
+                            <Moon className="h-6 w-6 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground text-center">
+                              <span className="font-medium text-foreground">Upload dark variant</span>
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">Used when the customizer is in dark mode</p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <input
+                      ref={darkLogoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "dark"); e.target.value = ""; }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -492,8 +542,12 @@ export default function BrandSettings() {
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        {config.logoUrl ? (
-                          <img src={config.logoUrl} alt="Logo" className="h-5 max-w-[80px] object-contain" />
+                        {(config.theme === "dark" && config.logoDarkUrl) || config.logoUrl ? (
+                          <img
+                            src={config.theme === "dark" && config.logoDarkUrl ? config.logoDarkUrl : config.logoUrl}
+                            alt="Logo"
+                            className="h-5 max-w-[80px] object-contain"
+                          />
                         ) : (
                           <Sparkles className="h-4 w-4" style={{ color: config.primaryColor }} />
                         )}

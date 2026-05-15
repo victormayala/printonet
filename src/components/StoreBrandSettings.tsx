@@ -25,6 +25,7 @@ interface Props {
   store: CorporateStore & {
     customizer_theme?: string;
     customizer_border_radius?: number;
+    customizer_logo_dark_url?: string | null;
   };
 }
 
@@ -34,10 +35,12 @@ export function StoreBrandSettings({ store }: Props) {
   const { toast } = useToast();
   const previewRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const darkLogoInputRef = useRef<HTMLInputElement>(null);
 
   const initial: BrandConfig = {
     name: store.name || "",
     logoUrl: store.logo_url || "",
+    logoDarkUrl: (store as any).customizer_logo_dark_url || "",
     theme: ((store as any).customizer_theme === "light" ? "light" : "dark") as BrandConfig["theme"],
     primaryColor: store.primary_color || DEFAULT_BRAND_CONFIG.primaryColor,
     accentColor: store.accent_color || DEFAULT_BRAND_CONFIG.accentColor,
@@ -47,8 +50,9 @@ export function StoreBrandSettings({ store }: Props) {
 
   const [config, setConfig] = useState<BrandConfig>(initial);
   const [saving, setSaving] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState<"light" | "dark" | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [darkDragOver, setDarkDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
 
   useEffect(() => {
@@ -59,7 +63,7 @@ export function StoreBrandSettings({ store }: Props) {
 
   function update(p: Partial<BrandConfig>) { setConfig((prev) => ({ ...prev, ...p })); }
 
-  const handleLogoUpload = useCallback(async (file: File) => {
+  const handleLogoUpload = useCallback(async (file: File, variant: "light" | "dark" = "light") => {
     if (!file.type.startsWith("image/")) {
       toast({ title: "Invalid file", description: "Please upload an image (PNG, JPG, SVG)", variant: "destructive" });
       return;
@@ -68,19 +72,20 @@ export function StoreBrandSettings({ store }: Props) {
       toast({ title: "File too large", description: "Logo must be under 5MB", variant: "destructive" });
       return;
     }
-    setUploadingLogo(true);
+    setUploadingLogo(variant);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const path = `${user?.id}/stores/${store.id}/logo_${Date.now()}.${ext}`;
+      const path = `${user?.id}/stores/${store.id}/logo_${variant}_${Date.now()}.${ext}`;
       const { data, error } = await supabase.storage.from("brand-assets").upload(path, file, { contentType: file.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("brand-assets").getPublicUrl(data.path);
-      update({ logoUrl: urlData.publicUrl });
-      toast({ title: "Logo uploaded" });
+      if (variant === "dark") update({ logoDarkUrl: urlData.publicUrl });
+      else update({ logoUrl: urlData.publicUrl });
+      toast({ title: variant === "dark" ? "Dark-mode logo uploaded" : "Logo uploaded" });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
-      setUploadingLogo(false);
+      setUploadingLogo(null);
     }
   }, [toast, user?.id, store.id]);
 
@@ -99,6 +104,7 @@ export function StoreBrandSettings({ store }: Props) {
       setConfig({
         name: data.name || config.name,
         logoUrl: data.logo_url || "",
+        logoDarkUrl: (data as any).logo_dark_url || "",
         theme: (data.theme === "light" ? "light" : "dark"),
         primaryColor: data.primary_color,
         accentColor: data.accent_color,
@@ -120,12 +126,13 @@ export function StoreBrandSettings({ store }: Props) {
         .from("corporate_stores")
         .update({
           logo_url: config.logoUrl || null,
+          customizer_logo_dark_url: config.logoDarkUrl || null,
           primary_color: config.primaryColor,
           accent_color: config.accentColor,
           font_family: config.fontFamily,
           customizer_theme: config.theme,
           customizer_border_radius: config.borderRadius,
-        })
+        } as any)
         .eq("id", store.id);
       if (error) throw error;
       toast({ title: "Customizer brand updated" });
@@ -211,35 +218,71 @@ export function StoreBrandSettings({ store }: Props) {
 
           <div className="rounded-xl border bg-card p-5 space-y-4">
             <div className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-primary" /><h4 className="font-semibold text-sm">Logo</h4></div>
-            {config.logoUrl ? (
-              <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
-                <img src={config.logoUrl} alt="Brand logo" className="h-10 max-w-[120px] object-contain" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground truncate">{config.logoUrl.split("/").pop()}</p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Default logo</Label>
+              {config.logoUrl ? (
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
+                  <img src={config.logoUrl} alt="Brand logo" className="h-10 max-w-[120px] object-contain" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground truncate">{config.logoUrl.split("/").pop()}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => update({ logoUrl: "" })}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => update({ logoUrl: "" })}>
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f); }}
-                onClick={() => logoInputRef.current?.click()}
-                className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"}`}
-              >
-                {uploadingLogo ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
-                  <>
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground text-center"><span className="font-medium text-foreground">Click to upload</span> or drag and drop</p>
-                    <p className="text-[10px] text-muted-foreground">PNG, JPG or SVG · Max 5MB</p>
-                  </>
-                )}
-              </div>
-            )}
-            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }} />
+              ) : (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f, "light"); }}
+                  onClick={() => logoInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"}`}
+                >
+                  {uploadingLogo === "light" ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
+                    <>
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground text-center"><span className="font-medium text-foreground">Click to upload</span> or drag and drop</p>
+                      <p className="text-[10px] text-muted-foreground">PNG, JPG or SVG · Max 5MB</p>
+                    </>
+                  )}
+                </div>
+              )}
+              <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "light"); e.target.value = ""; }} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Dark-mode logo (optional)</Label>
+              {config.logoDarkUrl ? (
+                <div className="flex items-center gap-3 rounded-lg border bg-neutral-900 p-3">
+                  <img src={config.logoDarkUrl} alt="Dark-mode logo" className="h-10 max-w-[120px] object-contain" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-neutral-400 truncate">{config.logoDarkUrl.split("/").pop()}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-neutral-400 hover:text-destructive" onClick={() => update({ logoDarkUrl: "" })}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDarkDragOver(true); }}
+                  onDragLeave={() => setDarkDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDarkDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleLogoUpload(f, "dark"); }}
+                  onClick={() => darkLogoInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${darkDragOver ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground hover:bg-muted/30"}`}
+                >
+                  {uploadingLogo === "dark" ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
+                    <>
+                      <Moon className="h-6 w-6 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground text-center"><span className="font-medium text-foreground">Upload dark variant</span></p>
+                      <p className="text-[10px] text-muted-foreground">Used when the customizer is in dark mode</p>
+                    </>
+                  )}
+                </div>
+              )}
+              <input ref={darkLogoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "dark"); e.target.value = ""; }} />
+            </div>
           </div>
 
           <div className="rounded-xl border bg-card p-5 space-y-4">
@@ -275,7 +318,15 @@ export function StoreBrandSettings({ store }: Props) {
               <div className="rounded-lg overflow-hidden border shadow-lg" style={{ borderColor: previewBorder, borderRadius: `${config.borderRadius}px` }}>
                 <div className="flex items-center justify-between px-3 py-2 border-b" style={{ background: previewToolbar, color: previewText, borderColor: previewBorder, fontFamily: config.fontFamily }}>
                   <div className="flex items-center gap-2">
-                    {config.logoUrl ? <img src={config.logoUrl} alt="Logo" className="h-5 max-w-[80px] object-contain" /> : <Sparkles className="h-4 w-4" style={{ color: config.primaryColor }} />}
+                    {((config.theme === "dark" && config.logoDarkUrl) || config.logoUrl) ? (
+                      <img
+                        src={config.theme === "dark" && config.logoDarkUrl ? config.logoDarkUrl : config.logoUrl}
+                        alt="Logo"
+                        className="h-5 max-w-[80px] object-contain"
+                      />
+                    ) : (
+                      <Sparkles className="h-4 w-4" style={{ color: config.primaryColor }} />
+                    )}
                     <span className="text-xs font-semibold">{config.name || store.name}</span>
                   </div>
                   <div className="flex items-center gap-1">

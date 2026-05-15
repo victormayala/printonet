@@ -452,6 +452,7 @@ export default function DesignStudio({
           setDbBrandConfig({
             name: data.name || "",
             logoUrl: data.logo_url || "",
+            logoDarkUrl: (data as any).logo_dark_url || "",
             theme: (data.theme === "light" ? "light" : "dark") as "light" | "dark",
             primaryColor: data.primary_color,
             accentColor: data.accent_color,
@@ -2760,8 +2761,12 @@ export default function DesignStudio({
             </Button>
           )}
           {!embedMode && <Separator orientation="vertical" className="h-6 bg-sidebar-border" />}
-          {brand.logoUrl ? (
-            <img src={brand.logoUrl} alt={brand.name || "Logo"} className="h-6 max-w-[120px] object-contain" />
+          {((brand.theme === "dark" && brand.logoDarkUrl) || brand.logoUrl) ? (
+            <img
+              src={brand.theme === "dark" && brand.logoDarkUrl ? brand.logoDarkUrl : brand.logoUrl}
+              alt={brand.name || "Logo"}
+              className="h-6 max-w-[120px] object-contain"
+            />
           ) : (
             <Sparkles className="h-5 w-5 text-primary" />
           )}

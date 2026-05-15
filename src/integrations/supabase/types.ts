@@ -36,6 +36,7 @@ export type Database = {
           created_at: string
           font_family: string
           id: string
+          logo_dark_url: string | null
           logo_url: string | null
           name: string | null
           primary_color: string
@@ -49,6 +50,7 @@ export type Database = {
           created_at?: string
           font_family?: string
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           name?: string | null
           primary_color?: string
@@ -62,6 +64,7 @@ export type Database = {
           created_at?: string
           font_family?: string
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           name?: string | null
           primary_color?: string
@@ -153,6 +156,7 @@ export type Database = {
           created_at: string
           custom_domain: string | null
           customizer_border_radius: number
+          customizer_logo_dark_url: string | null
           customizer_theme: string
           dns_checked_at: string | null
           dns_verified: boolean
@@ -195,6 +199,7 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           customizer_border_radius?: number
+          customizer_logo_dark_url?: string | null
           customizer_theme?: string
           dns_checked_at?: string | null
           dns_verified?: boolean
@@ -237,6 +242,7 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           customizer_border_radius?: number
+          customizer_logo_dark_url?: string | null
           customizer_theme?: string
           dns_checked_at?: string | null
           dns_verified?: boolean
