@@ -316,7 +316,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <Package className="h-5 w-5" /> Store products
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">{rows.length} in store · {enabledCount} customizable</Badge>
             <Button size="sm" onClick={() => setPushOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Add products
             </Button>
@@ -386,7 +385,12 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           <>
             <div className="flex items-center justify-between gap-3 p-2 mb-2 rounded-md border bg-muted/30">
               <span className="text-sm font-medium">
-                {search ? `${filtered.length} match${filtered.length === 1 ? "" : "es"}` : `${filtered.length} product${filtered.length === 1 ? "" : "s"}`}
+                {rows.length} in store · {enabledCount} customizable
+                {search && (
+                  <span className="ml-2 text-muted-foreground font-normal">
+                    · {filtered.length} match{filtered.length === 1 ? "" : "es"}
+                  </span>
+                )}
               </span>
               <div className="flex gap-2">
                 <Button

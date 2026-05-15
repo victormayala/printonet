@@ -122,7 +122,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
-import { PushProductsDialog } from "@/components/PushProductsDialog";
+
 import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
 import { EditStoreDialog } from "@/pages/CorporateStores";
@@ -211,7 +211,7 @@ export default function CorporateStoreDetails() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [pushOpen, setPushOpen] = useState(false);
+  
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPause, setConfirmPause] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
@@ -384,21 +384,13 @@ export default function CorporateStoreDetails() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Primary operations */}
-            {(store.wp_site_url || store.status === "active") && (
+            {store.wp_site_url && (
               <div className="flex items-center gap-2 lg:pr-4 lg:border-r lg:border-border">
-                {store.wp_site_url && (
-                  <Button asChild variant="outline">
-                    <a href={store.wp_site_url} target="_blank" rel="noreferrer">
-                      <Globe className="h-4 w-4" /> Visit store
-                    </a>
-                  </Button>
-                )}
-                {store.status === "active" && (
-                  <Button onClick={() => setPushOpen(true)}>
-                    <Package className="h-4 w-4" /> Push products
-                  </Button>
-                )}
+                <Button asChild variant="outline">
+                  <a href={store.wp_site_url} target="_blank" rel="noreferrer">
+                    <Globe className="h-4 w-4" /> Visit store
+                  </a>
+                </Button>
               </div>
             )}
 
@@ -578,7 +570,7 @@ export default function CorporateStoreDetails() {
         </TabsContent>
       </Tabs>
 
-      <PushProductsDialog store={store} open={pushOpen} onOpenChange={setPushOpen} />
+      
 
       <Dialog open={editBrandingOpen} onOpenChange={setEditBrandingOpen}>
         <EditStoreDialog
