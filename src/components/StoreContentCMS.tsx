@@ -599,6 +599,124 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
   );
 }
 
+function AssetsPanel({ store }: { store: CorporateStore }) {
+  const [busy, setBusy] = useState(false);
+  const [uploads, setUploads] = useState<Array<{ name: string; url: string; size: number }>>([]);
+  const [drag, setDrag] = useState(false);
+
+  const handleFiles = async (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    if (!arr.length) return;
+    setBusy(true);
+    try {
+      for (const file of arr) {
+        const signed = await cms<{ upload_url: string; public_url: string; key?: string }>(
+          store.id,
+          "create-asset-upload-url",
+          {
+            filename: file.name,
+            content_type: file.type || "application/octet-stream",
+            size: file.size,
+          },
+        );
+        const putRes = await fetch(signed.upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!putRes.ok) {
+          throw new Error(`Upload failed (${putRes.status}) for ${file.name}`);
+        }
+        setUploads((u) => [
+          { name: file.name, url: signed.public_url, size: file.size },
+          ...u,
+        ]);
+      }
+      toast({ title: `Uploaded ${arr.length} file${arr.length > 1 ? "s" : ""}` });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDrag(true);
+        }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDrag(false);
+          if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
+        }}
+        className={`rounded-md border-2 border-dashed p-8 text-center transition-colors ${
+          drag ? "border-primary bg-primary/5" : "border-border bg-muted/30"
+        }`}
+      >
+        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+        <p className="text-sm font-medium">Drop files here, or</p>
+        <div className="mt-3">
+          <Label htmlFor="cms-asset-input" className="inline-block">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium cursor-pointer hover:bg-primary-hover">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Choose files
+            </span>
+            <input
+              id="cms-asset-input"
+              type="file"
+              multiple
+              className="sr-only"
+              disabled={busy}
+              onChange={(e) => {
+                if (e.target.files) handleFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          Uploads are signed by the storefront and stored in its asset bucket.
+        </p>
+      </div>
+
+      {uploads.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Recently uploaded (this session)</Label>
+          {uploads.map((u, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-md border p-2 text-sm">
+              {/^image\//.test(u.name) || /\.(png|jpe?g|gif|webp|svg)$/i.test(u.name) ? (
+                <img src={u.url} alt={u.name} className="h-12 w-12 object-cover rounded" />
+              ) : (
+                <div className="h-12 w-12 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                  file
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-medium truncate">{u.name}</p>
+                <p className="text-xs text-muted-foreground">{(u.size / 1024).toFixed(1)} KB</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(u.url);
+                  toast({ title: "URL copied" });
+                }}
+              >
+                Copy URL
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NavigationPanel({ store, canPublish }: { store: CorporateStore; canPublish: boolean }) {
   const [items, setItems] = useState<NavItem[]>([]);
   const [loading, setLoading] = useState(true);
