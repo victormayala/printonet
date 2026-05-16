@@ -126,6 +126,7 @@ import { CorporateStore } from "@/types/corporateStore";
 import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
 import { StoreCustomers } from "@/components/StoreCustomers";
+import { StoreShippingTax } from "@/components/StoreShippingTax";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
@@ -465,6 +466,7 @@ export default function CorporateStoreDetails() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="customizer">Customizer</TabsTrigger>
+          <TabsTrigger value="shipping-tax">Shipping & Tax</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
 
@@ -571,6 +573,10 @@ export default function CorporateStoreDetails() {
 
         <TabsContent value="customizer" className="mt-0">
           <StoreCustomizerSettings store={store} />
+        </TabsContent>
+
+        <TabsContent value="shipping-tax" className="mt-0">
+          <StoreShippingTax store={store} />
         </TabsContent>
 
         <TabsContent value="customers" className="mt-0">
