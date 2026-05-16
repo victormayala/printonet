@@ -581,6 +581,10 @@ export default function CorporateStoreDetails() {
           <StoreShippingTax store={store} />
         </TabsContent>
 
+        <TabsContent value="content" className="mt-0">
+          <StoreContentCMS store={store} />
+        </TabsContent>
+
         <TabsContent value="customers" className="mt-0">
           <StoreCustomers storeId={store.id} />
         </TabsContent>
