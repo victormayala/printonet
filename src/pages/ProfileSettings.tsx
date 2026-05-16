@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Camera, User } from "lucide-react";
+import { Loader2, Camera, User, Mail, Store, Copy, CheckCircle2, Fingerprint } from "lucide-react";
 
 export default function ProfileSettings() {
   const { user } = useAuth();
@@ -17,6 +16,7 @@ export default function ProfileSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -75,6 +75,13 @@ export default function ProfileSettings() {
     }
   };
 
+  const handleCopyUserId = () => {
+    navigator.clipboard.writeText(user?.id ?? "");
+    setCopied(true);
+    toast({ title: "Copied!", description: "User ID copied to clipboard" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -88,30 +95,27 @@ export default function ProfileSettings() {
     : (user?.email?.slice(0, 2).toUpperCase() ?? "??");
 
   return (
-    <div className="bg-background">
-      <div className="p-4 sm:p-6 lg:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Profile</CardTitle>
-            <CardDescription>Manage your store identity</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Avatar */}
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative group">
-                <Avatar className="h-24 w-24 text-lg">
+    <div className="bg-background min-h-screen">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
+        <Card className="overflow-hidden border-0 shadow-xl">
+          {/* Gradient header banner */}
+          <div className="relative h-40 bg-gradient-to-r from-primary via-primary to-accent">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(253,209,0,0.3),transparent_60%)]" />
+            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
+              <div className="relative">
+                <Avatar className="h-24 w-24 text-lg ring-4 ring-background shadow-lg">
                   {avatarUrl ? (
                     <AvatarImage src={avatarUrl} alt="Avatar" />
                   ) : null}
-                  <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
+                  <AvatarFallback className="bg-accent text-accent-foreground text-2xl font-bold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <label className="absolute -bottom-1 -right-1 h-8 w-8 flex items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md cursor-pointer hover:scale-105 transition-transform">
                   {uploading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Camera className="h-5 w-5 text-white" />
+                    <Camera className="h-4 w-4" />
                   )}
                   <input
                     type="file"
@@ -125,48 +129,69 @@ export default function ProfileSettings() {
                   />
                 </label>
               </div>
-              <p className="text-xs text-muted-foreground">Click to change avatar</p>
             </div>
+          </div>
 
-            {/* User ID (for integrations) */}
-            <div className="space-y-2">
-              <Label>User ID</Label>
-              <div className="flex gap-2">
-                <Input value={user?.id ?? ""} disabled className="bg-muted font-mono text-xs" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(user?.id ?? "");
-                    toast({ title: "Copied!", description: "User ID copied to clipboard" });
-                  }}
-                >
-                  Copy
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Use this for store branding to appear in the customizer.</p>
-            </div>
+          {/* Title section */}
+          <div className="pt-14 pb-6 text-center">
+            <h1 className="text-2xl font-bold text-foreground">
+              {storeName || "Your Profile"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
+          </div>
 
-            {/* Email (read-only) */}
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={user?.email ?? ""} disabled className="bg-muted" />
-            </div>
-
+          <CardContent className="space-y-6 px-6 pb-8">
             {/* Store Name */}
             <div className="space-y-2">
-              <Label htmlFor="store-name">Store Name</Label>
+              <Label htmlFor="store-name" className="flex items-center gap-2 text-sm font-medium">
+                <Store className="h-4 w-4 text-accent" />
+                Store Name
+              </Label>
               <Input
                 id="store-name"
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
                 placeholder="My Awesome Store"
+                className="bg-muted/50"
               />
             </div>
 
-            <Button onClick={handleSave} disabled={saving} className="w-full">
+            {/* Email */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Mail className="h-4 w-4 text-accent" />
+                Email
+              </Label>
+              <Input value={user?.email ?? ""} disabled className="bg-muted/50 text-muted-foreground" />
+            </div>
+
+            {/* User ID */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Fingerprint className="h-4 w-4 text-accent" />
+                User ID
+              </Label>
+              <div className="flex gap-2">
+                <Input value={user?.id ?? ""} disabled className="bg-muted/50 font-mono text-xs text-muted-foreground" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-accent/30 hover:bg-accent/10 hover:text-accent"
+                  onClick={handleCopyUserId}
+                >
+                  {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Use this ID for store branding integrations.</p>
+            </div>
+
+            {/* Save button */}
+            <Button 
+              onClick={handleSave} 
+              disabled={saving} 
+              className="w-full bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+            >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
