@@ -126,6 +126,7 @@ import { CorporateStore } from "@/types/corporateStore";
 import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
 import { StoreCustomers } from "@/components/StoreCustomers";
+import { StoreShippingTax } from "@/components/StoreShippingTax";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
