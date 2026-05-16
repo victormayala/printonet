@@ -730,6 +730,8 @@ Deno.serve(async (req) => {
 
         return json(200, { orders, next_cursor: nextCursor });
       }
+
+      default:
         return json(400, { error: "unknown_op", op });
     }
   } catch (err) {
