@@ -885,6 +885,7 @@ export function StoreContentCMS({ store }: { store: CorporateStore }) {
             <TabsTrigger value="settings">Site settings</TabsTrigger>
             <TabsTrigger value="pages">Content pages</TabsTrigger>
             <TabsTrigger value="nav">Navigation</TabsTrigger>
+            <TabsTrigger value="assets">Assets</TabsTrigger>
           </TabsList>
           <Separator className="my-4" />
           <TabsContent value="blocks">
@@ -898,6 +899,9 @@ export function StoreContentCMS({ store }: { store: CorporateStore }) {
           </TabsContent>
           <TabsContent value="nav">
             <NavigationPanel store={store} canPublish={canPublish} />
+          </TabsContent>
+          <TabsContent value="assets">
+            <AssetsPanel store={store} />
           </TabsContent>
         </Tabs>
       </CardContent>
