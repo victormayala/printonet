@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.subscription-portal]
 verify_jwt = false
+
+[functions.stripe-connect-webhook]
+verify_jwt = false
