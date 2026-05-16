@@ -91,6 +91,16 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
+  const fetchShippingZones = async (storeId: string) => {
+    const { data, error } = await supabase
+      .from("corporate_store_shipping_zones")
+      .select("id, name, countries, rate_amount, free_threshold, sort_order")
+      .eq("store_id", storeId)
+      .order("sort_order", { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  };
+
   try {
     switch (op) {
       case "get_user_store_limit": {
