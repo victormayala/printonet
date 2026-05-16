@@ -604,49 +604,67 @@ export type Database = {
         Row: {
           amount_total: number | null
           application_fee_amount: number | null
+          carrier: string | null
           created_at: string
           currency: string | null
           customer_email: string | null
+          delivered_at: string | null
           environment: string
           id: string
+          last_refund_id: string | null
+          refunded_amount: number
           session_id: string | null
+          shipped_at: string | null
           status: string
           store_id: string | null
           stripe_account_id: string | null
           stripe_checkout_id: string | null
           stripe_payment_intent: string | null
+          tracking_number: string | null
           updated_at: string
         }
         Insert: {
           amount_total?: number | null
           application_fee_amount?: number | null
+          carrier?: string | null
           created_at?: string
           currency?: string | null
           customer_email?: string | null
+          delivered_at?: string | null
           environment?: string
           id?: string
+          last_refund_id?: string | null
+          refunded_amount?: number
           session_id?: string | null
+          shipped_at?: string | null
           status?: string
           store_id?: string | null
           stripe_account_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent?: string | null
+          tracking_number?: string | null
           updated_at?: string
         }
         Update: {
           amount_total?: number | null
           application_fee_amount?: number | null
+          carrier?: string | null
           created_at?: string
           currency?: string | null
           customer_email?: string | null
+          delivered_at?: string | null
           environment?: string
           id?: string
+          last_refund_id?: string | null
+          refunded_amount?: number
           session_id?: string | null
+          shipped_at?: string | null
           status?: string
           store_id?: string | null
           stripe_account_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent?: string | null
+          tracking_number?: string | null
           updated_at?: string
         }
         Relationships: [
