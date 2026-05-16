@@ -127,6 +127,7 @@ import { StoreCustomizableProducts } from "@/components/StoreCustomizableProduct
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
 import { StoreCustomers } from "@/components/StoreCustomers";
 import { StoreShippingTax } from "@/components/StoreShippingTax";
+import { StoreContentCMS } from "@/components/StoreContentCMS";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
