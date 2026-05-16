@@ -112,24 +112,59 @@ Deno.serve(async (req) => {
     return json(400, { ok: false, error: "store_has_no_tenant_slug" });
   }
 
-  const url = `${BASE.replace(/\/$/, "")}/api/public/cms/${action}`;
+  // Normalize: force https, strip trailing slashes, no double slashes.
+  // The storefront 405s a GET on every action except `schema-version`, so
+  // we must guarantee POST reaches the origin (no http→https or trailing
+  // slash redirect, which would downgrade POST → GET).
+  const baseNorm = BASE.replace(/\/+$/, "").replace(/^http:\/\//i, "https://");
+  const url = `${baseNorm}/api/public/cms/${action}`;
 
   const raw = JSON.stringify(body ?? {});
   const ts = Date.now().toString();
   const sig = await hmacHex(SECRET, `${ts}.${store.tenant_slug}.${raw}`);
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-platform-tenant": store.tenant_slug,
-      "x-platform-timestamp": ts,
-      "x-platform-signature": sig,
-    },
-    body: raw,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      redirect: "manual", // surface redirects instead of silently GETting
+      headers: {
+        "Content-Type": "application/json",
+        "x-platform-tenant": store.tenant_slug,
+        "x-platform-timestamp": ts,
+        "x-platform-signature": sig,
+      },
+      body: raw,
+    });
+  } catch (e) {
+    console.error("cms-proxy fetch failed", { url, action, err: String(e) });
+    return json(502, { ok: false, error: `upstream_fetch_failed: ${String(e)}` });
+  }
+
+  // If the storefront tried to redirect us, the POST would have been
+  // downgraded to GET on follow. Report it loudly instead.
+  if (res.status >= 300 && res.status < 400) {
+    const location = res.headers.get("location");
+    console.error("cms-proxy upstream redirect (POST would downgrade)", {
+      url,
+      status: res.status,
+      location,
+    });
+    return json(502, {
+      ok: false,
+      error: `upstream_redirect_${res.status}_to_${location ?? "unknown"}`,
+    });
+  }
 
   const text = await res.text();
+  if (!res.ok) {
+    console.error("cms-proxy upstream non-2xx", {
+      url,
+      action,
+      status: res.status,
+      body: text.slice(0, 500),
+    });
+  }
   return new Response(text, {
     status: res.status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
