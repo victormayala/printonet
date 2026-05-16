@@ -23,8 +23,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const applySession = (nextSession: Session | null) => {
-    setSession(nextSession);
+  const applySession = (nextSession: Session | null, forceSessionUpdate = false) => {
+    setSession((currentSession) => {
+      const currentUserId = currentSession?.user?.id ?? null;
+      const nextUserId = nextSession?.user?.id ?? null;
+      return forceSessionUpdate || currentUserId !== nextUserId ? nextSession : currentSession;
+    });
     setUser((currentUser) => {
       const nextUser = nextSession?.user ?? null;
       return currentUser?.id === nextUser?.id ? currentUser : nextUser;
@@ -34,13 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        applySession(session);
+      (event, session) => {
+        applySession(session, event !== "SIGNED_IN" && event !== "TOKEN_REFRESHED");
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session);
+      applySession(session, true);
     });
 
     return () => subscription.unsubscribe();
