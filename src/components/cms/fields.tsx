@@ -218,7 +218,7 @@ export function ArrayField<T>({
   min?: number;
   max?: number;
   newItem: () => T;
-  render: (item: T, update: (patch: Partial<T>) => void, idx: number) => React.ReactNode;
+  render: (item: T, update: (patch: Partial<T>) => void, idx: number) => ReactNode;
   itemTitle?: (item: T, idx: number) => string;
 }) {
   const arr = items ?? [];
