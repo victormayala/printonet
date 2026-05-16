@@ -31,7 +31,14 @@ import Billing from "./pages/Billing";
 import BillingReturn from "./pages/BillingReturn";
 import Customizer from "./pages/Customizer";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 
 const currentHost = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
 const isPotentialStoreHost =
