@@ -99,6 +99,13 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
   const [newType, setNewType] = useState("hero");
+  const [rawIds, setRawIds] = useState<Set<string>>(new Set());
+  const toggleRaw = (id: string) =>
+    setRawIds((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
 
   const load = useCallback(async () => {
     setLoading(true);
