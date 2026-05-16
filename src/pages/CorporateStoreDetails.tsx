@@ -468,6 +468,7 @@ export default function CorporateStoreDetails() {
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="customizer">Customizer</TabsTrigger>
           <TabsTrigger value="shipping-tax">Shipping & Tax</TabsTrigger>
+          <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
 
