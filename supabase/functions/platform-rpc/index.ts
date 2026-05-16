@@ -157,14 +157,16 @@ Deno.serve(async (req) => {
             "id, user_id, name, tenant_slug, status, custom_domain, contact_email, " +
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
-              "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold",
+              "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
+              "tax_rate_bps, tax_inclusive, tax_label",
           )
           .eq("status", "active")
           .ilike("custom_domain", domain)
           .maybeSingle();
         if (error) throw error;
         if (!data) return json(404, { error: "store_not_found" });
-        return json(200, { store: data });
+        const zones = await fetchShippingZones(data.id);
+        return json(200, { store: { ...data, shipping_zones: zones } });
       }
 
       case "get_store_by_slug": {
@@ -176,14 +178,16 @@ Deno.serve(async (req) => {
             "id, user_id, name, tenant_slug, status, custom_domain, contact_email, " +
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
-              "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold",
+              "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
+              "tax_rate_bps, tax_inclusive, tax_label",
           )
           .eq("status", "active")
           .ilike("tenant_slug", slug)
           .maybeSingle();
         if (error) throw error;
         if (!data) return json(404, { error: "store_not_found" });
-        return json(200, { store: data });
+        const zones = await fetchShippingZones(data.id);
+        return json(200, { store: { ...data, shipping_zones: zones } });
       }
 
       case "list_store_products": {
