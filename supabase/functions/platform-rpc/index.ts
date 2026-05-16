@@ -364,6 +364,32 @@ Deno.serve(async (req) => {
         return json(200, { settings: data });
       }
 
+      case "update_store_stripe": {
+        const storeId = String(params.store_id ?? "");
+        const patch = (params.patch ?? {}) as Record<string, unknown>;
+        if (!storeId) return json(400, { error: "store_id_required" });
+        const allowed = [
+          "stripe_account_id",
+          "stripe_charges_enabled",
+          "stripe_payouts_enabled",
+          "stripe_details_submitted",
+          "stripe_connected_at",
+        ];
+        const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        for (const k of allowed) if (k in patch) update[k] = patch[k];
+        const { data, error } = await supabase
+          .from("corporate_stores")
+          .update(update)
+          .eq("id", storeId)
+          .select(
+            "id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, stripe_connected_at",
+          )
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "store_not_found" });
+        return json(200, { store: data });
+      }
+
       case "record_webhook_event": {
         const eventId = String(params.event_id ?? "");
         const eventType = String(params.type ?? "");
