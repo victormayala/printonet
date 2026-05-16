@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +13,7 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  Code2,
   CheckCircle2,
   Loader2,
   Plus,
@@ -23,27 +23,12 @@ import {
   Upload,
 } from "lucide-react";
 import type { CorporateStore } from "@/types/corporateStore";
+import { cms } from "@/lib/cmsClient";
+import { BlockEditor, BLOCK_TYPES } from "@/components/cms/BlockEditor";
+import { SiteSettingsEditor, ContentPageEditor } from "@/components/cms/SiteSettingsEditor";
 
 // Bump in lock-step with storefront's `PLATFORM_CMS_SCHEMA_VERSION`.
 const PLATFORM_CMS_SCHEMA_VERSION = 1;
-
-type RpcResult<T = any> = { ok: true } & T | { ok: false; error: string; status?: number };
-
-async function cms<T = any>(
-  storeId: string,
-  action: string,
-  body: unknown = {},
-  method: "POST" | "GET" = "POST",
-): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<RpcResult<T>>("cms-proxy", {
-    body: { store_id: storeId, action, body, method },
-  });
-  if (error) throw new Error(error.message);
-  if (!data || (data as any).ok === false) {
-    throw new Error((data as any)?.error ?? `cms ${action} failed`);
-  }
-  return data as T;
-}
 
 type Block = {
   id: string;
