@@ -424,10 +424,7 @@ function SiteSettingsPanel({ store, canPublish }: { store: CorporateStore; canPu
         Last published:{" "}
         {settings?.published_at ? new Date(settings.published_at).toLocaleString() : "never"}
       </div>
-      <div>
-        <Label className="text-xs text-muted-foreground">Draft data (JSON)</Label>
-        <JsonField value={draft} onChange={setDraft} rows={18} />
-      </div>
+      <SiteSettingsEditor storeId={store.id} data={draft} onChange={setDraft} />
       <div className="flex gap-2">
         <Button onClick={save} disabled={busy !== null}>
           {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -590,14 +587,11 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
               />
               <Label className="text-sm">Enabled</Label>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Draft (JSON)</Label>
-              <JsonField
-                value={drafts[p.id] ?? p.draft}
-                onChange={(v) => setDrafts((d) => ({ ...d, [p.id]: v }))}
-                rows={10}
-              />
-            </div>
+            <ContentPageEditor
+              storeId={store.id}
+              data={drafts[p.id] ?? p.draft}
+              onChange={(v) => setDrafts((d) => ({ ...d, [p.id]: v }))}
+            />
             <div className="flex gap-2">
               <Button size="sm" onClick={() => save(p)} disabled={busy === p.id}>
                 <Save className="h-4 w-4" /> Save draft
