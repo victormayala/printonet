@@ -297,12 +297,35 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
               />
               <Label className="text-sm">Enabled on storefront</Label>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Draft data (JSON)</Label>
-              <JsonField
-                value={drafts[b.id] ?? b.draft_data}
-                onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
-              />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">
+                  {rawIds.has(b.id) ? "Draft data (raw JSON)" : "Block content"}
+                </Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => toggleRaw(b.id)}
+                >
+                  <Code2 className="h-3 w-3" />
+                  {rawIds.has(b.id) ? "Use form" : "Edit JSON"}
+                </Button>
+              </div>
+              {rawIds.has(b.id) ? (
+                <JsonField
+                  value={drafts[b.id] ?? b.draft_data}
+                  onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
+                />
+              ) : (
+                <BlockEditor
+                  storeId={store.id}
+                  type={b.block_type}
+                  data={drafts[b.id] ?? b.draft_data}
+                  onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
+                />
+              )}
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => save(b)} disabled={busy === b.id}>
