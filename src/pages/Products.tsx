@@ -4156,27 +4156,27 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             )}
           </TabsContent>
 
-          <TabsContent value="categories" forceMount className="data-[state=inactive]:hidden">
+          <TabsContent value="categories">
             <CategoriesManager />
           </TabsContent>
-          <TabsContent value="shopify" forceMount className="data-[state=inactive]:hidden">
+          <TabsContent value="shopify">
             <ShopifyImport onDone={fetchProducts} />
           </TabsContent>
 
-          <TabsContent value="woocommerce" forceMount className="data-[state=inactive]:hidden">
+          <TabsContent value="woocommerce">
             <WooCommerceImport onDone={fetchProducts} />
           </TabsContent>
 
-          <TabsContent value="suppliers" forceMount className="data-[state=inactive]:hidden">
+          <TabsContent value="suppliers">
             <Tabs defaultValue="ssactivewear" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
                 <TabsTrigger value="sanmar" className="gap-2"><Package className="h-4 w-4" /> SanMar</TabsTrigger>
               </TabsList>
-              <TabsContent value="ssactivewear" forceMount className="data-[state=inactive]:hidden">
+              <TabsContent value="ssactivewear">
                 <SSActivewearImport onDone={fetchProducts} />
               </TabsContent>
-              <TabsContent value="sanmar" forceMount className="data-[state=inactive]:hidden">
+              <TabsContent value="sanmar">
                 <SanMarImport onDone={fetchProducts} />
               </TabsContent>
             </Tabs>

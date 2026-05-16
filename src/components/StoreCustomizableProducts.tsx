@@ -51,9 +51,10 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const { data: rows = [], isLoading, refetch, isFetching } = useQuery<Row[]>({
     queryKey,
     enabled: !!user?.id,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-    staleTime: 0,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data: links, error } = await supabase
         .from("corporate_store_products")
