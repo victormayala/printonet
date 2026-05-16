@@ -146,6 +146,50 @@ export type Database = {
         }
         Relationships: []
       }
+      corporate_store_shipping_zones: {
+        Row: {
+          countries: string[]
+          created_at: string
+          free_threshold: number | null
+          id: string
+          name: string
+          rate_amount: number
+          sort_order: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          countries?: string[]
+          created_at?: string
+          free_threshold?: number | null
+          id?: string
+          name: string
+          rate_amount?: number
+          sort_order?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          countries?: string[]
+          created_at?: string
+          free_threshold?: number | null
+          id?: string
+          name?: string
+          rate_amount?: number
+          sort_order?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corporate_store_shipping_zones_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corporate_stores: {
         Row: {
           accent_color: string
@@ -175,6 +219,9 @@ export type Database = {
           stripe_details_submitted: boolean
           stripe_payouts_enabled: boolean
           tax_enabled: boolean
+          tax_inclusive: boolean
+          tax_label: string
+          tax_rate_bps: number
           tenant_slug: string | null
           updated_at: string
           user_id: string
@@ -207,6 +254,9 @@ export type Database = {
           stripe_details_submitted?: boolean
           stripe_payouts_enabled?: boolean
           tax_enabled?: boolean
+          tax_inclusive?: boolean
+          tax_label?: string
+          tax_rate_bps?: number
           tenant_slug?: string | null
           updated_at?: string
           user_id: string
@@ -239,6 +289,9 @@ export type Database = {
           stripe_details_submitted?: boolean
           stripe_payouts_enabled?: boolean
           tax_enabled?: boolean
+          tax_inclusive?: boolean
+          tax_label?: string
+          tax_rate_bps?: number
           tenant_slug?: string | null
           updated_at?: string
           user_id?: string
