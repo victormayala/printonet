@@ -301,6 +301,12 @@ Deno.serve(async (req) => {
           "stripe_account_id",
           "customer_email",
           "environment",
+          "tracking_number",
+          "carrier",
+          "shipped_at",
+          "delivered_at",
+          "refunded_amount",
+          "last_refund_id",
         ];
         const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
         for (const k of allowed) if (k in patch) update[k] = patch[k];
