@@ -358,30 +358,151 @@ Deno.serve(async (req) => {
         if (!storeId) return json(400, { error: "store_id_required" });
         const { data, error } = await supabase
           .from("corporate_stores")
-          .select("id, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold")
+          .select(
+            "id, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
+              "tax_rate_bps, tax_inclusive, tax_label",
+          )
           .eq("id", storeId)
           .maybeSingle();
         if (error) throw error;
         if (!data) return json(404, { error: "store_not_found" });
-        return json(200, { settings: data });
+        const zones = await fetchShippingZones(storeId);
+        return json(200, { settings: { ...data, shipping_zones: zones } });
       }
 
       case "update_store_shipping_settings": {
         const storeId = String(params.store_id ?? "");
         const patch = (params.patch ?? {}) as Record<string, unknown>;
+        const zonesInput = (params as Record<string, unknown>).shipping_zones;
         if (!storeId) return json(400, { error: "store_id_required" });
-        const allowed = ["tax_enabled", "shipping_label", "shipping_flat_amount", "free_shipping_threshold"];
+
+        const allowed = [
+          "tax_enabled",
+          "shipping_label",
+          "shipping_flat_amount",
+          "free_shipping_threshold",
+          "tax_rate_bps",
+          "tax_inclusive",
+          "tax_label",
+        ];
         const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
         for (const k of allowed) if (k in patch) update[k] = patch[k];
+
+        // Validate ranges
+        if ("tax_rate_bps" in update) {
+          const v = Number(update.tax_rate_bps);
+          if (!Number.isFinite(v) || v < 0 || v > 10000) {
+            return json(400, { error: "tax_rate_bps_out_of_range" });
+          }
+          update.tax_rate_bps = Math.round(v);
+        }
+        for (const k of ["shipping_flat_amount", "free_shipping_threshold"] as const) {
+          if (k in update && update[k] !== null) {
+            const v = Number(update[k]);
+            if (!Number.isFinite(v) || v < 0) {
+              return json(400, { error: `${k}_must_be_non_negative` });
+            }
+            update[k] = Math.round(v);
+          }
+        }
+
+        if (Object.keys(update).length > 1) {
+          const { error: upErr } = await supabase
+            .from("corporate_stores")
+            .update(update)
+            .eq("id", storeId);
+          if (upErr) throw upErr;
+        }
+
+        // Zones sync — undefined = leave untouched, [] = delete all.
+        if (zonesInput !== undefined) {
+          if (!Array.isArray(zonesInput)) {
+            return json(400, { error: "shipping_zones_must_be_array" });
+          }
+          const incoming = zonesInput as Array<Record<string, unknown>>;
+          const keepIds: string[] = [];
+          const toInsert: Array<Record<string, unknown>> = [];
+          const toUpdate: Array<Record<string, unknown>> = [];
+
+          for (const z of incoming) {
+            const name = String(z.name ?? "").trim();
+            if (!name) return json(400, { error: "zone_name_required" });
+            const rate = Number(z.rate_amount);
+            if (!Number.isFinite(rate) || rate < 0) {
+              return json(400, { error: "zone_rate_amount_invalid" });
+            }
+            const freeRaw = z.free_threshold;
+            let free: number | null = null;
+            if (freeRaw !== null && freeRaw !== undefined && freeRaw !== "") {
+              const f = Number(freeRaw);
+              if (!Number.isFinite(f) || f < 0) {
+                return json(400, { error: "zone_free_threshold_invalid" });
+              }
+              free = Math.round(f);
+            }
+            const countries = Array.isArray(z.countries)
+              ? (z.countries as unknown[])
+                  .map((c) => String(c).trim().toUpperCase())
+                  .filter((c) => c.length === 2)
+              : [];
+            const sort = Number.isFinite(Number(z.sort_order)) ? Math.round(Number(z.sort_order)) : 0;
+
+            const row = {
+              store_id: storeId,
+              name,
+              countries,
+              rate_amount: Math.round(rate),
+              free_threshold: free,
+              sort_order: sort,
+            };
+
+            if (z.id && typeof z.id === "string") {
+              keepIds.push(z.id);
+              toUpdate.push({ id: z.id, ...row });
+            } else {
+              toInsert.push(row);
+            }
+          }
+
+          // Delete any zones for this store not in the incoming keep list.
+          let delQ = supabase
+            .from("corporate_store_shipping_zones")
+            .delete()
+            .eq("store_id", storeId);
+          if (keepIds.length > 0) delQ = delQ.not("id", "in", `(${keepIds.join(",")})`);
+          const { error: delErr } = await delQ;
+          if (delErr) throw delErr;
+
+          for (const row of toUpdate) {
+            const { id, ...rest } = row as { id: string } & Record<string, unknown>;
+            const { error: uErr } = await supabase
+              .from("corporate_store_shipping_zones")
+              .update({ ...rest, updated_at: new Date().toISOString() })
+              .eq("id", id)
+              .eq("store_id", storeId);
+            if (uErr) throw uErr;
+          }
+
+          if (toInsert.length > 0) {
+            const { error: iErr } = await supabase
+              .from("corporate_store_shipping_zones")
+              .insert(toInsert);
+            if (iErr) throw iErr;
+          }
+        }
+
         const { data, error } = await supabase
           .from("corporate_stores")
-          .update(update)
+          .select(
+            "id, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
+              "tax_rate_bps, tax_inclusive, tax_label",
+          )
           .eq("id", storeId)
-          .select("id, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold")
           .maybeSingle();
         if (error) throw error;
         if (!data) return json(404, { error: "store_not_found" });
-        return json(200, { settings: data });
+        const zones = await fetchShippingZones(storeId);
+        return json(200, { settings: { ...data, shipping_zones: zones } });
       }
 
       case "update_store_stripe": {
