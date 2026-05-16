@@ -219,12 +219,15 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
       <div className="flex flex-wrap items-end gap-3 rounded-md border p-4 bg-muted/30">
         <div className="space-y-1">
           <Label className="text-xs">New block type</Label>
-          <Input
+          <select
             value={newType}
             onChange={(e) => setNewType(e.target.value)}
-            className="w-48"
-            placeholder="hero"
-          />
+            className="flex h-10 w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            {BLOCK_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
         </div>
         <Button onClick={addBlock} disabled={busy === "__new" || !newType.trim()}>
           {busy === "__new" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
