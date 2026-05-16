@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +13,7 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  Code2,
   CheckCircle2,
   Loader2,
   Plus,
@@ -23,27 +23,12 @@ import {
   Upload,
 } from "lucide-react";
 import type { CorporateStore } from "@/types/corporateStore";
+import { cms } from "@/lib/cmsClient";
+import { BlockEditor, BLOCK_TYPES } from "@/components/cms/BlockEditor";
+import { SiteSettingsEditor, ContentPageEditor } from "@/components/cms/SiteSettingsEditor";
 
 // Bump in lock-step with storefront's `PLATFORM_CMS_SCHEMA_VERSION`.
 const PLATFORM_CMS_SCHEMA_VERSION = 1;
-
-type RpcResult<T = any> = { ok: true } & T | { ok: false; error: string; status?: number };
-
-async function cms<T = any>(
-  storeId: string,
-  action: string,
-  body: unknown = {},
-  method: "POST" | "GET" = "POST",
-): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<RpcResult<T>>("cms-proxy", {
-    body: { store_id: storeId, action, body, method },
-  });
-  if (error) throw new Error(error.message);
-  if (!data || (data as any).ok === false) {
-    throw new Error((data as any)?.error ?? `cms ${action} failed`);
-  }
-  return data as T;
-}
 
 type Block = {
   id: string;
@@ -114,6 +99,13 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
   const [newType, setNewType] = useState("hero");
+  const [rawIds, setRawIds] = useState<Set<string>>(new Set());
+  const toggleRaw = (id: string) =>
+    setRawIds((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -234,12 +226,15 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
       <div className="flex flex-wrap items-end gap-3 rounded-md border p-4 bg-muted/30">
         <div className="space-y-1">
           <Label className="text-xs">New block type</Label>
-          <Input
+          <select
             value={newType}
             onChange={(e) => setNewType(e.target.value)}
-            className="w-48"
-            placeholder="hero"
-          />
+            className="flex h-10 w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            {BLOCK_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
         </div>
         <Button onClick={addBlock} disabled={busy === "__new" || !newType.trim()}>
           {busy === "__new" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -302,12 +297,35 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
               />
               <Label className="text-sm">Enabled on storefront</Label>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Draft data (JSON)</Label>
-              <JsonField
-                value={drafts[b.id] ?? b.draft_data}
-                onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
-              />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">
+                  {rawIds.has(b.id) ? "Draft data (raw JSON)" : "Block content"}
+                </Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => toggleRaw(b.id)}
+                >
+                  <Code2 className="h-3 w-3" />
+                  {rawIds.has(b.id) ? "Use form" : "Edit JSON"}
+                </Button>
+              </div>
+              {rawIds.has(b.id) ? (
+                <JsonField
+                  value={drafts[b.id] ?? b.draft_data}
+                  onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
+                />
+              ) : (
+                <BlockEditor
+                  storeId={store.id}
+                  type={b.block_type}
+                  data={drafts[b.id] ?? b.draft_data}
+                  onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
+                />
+              )}
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => save(b)} disabled={busy === b.id}>
@@ -406,10 +424,7 @@ function SiteSettingsPanel({ store, canPublish }: { store: CorporateStore; canPu
         Last published:{" "}
         {settings?.published_at ? new Date(settings.published_at).toLocaleString() : "never"}
       </div>
-      <div>
-        <Label className="text-xs text-muted-foreground">Draft data (JSON)</Label>
-        <JsonField value={draft} onChange={setDraft} rows={18} />
-      </div>
+      <SiteSettingsEditor storeId={store.id} data={draft} onChange={setDraft} />
       <div className="flex gap-2">
         <Button onClick={save} disabled={busy !== null}>
           {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -572,14 +587,11 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
               />
               <Label className="text-sm">Enabled</Label>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Draft (JSON)</Label>
-              <JsonField
-                value={drafts[p.id] ?? p.draft}
-                onChange={(v) => setDrafts((d) => ({ ...d, [p.id]: v }))}
-                rows={10}
-              />
-            </div>
+            <ContentPageEditor
+              storeId={store.id}
+              data={drafts[p.id] ?? p.draft}
+              onChange={(v) => setDrafts((d) => ({ ...d, [p.id]: v }))}
+            />
             <div className="flex gap-2">
               <Button size="sm" onClick={() => save(p)} disabled={busy === p.id}>
                 <Save className="h-4 w-4" /> Save draft
