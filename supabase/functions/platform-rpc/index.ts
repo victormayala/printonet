@@ -648,7 +648,88 @@ Deno.serve(async (req) => {
         return json(200, { counts });
       }
 
-      default:
+      case "list_store_orders": {
+        const storeId = String(params.store_id ?? "");
+        if (!storeId) return json(400, { error: "store_id_required" });
+
+        const status = params.status ? String(params.status) : "all";
+        const from = params.from ? String(params.from) : null;
+        const to = params.to ? String(params.to) : null;
+        const search = params.search ? String(params.search).trim() : "";
+        const limit = Math.min(Math.max(Number(params.limit ?? 50) || 50, 1), 200);
+
+        // Keyset cursor: base64("<created_at_iso>|<id>")
+        let cursorCreatedAt: string | null = null;
+        let cursorId: string | null = null;
+        if (params.cursor) {
+          try {
+            const decoded = atob(String(params.cursor));
+            const [c, i] = decoded.split("|");
+            if (c && i) {
+              cursorCreatedAt = c;
+              cursorId = i;
+            }
+          } catch {
+            return json(400, { error: "bad_cursor" });
+          }
+        }
+
+        let q = supabase
+          .from("orders")
+          .select("*")
+          .eq("store_id", storeId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(limit + 1);
+
+        if (status && status !== "all") q = q.eq("status", status);
+        if (from) q = q.gte("created_at", from);
+        if (to) q = q.lte("created_at", to);
+        if (search) {
+          // Match on email OR exact order id
+          const isUuid = /^[0-9a-f-]{36}$/i.test(search);
+          q = isUuid
+            ? q.or(`customer_email.ilike.%${search}%,id.eq.${search}`)
+            : q.ilike("customer_email", `%${search}%`);
+        }
+        if (cursorCreatedAt && cursorId) {
+          // (created_at, id) < (cursorCreatedAt, cursorId) in DESC order
+          q = q.or(
+            `created_at.lt.${cursorCreatedAt},and(created_at.eq.${cursorCreatedAt},id.lt.${cursorId})`,
+          );
+        }
+
+        const { data: rows, error } = await q;
+        if (error) throw error;
+
+        const page = (rows ?? []).slice(0, limit);
+        const hasMore = (rows ?? []).length > limit;
+        const last = page[page.length - 1];
+        const nextCursor = hasMore && last
+          ? btoa(`${last.created_at}|${last.id}`)
+          : null;
+
+        const ids = page.map((o) => o.id);
+        let items: Record<string, unknown>[] = [];
+        if (ids.length > 0) {
+          const { data: itemRows, error: itemsErr } = await supabase
+            .from("order_items")
+            .select("*")
+            .in("order_id", ids);
+          if (itemsErr) throw itemsErr;
+          items = itemRows ?? [];
+        }
+
+        const itemsByOrder: Record<string, Record<string, unknown>[]> = {};
+        for (const it of items) {
+          const oid = String((it as { order_id?: string }).order_id ?? "");
+          if (!oid) continue;
+          (itemsByOrder[oid] ??= []).push(it);
+        }
+        const orders = page.map((o) => ({ ...o, items: itemsByOrder[o.id] ?? [] }));
+
+        return json(200, { orders, next_cursor: nextCursor });
+      }
         return json(400, { error: "unknown_op", op });
     }
   } catch (err) {
