@@ -114,16 +114,6 @@ Deno.serve(async (req) => {
 
   const url = `${BASE.replace(/\/$/, "")}/api/public/cms/${action}`;
 
-  // schema-version supports GET without HMAC
-  if (method === "GET" || action === "schema-version") {
-    const res = await fetch(url, { method: "GET" });
-    const text = await res.text();
-    return new Response(text, {
-      status: res.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   const raw = JSON.stringify(body ?? {});
   const ts = Date.now().toString();
   const sig = await hmacHex(SECRET, `${ts}.${store.tenant_slug}.${raw}`);
