@@ -242,15 +242,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
               disabled={isFetching}
               title="Refresh from database"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => refetch()}
-              disabled={isFetching}
-              title="Refresh from database"
-            >
               <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             </Button>
           </div>
