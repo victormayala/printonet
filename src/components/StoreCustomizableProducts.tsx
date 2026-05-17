@@ -237,7 +237,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             </Button>
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => refetch()}
               disabled={isFetching}
               title="Refresh from database"
