@@ -4,14 +4,14 @@ import {
   Activity,
   ArrowUpRight,
   Building2,
-  CreditCard,
+  Clock,
   DollarSign,
   Package,
   Palette,
   ShoppingBag,
-  Sparkles,
   Truck,
   Users,
+  Zap,
 } from "lucide-react";
 import {
   Area,
@@ -22,15 +22,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays, startOfDay, startOfWeek } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 
 type OrderRow = {
   id: string;
