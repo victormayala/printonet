@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Products", url: "/products", icon: Package },
   { title: "My Stores", url: "/corporate-stores", icon: Building2 },
   { title: "Customizer", url: "/customizer", icon: Paintbrush },
