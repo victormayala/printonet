@@ -321,11 +321,7 @@ export default function Dashboard() {
           icon={Building2}
           label="Active Stores"
           value={`${activeStores}`}
-          hint={
-            sub.totalStoreLimit > 0
-              ? `${stores.length} of ${sub.totalStoreLimit} seats used`
-              : `${stores.length} total`
-          }
+          hint={`${stores.length} total`}
           accent="bg-amber-500/10 text-amber-600"
         />
         <KpiCard
@@ -350,14 +346,10 @@ export default function Dashboard() {
           accent="bg-cyan-500/10 text-cyan-600"
         />
         <KpiCard
-          icon={CreditCard}
-          label="Plan"
-          value={sub.planMeta?.name ?? "None"}
-          hint={
-            sub.isActive && sub.periodEnd
-              ? `Renews ${sub.periodEnd.toLocaleDateString()}`
-              : "Not subscribed"
-          }
+          icon={Zap}
+          label="Orders Today"
+          value={ordersToday.length.toLocaleString()}
+          hint={`${fmtMoney(revenueToday, currency)} today`}
           accent="bg-indigo-500/10 text-indigo-600"
         />
       </div>
