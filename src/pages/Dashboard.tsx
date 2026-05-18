@@ -96,7 +96,6 @@ function KpiCard({
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const sub = useSubscription();
 
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);
