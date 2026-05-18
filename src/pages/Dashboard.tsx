@@ -4,14 +4,14 @@ import {
   Activity,
   ArrowUpRight,
   Building2,
-  CreditCard,
+  Clock,
   DollarSign,
   Package,
   Palette,
   ShoppingBag,
-  Sparkles,
   Truck,
   Users,
+  Zap,
 } from "lucide-react";
 import {
   Area,
@@ -22,15 +22,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays, startOfDay, startOfWeek } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 
 type OrderRow = {
   id: string;
@@ -98,7 +96,6 @@ function KpiCard({
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const sub = useSubscription();
 
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -199,6 +196,28 @@ export default function Dashboard() {
   const aov = ordersLast30.length > 0 ? revenue30 / ordersLast30.length : 0;
   const currency = orders[0]?.currency || "usd";
 
+  const todayStart = useMemo(() => startOfDay(new Date()), []);
+  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const ordersToday = useMemo(
+    () => orders.filter((o) => new Date(o.created_at) >= todayStart),
+    [orders, todayStart],
+  );
+  const ordersThisWeek = useMemo(
+    () => orders.filter((o) => new Date(o.created_at) >= weekStart),
+    [orders, weekStart],
+  );
+  const revenueToday = ordersToday.reduce((s, o) => s + (o.amount_total ?? 0), 0);
+  const revenueWeek = ordersThisWeek.reduce((s, o) => s + (o.amount_total ?? 0), 0);
+  const pendingCount = useMemo(
+    () => ordersLast30.filter((o) => o.status !== "paid" && o.status !== "refunded").length,
+    [ordersLast30],
+  );
+  const statusBreakdown = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const o of ordersLast30) m.set(o.status, (m.get(o.status) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [ordersLast30]);
+
   // 30-day timeseries
   const chartData = useMemo(() => {
     const buckets = new Map<string, number>();
@@ -265,18 +284,10 @@ export default function Dashboard() {
             Here's how your print business is performing across all stores and channels.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {sub.isActive && sub.planMeta ? (
-            <Badge variant="secondary" className="gap-1">
-              <Sparkles className="h-3 w-3" />
-              {sub.planMeta.name} plan · {sub.feeLabel} fee
-            </Badge>
-          ) : (
-            <Button asChild size="sm">
-              <Link to="/pricing">Choose a plan</Link>
-            </Button>
-          )}
-        </div>
+        <Badge variant="secondary" className="gap-1">
+          <Activity className="h-3 w-3" />
+          Last 30 days
+        </Badge>
       </div>
 
       {/* KPIs */}
@@ -310,11 +321,7 @@ export default function Dashboard() {
           icon={Building2}
           label="Active Stores"
           value={`${activeStores}`}
-          hint={
-            sub.totalStoreLimit > 0
-              ? `${stores.length} of ${sub.totalStoreLimit} seats used`
-              : `${stores.length} total`
-          }
+          hint={`${stores.length} total`}
           accent="bg-amber-500/10 text-amber-600"
         />
         <KpiCard
@@ -339,14 +346,10 @@ export default function Dashboard() {
           accent="bg-cyan-500/10 text-cyan-600"
         />
         <KpiCard
-          icon={CreditCard}
-          label="Plan"
-          value={sub.planMeta?.name ?? "None"}
-          hint={
-            sub.isActive && sub.periodEnd
-              ? `Renews ${sub.periodEnd.toLocaleDateString()}`
-              : "Not subscribed"
-          }
+          icon={Zap}
+          label="Orders Today"
+          value={ordersToday.length.toLocaleString()}
+          hint={`${fmtMoney(revenueToday, currency)} today`}
           accent="bg-indigo-500/10 text-indigo-600"
         />
       </div>
@@ -404,58 +407,65 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Plan & seats</CardTitle>
-            <CardDescription>
-              {sub.isActive ? sub.planMeta?.name : "No active plan"}
-            </CardDescription>
+            <CardTitle className="text-base">Today at a glance</CardTitle>
+            <CardDescription>Live snapshot of activity</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {sub.isActive ? (
-              <>
-                <div>
-                  <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-sm text-muted-foreground">Store seats</span>
-                    <span className="text-sm font-medium">
-                      {stores.length} / {sub.totalStoreLimit}
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      sub.totalStoreLimit > 0
-                        ? Math.min(100, (stores.length / sub.totalStoreLimit) * 100)
-                        : 0
-                    }
-                  />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-border p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Today</div>
+                <div className="text-xl font-semibold mt-1">
+                  {fmtMoney(revenueToday, currency)}
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Transaction fee:{" "}
-                  <span className="text-foreground font-medium">{sub.feeLabel}</span>
+                <div className="text-xs text-muted-foreground">
+                  {ordersToday.length} order{ordersToday.length === 1 ? "" : "s"}
                 </div>
-                {sub.periodEnd && (
-                  <div className="text-sm text-muted-foreground">
-                    Renews{" "}
-                    <span className="text-foreground font-medium">
-                      {sub.periodEnd.toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link to="/billing">
-                    Manage billing <ArrowUpRight className="h-3 w-3 ml-1" />
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Subscribe to unlock corporate stores, higher store limits, and lower
-                  transaction fees.
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">This week</div>
+                <div className="text-xl font-semibold mt-1">
+                  {fmtMoney(revenueWeek, currency)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {ordersThisWeek.length} order{ordersThisWeek.length === 1 ? "" : "s"}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Order status (30d)</span>
+              </div>
+              {statusBreakdown.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No orders in the last 30 days.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {statusBreakdown.map(([status, count]) => (
+                    <div key={status} className="flex items-center justify-between text-sm">
+                      <Badge
+                        variant={status === "paid" ? "default" : "secondary"}
+                        className="capitalize"
+                      >
+                        {status}
+                      </Badge>
+                      <span className="tabular-nums text-muted-foreground">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {pendingCount > 0 && (
+                <p className="text-xs text-amber-600 mt-2">
+                  {pendingCount} order{pendingCount === 1 ? "" : "s"} need attention
                 </p>
-                <Button asChild className="w-full">
-                  <Link to="/pricing">View plans</Link>
-                </Button>
-              </>
-            )}
+              )}
+            </div>
+
+            <Button asChild variant="outline" size="sm" className="w-full">
+              <Link to="/orders">
+                Go to orders <ArrowUpRight className="h-3 w-3 ml-1" />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
