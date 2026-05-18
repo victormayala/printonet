@@ -423,9 +423,23 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Today at a glance</CardTitle>
-            <CardDescription>Live snapshot of activity</CardDescription>
+          <CardHeader className="pb-2 space-y-2">
+            <div>
+              <CardTitle className="text-base">Today at a glance</CardTitle>
+              <CardDescription>Live snapshot of activity</CardDescription>
+            </div>
+            <ToggleGroup
+              type="single"
+              size="sm"
+              value={todayFilter}
+              onValueChange={(v) => v && setTodayFilter(v as typeof todayFilter)}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="all" className="h-7 px-2 text-xs">All</ToggleGroupItem>
+              <ToggleGroupItem value="paid" className="h-7 px-2 text-xs">Paid</ToggleGroupItem>
+              <ToggleGroupItem value="pending" className="h-7 px-2 text-xs">Pending</ToggleGroupItem>
+              <ToggleGroupItem value="refunded" className="h-7 px-2 text-xs">Refunded</ToggleGroupItem>
+            </ToggleGroup>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
