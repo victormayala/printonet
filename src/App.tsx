@@ -67,7 +67,8 @@ const App = () => (
           <Sonner />
           <Routes>
             {/* Redirect root to auth */}
-            <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/auth" replace />} />
+            <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <DashboardRoute><Dashboard /></DashboardRoute>} />
 
             {/* Auth */}
             <Route path="/auth" element={<Auth />} />
