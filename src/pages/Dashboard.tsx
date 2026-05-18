@@ -407,58 +407,65 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Plan & seats</CardTitle>
-            <CardDescription>
-              {sub.isActive ? sub.planMeta?.name : "No active plan"}
-            </CardDescription>
+            <CardTitle className="text-base">Today at a glance</CardTitle>
+            <CardDescription>Live snapshot of activity</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {sub.isActive ? (
-              <>
-                <div>
-                  <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-sm text-muted-foreground">Store seats</span>
-                    <span className="text-sm font-medium">
-                      {stores.length} / {sub.totalStoreLimit}
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      sub.totalStoreLimit > 0
-                        ? Math.min(100, (stores.length / sub.totalStoreLimit) * 100)
-                        : 0
-                    }
-                  />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-border p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Today</div>
+                <div className="text-xl font-semibold mt-1">
+                  {fmtMoney(revenueToday, currency)}
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Transaction fee:{" "}
-                  <span className="text-foreground font-medium">{sub.feeLabel}</span>
+                <div className="text-xs text-muted-foreground">
+                  {ordersToday.length} order{ordersToday.length === 1 ? "" : "s"}
                 </div>
-                {sub.periodEnd && (
-                  <div className="text-sm text-muted-foreground">
-                    Renews{" "}
-                    <span className="text-foreground font-medium">
-                      {sub.periodEnd.toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link to="/billing">
-                    Manage billing <ArrowUpRight className="h-3 w-3 ml-1" />
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Subscribe to unlock corporate stores, higher store limits, and lower
-                  transaction fees.
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">This week</div>
+                <div className="text-xl font-semibold mt-1">
+                  {fmtMoney(revenueWeek, currency)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {ordersThisWeek.length} order{ordersThisWeek.length === 1 ? "" : "s"}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Order status (30d)</span>
+              </div>
+              {statusBreakdown.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No orders in the last 30 days.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {statusBreakdown.map(([status, count]) => (
+                    <div key={status} className="flex items-center justify-between text-sm">
+                      <Badge
+                        variant={status === "paid" ? "default" : "secondary"}
+                        className="capitalize"
+                      >
+                        {status}
+                      </Badge>
+                      <span className="tabular-nums text-muted-foreground">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {pendingCount > 0 && (
+                <p className="text-xs text-amber-600 mt-2">
+                  {pendingCount} order{pendingCount === 1 ? "" : "s"} need attention
                 </p>
-                <Button asChild className="w-full">
-                  <Link to="/pricing">View plans</Link>
-                </Button>
-              </>
-            )}
+              )}
+            </div>
+
+            <Button asChild variant="outline" size="sm" className="w-full">
+              <Link to="/orders">
+                Go to orders <ArrowUpRight className="h-3 w-3 ml-1" />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
