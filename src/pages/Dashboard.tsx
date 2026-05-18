@@ -262,18 +262,10 @@ export default function Dashboard() {
             Here's how your print business is performing across all stores and channels.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {sub.isActive && sub.planMeta ? (
-            <Badge variant="secondary" className="gap-1">
-              <Sparkles className="h-3 w-3" />
-              {sub.planMeta.name} plan · {sub.feeLabel} fee
-            </Badge>
-          ) : (
-            <Button asChild size="sm">
-              <Link to="/pricing">Choose a plan</Link>
-            </Button>
-          )}
-        </div>
+        <Badge variant="secondary" className="gap-1">
+          <Activity className="h-3 w-3" />
+          Last 30 days
+        </Badge>
       </div>
 
       {/* KPIs */}
