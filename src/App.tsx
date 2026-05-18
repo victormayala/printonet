@@ -30,6 +30,7 @@ import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import BillingReturn from "./pages/BillingReturn";
 import Customizer from "./pages/Customizer";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
