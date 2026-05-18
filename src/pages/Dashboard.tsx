@@ -29,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type OrderRow = {
   id: string;
@@ -196,15 +197,31 @@ export default function Dashboard() {
   const aov = ordersLast30.length > 0 ? revenue30 / ordersLast30.length : 0;
   const currency = orders[0]?.currency || "usd";
 
+  const [todayFilter, setTodayFilter] = useState<"all" | "paid" | "pending" | "refunded">("all");
+
+  const matchesTodayFilter = (status: string) => {
+    if (todayFilter === "all") return true;
+    if (todayFilter === "pending") return status !== "paid" && status !== "refunded";
+    return status === todayFilter;
+  };
+
   const todayStart = useMemo(() => startOfDay(new Date()), []);
   const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const ordersToday = useMemo(
-    () => orders.filter((o) => new Date(o.created_at) >= todayStart),
-    [orders, todayStart],
+    () =>
+      orders.filter(
+        (o) => new Date(o.created_at) >= todayStart && matchesTodayFilter(o.status),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [orders, todayStart, todayFilter],
   );
   const ordersThisWeek = useMemo(
-    () => orders.filter((o) => new Date(o.created_at) >= weekStart),
-    [orders, weekStart],
+    () =>
+      orders.filter(
+        (o) => new Date(o.created_at) >= weekStart && matchesTodayFilter(o.status),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [orders, weekStart, todayFilter],
   );
   const revenueToday = ordersToday.reduce((s, o) => s + (o.amount_total ?? 0), 0);
   const revenueWeek = ordersThisWeek.reduce((s, o) => s + (o.amount_total ?? 0), 0);
@@ -347,7 +364,7 @@ export default function Dashboard() {
         />
         <KpiCard
           icon={Zap}
-          label="Orders Today"
+          label={`Orders Today${todayFilter === "all" ? "" : ` · ${todayFilter}`}`}
           value={ordersToday.length.toLocaleString()}
           hint={`${fmtMoney(revenueToday, currency)} today`}
           accent="bg-indigo-500/10 text-indigo-600"
@@ -406,9 +423,23 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Today at a glance</CardTitle>
-            <CardDescription>Live snapshot of activity</CardDescription>
+          <CardHeader className="pb-2 space-y-2">
+            <div>
+              <CardTitle className="text-base">Today at a glance</CardTitle>
+              <CardDescription>Live snapshot of activity</CardDescription>
+            </div>
+            <ToggleGroup
+              type="single"
+              size="sm"
+              value={todayFilter}
+              onValueChange={(v) => v && setTodayFilter(v as typeof todayFilter)}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="all" className="h-7 px-2 text-xs">All</ToggleGroupItem>
+              <ToggleGroupItem value="paid" className="h-7 px-2 text-xs">Paid</ToggleGroupItem>
+              <ToggleGroupItem value="pending" className="h-7 px-2 text-xs">Pending</ToggleGroupItem>
+              <ToggleGroupItem value="refunded" className="h-7 px-2 text-xs">Refunded</ToggleGroupItem>
+            </ToggleGroup>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
