@@ -196,15 +196,31 @@ export default function Dashboard() {
   const aov = ordersLast30.length > 0 ? revenue30 / ordersLast30.length : 0;
   const currency = orders[0]?.currency || "usd";
 
+  const [todayFilter, setTodayFilter] = useState<"all" | "paid" | "pending" | "refunded">("all");
+
+  const matchesTodayFilter = (status: string) => {
+    if (todayFilter === "all") return true;
+    if (todayFilter === "pending") return status !== "paid" && status !== "refunded";
+    return status === todayFilter;
+  };
+
   const todayStart = useMemo(() => startOfDay(new Date()), []);
   const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const ordersToday = useMemo(
-    () => orders.filter((o) => new Date(o.created_at) >= todayStart),
-    [orders, todayStart],
+    () =>
+      orders.filter(
+        (o) => new Date(o.created_at) >= todayStart && matchesTodayFilter(o.status),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [orders, todayStart, todayFilter],
   );
   const ordersThisWeek = useMemo(
-    () => orders.filter((o) => new Date(o.created_at) >= weekStart),
-    [orders, weekStart],
+    () =>
+      orders.filter(
+        (o) => new Date(o.created_at) >= weekStart && matchesTodayFilter(o.status),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [orders, weekStart, todayFilter],
   );
   const revenueToday = ordersToday.reduce((s, o) => s + (o.amount_total ?? 0), 0);
   const revenueWeek = ordersThisWeek.reduce((s, o) => s + (o.amount_total ?? 0), 0);
