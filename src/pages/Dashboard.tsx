@@ -196,6 +196,28 @@ export default function Dashboard() {
   const aov = ordersLast30.length > 0 ? revenue30 / ordersLast30.length : 0;
   const currency = orders[0]?.currency || "usd";
 
+  const todayStart = useMemo(() => startOfDay(new Date()), []);
+  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const ordersToday = useMemo(
+    () => orders.filter((o) => new Date(o.created_at) >= todayStart),
+    [orders, todayStart],
+  );
+  const ordersThisWeek = useMemo(
+    () => orders.filter((o) => new Date(o.created_at) >= weekStart),
+    [orders, weekStart],
+  );
+  const revenueToday = ordersToday.reduce((s, o) => s + (o.amount_total ?? 0), 0);
+  const revenueWeek = ordersThisWeek.reduce((s, o) => s + (o.amount_total ?? 0), 0);
+  const pendingCount = useMemo(
+    () => ordersLast30.filter((o) => o.status !== "paid" && o.status !== "refunded").length,
+    [ordersLast30],
+  );
+  const statusBreakdown = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const o of ordersLast30) m.set(o.status, (m.get(o.status) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [ordersLast30]);
+
   // 30-day timeseries
   const chartData = useMemo(() => {
     const buckets = new Map<string, number>();
