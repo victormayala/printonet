@@ -30,6 +30,7 @@ import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import BillingReturn from "./pages/BillingReturn";
 import Customizer from "./pages/Customizer";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,7 +67,8 @@ const App = () => (
           <Sonner />
           <Routes>
             {/* Redirect root to auth */}
-            <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/auth" replace />} />
+            <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <DashboardRoute><Dashboard /></DashboardRoute>} />
 
             {/* Auth */}
             <Route path="/auth" element={<Auth />} />
