@@ -363,7 +363,7 @@ export default function Dashboard() {
         />
         <KpiCard
           icon={Zap}
-          label="Orders Today"
+          label={`Orders Today${todayFilter === "all" ? "" : ` · ${todayFilter}`}`}
           value={ordersToday.length.toLocaleString()}
           hint={`${fmtMoney(revenueToday, currency)} today`}
           accent="bg-indigo-500/10 text-indigo-600"
