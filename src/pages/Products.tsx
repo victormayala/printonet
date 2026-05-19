@@ -3695,19 +3695,11 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   })();
 
   const fetchProducts = async () => {
-    setLoading(true);
-    // Use rpc or a broader query — the RLS only allows viewing active products
-    // so inactive ones won't show. For a dashboard we need all.
-    // Since RLS is (is_active = true) for SELECT, we'll work with that limitation.
-    const { data, error } = await supabase.from("inventory_products").select("*").order("created_at", { ascending: false });
-    if (!error && data) setProducts(data as unknown as Product[]);
-    setLoading(false);
+    const { data } = await qc.refetchQueries({
+      queryKey: ["products-page", "inventory_products", user?.id],
+    }).then(() => productsQuery.refetch());
     return data as any;
   };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
 
   const mirrorDeletesToStores = async (skus: string[]) => {
     if (!skus.length) return;
