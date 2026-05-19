@@ -866,6 +866,95 @@ Deno.serve(async (req) => {
         return json(200, { orders, next_cursor: nextCursor });
       }
 
+      case "get_store_with_products": {
+        const slug = String(params.tenant_slug ?? "").trim().toLowerCase();
+        const rawDomain = String(params.domain ?? "").trim().toLowerCase();
+        const domain = rawDomain.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+        if (!slug && !domain) {
+          return json(400, { error: "tenant_slug_or_domain_required" });
+        }
+
+        const storeSelect =
+          "id, user_id, name, tenant_slug, status, custom_domain, contact_email, " +
+          "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
+          "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
+          "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
+          "tax_rate_bps, tax_inclusive, tax_label";
+
+        let storeQuery = supabase
+          .from("corporate_stores")
+          .select(storeSelect)
+          .eq("status", "active");
+        if (slug && domain) {
+          storeQuery = storeQuery.or(`tenant_slug.eq.${slug},custom_domain.ilike.${domain}`);
+        } else if (slug) {
+          storeQuery = storeQuery.ilike("tenant_slug", slug);
+        } else {
+          storeQuery = storeQuery.ilike("custom_domain", domain);
+        }
+        const { data: storeRow, error: storeErr } = await storeQuery.limit(1).maybeSingle();
+        if (storeErr) throw storeErr;
+        if (!storeRow) return json(404, { error: "store_not_found" });
+
+        const productsPromise = (async () => {
+          const { data: links, error: linksErr } = await supabase
+            .from("corporate_store_products")
+            .select("id, store_id, product_id, sort_order, is_active")
+            .eq("store_id", storeRow.id)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true });
+          if (linksErr) throw linksErr;
+          const ids = (links ?? []).map((l) => l.product_id);
+          if (ids.length === 0) return [];
+          const { data: prods, error: prodsErr } = await supabase
+            .from("inventory_products")
+            .select(
+              "id, name, description, category, base_price, sale_price, " +
+                "image_front, image_back, image_side1, image_side2, variants, decoration_methods, " +
+                "product_type, inventory, status, weight, weight_unit, length, width, height, dimension_unit",
+            )
+            .in("id", ids)
+            .eq("is_active", true);
+          if (prodsErr) throw prodsErr;
+          const byId = new Map((prods ?? []).map((p) => [p.id, p]));
+          return (links ?? []).map((l) => ({
+            ...l,
+            inventory_products: byId.get(l.product_id) ?? null,
+          }));
+        })();
+
+        const zonesPromise = fetchShippingZones(storeRow.id);
+
+        const categoriesPromise = (async () => {
+          if (!storeRow.tenant_slug) return null;
+          const { data, error } = await supabase
+            .from("tenant_categories" as never)
+            .select("id, platform_category_id, name, slug, parent_platform_category_id, sort_order")
+            .eq("tenant_slug", storeRow.tenant_slug)
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true });
+          if (error) {
+            // Table may not exist in this environment — return null per spec.
+            return null;
+          }
+          return data ?? [];
+        })();
+
+        const [products, zones, categories] = await Promise.all([
+          productsPromise,
+          zonesPromise,
+          categoriesPromise,
+        ]);
+
+        return json(200, {
+          data: {
+            store: { ...storeRow, shipping_zones: zones },
+            products,
+            categories,
+          },
+        });
+      }
+
       default:
         return json(400, { error: "unknown_op", op });
     }
