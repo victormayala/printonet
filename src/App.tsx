@@ -102,7 +102,7 @@ const App = () => (
             <Route path="/developers" element={<Navigate to="/customizer" replace />} />
             <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/billing" element={<DashboardRoute><Billing /></DashboardRoute>} />
+            <Route path="/billing" element={<Navigate to="/profile?tab=billing" replace />} />
             <Route path="/billing/return" element={<BillingReturn />} />
             <Route path="*" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <NotFound />} />
           </Routes>
