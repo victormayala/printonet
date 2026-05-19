@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Package, User, LogOut, ShoppingBag, Building2, CreditCard, Paintbrush, LayoutDashboard } from "lucide-react";
+import { Package, User, LogOut, ShoppingBag, Building2, Paintbrush, LayoutDashboard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import logoIcon from "@/assets/printonet-logo-sidebar.svg";
@@ -23,7 +23,6 @@ const navItems = [
   { title: "Products", url: "/products", icon: Package },
   { title: "Customizer", url: "/customizer", icon: Paintbrush },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
-  { title: "Billing", url: "/billing", icon: CreditCard },
 ];
 
 export function DashboardSidebar() {
