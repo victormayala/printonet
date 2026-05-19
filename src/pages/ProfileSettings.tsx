@@ -101,107 +101,128 @@ export default function ProfileSettings() {
 
   return (
     <div className="bg-background min-h-screen">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
-        <Card className="overflow-hidden border-0 shadow-xl">
-          {/* Gradient header banner */}
-          <div className="relative h-40 bg-gradient-to-r from-primary via-primary to-accent">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(253,209,0,0.3),transparent_60%)]" />
-            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
-              <div className="relative">
-                <Avatar className="h-24 w-24 text-lg ring-4 ring-background shadow-lg">
-                  {avatarUrl ? (
-                    <AvatarImage src={avatarUrl} alt="Avatar" />
-                  ) : null}
-                  <AvatarFallback className="bg-accent text-accent-foreground text-2xl font-bold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <label className="absolute -bottom-1 -right-1 h-8 w-8 flex items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md cursor-pointer hover:scale-105 transition-transform">
-                  {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Camera className="h-4 w-4" />
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleAvatarUpload(f);
-                    }}
-                  />
-                </label>
-              </div>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            const next = new URLSearchParams(searchParams);
+            if (v === "billing") next.set("tab", "billing");
+            else next.delete("tab");
+            setSearchParams(next, { replace: true });
+          }}
+          className="space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto">
+            <TabsTrigger value="profile" className="gap-2">
+              <User className="h-4 w-4" /> Profile
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="gap-2">
+              <CreditCard className="h-4 w-4" /> Billing
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="mt-0">
+            <div className="max-w-2xl mx-auto">
+              <Card className="overflow-hidden border-0 shadow-xl">
+                {/* Gradient header banner */}
+                <div className="relative h-40 bg-gradient-to-r from-primary via-primary to-accent">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(253,209,0,0.3),transparent_60%)]" />
+                  <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
+                    <div className="relative">
+                      <Avatar className="h-24 w-24 text-lg ring-4 ring-background shadow-lg">
+                        {avatarUrl ? <AvatarImage src={avatarUrl} alt="Avatar" /> : null}
+                        <AvatarFallback className="bg-accent text-accent-foreground text-2xl font-bold">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <label className="absolute -bottom-1 -right-1 h-8 w-8 flex items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md cursor-pointer hover:scale-105 transition-transform">
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploading}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleAvatarUpload(f);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-14 pb-6 text-center">
+                  <h1 className="text-2xl font-bold text-foreground">
+                    {storeName || "Your Profile"}
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
+                </div>
+
+                <CardContent className="space-y-6 px-6 pb-8">
+                  <div className="space-y-2">
+                    <Label htmlFor="store-name" className="flex items-center gap-2 text-sm font-medium">
+                      <Store className="h-4 w-4 text-accent" />
+                      Store Name
+                    </Label>
+                    <Input
+                      id="store-name"
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      placeholder="My Awesome Store"
+                      className="bg-muted/50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Mail className="h-4 w-4 text-accent" />
+                      Email
+                    </Label>
+                    <Input value={user?.email ?? ""} disabled className="bg-muted/50 text-muted-foreground" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Fingerprint className="h-4 w-4 text-accent" />
+                      User ID
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input value={user?.id ?? ""} disabled className="bg-muted/50 font-mono text-xs text-muted-foreground" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 border-accent/30 hover:bg-accent/10 hover:text-accent"
+                        onClick={handleCopyUserId}
+                      >
+                        {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Use this ID for store branding integrations.</p>
+                  </div>
+
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="w-full bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+                  >
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          </TabsContent>
 
-          {/* Title section */}
-          <div className="pt-14 pb-6 text-center">
-            <h1 className="text-2xl font-bold text-foreground">
-              {storeName || "Your Profile"}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
-          </div>
-
-          <CardContent className="space-y-6 px-6 pb-8">
-            {/* Store Name */}
-            <div className="space-y-2">
-              <Label htmlFor="store-name" className="flex items-center gap-2 text-sm font-medium">
-                <Store className="h-4 w-4 text-accent" />
-                Store Name
-              </Label>
-              <Input
-                id="store-name"
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                placeholder="My Awesome Store"
-                className="bg-muted/50"
-              />
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <Mail className="h-4 w-4 text-accent" />
-                Email
-              </Label>
-              <Input value={user?.email ?? ""} disabled className="bg-muted/50 text-muted-foreground" />
-            </div>
-
-            {/* User ID */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <Fingerprint className="h-4 w-4 text-accent" />
-                User ID
-              </Label>
-              <div className="flex gap-2">
-                <Input value={user?.id ?? ""} disabled className="bg-muted/50 font-mono text-xs text-muted-foreground" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 border-accent/30 hover:bg-accent/10 hover:text-accent"
-                  onClick={handleCopyUserId}
-                >
-                  {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Use this ID for store branding integrations.</p>
-            </div>
-
-            {/* Save button */}
-            <Button 
-              onClick={handleSave} 
-              disabled={saving} 
-              className="w-full bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
-            >
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </CardContent>
-        </Card>
+          <TabsContent value="billing" className="mt-0">
+            <Billing />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
