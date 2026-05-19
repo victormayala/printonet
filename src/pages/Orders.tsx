@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -85,135 +86,99 @@ function formatMoney(cents: number | null | undefined, currency: string | null |
 
 export default function Orders() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<EnrichedOrder[]>([]);
-  const [stores, setStores] = useState<StoreRow[]>([]);
-  const [sessionById, setSessionById] = useState<Record<string, SessionRow>>({});
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<EnrichedOrder | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    void fetchOrders();
-  }, [user]);
+  const { data, isLoading } = useQuery({
+    queryKey: ["orders-page", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data: storesData, error: storesErr } = await supabase
+        .from("corporate_stores")
+        .select("id, name, tenant_slug")
+        .eq("user_id", user!.id);
 
-  async function fetchOrders() {
-    setLoading(true);
+      if (storesErr) {
+        toast({ title: "Error loading stores", description: storesErr.message, variant: "destructive" });
+        return { orders: [] as EnrichedOrder[], stores: [] as StoreRow[], sessionById: {} as Record<string, SessionRow> };
+      }
 
-    const { data: storesData, error: storesErr } = await supabase
-      .from("corporate_stores")
-      .select("id, name, tenant_slug")
-      .eq("user_id", user!.id);
+      const storeRows = (storesData || []) as StoreRow[];
+      if (storeRows.length === 0) {
+        return { orders: [], stores: storeRows, sessionById: {} };
+      }
 
-    if (storesErr) {
-      toast({
-        title: "Error loading stores",
-        description: storesErr.message,
-        variant: "destructive",
-      });
-      setOrders([]);
-      setStores([]);
-      setSessionById({});
-      setLoading(false);
-      return;
-    }
-
-    const storeRows = (storesData || []) as StoreRow[];
-    setStores(storeRows);
-
-    if (storeRows.length === 0) {
-      setOrders([]);
-      setSessionById({});
-      setLoading(false);
-      return;
-    }
-
-    const storeIds = storeRows.map((s) => s.id);
-
-    const { data: orderRows, error: ordersErr } = await supabase
-      .from("orders")
-      .select("*")
-      .in("store_id", storeIds)
-      .order("created_at", { ascending: false });
-
-    if (ordersErr) {
-      toast({
-        title: "Error loading orders",
-        description: ordersErr.message,
-        variant: "destructive",
-      });
-      setOrders([]);
-      setSessionById({});
-      setLoading(false);
-      return;
-    }
-
-    const orderIds = (orderRows || []).map((o) => o.id);
-    let itemsByOrder: Record<string, OrderItemRow[]> = {};
-    if (orderIds.length > 0) {
-      const { data: itemRows, error: itemsErr } = await supabase
-        .from("order_items")
+      const storeIds = storeRows.map((s) => s.id);
+      const { data: orderRows, error: ordersErr } = await supabase
+        .from("orders")
         .select("*")
-        .in("order_id", orderIds);
-      if (itemsErr) {
-        toast({
-          title: "Error loading line items",
-          description: itemsErr.message,
-          variant: "destructive",
-        });
+        .in("store_id", storeIds)
+        .order("created_at", { ascending: false });
+
+      if (ordersErr) {
+        toast({ title: "Error loading orders", description: ordersErr.message, variant: "destructive" });
+        return { orders: [], stores: storeRows, sessionById: {} };
       }
-      for (const it of (itemRows || []) as OrderItemRow[]) {
-        (itemsByOrder[it.order_id] ||= []).push(it);
+
+      const orderIds = (orderRows || []).map((o) => o.id);
+      const itemsByOrder: Record<string, OrderItemRow[]> = {};
+      if (orderIds.length > 0) {
+        const { data: itemRows, error: itemsErr } = await supabase
+          .from("order_items")
+          .select("*")
+          .in("order_id", orderIds);
+        if (itemsErr) {
+          toast({ title: "Error loading line items", description: itemsErr.message, variant: "destructive" });
+        }
+        for (const it of (itemRows || []) as OrderItemRow[]) {
+          (itemsByOrder[it.order_id] ||= []).push(it);
+        }
       }
-    }
 
-    const storeMap = new Map(storeRows.map((s) => [s.id, s]));
-    const enriched: EnrichedOrder[] = (orderRows || []).map((o) => ({
-      ...(o as OrderRow),
-      items: itemsByOrder[o.id] || [],
-      store: o.store_id ? storeMap.get(o.store_id) : undefined,
-    }));
-    setOrders(enriched);
+      const storeMap = new Map(storeRows.map((s) => [s.id, s]));
+      const enriched: EnrichedOrder[] = (orderRows || []).map((o) => ({
+        ...(o as OrderRow),
+        items: itemsByOrder[o.id] || [],
+        store: o.store_id ? storeMap.get(o.store_id) : undefined,
+      }));
 
-    const sessionIds = Array.from(
-      new Set(
-        enriched.flatMap((o) => {
-          const ids: string[] = [];
-          if (typeof o.session_id === "string" && o.session_id) ids.push(o.session_id);
-          for (const it of o.items) {
-            const meta = (it as { metadata?: Record<string, unknown> | null }).metadata;
-            const sid = meta && typeof meta === "object" ? (meta as Record<string, unknown>).customizer_session_id : null;
-            if (typeof sid === "string" && sid) ids.push(sid);
-          }
-          return ids;
-        }),
-      ),
-    );
+      const sessionIds = Array.from(
+        new Set(
+          enriched.flatMap((o) => {
+            const ids: string[] = [];
+            if (typeof o.session_id === "string" && o.session_id) ids.push(o.session_id);
+            for (const it of o.items) {
+              const meta = (it as { metadata?: Record<string, unknown> | null }).metadata;
+              const sid = meta && typeof meta === "object" ? (meta as Record<string, unknown>).customizer_session_id : null;
+              if (typeof sid === "string" && sid) ids.push(sid);
+            }
+            return ids;
+          }),
+        ),
+      );
 
-    if (sessionIds.length > 0) {
-      const { data: sessRows, error: sessErr } = await supabase
-        .from("customizer_sessions")
-        .select("*")
-        .in("id", sessionIds);
-      if (sessErr) {
-        toast({
-          title: "Could not load customizer sessions",
-          description: sessErr.message,
-          variant: "destructive",
-        });
-        setSessionById({});
-      } else {
-        const map: Record<string, SessionRow> = {};
-        for (const s of (sessRows || []) as SessionRow[]) map[s.id] = s;
-        setSessionById(map);
+      const sessionById: Record<string, SessionRow> = {};
+      if (sessionIds.length > 0) {
+        const { data: sessRows, error: sessErr } = await supabase
+          .from("customizer_sessions")
+          .select("*")
+          .in("id", sessionIds);
+        if (sessErr) {
+          toast({ title: "Could not load customizer sessions", description: sessErr.message, variant: "destructive" });
+        } else {
+          for (const s of (sessRows || []) as SessionRow[]) sessionById[s.id] = s;
+        }
       }
-    } else {
-      setSessionById({});
-    }
 
-    setLoading(false);
-  }
+      return { orders: enriched, stores: storeRows, sessionById };
+    },
+  });
+
+  const orders = data?.orders ?? [];
+  const stores = data?.stores ?? [];
+  const sessionById = data?.sessionById ?? {};
+  const loading = isLoading;
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
