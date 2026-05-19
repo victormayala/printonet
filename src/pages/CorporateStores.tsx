@@ -1042,8 +1042,11 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   } | null>(null);
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeOnboardingOpened, setStripeOnboardingOpened] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [seedingTemplate, setSeedingTemplate] = useState(false);
+  const [templateSeeded, setTemplateSeeded] = useState(false);
 
-  const STEP_LABELS = ["Create Store", "Choose Address", "Connect Stripe"];
+  const STEP_LABELS = ["Create Store", "Choose Address", "Choose Theme", "Connect Stripe"];
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
