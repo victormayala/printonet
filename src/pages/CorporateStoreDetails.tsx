@@ -575,6 +575,10 @@ export default function CorporateStoreDetails() {
           <StoreCustomizableProducts store={store} />
         </TabsContent>
 
+        <TabsContent value="theme" className="mt-0">
+          <StoreThemeTab store={store} />
+        </TabsContent>
+
         <TabsContent value="customizer" className="mt-0">
           <StoreCustomizerSettings store={store} />
         </TabsContent>
