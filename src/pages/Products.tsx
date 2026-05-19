@@ -3695,10 +3695,8 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   })();
 
   const fetchProducts = async () => {
-    const { data } = await qc.refetchQueries({
-      queryKey: ["products-page", "inventory_products", user?.id],
-    }).then(() => productsQuery.refetch());
-    return data as any;
+    const res = await productsQuery.refetch();
+    return res.data as any;
   };
 
   const mirrorDeletesToStores = async (skus: string[]) => {
