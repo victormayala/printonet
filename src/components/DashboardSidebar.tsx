@@ -22,7 +22,6 @@ const navItems = [
   { title: "My Stores", url: "/corporate-stores", icon: Building2 },
   { title: "Products", url: "/products", icon: Package },
   { title: "Customizer", url: "/customizer", icon: Paintbrush },
-  { title: "Customizer", url: "/customizer", icon: Paintbrush },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
   { title: "Billing", url: "/billing", icon: CreditCard },
 ];
