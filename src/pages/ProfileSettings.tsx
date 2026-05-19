@@ -14,6 +14,8 @@ import Billing from "@/pages/Billing";
 
 export default function ProfileSettings() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "billing" ? "billing" : "profile";
   const [storeName, setStoreName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
