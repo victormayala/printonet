@@ -1416,6 +1416,42 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         <div className="space-y-5 py-2">
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">Choose a theme</CardTitle>
+              <CardDescription>
+                Pick a starting design for your storefront. You can change it anytime from store settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {provisionedStoreId ? (
+                <StoreThemePicker
+                  storeId={provisionedStoreId}
+                  selectedId={selectedTemplateId}
+                  onSelect={setSelectedTemplateId}
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Preparing store…
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setStep(2)} disabled={seedingTemplate}>
+              Back
+            </Button>
+            <Button onClick={goNextFromStep3} disabled={seedingTemplate || !provisionedStoreId}>
+              {seedingTemplate && <Loader2 className="h-4 w-4 animate-spin" />}
+              Continue
+            </Button>
+          </DialogFooter>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="space-y-5 py-2">
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base">Connect Stripe</CardTitle>
               <CardDescription>
                 Connect your Stripe account to accept payments. Customers pay your business
