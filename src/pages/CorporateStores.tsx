@@ -1239,6 +1239,33 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
+  const goNextFromStep3 = async () => {
+    if (!provisionedStoreId) {
+      setStep(4);
+      return;
+    }
+    if (templateSeeded) {
+      setStep(4);
+      return;
+    }
+    setSeedingTemplate(true);
+    try {
+      // Falls back to storefront default if nothing selected yet.
+      const templateId = selectedTemplateId ?? undefined;
+      await cms(provisionedStoreId, "seed-defaults", templateId ? { template_id: templateId } : {});
+      setTemplateSeeded(true);
+      setStep(4);
+    } catch (e) {
+      toast({
+        title: "Couldn't apply theme",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setSeedingTemplate(false);
+    }
+  };
+
   const finishOnboarding = () => {
     toast({
       title: "Store provisioning started",
