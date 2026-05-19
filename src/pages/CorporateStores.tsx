@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import Products from "@/pages/Products";
+import { StoreThemePicker } from "@/components/StoreThemePicker";
+import { cms } from "@/lib/cmsClient";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1040,8 +1042,11 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   } | null>(null);
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeOnboardingOpened, setStripeOnboardingOpened] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [seedingTemplate, setSeedingTemplate] = useState(false);
+  const [templateSeeded, setTemplateSeeded] = useState(false);
 
-  const STEP_LABELS = ["Create Store", "Choose Address", "Connect Stripe"];
+  const STEP_LABELS = ["Create Store", "Choose Address", "Choose Theme", "Connect Stripe"];
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
@@ -1234,6 +1239,33 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
   };
 
+  const goNextFromStep3 = async () => {
+    if (!provisionedStoreId) {
+      setStep(4);
+      return;
+    }
+    if (templateSeeded) {
+      setStep(4);
+      return;
+    }
+    setSeedingTemplate(true);
+    try {
+      // Falls back to storefront default if nothing selected yet.
+      const templateId = selectedTemplateId ?? undefined;
+      await cms(provisionedStoreId, "seed-defaults", templateId ? { template_id: templateId } : {});
+      setTemplateSeeded(true);
+      setStep(4);
+    } catch (e) {
+      toast({
+        title: "Couldn't apply theme",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setSeedingTemplate(false);
+    }
+  };
+
   const finishOnboarding = () => {
     toast({
       title: "Store provisioning started",
@@ -1384,6 +1416,42 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
         <div className="space-y-5 py-2">
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">Choose a theme</CardTitle>
+              <CardDescription>
+                Pick a starting design for your storefront. You can change it anytime from store settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {provisionedStoreId ? (
+                <StoreThemePicker
+                  storeId={provisionedStoreId}
+                  selectedId={selectedTemplateId}
+                  onSelect={setSelectedTemplateId}
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Preparing store…
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setStep(2)} disabled={seedingTemplate}>
+              Back
+            </Button>
+            <Button onClick={goNextFromStep3} disabled={seedingTemplate || !provisionedStoreId}>
+              {seedingTemplate && <Loader2 className="h-4 w-4 animate-spin" />}
+              Continue
+            </Button>
+          </DialogFooter>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="space-y-5 py-2">
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base">Connect Stripe</CardTitle>
               <CardDescription>
                 Connect your Stripe account to accept payments. Customers pay your business
@@ -1442,7 +1510,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           </Card>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(2)} disabled={provision.isPending}>
+            <Button variant="outline" onClick={() => setStep(3)} disabled={provision.isPending}>
               Back
             </Button>
             <Button variant="ghost" onClick={finishOnboarding}>

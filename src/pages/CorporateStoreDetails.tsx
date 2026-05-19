@@ -128,6 +128,7 @@ import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
 import { StoreCustomers } from "@/components/StoreCustomers";
 import { StoreShippingTax } from "@/components/StoreShippingTax";
 import { StoreContentCMS } from "@/components/StoreContentCMS";
+import { StoreThemeTab } from "@/components/StoreThemeTab";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
@@ -466,6 +467,7 @@ export default function CorporateStoreDetails() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="theme">Theme</TabsTrigger>
           <TabsTrigger value="customizer">Customizer</TabsTrigger>
           <TabsTrigger value="shipping-tax">Shipping & Tax</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -571,6 +573,10 @@ export default function CorporateStoreDetails() {
 
         <TabsContent value="products" className="mt-0">
           <StoreCustomizableProducts store={store} />
+        </TabsContent>
+
+        <TabsContent value="theme" className="mt-0">
+          <StoreThemeTab store={store} />
         </TabsContent>
 
         <TabsContent value="customizer" className="mt-0">
