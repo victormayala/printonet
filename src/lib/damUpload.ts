@@ -2,8 +2,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Upload an image to the VPS-hosted DAM (MinIO) via a signed PUT URL.
- * Falls back to Lovable Cloud Storage `product-images` bucket if the DAM is
- * not configured (edge function returns 503) or any DAM step fails.
+ * Falls back to Lovable Cloud Storage `product-images` bucket only when the
+ * DAM is not configured. If the DAM is configured but upload fails, surface
+ * the error instead of silently storing a Lovable Cloud URL.
  *
  * Returns the public URL to store in the DB.
  */
@@ -21,18 +22,28 @@ export async function uploadProductImage(
       },
     });
 
-    if (!error && data?.configured && data?.upload_url && data?.public_url) {
+    if (error) {
+      if (error.context?.status === 503) {
+        console.warn("[DAM] not configured, falling back to Lovable Cloud");
+      } else {
+        throw new Error(error.message || "DAM signing failed");
+      }
+    } else if (data?.configured && data?.upload_url && data?.public_url) {
       const putRes = await fetch(data.upload_url, {
         method: "PUT",
         headers: data.required_headers ?? { "Content-Type": file.type },
         body: file,
       });
       if (putRes.ok) return data.public_url as string;
-      // PUT failed — fall through to Lovable Cloud
-      console.warn("[DAM] PUT failed, falling back to Lovable Cloud:", putRes.status);
+      const details = await putRes.text().catch(() => "");
+      throw new Error(`DAM upload failed (${putRes.status})${details ? `: ${details.slice(0, 160)}` : ""}`);
+    } else if (data?.configured === false) {
+      console.warn("[DAM] not configured, falling back to Lovable Cloud");
+    } else {
+      throw new Error("DAM signing returned an invalid response");
     }
   } catch (e) {
-    console.warn("[DAM] sign-upload unavailable, falling back:", e);
+    throw e instanceof Error ? e : new Error("DAM upload failed");
   }
 
   // 2. Fallback: Lovable Cloud Storage
