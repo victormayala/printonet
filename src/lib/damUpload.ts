@@ -36,9 +36,15 @@ export async function uploadProductImage(
   }
 
   // 2. Fallback: Lovable Cloud Storage
+  // RLS requires the first folder segment to equal the auth user id.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in to upload images.");
+  const scopedPath = fallbackPath.startsWith(`${user.id}/`)
+    ? fallbackPath
+    : `${user.id}/${fallbackPath}`;
   const { error: upErr } = await supabase.storage
     .from("product-images")
-    .upload(fallbackPath, file);
+    .upload(scopedPath, file);
   if (upErr) throw upErr;
-  return supabase.storage.from("product-images").getPublicUrl(fallbackPath).data.publicUrl;
+  return supabase.storage.from("product-images").getPublicUrl(scopedPath).data.publicUrl;
 }
