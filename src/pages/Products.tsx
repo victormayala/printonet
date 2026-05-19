@@ -316,17 +316,16 @@ function AddVariantDialog({
 
   const upload = async (file: File) => {
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-variant.${ext}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
-    if (error) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-variant.${ext}`;
+      const url = await uploadProductImage(file, path);
+      setImage(url);
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error?.message ?? "Unknown error", variant: "destructive" });
+    } finally {
       setUploading(false);
-      return;
     }
-    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-    setImage(data.publicUrl);
-    setUploading(false);
   };
 
   const handleAdd = () => {
@@ -676,18 +675,17 @@ function ProductForm({
 
   const uploadImage = async (file: File, side: string) => {
     setUploading(side);
-    const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${side}.${ext}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
-    if (error) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-${side}.${ext}`;
+      const url = await uploadProductImage(file, path);
+      const sideConfig = IMAGE_SIDES.find(s => s.key === side);
+      if (sideConfig) sideConfig.setter(url);
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error?.message ?? "Unknown error", variant: "destructive" });
+    } finally {
       setUploading(null);
-      return;
     }
-    const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
-    const sideConfig = IMAGE_SIDES.find(s => s.key === side);
-    if (sideConfig) sideConfig.setter(urlData.publicUrl);
-    setUploading(null);
   };
 
   const handleSave = async () => {
