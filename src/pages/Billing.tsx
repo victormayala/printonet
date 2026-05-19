@@ -64,7 +64,11 @@ export default function Billing() {
         </Button>
       </div>
 
-      {!sub.isActive ? (
+      {sub.isLoading ? (
+        <Card className="p-12 flex items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </Card>
+      ) : !sub.isActive ? (
         <Card className="p-8 text-center">
           <AlertTriangle className="h-10 w-10 text-warning mx-auto mb-3 text-amber-500" />
           <h2 className="text-xl font-semibold mb-2">No active plan</h2>
