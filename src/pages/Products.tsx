@@ -3,6 +3,7 @@ import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
 import PrintAreaOverlay from "@/components/PrintAreaOverlay";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadProductImage } from "@/lib/damUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
