@@ -3437,8 +3437,27 @@ type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "supp
 
 export default function Products({ initialTab = "products", showStorefrontTabs = false, hideTabsList = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean; hideTabsList?: boolean } = {}) {
   const { user, signOut } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const productsQuery = useQuery({
+    queryKey: ["products-page", "inventory_products", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_products")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as Product[];
+    },
+  });
+  const products = productsQuery.data ?? [];
+  const setProducts = (updater: Product[] | ((prev: Product[]) => Product[])) => {
+    qc.setQueryData<Product[]>(
+      ["products-page", "inventory_products", user?.id],
+      (prev) => (typeof updater === "function" ? (updater as (p: Product[]) => Product[])(prev ?? []) : updater),
+    );
+  };
+  const loading = productsQuery.isLoading;
   const [editingProduct, setEditingProduct] = useState<Product | null | undefined>(undefined);
   const [showAddForm, setShowAddForm] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
