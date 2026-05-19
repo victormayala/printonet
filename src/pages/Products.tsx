@@ -3799,11 +3799,11 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             </TabsList>
           ) : (
             <TabsList className="mb-6 w-full sm:w-auto flex-wrap">
+              <TabsTrigger value="suppliers" className="gap-2 flex-1 sm:flex-none"><Truck className="h-4 w-4" /> Suppliers</TabsTrigger>
               <TabsTrigger value="products" className="gap-2 flex-1 sm:flex-none"><Package className="h-4 w-4" /> Products</TabsTrigger>
               <TabsTrigger value="categories" className="gap-2 flex-1 sm:flex-none"><LayoutGrid className="h-4 w-4" /> Categories</TabsTrigger>
               <TabsTrigger value="shopify" className="sr-only">Shopify</TabsTrigger>
               <TabsTrigger value="woocommerce" className="sr-only">WooCommerce</TabsTrigger>
-              <TabsTrigger value="suppliers" className="sr-only">Suppliers</TabsTrigger>
             </TabsList>
           )}
 

@@ -93,7 +93,7 @@ const App = () => (
             <Route path="/storefront" element={<Navigate to="/corporate-stores?tab=shopify" replace />} />
             <Route path="/corporate-stores" element={<DashboardRoute><CorporateStores /></DashboardRoute>} />
             <Route path="/corporate-stores/:id" element={<DashboardRoute><CorporateStoreDetails /></DashboardRoute>} />
-            <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" hideTabsList /></DashboardRoute>} />
+            <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />
             <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
             <Route path="/customizer" element={<DashboardRoute><Customizer /></DashboardRoute>} />
             <Route path="/customizer/brand" element={<Navigate to="/customizer" replace />} />
