@@ -1510,7 +1510,7 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           </Card>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(2)} disabled={provision.isPending}>
+            <Button variant="outline" onClick={() => setStep(3)} disabled={provision.isPending}>
               Back
             </Button>
             <Button variant="ghost" onClick={finishOnboarding}>
