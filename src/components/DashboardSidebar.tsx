@@ -19,8 +19,8 @@ import {
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Products", url: "/products", icon: Package },
   { title: "My Stores", url: "/corporate-stores", icon: Building2 },
+  { title: "Products", url: "/products", icon: Package },
   { title: "Customizer", url: "/customizer", icon: Paintbrush },
   { title: "Suppliers", url: "/suppliers", icon: Truck },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
