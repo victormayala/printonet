@@ -121,7 +121,13 @@ Deno.serve(async (req) => {
 
   const raw = JSON.stringify(body ?? {});
   const ts = Date.now().toString();
+  // Legacy signature (no action) for existing CMS actions.
   const sig = await hmacHex(SECRET, `${ts}.${store.tenant_slug}.${raw}`);
+  // New signature scheme (template endpoints): includes action in the message
+  // and uses unix-seconds. Sent in parallel via x-cms-* headers so storefront
+  // endpoints expecting either scheme will validate.
+  const tsSec = Math.floor(Date.now() / 1000).toString();
+  const sigCms = await hmacHex(SECRET, `${tsSec}.${store.tenant_slug}.${action}.${raw}`);
 
   let res: Response;
   try {
@@ -133,6 +139,9 @@ Deno.serve(async (req) => {
         "x-platform-tenant": store.tenant_slug,
         "x-platform-timestamp": ts,
         "x-platform-signature": sig,
+        "x-cms-tenant": store.tenant_slug,
+        "x-cms-timestamp": tsSec,
+        "x-cms-signature": sigCms,
       },
       body: raw,
     });
