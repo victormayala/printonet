@@ -23,7 +23,6 @@ const navItems = [
   { title: "Products", url: "/products", icon: Package },
   { title: "Customizer", url: "/customizer", icon: Paintbrush },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
-  { title: "Billing", url: "/billing", icon: CreditCard },
 ];
 
 export function DashboardSidebar() {
