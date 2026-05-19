@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
 import PrintAreaOverlay from "@/components/PrintAreaOverlay";
 import { Link } from "react-router-dom";
