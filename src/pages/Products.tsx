@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
 import PrintAreaOverlay from "@/components/PrintAreaOverlay";
 import { Link } from "react-router-dom";
@@ -3436,8 +3437,27 @@ type ProductsTab = "products" | "categories" | "shopify" | "woocommerce" | "supp
 
 export default function Products({ initialTab = "products", showStorefrontTabs = false, hideTabsList = false }: { initialTab?: ProductsTab; showStorefrontTabs?: boolean; hideTabsList?: boolean } = {}) {
   const { user, signOut } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const productsQuery = useQuery({
+    queryKey: ["products-page", "inventory_products", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_products")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as Product[];
+    },
+  });
+  const products = productsQuery.data ?? [];
+  const setProducts = (updater: Product[] | ((prev: Product[]) => Product[])) => {
+    qc.setQueryData<Product[]>(
+      ["products-page", "inventory_products", user?.id],
+      (prev) => (typeof updater === "function" ? (updater as (p: Product[]) => Product[])(prev ?? []) : updater),
+    );
+  };
+  const loading = productsQuery.isLoading;
   const [editingProduct, setEditingProduct] = useState<Product | null | undefined>(undefined);
   const [showAddForm, setShowAddForm] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -3675,19 +3695,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   })();
 
   const fetchProducts = async () => {
-    setLoading(true);
-    // Use rpc or a broader query — the RLS only allows viewing active products
-    // so inactive ones won't show. For a dashboard we need all.
-    // Since RLS is (is_active = true) for SELECT, we'll work with that limitation.
-    const { data, error } = await supabase.from("inventory_products").select("*").order("created_at", { ascending: false });
-    if (!error && data) setProducts(data as unknown as Product[]);
-    setLoading(false);
-    return data as any;
+    const res = await productsQuery.refetch();
+    return res.data as any;
   };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
 
   const mirrorDeletesToStores = async (skus: string[]) => {
     if (!skus.length) return;

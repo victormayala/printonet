@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Activity,
@@ -98,81 +99,80 @@ function KpiCard({
 export default function Dashboard() {
   const { user } = useAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [stores, setStores] = useState<StoreRow[]>([]);
-  const [productCount, setProductCount] = useState(0);
-  const [customizableCount, setCustomizableCount] = useState(0);
-  const [customerCount, setCustomerCount] = useState(0);
-  const [integrationCount, setIntegrationCount] = useState(0);
-  const [displayName, setDisplayName] = useState("");
-
-  useEffect(() => {
-    if (!user) return;
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  async function load() {
-    setLoading(true);
-    const since = subDays(new Date(), 30).toISOString();
-
-    const [
-      profileRes,
-      storesRes,
-      productsRes,
-      customizableRes,
-      integrationsRes,
-    ] = await Promise.all([
-      supabase.from("profiles").select("store_name").eq("id", user!.id).maybeSingle(),
-      supabase
-        .from("corporate_stores")
-        .select("id,name,tenant_slug,status,store_type,custom_domain")
-        .eq("user_id", user!.id),
-      supabase
-        .from("inventory_products")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user!.id),
-      supabase
-        .from("corporate_store_products")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user!.id)
-        .eq("customizable", true),
-      supabase
-        .from("store_integrations")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user!.id),
-    ]);
-
-    setDisplayName(profileRes.data?.store_name || user!.email?.split("@")[0] || "there");
-    const storeRows = (storesRes.data || []) as StoreRow[];
-    setStores(storeRows);
-    setProductCount(productsRes.count ?? 0);
-    setCustomizableCount(customizableRes.count ?? 0);
-    setIntegrationCount(integrationsRes.count ?? 0);
-
-    const storeIds = storeRows.map((s) => s.id);
-    if (storeIds.length > 0) {
-      const [ordersRes, customersRes] = await Promise.all([
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["dashboard", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const [
+        profileRes,
+        storesRes,
+        productsRes,
+        customizableRes,
+        integrationsRes,
+      ] = await Promise.all([
+        supabase.from("profiles").select("store_name").eq("id", user!.id).maybeSingle(),
         supabase
-          .from("orders")
-          .select("id,store_id,amount_total,currency,status,customer_email,created_at")
-          .in("store_id", storeIds)
-          .gte("created_at", subDays(new Date(), 90).toISOString())
-          .order("created_at", { ascending: false }),
+          .from("corporate_stores")
+          .select("id,name,tenant_slug,status,store_type,custom_domain")
+          .eq("user_id", user!.id),
         supabase
-          .from("customer_profiles")
+          .from("inventory_products")
           .select("id", { count: "exact", head: true })
-          .in("store_id", storeIds),
+          .eq("user_id", user!.id),
+        supabase
+          .from("corporate_store_products")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user!.id)
+          .eq("customizable", true),
+        supabase
+          .from("store_integrations")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user!.id),
       ]);
-      setOrders((ordersRes.data || []) as OrderRow[]);
-      setCustomerCount(customersRes.count ?? 0);
-    } else {
-      setOrders([]);
-      setCustomerCount(0);
-    }
-    setLoading(false);
-  }
+
+      const storeRows = (storesRes.data || []) as StoreRow[];
+      const displayName =
+        profileRes.data?.store_name || user!.email?.split("@")[0] || "there";
+
+      let orders: OrderRow[] = [];
+      let customerCount = 0;
+      const storeIds = storeRows.map((s) => s.id);
+      if (storeIds.length > 0) {
+        const [ordersRes, customersRes] = await Promise.all([
+          supabase
+            .from("orders")
+            .select("id,store_id,amount_total,currency,status,customer_email,created_at")
+            .in("store_id", storeIds)
+            .gte("created_at", subDays(new Date(), 90).toISOString())
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("customer_profiles")
+            .select("id", { count: "exact", head: true })
+            .in("store_id", storeIds),
+        ]);
+        orders = (ordersRes.data || []) as OrderRow[];
+        customerCount = customersRes.count ?? 0;
+      }
+
+      return {
+        displayName,
+        stores: storeRows,
+        productCount: productsRes.count ?? 0,
+        customizableCount: customizableRes.count ?? 0,
+        integrationCount: integrationsRes.count ?? 0,
+        orders,
+        customerCount,
+      };
+    },
+  });
+
+  const displayName = data?.displayName ?? "";
+  const stores = data?.stores ?? [];
+  const productCount = data?.productCount ?? 0;
+  const customizableCount = data?.customizableCount ?? 0;
+  const integrationCount = data?.integrationCount ?? 0;
+  const customerCount = data?.customerCount ?? 0;
+  const orders = data?.orders ?? [];
 
   const since30 = useMemo(() => subDays(new Date(), 30), []);
   const sincePrev30 = useMemo(() => subDays(new Date(), 60), []);
