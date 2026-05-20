@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2 } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,8 +45,38 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [bulkBusy, setBulkBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
+  const [syncBusy, setSyncBusy] = useState(false);
 
   const queryKey = ["store_customizer_flags", store.id];
+
+  /**
+   * Push the full customizer-flag snapshot for this store to the hosted
+   * storefront. The edge function signs the payload with the platform HMAC
+   * secret and POSTs to `/api/public/{tenant_slug}/customizer-flags`.
+   * Fire-and-log: UI toggles still save to the DB regardless of push result.
+   */
+  const pushSnapshot = async (opts?: { silent?: boolean }) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-customizer-flags", {
+        body: { storeId: store.id },
+      });
+      if (error) throw error;
+      if (!opts?.silent) {
+        toast({
+          title: "Storefront synced",
+          description: `${data?.sent_items ?? 0} customizable product${(data?.sent_items ?? 0) === 1 ? "" : "s"} sent to ${store.tenant_slug}.`,
+        });
+      }
+      return true;
+    } catch (e) {
+      toast({
+        title: "Storefront sync failed",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
 
   const { data: rows = [], isLoading, refetch, isFetching } = useQuery<Row[]>({
     queryKey,
