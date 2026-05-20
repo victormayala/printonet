@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Package,
   User,
@@ -13,8 +13,9 @@ import {
   Store,
   BookOpen,
   Shield,
-
+  ChevronRight,
 } from "lucide-react";
+
 import { NavLink, useLocation } from "react-router-dom";
 import { NavLink as RouterNavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -107,7 +108,7 @@ export function DashboardSidebar() {
   const { signOut } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
   const { pathname, search } = useLocation();
-
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
@@ -119,21 +120,42 @@ export function DashboardSidebar() {
   }, []);
 
   const renderItem = (item: NavItem) => {
-    const showSub = !collapsed && !!item.subItems;
+    const hasSub = !!item.subItems?.length;
+    const isOpen = !!openGroups[item.title];
+    const showSub = !collapsed && hasSub && isOpen;
 
     return (
       <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton asChild>
-          <RouterNavLink
-            to={item.url}
-            end
-            className="hover:bg-sidebar-accent"
-            activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>{item.title}</span>}
-          </RouterNavLink>
-        </SidebarMenuButton>
+        <div className="relative">
+          <SidebarMenuButton asChild>
+            <RouterNavLink
+              to={item.url}
+              end
+              className={`hover:bg-sidebar-accent ${hasSub && !collapsed ? "pr-9" : ""}`}
+              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            >
+              <item.icon className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>{item.title}</span>}
+            </RouterNavLink>
+          </SidebarMenuButton>
+          {hasSub && !collapsed && (
+            <button
+              type="button"
+              aria-label={isOpen ? `Collapse ${item.title}` : `Expand ${item.title}`}
+              aria-expanded={isOpen}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setOpenGroups((prev) => ({ ...prev, [item.title]: !prev[item.title] }));
+              }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
+            >
+              <ChevronRight
+                className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+              />
+            </button>
+          )}
+        </div>
         {showSub && (
           <SidebarMenuSub className="mt-2 mb-1">
             {item.subItems!.map((sub) => {
@@ -162,6 +184,7 @@ export function DashboardSidebar() {
       </SidebarMenuItem>
     );
   };
+
 
   return (
     <Sidebar collapsible="icon">
