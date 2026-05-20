@@ -11,7 +11,7 @@ import {
   Globe,
   CreditCard,
   Store,
-  Library,
+  BookOpen,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NavLink as RouterNavLink } from "@/components/NavLink";
@@ -60,7 +60,7 @@ const navItems: NavItem[] = [
   {
     title: "Catalog",
     url: "/products",
-    icon: Library,
+    icon: BookOpen,
     matchPaths: ["/products", "/suppliers"],
     subItems: [
       { title: "Products", to: "/products", icon: Package },
