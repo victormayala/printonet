@@ -64,7 +64,7 @@ export default function AdminSubscriptions() {
             ) : (
               (data || []).map((s) => (
                 <TableRow key={s.id}>
-                  <TableCell className="text-sm">{users?.get(s.user_id) || s.user_id.slice(0, 8)}</TableCell>
+                  <TableCell className="text-sm">{(users?.get(s.user_id) as string | undefined) || s.user_id.slice(0, 8)}</TableCell>
                   <TableCell><Badge variant="outline">{s.price_id}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={s.status === "active" || s.status === "trialing" ? "default" : "secondary"}>
