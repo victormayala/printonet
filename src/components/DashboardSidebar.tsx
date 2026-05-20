@@ -12,11 +12,15 @@ import {
   CreditCard,
   Store,
   BookOpen,
+  Shield,
+
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NavLink as RouterNavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import logoIcon from "@/assets/printonet-logo-sidebar.svg";
+
 import logoFull from "@/assets/printonet-logo-sidebar-full.svg";
 
 import {
@@ -101,7 +105,9 @@ export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { signOut } = useAuth();
+  const { isSuperAdmin } = useIsSuperAdmin();
   const { pathname, search } = useLocation();
+
 
   useEffect(() => {
     try {
