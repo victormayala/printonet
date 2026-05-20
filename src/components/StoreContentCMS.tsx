@@ -28,7 +28,7 @@ import { BlockEditor, BLOCK_TYPES } from "@/components/cms/BlockEditor";
 import { SiteSettingsEditor, ContentPageEditor } from "@/components/cms/SiteSettingsEditor";
 
 // Bump in lock-step with storefront's `PLATFORM_CMS_SCHEMA_VERSION`.
-const PLATFORM_CMS_SCHEMA_VERSION = 1;
+const PLATFORM_CMS_SCHEMA_VERSION = 8;
 
 type Block = {
   id: string;
