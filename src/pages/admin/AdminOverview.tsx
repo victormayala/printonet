@@ -11,7 +11,7 @@ export default function AdminOverview() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-platform-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_platform_stats");
+      const { data, error } = await (supabase as any).rpc("admin_platform_stats");
       if (error) throw error;
       return data as Record<string, number>;
     },

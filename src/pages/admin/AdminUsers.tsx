@@ -27,7 +27,7 @@ export default function AdminUsers() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_list_users");
+      const { data, error } = await (supabase as any).rpc("admin_list_users");
       if (error) throw error;
       return (data || []) as AdminUser[];
     },
