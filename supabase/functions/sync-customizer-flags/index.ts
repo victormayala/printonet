@@ -56,6 +56,11 @@ Deno.serve(async (req) => {
     Deno.env.get("PRINTONET_STOREFRONT_PUBLIC_URL") ||
     Deno.env.get("PRINTONET_STOREFRONT_URL") ||
     Deno.env.get("PRINTONET_TENANT_BASE_URL");
+  // Customizer Studio deployed URL (this app). The storefront iframes this URL
+  // verbatim, so it MUST be the customizer host, not the storefront host.
+  const CUSTOMIZER_STUDIO_URL =
+    Deno.env.get("CUSTOMIZER_STUDIO_PUBLIC_URL") ||
+    "https://customizer.printonet.com";
 
   if (!HMAC_SECRET) return json(500, { error: "PRINTONET_PLATFORM_HMAC_SECRET is not configured" });
   if (!STOREFRONT_URL) return json(500, { error: "Storefront base URL secret is not configured" });
@@ -112,10 +117,14 @@ Deno.serve(async (req) => {
   }
 
   const storefrontBase = STOREFRONT_URL.replace(/\/+$/, "");
+  const customizerBase = CUSTOMIZER_STUDIO_URL.replace(/\/+$/, "");
   const items = products.map((p) => ({
     sku: p.id, // we don't store a separate SKU; product UUID is the stable id
     name: p.name,
-    customizer_url: `${storefrontBase}/s/${store.tenant_slug}/customize/${p.id}`,
+    // Must point at the Customizer Studio app (this project), not the storefront.
+    // The storefront iframes this URL verbatim. /s/:tenant/customize/:productId
+    // creates a session and redirects to /embed/:sessionId with store branding.
+    customizer_url: `${customizerBase}/s/${store.tenant_slug}/customize/${p.id}`,
   }));
 
   const payload = JSON.stringify({ items });
