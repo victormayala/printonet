@@ -3494,71 +3494,18 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const [markupValue, setMarkupValue] = useState("");
   const [applyingMarkup, setApplyingMarkup] = useState(false);
 
-  // Sync to multi-tenant stores
+  // Sync to multi-tenant stores — legacy WordPress catalog push. Removed:
+  // hosted storefronts now read products + customizer flags directly from
+  // the shared DB, so there is nothing to push from here.
   const [tenantSyncOpen, setTenantSyncOpen] = useState(false);
   const [corporateStores, setCorporateStores] = useState<any[]>([]);
-  const [loadingStores, setLoadingStores] = useState(false);
-  const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
-  const [storeSyncResults, setStoreSyncResults] = useState<Record<string, { ok: boolean; message: string; count?: number }>>({});
+  const [loadingStores] = useState(false);
+  const [syncingStoreId] = useState<string | null>(null);
+  const [storeSyncResults] = useState<Record<string, { ok: boolean; message: string; count?: number }>>({});
+  void tenantSyncOpen; void setTenantSyncOpen;
+  void corporateStores; void setCorporateStores;
+  void loadingStores; void syncingStoreId; void storeSyncResults;
 
-  const openTenantSync = async () => {
-    setTenantSyncOpen(true);
-    setStoreSyncResults({});
-    setLoadingStores(true);
-    const { data } = await supabase
-      .from("corporate_stores")
-      .select("*")
-      .eq("user_id", user?.id || "")
-      .order("created_at", { ascending: false });
-    setCorporateStores(data || []);
-    setLoadingStores(false);
-  };
-
-  const syncToStore = async (store: any) => {
-    const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
-    if (!slug) {
-      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: "Missing tenant slug / site URL" } }));
-      return;
-    }
-    setSyncingStoreId(store.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-catalog-to-tenant", {
-        body: {
-          tenant_slug: slug,
-          custom_domain: store.custom_domain || undefined,
-          limit: 200,
-          mode: "full",
-          prune: true,
-        },
-      });
-      if (error) throw error;
-      const ok = (data as any)?.ok !== false && !(data as any)?.error;
-      const count = (data as any)?.product_count;
-      setStoreSyncResults((p) => ({
-        ...p,
-        [store.id]: {
-          ok,
-          message: ok ? `Synced ${count ?? 0} products` : ((data as any)?.detail || (data as any)?.error || "Sync failed"),
-          count,
-        },
-      }));
-      if (ok) toast({ title: `Synced to ${store.name}`, description: `${count ?? 0} products pushed.` });
-      else toast({ title: `Failed to sync ${store.name}`, description: (data as any)?.detail || (data as any)?.error || "Unknown error", variant: "destructive" });
-    } catch (err: any) {
-      setStoreSyncResults((p) => ({ ...p, [store.id]: { ok: false, message: err?.message || "Sync failed" } }));
-      toast({ title: `Failed to sync ${store.name}`, description: err?.message, variant: "destructive" });
-    } finally {
-      setSyncingStoreId(null);
-    }
-  };
-
-  const syncToAllStores = async () => {
-    for (const store of corporateStores) {
-      if (store.status !== "active") continue;
-      // eslint-disable-next-line no-await-in-loop
-      await syncToStore(store);
-    }
-  };
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) => {
@@ -3710,25 +3657,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     return res.data as any;
   };
 
-  const mirrorDeletesToStores = async (skus: string[]) => {
-    if (!skus.length) return;
-    const targets = corporateStores.filter((s) => s.status === "active");
-    for (const store of targets) {
-      const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
-      if (!slug) continue;
-      try {
-        await supabase.functions.invoke("sync-catalog-to-tenant", {
-          body: {
-            tenant_slug: slug,
-            custom_domain: store.custom_domain || undefined,
-            mode: "delete",
-            removed_skus: skus,
-          },
-        });
-      } catch {
-        // best-effort; surfaced via toast below
-      }
-    }
+  const mirrorDeletesToStores = async (_skus: string[]) => {
+    // No-op: hosted storefronts read products directly from the DB, so deletes
+    // propagate automatically. Previous WordPress catalog-mirror call removed.
   };
 
   const deleteProduct = async (id: string) => {
@@ -3955,9 +3886,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                       </Button>
                     </div>
 
-                    <Button onClick={openTenantSync} variant="outline" className="gap-2 h-9">
-                      <RefreshCw className="h-4 w-4" /> Sync to Stores
-                    </Button>
+                    {/* Catalog sync removed: hosted storefronts read products + customizer flags directly from the DB. */}
                     <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2 h-9">
                       <Plus className="h-4 w-4" /> Add Product
                     </Button>
@@ -4351,66 +4280,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           </DialogContent>
         </Dialog>
 
-        <Dialog open={tenantSyncOpen} onOpenChange={setTenantSyncOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Sync products to your stores</DialogTitle>
-              <DialogDescription>
-                Push your full product catalog to each connected multi-tenant storefront.
-              </DialogDescription>
-            </DialogHeader>
-            {loadingStores ? (
-              <div className="py-6 flex items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading stores...
-              </div>
-            ) : corporateStores.length === 0 ? (
-              <p className="py-6 text-sm text-muted-foreground text-center">
-                You don't have any corporate stores yet.
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {corporateStores.map((store) => {
-                  const result = storeSyncResults[store.id];
-                  const isSyncing = syncingStoreId === store.id;
-                  const disabled = store.status !== "active";
-                  return (
-                    <div key={store.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{store.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{store.wp_site_url || store.tenant_slug || "—"}</p>
-                        {result && (
-                          <p className={`text-xs mt-1 ${result.ok ? "text-green-600" : "text-destructive"}`}>{result.message}</p>
-                        )}
-                        {disabled && <p className="text-xs text-muted-foreground mt-1">Status: {store.status}</p>}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => syncToStore(store)}
-                        disabled={isSyncing || disabled || !!syncingStoreId}
-                        className="gap-1.5"
-                      >
-                        {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                        Sync
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setTenantSyncOpen(false)}>Close</Button>
-              <Button
-                onClick={syncToAllStores}
-                disabled={!!syncingStoreId || corporateStores.length === 0 || loadingStores}
-                className="gap-2"
-              >
-                {syncingStoreId ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                Sync All
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Legacy "Sync to Stores" dialog removed — storefronts now pull catalog directly from the DB. */}
       </div>
     </div>
   );
