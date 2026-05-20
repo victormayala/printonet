@@ -129,8 +129,8 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-platform-timestamp": ts,
-        "x-platform-signature": signature,
+        "X-Printonet-Timestamp": ts,
+        "X-Printonet-Signature": signature,
       },
       body: payload,
     });
