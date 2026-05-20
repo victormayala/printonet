@@ -36,6 +36,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminStores from "./pages/admin/AdminStores";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+import AdminInvites from "./pages/admin/AdminInvites";
 
 
 
@@ -115,6 +116,7 @@ const App = () => (
             {/* Super admin */}
             <Route path="/admin" element={<AdminLayout><AdminOverview /></AdminLayout>} />
             <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
+            <Route path="/admin/invites" element={<AdminLayout><AdminInvites /></AdminLayout>} />
             <Route path="/admin/stores" element={<AdminLayout><AdminStores /></AdminLayout>} />
             <Route path="/admin/orders" element={<AdminLayout><AdminOrders /></AdminLayout>} />
             <Route path="/admin/subscriptions" element={<AdminLayout><AdminSubscriptions /></AdminLayout>} />
