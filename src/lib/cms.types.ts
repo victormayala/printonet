@@ -170,6 +170,10 @@ export const blockDataSchemaByType: Record<BlockType, z.ZodTypeAny> = {
 };
 
 // ---------- Site settings ----------
+// TODO: replace with real IDs from storefront `@/lib/store-templates`.
+export const TEMPLATE_IDS = ["default"] as const;
+export const DEFAULT_TEMPLATE_ID = "default" as const;
+
 export const siteSettingsSchema = z.object({
   announcement_text: z.string().trim().max(160).optional().or(z.literal("")),
   announcement_href: z.string().trim().max(1000).optional().or(z.literal("")),
@@ -204,6 +208,8 @@ export const siteSettingsSchema = z.object({
   contact_phone: z.string().trim().max(40).optional().or(z.literal("")),
   contact_address: z.string().trim().max(500).optional().or(z.literal("")),
   default_og_image_url: z.string().trim().max(1000).optional().or(z.literal("")),
+  // Visual template — controls how homepage blocks are rendered.
+  template_id: z.enum(TEMPLATE_IDS).default(DEFAULT_TEMPLATE_ID),
 });
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
@@ -298,4 +304,5 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   contact_phone: "",
   contact_address: "",
   default_og_image_url: "",
+  template_id: DEFAULT_TEMPLATE_ID,
 };
