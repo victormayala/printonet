@@ -134,7 +134,7 @@ export function DashboardSidebar() {
               const active = isSubActive(sub.to, pathname, search);
               return (
                 <SidebarMenuSubItem key={sub.to}>
-                  <SidebarMenuSubButton asChild isActive={active}>
+                  <SidebarMenuSubButton asChild isActive={active} className={active ? "text-accent hover:text-accent" : ""}>
                     <NavLink to={sub.to} className="flex items-center gap-2">
                       <sub.icon className="h-3.5 w-3.5 shrink-0" />
                       <span>{sub.title}</span>
