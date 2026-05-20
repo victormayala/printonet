@@ -3710,25 +3710,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     return res.data as any;
   };
 
-  const mirrorDeletesToStores = async (skus: string[]) => {
-    if (!skus.length) return;
-    const targets = corporateStores.filter((s) => s.status === "active");
-    for (const store of targets) {
-      const slug = store.tenant_slug || (store.wp_site_url ? (() => { try { return new URL(store.wp_site_url).host.toLowerCase().replace(/^www\./, ""); } catch { return null; } })() : null);
-      if (!slug) continue;
-      try {
-        await supabase.functions.invoke("sync-catalog-to-tenant", {
-          body: {
-            tenant_slug: slug,
-            custom_domain: store.custom_domain || undefined,
-            mode: "delete",
-            removed_skus: skus,
-          },
-        });
-      } catch {
-        // best-effort; surfaced via toast below
-      }
-    }
+  const mirrorDeletesToStores = async (_skus: string[]) => {
+    // No-op: hosted storefronts read products directly from the DB, so deletes
+    // propagate automatically. Previous WordPress catalog-mirror call removed.
   };
 
   const deleteProduct = async (id: string) => {
