@@ -56,6 +56,11 @@ Deno.serve(async (req) => {
     Deno.env.get("PRINTONET_STOREFRONT_PUBLIC_URL") ||
     Deno.env.get("PRINTONET_STOREFRONT_URL") ||
     Deno.env.get("PRINTONET_TENANT_BASE_URL");
+  // Customizer Studio deployed URL (this app). The storefront iframes this URL
+  // verbatim, so it MUST be the customizer host, not the storefront host.
+  const CUSTOMIZER_STUDIO_URL =
+    Deno.env.get("CUSTOMIZER_STUDIO_PUBLIC_URL") ||
+    "https://customizer.printonet.com";
 
   if (!HMAC_SECRET) return json(500, { error: "PRINTONET_PLATFORM_HMAC_SECRET is not configured" });
   if (!STOREFRONT_URL) return json(500, { error: "Storefront base URL secret is not configured" });
