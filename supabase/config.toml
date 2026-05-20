@@ -59,3 +59,7 @@ verify_jwt = false
 
 [functions.stripe-connect-webhook]
 verify_jwt = false
+
+[functions.sync-customizer-flags]
+verify_jwt = false
+
