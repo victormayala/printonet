@@ -117,10 +117,14 @@ Deno.serve(async (req) => {
   }
 
   const storefrontBase = STOREFRONT_URL.replace(/\/+$/, "");
+  const customizerBase = CUSTOMIZER_STUDIO_URL.replace(/\/+$/, "");
   const items = products.map((p) => ({
     sku: p.id, // we don't store a separate SKU; product UUID is the stable id
     name: p.name,
-    customizer_url: `${storefrontBase}/s/${store.tenant_slug}/customize/${p.id}`,
+    // Must point at the Customizer Studio app (this project), not the storefront.
+    // The storefront iframes this URL verbatim. /s/:tenant/customize/:productId
+    // creates a session and redirects to /embed/:sessionId with store branding.
+    customizer_url: `${customizerBase}/s/${store.tenant_slug}/customize/${p.id}`,
   }));
 
   const payload = JSON.stringify({ items });
