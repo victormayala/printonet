@@ -170,6 +170,10 @@ export const blockDataSchemaByType: Record<BlockType, z.ZodTypeAny> = {
 };
 
 // ---------- Site settings ----------
+// TODO: replace with real IDs from storefront `@/lib/store-templates`.
+export const TEMPLATE_IDS = ["default"] as const;
+export const DEFAULT_TEMPLATE_ID = "default" as const;
+
 export const siteSettingsSchema = z.object({
   announcement_text: z.string().trim().max(160).optional().or(z.literal("")),
   announcement_href: z.string().trim().max(1000).optional().or(z.literal("")),
