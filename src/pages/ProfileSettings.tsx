@@ -112,14 +112,6 @@ export default function ProfileSettings() {
           }}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto">
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="h-4 w-4" /> Profile
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="gap-2">
-              <CreditCard className="h-4 w-4" /> Billing
-            </TabsTrigger>
-          </TabsList>
 
           <TabsContent value="profile" className="mt-0">
             <div className="max-w-2xl mx-auto">
