@@ -128,9 +128,11 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
 
   const enabledCount = rows.filter((r) => r.customizable).length;
 
-  // Note: customizer flags are read directly by the hosted storefront app from
-  // corporate_store_products in Supabase, so we no longer push catalog flags
-  // anywhere — saving the row is the source of truth.
+  // Every write that affects which products are customizable on the storefront
+  // triggers a signed full-snapshot push via the sync-customizer-flags edge
+  // function. The DB row remains the source of truth; the push keeps the
+  // storefront's tenant_customizer_flags table in sync.
+
 
   /**
    * Toggle one row, then re-read it from the DB to prove it stuck.
@@ -167,6 +169,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         title: updated.customizable ? "Customizer enabled" : "Customizer disabled",
         description: row.product.name,
       });
+
+      // Push fresh snapshot to the storefront. Silent unless it fails.
+      void pushSnapshot({ silent: true });
     } catch (e) {
       // Revert and surface
       await refetch();
@@ -200,6 +205,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           ? `Enabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`
           : `Disabled customizer on ${targets.length} product${targets.length === 1 ? "" : "s"}`,
       });
+
+      void pushSnapshot({ silent: true });
     } catch (e) {
       toast({
         title: "Bulk update failed",
@@ -231,6 +238,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
 
       qc.setQueryData<Row[]>(queryKey, (prev) => (prev ?? []).filter((r) => r.id !== row.id));
       toast({ title: "Product removed", description: row.product.name });
+      // If the removed row was customizable it must drop off the storefront snapshot.
+      if (row.customizable) void pushSnapshot({ silent: true });
     } catch (e) {
       await refetch();
       toast({
