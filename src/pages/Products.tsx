@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
 import PrintAreaOverlay from "@/components/PrintAreaOverlay";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadProductImage } from "@/lib/damUpload";
 import { Button } from "@/components/ui/button";
@@ -3473,8 +3473,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const [pushingIntegrationId, setPushingIntegrationId] = useState<string | null>(null);
   const [pushResults, setPushResults] = useState<{ created: number; updated: number; failed: number; errors: string[] } | null>(null);
   const [variantDetailProduct, setVariantDetailProduct] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState(initialTab);
-  useEffect(() => { setActiveTab(initialTab); }, [initialTab]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab") as ProductsTab | null;
+  const [activeTab, setActiveTabState] = useState<ProductsTab>(urlTab ?? initialTab);
+  useEffect(() => {
+    setActiveTabState(urlTab ?? initialTab);
+  }, [initialTab, urlTab]);
+  const setActiveTab = (v: ProductsTab) => {
+    setActiveTabState(v);
+    const next = new URLSearchParams(searchParams);
+    if (v === initialTab) next.delete("tab");
+    else next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
   const [savingVariantPrices, setSavingVariantPrices] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
