@@ -30,6 +30,14 @@ import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import BillingReturn from "./pages/BillingReturn";
 import Dashboard from "./pages/Dashboard";
+import { AdminLayout } from "@/components/AdminLayout";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminStores from "./pages/admin/AdminStores";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,6 +111,14 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/billing" element={<Navigate to="/profile?tab=billing" replace />} />
             <Route path="/billing/return" element={<BillingReturn />} />
+
+            {/* Super admin */}
+            <Route path="/admin" element={<AdminLayout><AdminOverview /></AdminLayout>} />
+            <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
+            <Route path="/admin/stores" element={<AdminLayout><AdminStores /></AdminLayout>} />
+            <Route path="/admin/orders" element={<AdminLayout><AdminOrders /></AdminLayout>} />
+            <Route path="/admin/subscriptions" element={<AdminLayout><AdminSubscriptions /></AdminLayout>} />
+
             <Route path="*" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <NotFound />} />
           </Routes>
         </TooltipProvider>
