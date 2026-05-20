@@ -135,7 +135,7 @@ export function DashboardSidebar() {
               activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
               onClick={() => {
                 if (hasSub && !collapsed) {
-                  setOpenGroups((prev) => ({ ...prev, [item.title]: true }));
+                  setOpenGroups((prev) => ({ ...prev, [item.title]: !prev[item.title] }));
                 }
               }}
             >
