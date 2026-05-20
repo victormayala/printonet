@@ -177,7 +177,10 @@ export function DashboardSidebar() {
 
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>{navItems.map(renderItem)}</SidebarMenu>
+            <SidebarMenu>
+              {navItems.map(renderItem)}
+              {isSuperAdmin && renderItem({ title: "Admin", url: "/admin", icon: Shield })}
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
