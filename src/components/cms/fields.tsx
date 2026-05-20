@@ -119,22 +119,26 @@ export function AssetField({
   const upload = async (file: File) => {
     setBusy(true);
     try {
-      const signed = await cms<{ upload_url: string; public_url: string }>(
+      // Build a tenant-relative path. Server auto-prefixes the tenant slug.
+      // Allowed chars: [a-zA-Z0-9_\-./]
+      const safeName = file.name
+        .replace(/[^a-zA-Z0-9_.-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      const path = `homepage/${Date.now()}-${safeName || "upload"}`;
+
+      const signed = await cms<{ signedUrl: string; publicUrl: string }>(
         storeId,
         "create-asset-upload-url",
-        {
-          filename: file.name,
-          content_type: file.type || "application/octet-stream",
-          size: file.size,
-        },
+        { path },
       );
-      const putRes = await fetch(signed.upload_url, {
+      const putRes = await fetch(signed.signedUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type || "application/octet-stream" },
         body: file,
       });
       if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
-      onChange(signed.public_url);
+      onChange(signed.publicUrl);
       toast({ title: "Image uploaded" });
     } catch (e: any) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });
