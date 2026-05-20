@@ -304,4 +304,5 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   contact_phone: "",
   contact_address: "",
   default_og_image_url: "",
+  template_id: DEFAULT_TEMPLATE_ID,
 };
