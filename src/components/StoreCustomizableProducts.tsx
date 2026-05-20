@@ -277,6 +277,21 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <Button
               size="sm"
               variant="outline"
+              onClick={async () => {
+                if (syncBusy) return;
+                setSyncBusy(true);
+                await pushSnapshot();
+                setSyncBusy(false);
+              }}
+              disabled={syncBusy}
+              title="Send a fresh full snapshot of customizable products to the storefront"
+            >
+              <CloudUpload className={`h-3.5 w-3.5 ${syncBusy ? "animate-pulse" : ""}`} />
+              {syncBusy ? "Syncing…" : "Resync to storefront"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => refetch()}
               disabled={isFetching}
               title="Refresh from database"
