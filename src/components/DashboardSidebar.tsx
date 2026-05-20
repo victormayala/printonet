@@ -133,6 +133,11 @@ export function DashboardSidebar() {
               end
               className={`hover:bg-sidebar-accent ${hasSub && !collapsed ? "pr-9" : ""}`}
               activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              onClick={() => {
+                if (hasSub && !collapsed) {
+                  setOpenGroups((prev) => ({ ...prev, [item.title]: true }));
+                }
+              }}
             >
               <item.icon className="h-4 w-4 shrink-0" />
               {!collapsed && <span>{item.title}</span>}
