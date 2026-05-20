@@ -129,7 +129,7 @@ export function DashboardSidebar() {
           </RouterNavLink>
         </SidebarMenuButton>
         {showSub && (
-          <SidebarMenuSub>
+          <SidebarMenuSub className="mt-2 mb-1">
             {item.subItems!.map((sub) => {
               const active = isSubActive(sub.to, pathname, search);
               return (
