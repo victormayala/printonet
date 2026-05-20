@@ -1,5 +1,5 @@
 import { NavLink, Navigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Building2, ShoppingBag, CreditCard, ArrowLeft, Shield, Loader2, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Building2, ShoppingBag, CreditCard, ArrowLeft, Shield, Loader2, LogOut, Mail } from "lucide-react";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/invites", label: "Invites", icon: Mail },
   { to: "/admin/stores", label: "Stores", icon: Building2 },
   { to: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { to: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
