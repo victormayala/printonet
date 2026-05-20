@@ -57,7 +57,7 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    title: "Products",
+    title: "Catalog",
     url: "/products",
     icon: Package,
     matchPaths: ["/products", "/suppliers"],
