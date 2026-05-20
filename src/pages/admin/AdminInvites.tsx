@@ -34,8 +34,8 @@ export default function AdminInvites() {
   const { data: settings } = useQuery({
     queryKey: ["platform-settings"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("platform_settings" as any)
+      const { data, error } = await (supabase as any)
+        .from("platform_settings")
         .select("invite_only_enabled")
         .eq("id", true)
         .maybeSingle();
@@ -47,12 +47,12 @@ export default function AdminInvites() {
   const { data: invites, isLoading } = useQuery({
     queryKey: ["invites"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invites" as any)
+      const { data, error } = await (supabase as any)
+        .from("invites")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as unknown as Invite[];
+      return (data || []) as Invite[];
     },
   });
 
@@ -90,7 +90,7 @@ export default function AdminInvites() {
   };
 
   const remove = async (id: string) => {
-    const { error } = await supabase.from("invites" as any).delete().eq("id", id);
+    const { error } = await (supabase as any).from("invites").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Invite removed");
     qc.invalidateQueries({ queryKey: ["invites"] });
