@@ -57,10 +57,13 @@ Deno.serve(async (req) => {
     Deno.env.get("PRINTONET_STOREFRONT_URL") ||
     Deno.env.get("PRINTONET_TENANT_BASE_URL");
   // Customizer Studio deployed URL (this app). The storefront iframes this URL
-  // verbatim, so it MUST be the customizer host, not the storefront host.
+  // verbatim, so it MUST point at a host that actually resolves and serves the
+  // /s/:tenantSlug/customize/:productId route from this project. The Lovable
+  // published URL is guaranteed to resolve; override with the secret to use a
+  // custom domain like https://platform.printonet.com once DNS is configured.
   const CUSTOMIZER_STUDIO_URL =
     Deno.env.get("CUSTOMIZER_STUDIO_PUBLIC_URL") ||
-    "https://customizerstudio.com";
+    "https://printonet.lovable.app";
 
   if (!HMAC_SECRET) return json(500, { error: "PRINTONET_PLATFORM_HMAC_SECRET is not configured" });
   if (!STOREFRONT_URL) return json(500, { error: "Storefront base URL secret is not configured" });
