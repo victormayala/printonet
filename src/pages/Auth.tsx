@@ -96,6 +96,42 @@ function SignupForm() {
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState<string | null>(null);
+  const [inviteOnly, setInviteOnly] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("invite");
+      const { data: settings } = await (supabase as any)
+        .from("platform_settings")
+        .select("invite_only_enabled")
+        .eq("id", true)
+        .maybeSingle();
+      const enabled = !!settings?.invite_only_enabled;
+      setInviteOnly(enabled);
+
+      if (token) {
+        const { data: invite } = await (supabase as any)
+          .from("invites")
+          .select("email, used_at, expires_at")
+          .eq("token", token)
+          .maybeSingle();
+        if (!invite) setInviteError("This invite link is invalid.");
+        else if (invite.used_at) setInviteError("This invite has already been used.");
+        else if (new Date(invite.expires_at) < new Date()) setInviteError("This invite has expired.");
+        else {
+          setInviteToken(token);
+          setInviteEmail(invite.email);
+          setEmail(invite.email);
+        }
+      }
+      setChecking(false);
+    })();
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +149,7 @@ function SignupForm() {
       password,
       options: {
         emailRedirectTo: window.location.origin,
-        data: { store_name: storeName },
+        data: { store_name: storeName, invite_token: inviteToken },
       },
     });
     setLoading(false);
@@ -134,15 +170,36 @@ function SignupForm() {
     );
   }
 
+  if (checking) {
+    return <div className="py-10 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></div>;
+  }
+
+  if (inviteOnly && !inviteToken) {
+    return (
+      <div className="text-center py-6 space-y-3">
+        <Mail className="h-10 w-10 mx-auto text-muted-foreground" />
+        <h3 className="font-semibold text-lg">Signups are invite-only</h3>
+        <p className="text-sm text-muted-foreground">
+          {inviteError ?? "You need an invite link to create an account. Please contact the team to request access."}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSignup} className="space-y-4">
+      {inviteEmail && (
+        <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
+          You were invited as <strong>{inviteEmail}</strong>.
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="signup-store">Store Name</Label>
         <Input id="signup-store" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="My Awesome Store" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-email">Email</Label>
-        <Input id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required readOnly={!!inviteEmail} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-confirm">Confirm Password</Label>
