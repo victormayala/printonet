@@ -10,6 +10,7 @@ import {
   Truck,
   Globe,
   CreditCard,
+  Store,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NavLink as RouterNavLink } from "@/components/NavLink";
@@ -50,7 +51,7 @@ const navItems: NavItem[] = [
     icon: Building2,
     matchPaths: ["/corporate-stores"],
     subItems: [
-      { title: "My Stores", to: "/corporate-stores", icon: Building2 },
+      { title: "Stores", to: "/corporate-stores", icon: Store },
       { title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag },
       { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
     ],
