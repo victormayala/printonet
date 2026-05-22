@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Sparkles, Store } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { storeOriginFromReturnUrl, transferHostedCartToWoo } from "@/lib/wooCart";
