@@ -69,7 +69,7 @@ serve(async (req) => {
     const user = userData.user;
 
     const body = await req.json();
-    const { priceId, extraStores = 0, returnUrl, environment } = body;
+    const { priceId, extraStores = 0, extraSeats = 0, returnUrl, environment } = body;
     if (!ALLOWED_PLANS.has(priceId)) {
       return new Response(JSON.stringify({ error: "invalid_plan" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
