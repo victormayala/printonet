@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, EXTRA_STORE_PRICE } from "@/hooks/useSubscription";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export default function Billing() {
   const navigate = useNavigate();
