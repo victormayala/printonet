@@ -155,7 +155,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PaymentTestModeBanner />
+      
       <div className="max-w-5xl mx-auto p-6">
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link to="/cart">
