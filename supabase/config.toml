@@ -63,3 +63,9 @@ verify_jwt = false
 [functions.sync-customizer-flags]
 verify_jwt = false
 
+[functions.setup-byok-stripe-products]
+verify_jwt = false
+
+[functions.get-stripe-publishable-key]
+verify_jwt = false
+
