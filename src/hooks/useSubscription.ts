@@ -3,21 +3,66 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStripeEnvironment } from "@/lib/stripe";
 
-export type PlanKey = "starter_monthly" | "growth_monthly" | "pro_monthly";
+export type PlanKey =
+  | "customizer_monthly"
+  | "starter_monthly"
+  | "growth_monthly"
+  | "pro_monthly";
 
 export const PLAN_META: Record<PlanKey, {
   name: string;
   monthly: number;
   includedStores: number;
+  includedSeats: number;
+  productsPerStore: number | null; // null = N/A (e.g. customizer-only)
+  support: string;
   feeBps: number;
   feeLabel: string;
 }> = {
-  starter_monthly: { name: "Starter", monthly: 39, includedStores: 1, feeBps: 250, feeLabel: "2.5%" },
-  growth_monthly:  { name: "Growth",  monthly: 99, includedStores: 3, feeBps: 150, feeLabel: "1.5%" },
-  pro_monthly:     { name: "Pro",     monthly: 249, includedStores: 10, feeBps: 50, feeLabel: "0.5%" },
+  customizer_monthly: {
+    name: "Customizer Studio",
+    monthly: 29,
+    includedStores: 0,
+    includedSeats: 1,
+    productsPerStore: null,
+    support: "Email Support",
+    feeBps: 0,
+    feeLabel: "—",
+  },
+  starter_monthly: {
+    name: "Starter",
+    monthly: 39,
+    includedStores: 1,
+    includedSeats: 1,
+    productsPerStore: 100,
+    support: "Email Support",
+    feeBps: 250,
+    feeLabel: "2.5%",
+  },
+  growth_monthly: {
+    name: "Grow",
+    monthly: 99,
+    includedStores: 3,
+    includedSeats: 3,
+    productsPerStore: 250,
+    support: "Email + Chat Support",
+    feeBps: 150,
+    feeLabel: "1.5%",
+  },
+  pro_monthly: {
+    name: "Pro",
+    monthly: 299,
+    includedStores: 10,
+    includedSeats: 10,
+    productsPerStore: 500,
+    support: "Email + Chat + Priority Support",
+    feeBps: 50,
+    feeLabel: "0.5%",
+  },
 };
 
-export const EXTRA_STORE_PRICE = 20;
+export const EXTRA_STORE_PRICE = 29;
+export const EXTRA_SEAT_PRICE = 10;
 
 export function useSubscription() {
   const { user } = useAuth();
