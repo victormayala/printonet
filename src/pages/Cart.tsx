@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Sparkles, Store } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { storeOriginFromReturnUrl, transferHostedCartToWoo } from "@/lib/wooCart";
@@ -197,7 +197,7 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PaymentTestModeBanner />
+      
       <div className="max-w-3xl mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

@@ -4,7 +4,7 @@ import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -155,7 +155,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PaymentTestModeBanner />
+      
       <div className="max-w-5xl mx-auto p-6">
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link to="/cart">
