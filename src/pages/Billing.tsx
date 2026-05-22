@@ -50,7 +50,6 @@ export default function Billing() {
 
   return (
     <div className="p-6 max-w-[1280px] mx-auto">
-      <PaymentTestModeBanner />
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-semibold">Billing & Plan</h1>
