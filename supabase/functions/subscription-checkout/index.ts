@@ -4,8 +4,14 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
 
-const ALLOWED_PLANS = new Set(["starter_monthly", "growth_monthly", "pro_monthly"]);
+const ALLOWED_PLANS = new Set([
+  "customizer_monthly",
+  "starter_monthly",
+  "growth_monthly",
+  "pro_monthly",
+]);
 const EXTRA_STORE_PRICE = "extra_store_monthly";
+const EXTRA_SEAT_PRICE = "extra_seat_monthly";
 
 async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
