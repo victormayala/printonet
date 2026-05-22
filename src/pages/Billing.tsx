@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, EXTRA_STORE_PRICE } from "@/hooks/useSubscription";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export default function Billing() {
   const navigate = useNavigate();
@@ -51,7 +50,6 @@ export default function Billing() {
 
   return (
     <div className="p-6 max-w-[1280px] mx-auto">
-      <PaymentTestModeBanner />
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-semibold">Billing & Plan</h1>
