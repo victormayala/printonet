@@ -93,6 +93,14 @@ serve(async (req) => {
       }
     }
 
+    const teamSeats = Math.max(0, Math.min(100, Number(extraSeats) || 0));
+    if (teamSeats > 0) {
+      const teamSeatPrices = await stripe.prices.list({ lookup_keys: [EXTRA_SEAT_PRICE], limit: 1 });
+      if (teamSeatPrices.data.length) {
+        lineItems.push({ price: teamSeatPrices.data[0].id, quantity: teamSeats });
+      }
+    }
+
     const customerId = await resolveOrCreateCustomer(stripe, {
       email: user.email ?? undefined,
       userId: user.id,
