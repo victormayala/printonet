@@ -1313,9 +1313,11 @@ function NewStoreDialog({
   return (
     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>New store</DialogTitle>
+        <DialogTitle>{isResume ? `Finish setup — ${resumeStore?.name}` : "New store"}</DialogTitle>
         <DialogDescription>
-          A clean, guided flow to launch a Printonet-branded store.
+          {isResume
+            ? "Pick up where you left off. Choose a theme and connect Stripe to start accepting payments."
+            : "A clean, guided flow to launch a Printonet-branded store."}
         </DialogDescription>
       </DialogHeader>
 
