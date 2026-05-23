@@ -464,7 +464,7 @@ Deno.serve(async (req) => {
 
         const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
           color: colorName,
-          hex: null,
+          hex: colorNameToHex(colorName),
           colorFrontImage: parts[0].frontImage || null,
           colorSwatchImage: parts[0].swatchImage || null,
           gallery: (parts[0].gallery || []).slice(0, 6),
