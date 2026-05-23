@@ -460,6 +460,7 @@ export default function CorporateStores() {
                 </Button>
               </DialogTrigger>
               <NewStoreDialog
+                key={resumeStore?.id ?? "new"}
                 resumeStore={resumeStore}
                 onCreated={() => {
                   setOpen(false);
