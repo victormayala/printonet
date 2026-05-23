@@ -565,7 +565,15 @@ export default function CorporateStores() {
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : s.tenant_slug ? (
-                            <span className="text-sm font-mono text-muted-foreground">{s.tenant_slug}</span>
+                            <a
+                              href={`https://${s.tenant_slug}.stores.printonet.com`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              {s.tenant_slug}.stores.printonet.com
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
