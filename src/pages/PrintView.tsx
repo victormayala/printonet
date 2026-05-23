@@ -74,11 +74,9 @@ export default function PrintView() {
 
   async function fetchSession() {
     setLoading(true);
-    const { data, error: err } = await supabase
-      .from("customizer_sessions")
-      .select("*")
-      .eq("id", sessionId!)
-      .single();
+    const { data, error: err } = await (supabase as any)
+      .rpc("get_customizer_session", { p_id: sessionId! })
+      .maybeSingle();
 
     if (err || !data) {
       setError("Order not found or link is invalid.");

@@ -33,11 +33,9 @@ export default function Checkout() {
       return;
     }
 
-    supabase
-      .from("customizer_sessions")
-      .select("id, product_data, design_output, store_id")
-      .in("id", ids)
-      .then(({ data }) => {
+    (supabase as any)
+      .rpc("get_customizer_sessions", { p_ids: ids })
+      .then(({ data }: { data: any }) => {
         const sid = data?.find((r: any) => r.store_id)?.store_id ?? null;
         setStoreId(sid);
 

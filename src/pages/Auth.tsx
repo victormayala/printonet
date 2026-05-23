@@ -116,9 +116,7 @@ function SignupForm() {
 
       if (token) {
         const { data: invite } = await (supabase as any)
-          .from("invites")
-          .select("email, used_at, expires_at")
-          .eq("token", token)
+          .rpc("get_invite_by_token", { p_token: token })
           .maybeSingle();
         if (!invite) setInviteError("This invite link is invalid.");
         else if (invite.used_at) setInviteError("This invite has already been used.");

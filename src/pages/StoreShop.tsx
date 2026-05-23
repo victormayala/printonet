@@ -28,7 +28,9 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
     (async () => {
       let storeQuery = supabase
         .from("corporate_stores")
-        .select("*")
+        .select(
+          "id,user_id,name,tenant_slug,custom_domain,status,primary_color,accent_color,font_family,logo_url,secondary_logo_url,favicon_url,customizer_logo_dark_url,customizer_theme,customizer_border_radius,store_type,shipping_label,shipping_flat_amount,free_shipping_threshold,tax_label,tax_inclusive,tax_rate_bps,tax_enabled,created_at,updated_at"
+        )
         .eq("status", "active");
       storeQuery = customDomainHost
         ? storeQuery.eq("custom_domain", customDomainHost)
@@ -39,7 +41,7 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
         setError("Store not found.");
         return;
       }
-      setStore(s as CorporateStore);
+      setStore(s as unknown as CorporateStore);
 
       // Only show products that have been pushed to this store. The
       // `customizable` flag on the link decides whether the Customize button shows.
