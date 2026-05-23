@@ -94,7 +94,7 @@ export default function ReviewDesign() {
         // products carry per-size qty=0 but the owner toggled unlimited stock at
         // the product level — we must not show them as "Out of stock".
         let unlimited = pd?.inventory?.unlimited_stock !== false;
-        if (pd?.product_id || (!price || !pd?.inventory) && pd?.name) {
+        if (pd?.product_id || (((!price || !pd?.inventory) && pd?.name))) {
           const { data: products } = await supabase
             .from("inventory_products")
             .select("base_price, inventory")
