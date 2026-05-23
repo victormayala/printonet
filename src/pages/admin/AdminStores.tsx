@@ -32,6 +32,9 @@ type Store = {
   created_at: string;
 };
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export default function AdminStores() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -62,8 +65,8 @@ export default function AdminStores() {
       if (error) throw error;
       toast.success("Updated");
       await qc.invalidateQueries({ queryKey: ["admin-stores"] });
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed"));
     } finally {
       setBusy(null);
     }
@@ -77,8 +80,8 @@ export default function AdminStores() {
       toast.success(`Deleted ${s.name}`);
       await qc.invalidateQueries({ queryKey: ["admin-stores"] });
       await qc.invalidateQueries({ queryKey: ["corporate-stores"] });
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed to delete store");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed to delete store"));
     } finally {
       setBusy(null);
     }
