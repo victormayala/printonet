@@ -1029,6 +1029,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_banned: boolean
           is_super_admin: boolean
           store_count: number
           store_name: string
