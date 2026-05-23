@@ -46,10 +46,30 @@ Deno.serve(async (req) => {
       if (owned?.id) resolved_store_id = owned.id;
     }
 
+    const productId = typeof product.product_id === "string"
+      ? product.product_id
+      : (typeof product.id === "string" ? product.id : "");
+    let normalizedProduct = product;
+    if (productId && !product.inventory) {
+      const { data: inventoryProduct } = await supabase
+        .from("inventory_products")
+        .select("base_price, inventory")
+        .eq("id", productId)
+        .maybeSingle();
+      if (inventoryProduct?.inventory) {
+        normalizedProduct = {
+          ...product,
+          product_id: product.product_id ?? productId,
+          base_price: product.base_price ?? inventoryProduct.base_price,
+          inventory: inventoryProduct.inventory,
+        };
+      }
+    }
+
     const { data, error } = await supabase
       .from("customizer_sessions")
       .insert({
-        product_data: product,
+        product_data: normalizedProduct,
         external_ref: external_ref || null,
         user_id: user_id || null,
         store_id: resolved_store_id,

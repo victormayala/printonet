@@ -53,6 +53,28 @@ function json(status: number, body: unknown) {
   });
 }
 
+function normalizeUnlimitedStockProduct(product: Record<string, unknown> | null) {
+  if (!product) return null;
+  const inventory = product.inventory as { unlimited_stock?: boolean } | null | undefined;
+  if (inventory?.unlimited_stock !== true || !Array.isArray(product.variants)) return product;
+  return {
+    ...product,
+    variants: product.variants.map((variant) => {
+      if (!variant || typeof variant !== "object" || !Array.isArray((variant as { sizes?: unknown }).sizes)) {
+        return variant;
+      }
+      return {
+        ...(variant as Record<string, unknown>),
+        sizes: ((variant as { sizes: Record<string, unknown>[] }).sizes).map((size) => ({
+          ...size,
+          qty: 999999,
+          unlimited_stock: true,
+        })),
+      };
+    }),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
@@ -222,7 +244,7 @@ Deno.serve(async (req) => {
           .in("id", ids)
           .eq("is_active", true);
         if (prodsErr) throw prodsErr;
-        const byId = new Map((prods ?? []).map((p) => [p.id, p]));
+        const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
         const products = (links ?? []).map((l) => ({
           ...l,
           inventory_products: byId.get(l.product_id) ?? null,
@@ -251,7 +273,7 @@ Deno.serve(async (req) => {
           .eq("id", productId)
           .maybeSingle();
         if (prodErr) throw prodErr;
-        return json(200, { product: { ...link, inventory_products: prod } });
+        return json(200, { product: { ...link, inventory_products: normalizeUnlimitedStockProduct(prod) } });
       }
 
       case "create_order": {
@@ -916,7 +938,7 @@ Deno.serve(async (req) => {
             .in("id", ids)
             .eq("is_active", true);
           if (prodsErr) throw prodsErr;
-          const byId = new Map((prods ?? []).map((p) => [p.id, p]));
+          const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
           return (links ?? []).map((l) => ({
             ...l,
             inventory_products: byId.get(l.product_id) ?? null,
