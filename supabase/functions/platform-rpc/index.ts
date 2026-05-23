@@ -937,7 +937,7 @@ Deno.serve(async (req) => {
             .in("id", ids)
             .eq("is_active", true);
           if (prodsErr) throw prodsErr;
-          const byId = new Map((prods ?? []).map((p) => [p.id, p]));
+          const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
           return (links ?? []).map((l) => ({
             ...l,
             inventory_products: byId.get(l.product_id) ?? null,
