@@ -1246,9 +1246,10 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
     }
     setSeedingTemplate(true);
     try {
-      // Falls back to storefront default if nothing selected yet.
-      const templateId = selectedTemplateId ?? undefined;
-      await cms(provisionedStoreId, "seed-defaults", templateId ? { template_id: templateId } : {});
+      // Apply selected template via set-template; storefront uses its default otherwise.
+      if (selectedTemplateId) {
+        await cms(provisionedStoreId, "set-template", { template_id: selectedTemplateId });
+      }
       setTemplateSeeded(true);
       setStep(4);
     } catch (e) {
