@@ -566,12 +566,12 @@ export default function CorporateStores() {
                             </a>
                           ) : s.tenant_slug ? (
                             <a
-                              href={`https://${s.tenant_slug}.stores.printonet.com`}
+                              href={`https://stores.printonet.com/${s.tenant_slug}`}
                               target="_blank"
                               rel="noreferrer"
                               className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
                             >
-                              {s.tenant_slug}.stores.printonet.com
+                              stores.printonet.com/{s.tenant_slug}
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : (
