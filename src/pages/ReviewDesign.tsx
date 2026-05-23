@@ -90,17 +90,24 @@ export default function ReviewDesign() {
 
         const pd = data.product_data as any;
         let price = pd?.base_price || 0;
-        if (!price && pd?.name) {
+        // Respect the product's inventory.unlimited_stock flag. Supplier-imported
+        // products carry per-size qty=0 but the owner toggled unlimited stock at
+        // the product level — we must not show them as "Out of stock".
+        let unlimited = !!pd?.inventory?.unlimited_stock;
+        if ((!price || !pd?.inventory) && pd?.name) {
           const { data: products } = await supabase
             .from("inventory_products")
-            .select("base_price")
+            .select("base_price, inventory")
             .eq("name", pd.name)
             .limit(1);
           if (products && products.length > 0) {
-            price = products[0].base_price || 0;
+            if (!price) price = products[0].base_price || 0;
+            const inv = products[0].inventory as { unlimited_stock?: boolean } | null;
+            if (inv && typeof inv.unlimited_stock === "boolean") unlimited = inv.unlimited_stock;
           }
         }
         setBasePriceFallback(price);
+        setUnlimitedStock(unlimited);
         setLoading(false);
       });
   }, [sessionId]);
