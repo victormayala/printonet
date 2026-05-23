@@ -5,7 +5,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Store = {
@@ -20,6 +31,9 @@ type Store = {
   stripe_charges_enabled: boolean;
   created_at: string;
 };
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export default function AdminStores() {
   const qc = useQueryClient();
@@ -51,8 +65,23 @@ export default function AdminStores() {
       if (error) throw error;
       toast.success("Updated");
       await qc.invalidateQueries({ queryKey: ["admin-stores"] });
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteStore = async (s: Store) => {
+    setBusy(s.id);
+    try {
+      const { error } = await supabase.from("corporate_stores").delete().eq("id", s.id);
+      if (error) throw error;
+      toast.success(`Deleted ${s.name}`);
+      await qc.invalidateQueries({ queryKey: ["admin-stores"] });
+      await qc.invalidateQueries({ queryKey: ["corporate-stores"] });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed to delete store"));
     } finally {
       setBusy(null);
     }
@@ -121,6 +150,28 @@ export default function AdminStores() {
                     ) : (
                       <Button size="sm" variant="outline" disabled={busy === s.id} onClick={() => updateStore(s.id, { status: "active" })}>Activate</Button>
                     )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive" disabled={busy === s.id}>
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {s.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This permanently removes the store from the platform. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteStore(s)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete store
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))
