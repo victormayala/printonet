@@ -53,6 +53,27 @@ function json(status: number, body: unknown) {
   });
 }
 
+function normalizeUnlimitedStockProduct(product: Record<string, unknown> | null) {
+  if (!product) return null;
+  const inventory = product.inventory as { unlimited_stock?: boolean } | null | undefined;
+  if (inventory?.unlimited_stock !== true || !Array.isArray(product.variants)) return product;
+  return {
+    ...product,
+    variants: product.variants.map((variant) => {
+      if (!variant || typeof variant !== "object" || !Array.isArray((variant as { sizes?: unknown }).sizes)) {
+        return variant;
+      }
+      return {
+        ...(variant as Record<string, unknown>),
+        sizes: ((variant as { sizes: Record<string, unknown>[] }).sizes).map((size) => ({
+          ...size,
+          qty: undefined,
+        })),
+      };
+    }),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
