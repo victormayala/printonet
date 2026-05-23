@@ -67,6 +67,7 @@ export default function ReviewDesign() {
   const [transferDebug, setTransferDebug] = useState("idle");
   const [basePriceFallback, setBasePriceFallback] = useState<number>(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [unlimitedStock, setUnlimitedStock] = useState<boolean>(false);
 
   const returnUrl = searchParams.get("returnUrl") || "";
   const storeOriginParam = searchParams.get("storeOrigin") || "";
@@ -89,17 +90,24 @@ export default function ReviewDesign() {
 
         const pd = data.product_data as any;
         let price = pd?.base_price || 0;
-        if (!price && pd?.name) {
+        // Respect the product's inventory.unlimited_stock flag. Supplier-imported
+        // products carry per-size qty=0 but the owner toggled unlimited stock at
+        // the product level — we must not show them as "Out of stock".
+        let unlimited = !!pd?.inventory?.unlimited_stock;
+        if ((!price || !pd?.inventory) && pd?.name) {
           const { data: products } = await supabase
             .from("inventory_products")
-            .select("base_price")
+            .select("base_price, inventory")
             .eq("name", pd.name)
             .limit(1);
           if (products && products.length > 0) {
-            price = products[0].base_price || 0;
+            if (!price) price = products[0].base_price || 0;
+            const inv = products[0].inventory as { unlimited_stock?: boolean } | null;
+            if (inv && typeof inv.unlimited_stock === "boolean") unlimited = inv.unlimited_stock;
           }
         }
         setBasePriceFallback(price);
+        setUnlimitedStock(unlimited);
         setLoading(false);
       });
   }, [sessionId]);
@@ -129,9 +137,11 @@ export default function ReviewDesign() {
   // Default selected size = first in-stock size, or first size, or null
   useEffect(() => {
     if (selectedSize || variantSizes.length === 0) return;
-    const inStock = variantSizes.find((s) => (s.qty ?? 0) > 0);
+    const inStock = unlimitedStock
+      ? variantSizes[0]
+      : variantSizes.find((s) => (s.qty ?? 0) > 0);
     setSelectedSize((inStock || variantSizes[0]).size);
-  }, [variantSizes, selectedSize]);
+  }, [variantSizes, selectedSize, unlimitedStock]);
 
   // Resolve unit price: selected SKU price → first size price → product base_price
   const unitPrice = useMemo(() => {
@@ -351,7 +361,7 @@ export default function ReviewDesign() {
             <div className="flex flex-wrap gap-2">
               {variantSizes.map((s) => {
                 const isActive = selectedSize === s.size;
-                const outOfStock = (s.qty ?? 0) === 0 && s.qty !== undefined;
+                const outOfStock = !unlimitedStock && (s.qty ?? 0) === 0 && s.qty !== undefined;
                 return (
                   <button
                     key={s.size}
