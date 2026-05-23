@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0'
+import { colorNameToHex } from '../_shared/color-name-to-hex.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -463,7 +464,7 @@ Deno.serve(async (req) => {
 
         const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
           color: colorName,
-          hex: null,
+          hex: colorNameToHex(colorName),
           colorFrontImage: parts[0].frontImage || null,
           colorSwatchImage: parts[0].swatchImage || null,
           gallery: (parts[0].gallery || []).slice(0, 6),
@@ -517,7 +518,7 @@ Deno.serve(async (req) => {
           }
 
           const variants = Array.from(colorMap.entries()).map(([colorName, parts]) => ({
-            color: colorName, hex: null,
+            color: colorName, hex: colorNameToHex(colorName),
             image: parts[0].frontImage || null,
             gallery: (parts[0].gallery || []).slice(0, 6),
             sizes: parts.map(p => ({

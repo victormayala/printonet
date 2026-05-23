@@ -3,6 +3,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveVariantHex } from '../_shared/color-name-to-hex.ts'
 
 const SS_API_BASE = 'https://api.ssactivewear.com/v2'
 
@@ -167,7 +168,7 @@ Deno.serve(async (req) => {
           const first = skus[0]
           return {
             color: colorName,
-            hex: first.color1 || null,
+            hex: resolveVariantHex(colorName, first.color1),
             image: toLargeUrl(first.colorFrontImage),
             gallery: buildColorGallery(first),
             sizes: skus.map((s: any) => ({
@@ -331,7 +332,7 @@ Deno.serve(async (req) => {
         const first = skus[0]
         return {
           color: colorName,
-          hex: first.color1 || null,
+          hex: resolveVariantHex(colorName, first.color1),
           colorFrontImage: detailsToLargeUrl(first.colorFrontImage),
           colorSwatchImage: first.colorSwatchImage ? `https://www.ssactivewear.com/${first.colorSwatchImage}` : null,
           gallery: detailsBuildGallery(first),
