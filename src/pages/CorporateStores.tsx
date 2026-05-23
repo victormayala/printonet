@@ -1020,31 +1020,46 @@ function StepIndicator({ step, total, labels }: { step: number; total: number; l
   );
 }
 
-function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
+function NewStoreDialog({
+  onCreated,
+  resumeStore,
+}: {
+  onCreated: () => void;
+  resumeStore?: CorporateStore | null;
+}) {
   const { user } = useAuth();
-  const [step, setStep] = useState(1);
+  const isResume = !!resumeStore;
+  const [step, setStep] = useState(isResume ? 3 : 1);
   const [values, setValues] = useState<FormValues>({
-    name: "",
-    contact_email: "",
-    custom_domain: "",
-    primary_color: "#7c3aed",
-    font_family: "Inter",
-    store_type: "retail",
+    name: resumeStore?.name ?? "",
+    contact_email: resumeStore?.contact_email ?? "",
+    custom_domain: resumeStore?.custom_domain ?? "",
+    primary_color: resumeStore?.primary_color ?? "#7c3aed",
+    font_family: resumeStore?.font_family ?? "Inter",
+    store_type: (resumeStore?.store_type as FormValues["store_type"]) ?? "retail",
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [slugCheck, setSlugCheck] = useState<SlugCheck | null>(null);
-  const [chosenSlug, setChosenSlug] = useState<string | null>(null);
+  const [slugCheck, setSlugCheck] = useState<SlugCheck | null>(
+    isResume && resumeStore?.tenant_slug
+      ? { available: true, tenant_slug: resumeStore.tenant_slug, suggestions: [] }
+      : null,
+  );
+  const [chosenSlug, setChosenSlug] = useState<string | null>(resumeStore?.tenant_slug ?? null);
   const [checking, setChecking] = useState(false);
 
-  const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(null);
+  const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(resumeStore?.id ?? null);
   const [stripeStatus, setStripeStatus] = useState<{
     connected: boolean;
     charges_enabled: boolean;
     details_submitted: boolean;
-  } | null>(null);
+  } | null>(
+    resumeStore?.stripe_charges_enabled
+      ? { connected: true, charges_enabled: true, details_submitted: true }
+      : null,
+  );
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeOnboardingOpened, setStripeOnboardingOpened] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
