@@ -673,7 +673,7 @@ function PasswordCopyField({ label, value }: { label: string; value: string }) {
 }
 
 
-function StoreActions({ store }: { store: CorporateStore }) {
+function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResumeSetup?: () => void }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
