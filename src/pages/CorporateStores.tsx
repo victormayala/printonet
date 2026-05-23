@@ -403,6 +403,7 @@ export default function CorporateStores() {
   const { isSuperAdmin } = useIsSuperAdmin();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [resumeStore, setResumeStore] = useState<CorporateStore | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
@@ -445,16 +446,24 @@ export default function CorporateStores() {
                 Provision branded storefronts for corporate clients (e.g. Pepsico employee merch).
               </p>
             </div>
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(v) => {
+                setOpen(v);
+                if (!v) setResumeStore(null);
+              }}
+            >
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => setResumeStore(null)}>
                   <Plus className="h-4 w-4" />
                   New store
                 </Button>
               </DialogTrigger>
               <NewStoreDialog
+                resumeStore={resumeStore}
                 onCreated={() => {
                   setOpen(false);
+                  setResumeStore(null);
                   queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
                 }}
               />
@@ -561,7 +570,13 @@ export default function CorporateStores() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <StoreActions store={s} />
+                          <StoreActions
+                            store={s}
+                            onResumeSetup={() => {
+                              setResumeStore(s);
+                              setOpen(true);
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -658,7 +673,7 @@ function PasswordCopyField({ label, value }: { label: string; value: string }) {
 }
 
 
-function StoreActions({ store }: { store: CorporateStore }) {
+function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResumeSetup?: () => void }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -710,8 +725,15 @@ function StoreActions({ store }: { store: CorporateStore }) {
   const isActive = store.status === "active";
   const isPaused = store.status === "paused";
 
+  const needsSetup = store.status === "active" && !store.stripe_account_id;
+
   return (
     <div className="flex items-center justify-end gap-2">
+      {needsSetup && onResumeSetup && (
+        <Button variant="default" size="sm" onClick={onResumeSetup}>
+          Finish setup
+        </Button>
+      )}
       <Button asChild variant="outline" size="sm">
         <Link to={`/corporate-stores/${store.id}`}>See details</Link>
       </Button>
@@ -1011,31 +1033,46 @@ function StepIndicator({ step, total, labels }: { step: number; total: number; l
   );
 }
 
-function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
+function NewStoreDialog({
+  onCreated,
+  resumeStore,
+}: {
+  onCreated: () => void;
+  resumeStore?: CorporateStore | null;
+}) {
   const { user } = useAuth();
-  const [step, setStep] = useState(1);
+  const isResume = !!resumeStore;
+  const [step, setStep] = useState(isResume ? 3 : 1);
   const [values, setValues] = useState<FormValues>({
-    name: "",
-    contact_email: "",
-    custom_domain: "",
-    primary_color: "#7c3aed",
-    font_family: "Inter",
-    store_type: "retail",
+    name: resumeStore?.name ?? "",
+    contact_email: resumeStore?.contact_email ?? "",
+    custom_domain: resumeStore?.custom_domain ?? "",
+    primary_color: resumeStore?.primary_color ?? "#7c3aed",
+    font_family: resumeStore?.font_family ?? "Inter",
+    store_type: (resumeStore?.store_type as FormValues["store_type"]) ?? "retail",
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [slugCheck, setSlugCheck] = useState<SlugCheck | null>(null);
-  const [chosenSlug, setChosenSlug] = useState<string | null>(null);
+  const [slugCheck, setSlugCheck] = useState<SlugCheck | null>(
+    isResume && resumeStore?.tenant_slug
+      ? { available: true, tenant_slug: resumeStore.tenant_slug, suggestions: [] }
+      : null,
+  );
+  const [chosenSlug, setChosenSlug] = useState<string | null>(resumeStore?.tenant_slug ?? null);
   const [checking, setChecking] = useState(false);
 
-  const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(null);
+  const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(resumeStore?.id ?? null);
   const [stripeStatus, setStripeStatus] = useState<{
     connected: boolean;
     charges_enabled: boolean;
     details_submitted: boolean;
-  } | null>(null);
+  } | null>(
+    resumeStore?.stripe_charges_enabled
+      ? { connected: true, charges_enabled: true, details_submitted: true }
+      : null,
+  );
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeOnboardingOpened, setStripeOnboardingOpened] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -1276,9 +1313,11 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>New store</DialogTitle>
+        <DialogTitle>{isResume ? `Finish setup — ${resumeStore?.name}` : "New store"}</DialogTitle>
         <DialogDescription>
-          A clean, guided flow to launch a Printonet-branded store.
+          {isResume
+            ? "Pick up where you left off. Choose a theme and connect Stripe to start accepting payments."
+            : "A clean, guided flow to launch a Printonet-branded store."}
         </DialogDescription>
       </DialogHeader>
 
@@ -1434,9 +1473,11 @@ function NewStoreDialog({ onCreated }: { onCreated: () => void }) {
           </Card>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(2)} disabled={seedingTemplate}>
-              Back
-            </Button>
+            {!isResume && (
+              <Button variant="outline" onClick={() => setStep(2)} disabled={seedingTemplate}>
+                Back
+              </Button>
+            )}
             <Button onClick={goNextFromStep3} disabled={seedingTemplate || !provisionedStoreId}>
               {seedingTemplate && <Loader2 className="h-4 w-4 animate-spin" />}
               Continue
