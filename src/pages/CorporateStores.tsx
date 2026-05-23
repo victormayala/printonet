@@ -725,8 +725,15 @@ function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResum
   const isActive = store.status === "active";
   const isPaused = store.status === "paused";
 
+  const needsSetup = store.status === "active" && !store.stripe_account_id;
+
   return (
     <div className="flex items-center justify-end gap-2">
+      {needsSetup && onResumeSetup && (
+        <Button variant="default" size="sm" onClick={onResumeSetup}>
+          Finish setup
+        </Button>
+      )}
       <Button asChild variant="outline" size="sm">
         <Link to={`/corporate-stores/${store.id}`}>See details</Link>
       </Button>
