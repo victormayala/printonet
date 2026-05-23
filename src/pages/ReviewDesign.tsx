@@ -361,7 +361,7 @@ export default function ReviewDesign() {
             <div className="flex flex-wrap gap-2">
               {variantSizes.map((s) => {
                 const isActive = selectedSize === s.size;
-                const outOfStock = (s.qty ?? 0) === 0 && s.qty !== undefined;
+                const outOfStock = !unlimitedStock && (s.qty ?? 0) === 0 && s.qty !== undefined;
                 return (
                   <button
                     key={s.size}
