@@ -3,6 +3,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveVariantHex } from '../_shared/color-name-to-hex.ts'
 
 const SS_API_BASE = 'https://api.ssactivewear.com/v2'
 
