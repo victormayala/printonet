@@ -1473,9 +1473,11 @@ function NewStoreDialog({
           </Card>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(2)} disabled={seedingTemplate}>
-              Back
-            </Button>
+            {!isResume && (
+              <Button variant="outline" onClick={() => setStep(2)} disabled={seedingTemplate}>
+                Back
+              </Button>
+            )}
             <Button onClick={goNextFromStep3} disabled={seedingTemplate || !provisionedStoreId}>
               {seedingTemplate && <Loader2 className="h-4 w-4 animate-spin" />}
               Continue
