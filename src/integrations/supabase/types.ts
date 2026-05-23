@@ -1037,6 +1037,60 @@ export type Database = {
       }
       admin_platform_stats: { Args: never; Returns: Json }
       admin_set_invite_only: { Args: { p_enabled: boolean }; Returns: boolean }
+      get_customizer_session: {
+        Args: { p_id: string }
+        Returns: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          design_output: Json | null
+          external_ref: string | null
+          id: string
+          order_notes: string | null
+          product_data: Json
+          status: string
+          store_id: string | null
+          updated_at: string
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "customizer_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_customizer_sessions: {
+        Args: { p_ids: string[] }
+        Returns: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          design_output: Json | null
+          external_ref: string | null
+          id: string
+          order_notes: string | null
+          product_data: Json
+          status: string
+          store_id: string | null
+          updated_at: string
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "customizer_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_invite_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          used_at: string
+        }[]
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
