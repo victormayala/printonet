@@ -93,12 +93,12 @@ export default function ReviewDesign() {
         // Respect the product's inventory.unlimited_stock flag. Supplier-imported
         // products carry per-size qty=0 but the owner toggled unlimited stock at
         // the product level — we must not show them as "Out of stock".
-        let unlimited = !!pd?.inventory?.unlimited_stock;
-        if ((!price || !pd?.inventory) && pd?.name) {
+        let unlimited = pd?.inventory?.unlimited_stock !== false;
+        if (pd?.product_id || (!price || !pd?.inventory) && pd?.name) {
           const { data: products } = await supabase
             .from("inventory_products")
             .select("base_price, inventory")
-            .eq("name", pd.name)
+            .eq(pd?.product_id ? "id" : "name", pd?.product_id || pd.name)
             .limit(1);
           if (products && products.length > 0) {
             if (!price) price = products[0].base_price || 0;
