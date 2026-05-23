@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
           const first = skus[0]
           return {
             color: colorName,
-            hex: first.color1 || null,
+            hex: resolveVariantHex(colorName, first.color1),
             image: toLargeUrl(first.colorFrontImage),
             gallery: buildColorGallery(first),
             sizes: skus.map((s: any) => ({
