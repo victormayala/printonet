@@ -41,7 +41,7 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
         setError("Store not found.");
         return;
       }
-      setStore(s as CorporateStore);
+      setStore(s as unknown as CorporateStore);
 
       // Only show products that have been pushed to this store. The
       // `customizable` flag on the link decides whether the Customize button shows.
