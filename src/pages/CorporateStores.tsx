@@ -403,6 +403,7 @@ export default function CorporateStores() {
   const { isSuperAdmin } = useIsSuperAdmin();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [resumeStore, setResumeStore] = useState<CorporateStore | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
