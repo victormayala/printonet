@@ -6,7 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, ShieldOff, Pause, Play } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Shield, ShieldOff, Pause, Play, Ban, CircleCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type AdminUser = {
@@ -16,7 +27,11 @@ type AdminUser = {
   created_at: string;
   is_super_admin: boolean;
   store_count: number;
+  is_banned: boolean;
 };
+
+const getErrorMessage = (e: unknown, fallback: string) =>
+  e instanceof Error ? e.message : fallback;
 
 export default function AdminUsers() {
   const { user: me } = useAuth();
@@ -64,8 +79,8 @@ export default function AdminUsers() {
         toast.success(`Granted super_admin to ${u.email}`);
       }
       await qc.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed"));
     } finally {
       setBusy(null);
     }
@@ -80,8 +95,32 @@ export default function AdminUsers() {
       });
       if (error) throw error;
       toast.success(`${status === "paused" ? "Paused" : "Reactivated"} stores for ${u.email}`);
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const callUserAction = async (u: AdminUser, action: "ban" | "unban" | "delete") => {
+    if (u.id === me?.id) {
+      toast.error("You can't perform this action on your own account.");
+      return;
+    }
+    setBusy(u.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-user-actions", {
+        body: { action, user_id: u.id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const label =
+        action === "ban" ? "Suspended" : action === "unban" ? "Reactivated" : "Deleted";
+      toast.success(`${label} ${u.email}`);
+      await qc.invalidateQueries({ queryKey: ["admin-users"] });
+      await qc.invalidateQueries({ queryKey: ["admin-stores"] });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Action failed"));
     } finally {
       setBusy(null);
     }
@@ -91,7 +130,9 @@ export default function AdminUsers() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-        <p className="text-sm text-muted-foreground">All platform accounts. Grant admin or pause their stores.</p>
+        <p className="text-sm text-muted-foreground">
+          All platform accounts. <strong>Pause/Activate</strong> toggles the user's stores on or off. <strong>Suspend</strong> blocks the account from logging in. <strong>Delete</strong> permanently removes the account and all of their data.
+        </p>
       </div>
       <Input
         placeholder="Search by email, store name, or user id…"
@@ -107,6 +148,7 @@ export default function AdminUsers() {
               <TableHead>Store name</TableHead>
               <TableHead>Stores</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Account</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -114,13 +156,13 @@ export default function AdminUsers() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
+                <TableCell colSpan={7} className="text-center py-10">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground text-sm">
+                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-sm">
                   No users found.
                 </TableCell>
               </TableRow>
@@ -137,10 +179,17 @@ export default function AdminUsers() {
                       <Badge variant="secondary">user</Badge>
                     )}
                   </TableCell>
+                  <TableCell>
+                    {u.is_banned ? (
+                      <Badge variant="destructive">suspended</Badge>
+                    ) : (
+                      <Badge variant="secondary">active</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(u.created_at).toLocaleDateString()}
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
+                  <TableCell className="text-right space-x-2 space-y-1">
                     <Button
                       size="sm"
                       variant="outline"
@@ -156,11 +205,66 @@ export default function AdminUsers() {
                     {u.store_count > 0 && (
                       <>
                         <Button size="sm" variant="outline" disabled={busy === u.id} onClick={() => setStoresStatus(u, "paused")}>
-                          <Pause className="h-3.5 w-3.5 mr-1" /> Pause
+                          <Pause className="h-3.5 w-3.5 mr-1" /> Pause stores
                         </Button>
                         <Button size="sm" variant="outline" disabled={busy === u.id} onClick={() => setStoresStatus(u, "active")}>
-                          <Play className="h-3.5 w-3.5 mr-1" /> Activate
+                          <Play className="h-3.5 w-3.5 mr-1" /> Activate stores
                         </Button>
+                      </>
+                    )}
+                    {u.id !== me?.id && (
+                      <>
+                        {u.is_banned ? (
+                          <Button size="sm" variant="outline" disabled={busy === u.id} onClick={() => callUserAction(u, "unban")}>
+                            <CircleCheck className="h-3.5 w-3.5 mr-1" /> Unsuspend
+                          </Button>
+                        ) : (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={busy === u.id}>
+                                <Ban className="h-3.5 w-3.5 mr-1" /> Suspend
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Suspend {u.email}?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Blocks this user from signing in and pauses all of their stores. You can unsuspend them later.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => callUserAction(u, "ban")}>
+                                  Suspend account
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="destructive" disabled={busy === u.id}>
+                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete {u.email}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Permanently deletes this user, their stores, products, integrations, and all related data. This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => callUserAction(u, "delete")}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete forever
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </>
                     )}
                   </TableCell>
