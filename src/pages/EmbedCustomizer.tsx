@@ -128,12 +128,10 @@ export default function EmbedCustomizer() {
 
     let cancelled = false;
 
-    supabase
-      .from("customizer_sessions")
-      .select("*")
-      .eq("id", sessionId)
-      .single()
-      .then(async ({ data, error: err }) => {
+    (supabase as any)
+      .rpc("get_customizer_session", { p_id: sessionId })
+      .maybeSingle()
+      .then(async ({ data, error: err }: { data: any; error: any }) => {
         if (cancelled) return;
         if (err || !data) {
           setError("Session not found or expired.");

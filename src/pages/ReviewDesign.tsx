@@ -76,12 +76,10 @@ export default function ReviewDesign() {
 
   useEffect(() => {
     if (!sessionId) return;
-    supabase
-      .from("customizer_sessions")
-      .select("*")
-      .eq("id", sessionId)
-      .single()
-      .then(async ({ data, error: err }) => {
+    (supabase as any)
+      .rpc("get_customizer_session", { p_id: sessionId })
+      .maybeSingle()
+      .then(async ({ data, error: err }: { data: any; error: any }) => {
         if (err || !data) {
           setError("Design not found.");
           setLoading(false);
@@ -200,12 +198,10 @@ export default function ReviewDesign() {
 
     let dout: Record<string, unknown> | null = null;
     if (sessionId) {
-      const { data: fresh } = await supabase
-        .from("customizer_sessions")
-        .select("design_output")
-        .eq("id", sessionId)
+      const { data: fresh } = await (supabase as any)
+        .rpc("get_customizer_session", { p_id: sessionId })
         .maybeSingle();
-      const raw = fresh?.design_output ?? session?.design_output;
+      const raw = (fresh as any)?.design_output ?? session?.design_output;
       if (raw && typeof raw === "object" && !Array.isArray(raw)) {
         dout = raw as Record<string, unknown>;
       }

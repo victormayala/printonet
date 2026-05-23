@@ -2324,8 +2324,16 @@ export default function DesignStudio({
         let publicUrl = pngUrl;
 
         try {
+          // Storage policy requires the first folder segment to equal the
+          // uploader's auth.uid(). Anonymous sessions can't upload from the
+          // browser — the complete-session edge function handles them via
+          // the service role.
+          const { data: authData } = await supabase.auth.getUser();
+          const uid = authData?.user?.id;
+          if (!uid) return publicUrl;
+
           const blob = await (await fetch(pngUrl)).blob();
-          const fileName = `${sessionId || "export"}_${suffix}_${Date.now()}.png`;
+          const fileName = `${uid}/${sessionId || "export"}_${suffix}_${Date.now()}.png`;
 
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from("design-exports")
@@ -2551,17 +2559,22 @@ export default function DesignStudio({
       const layersJson = buildLayersExportJson(sessionId, sides);
 
       // Browser upload (works when storage policies allow the session). Edge function skips if URL already set.
+      // Storage policy requires the first folder segment to equal the uploader's auth.uid().
       try {
         if (sessionId && layersJson.length > 0) {
-          const path = `${sessionId}/layers.json`;
-          const blob = new Blob([layersJson], { type: "application/json" });
-          const { data: upData, error: upErr } = await supabase.storage
-            .from("design-exports")
-            .upload(path, blob, { contentType: "application/json", upsert: true });
-          if (!upErr && upData) {
-            result.designLayersUrl = supabase.storage.from("design-exports").getPublicUrl(upData.path).data.publicUrl;
-          } else if (upErr) {
-            console.warn("Client design layers upload skipped:", upErr.message);
+          const { data: authData } = await supabase.auth.getUser();
+          const uid = authData?.user?.id;
+          if (uid) {
+            const path = `${uid}/${sessionId}/layers.json`;
+            const blob = new Blob([layersJson], { type: "application/json" });
+            const { data: upData, error: upErr } = await supabase.storage
+              .from("design-exports")
+              .upload(path, blob, { contentType: "application/json", upsert: true });
+            if (!upErr && upData) {
+              result.designLayersUrl = supabase.storage.from("design-exports").getPublicUrl(upData.path).data.publicUrl;
+            } else if (upErr) {
+              console.warn("Client design layers upload skipped:", upErr.message);
+            }
           }
         }
       } catch (e) {
