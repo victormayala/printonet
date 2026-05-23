@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
           .in("id", ids)
           .eq("is_active", true);
         if (prodsErr) throw prodsErr;
-        const byId = new Map((prods ?? []).map((p) => [p.id, p]));
+        const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
         const products = (links ?? []).map((l) => ({
           ...l,
           inventory_products: byId.get(l.product_id) ?? null,
@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
           .eq("id", productId)
           .maybeSingle();
         if (prodErr) throw prodErr;
-        return json(200, { product: { ...link, inventory_products: prod } });
+        return json(200, { product: { ...link, inventory_products: normalizeUnlimitedStockProduct(prod) } });
       }
 
       case "create_order": {
