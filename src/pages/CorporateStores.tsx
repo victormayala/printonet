@@ -446,16 +446,24 @@ export default function CorporateStores() {
                 Provision branded storefronts for corporate clients (e.g. Pepsico employee merch).
               </p>
             </div>
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(v) => {
+                setOpen(v);
+                if (!v) setResumeStore(null);
+              }}
+            >
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => setResumeStore(null)}>
                   <Plus className="h-4 w-4" />
                   New store
                 </Button>
               </DialogTrigger>
               <NewStoreDialog
+                resumeStore={resumeStore}
                 onCreated={() => {
                   setOpen(false);
+                  setResumeStore(null);
                   queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
                 }}
               />
