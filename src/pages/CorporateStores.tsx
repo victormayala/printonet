@@ -570,7 +570,13 @@ export default function CorporateStores() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <StoreActions store={s} />
+                          <StoreActions
+                            store={s}
+                            onResumeSetup={() => {
+                              setResumeStore(s);
+                              setOpen(true);
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
