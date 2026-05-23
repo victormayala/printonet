@@ -67,7 +67,8 @@ function normalizeUnlimitedStockProduct(product: Record<string, unknown> | null)
         ...(variant as Record<string, unknown>),
         sizes: ((variant as { sizes: Record<string, unknown>[] }).sizes).map((size) => ({
           ...size,
-          qty: undefined,
+          qty: 999999,
+          unlimited_stock: true,
         })),
       };
     }),
