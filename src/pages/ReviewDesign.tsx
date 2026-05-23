@@ -67,6 +67,7 @@ export default function ReviewDesign() {
   const [transferDebug, setTransferDebug] = useState("idle");
   const [basePriceFallback, setBasePriceFallback] = useState<number>(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [unlimitedStock, setUnlimitedStock] = useState<boolean>(false);
 
   const returnUrl = searchParams.get("returnUrl") || "";
   const storeOriginParam = searchParams.get("storeOrigin") || "";
