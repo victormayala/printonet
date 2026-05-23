@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
         const first = skus[0]
         return {
           color: colorName,
-          hex: first.color1 || null,
+          hex: resolveVariantHex(colorName, first.color1),
           colorFrontImage: detailsToLargeUrl(first.colorFrontImage),
           colorSwatchImage: first.colorSwatchImage ? `https://www.ssactivewear.com/${first.colorSwatchImage}` : null,
           gallery: detailsBuildGallery(first),
