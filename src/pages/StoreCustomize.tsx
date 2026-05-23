@@ -82,6 +82,7 @@ export default function StoreCustomize({ customDomainHost }: { customDomainHost?
           image_side1: product.image_side1 ?? undefined,
           image_side2: product.image_side2 ?? undefined,
           variants: Array.isArray(product.variants) ? product.variants : [],
+          inventory: product.inventory ?? { unlimited_stock: true, stock: null },
           print_areas: product.print_areas ?? undefined,
           product_id: product.id,
           wc_attributes: wcAttrs ?? undefined,
