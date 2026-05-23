@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0'
+import { colorNameToHex } from '../_shared/color-name-to-hex.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
