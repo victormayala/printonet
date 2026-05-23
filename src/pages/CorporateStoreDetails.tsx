@@ -395,7 +395,7 @@ export default function CorporateStoreDetails() {
                     href={
                       store.custom_domain
                         ? `https://${store.custom_domain}`
-                        : `/s/${store.tenant_slug}`
+                        : `https://${store.tenant_slug}.stores.printonet.com`
                     }
                     target="_blank"
                     rel="noreferrer"
