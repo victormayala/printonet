@@ -9,20 +9,18 @@ html {
   scrollbar-gutter: stable;
   overflow-y: scroll;
 }
-/* Override react-remove-scroll inline styles applied by Radix Select/Dialog/Popover */
-body,
-body * {
-  margin-right: revert !important;
-}
-body {
+/* Override react-remove-scroll inline styles applied by Radix Select/Dialog/Popover.
+   Since html has overflow-y: scroll, the scrollbar is always present, so Radix's
+   scrollbar-width compensation must be neutralized on body AND on fixed/sticky elements
+   (Radix injects a stylesheet that pads position:fixed/sticky nodes when scroll is locked). */
+body[data-scroll-locked] {
+  margin-right: 0 !important;
   padding-right: 0 !important;
 }
-/* Radix adds padding-right to fixed/sticky elements to compensate for scrollbar removal */
-body[data-scroll-locked] [data-radix-scroll-area-viewport],
-header,
-[data-scroll-locked] header,
-.sticky,
-.fixed {
+body[data-scroll-locked] .fixed,
+body[data-scroll-locked] .sticky,
+body[data-scroll-locked] [style*="position: fixed"],
+body[data-scroll-locked] [style*="position: sticky"] {
   padding-right: 0 !important;
   margin-right: 0 !important;
 }
