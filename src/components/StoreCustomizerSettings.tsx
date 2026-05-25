@@ -25,20 +25,20 @@ export function StoreCustomizerSettings({ store }: { store: CorporateStore }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-          <TabsList className="mb-4 w-full sm:w-auto flex-wrap">
-            <TabsTrigger value="identity" className="gap-2 flex-1 sm:flex-none">
+          <TabsList className="mb-4 w-full sm:w-auto flex-wrap gap-1 p-1.5 bg-muted/60 border h-auto">
+            <TabsTrigger value="identity" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
               <Info className="h-4 w-4" /> Identity
             </TabsTrigger>
-            <TabsTrigger value="branding" className="gap-2 flex-1 sm:flex-none">
+            <TabsTrigger value="branding" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
               <ImageIcon className="h-4 w-4" /> Branding
             </TabsTrigger>
-            <TabsTrigger value="theme" className="gap-2 flex-1 sm:flex-none">
+            <TabsTrigger value="theme" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
               <Palette className="h-4 w-4" /> Theme
             </TabsTrigger>
-            <TabsTrigger value="brand" className="gap-2 flex-1 sm:flex-none">
+            <TabsTrigger value="brand" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
               <Paintbrush className="h-4 w-4" /> Customizer
             </TabsTrigger>
-            <TabsTrigger value="developers" className="gap-2 flex-1 sm:flex-none">
+            <TabsTrigger value="developers" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
               <Code className="h-4 w-4" /> Developers
             </TabsTrigger>
           </TabsList>
