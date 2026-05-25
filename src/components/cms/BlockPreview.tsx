@@ -215,8 +215,9 @@ function CategoryBentoPreview({ d }: { d: any }) {
               )}
             >
               {it?.image_url && (
-                <img src={it.image_url} className="absolute inset-0 h-full w-full object-cover" alt="" />
+                <Img src={it.image_url} className="absolute inset-0 h-full w-full" />
               )}
+
               {it?.label && (
                 <span className="relative text-[9px] font-medium text-background bg-foreground/60 px-1 rounded">
                   {it.label}
