@@ -1151,49 +1151,14 @@ function ProductForm({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2 items-start">
-        {/* ============ Inventory ============ */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            <Label className="text-base">Inventory</Label>
-          </div>
-          <div className="rounded-lg border p-4 space-y-3 bg-muted/10">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <Label className="text-sm">Unlimited stock</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Always purchasable (recommended for print-on-demand).
-                </p>
-              </div>
-              <Switch checked={unlimitedStock} onCheckedChange={setUnlimitedStock} />
-            </div>
-            {!unlimitedStock && (
-              <div className="space-y-2">
-                <Label className="text-xs">Stock quantity</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={stockQty}
-                  onChange={(e) => setStockQty(e.target.value)}
-                  placeholder="0"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Storefront will show out-of-stock when this reaches 0.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2 items-stretch">
         {/* ============ Shipping ============ */}
-        <div className="space-y-3">
+        <div className="space-y-3 h-full flex flex-col">
           <div className="flex items-center gap-2">
             <Truck className="h-4 w-4 text-muted-foreground" />
             <Label className="text-base">Shipping</Label>
           </div>
-          <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
+          <div className="rounded-lg border p-4 space-y-4 bg-muted/10 flex-1 flex flex-col justify-between">
             <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
               <div className="space-y-2">
                 <Label className="text-xs">Weight</Label>
@@ -1254,13 +1219,48 @@ function ProductForm({
           </div>
         </div>
 
+        {/* ============ Inventory ============ */}
+        <div className="space-y-3 h-full flex flex-col">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-base">Inventory</Label>
+          </div>
+          <div className="rounded-lg border p-4 space-y-3 bg-muted/10 flex-1 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">Unlimited stock</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Always purchasable (recommended for print-on-demand).
+                </p>
+              </div>
+              <Switch checked={unlimitedStock} onCheckedChange={setUnlimitedStock} />
+            </div>
+            {!unlimitedStock && (
+              <div className="space-y-2">
+                <Label className="text-xs">Stock quantity</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={stockQty}
+                  onChange={(e) => setStockQty(e.target.value)}
+                  placeholder="0"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Storefront will show out-of-stock when this reaches 0.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ============ Visibility ============ */}
-        <div className="space-y-3">
+        <div className="space-y-3 h-full flex flex-col">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4 text-muted-foreground" />
             <Label className="text-base">Visibility</Label>
           </div>
-          <div className="rounded-lg border p-4 bg-muted/10 flex items-start gap-3">
+          <div className="rounded-lg border p-4 bg-muted/10 flex-1 flex flex-col justify-center gap-3">
             <Switch checked={isActive} onCheckedChange={setIsActive} />
             <div className="space-y-0.5">
               <Label>Active (visible to customers)</Label>
