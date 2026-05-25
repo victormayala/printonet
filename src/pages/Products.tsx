@@ -28,6 +28,8 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import { OnboardingSteps } from "@/components/OnboardingSteps";
+import { MousePointerClick, FolderPlus, Tag, Store as StoreIcon, Edit3, DollarSign, ImagePlus, CheckCircle2 } from "lucide-react";
 import CategoriesManager, { useCategories, useCategoryLinks, buildCategoryTree } from "@/components/CategoriesManager";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -3760,6 +3762,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           ) : null}
 
           <TabsContent value="products">
+            {!(showAddForm || editingProduct !== undefined) && (
+              <OnboardingSteps
+                storageKey="products"
+                title="Manage & publish your products"
+                description="Refine product details, then push them to your connected storefront."
+                steps={[
+                  { title: "Preview, edit or push", description: "Use the row menu to preview a product, edit its details, or push it to your store.", icon: MousePointerClick },
+                  { title: "Complete product info", description: "Add images, descriptions, variants, profit margins and fees while editing.", icon: Edit3 },
+                  { title: "Set pricing & margins", description: "Apply markup in bulk or per product to control your retail pricing.", icon: DollarSign },
+                  { title: "Goes live in your storefront", description: "Pushed products and their details appear automatically in your store.", icon: StoreIcon },
+                ]}
+              />
+            )}
             {showAddForm || editingProduct !== undefined ? (
               <Card>
                 <CardHeader>
@@ -4106,6 +4121,16 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           </TabsContent>
 
           <TabsContent value="categories">
+            <OnboardingSteps
+              storageKey="categories"
+              title="Organize your storefront with categories"
+              description="Build a category tree that mirrors how customers browse your store."
+              steps={[
+                { title: "Create categories", description: "Add top-level categories and as many sub-categories as you need.", icon: FolderPlus },
+                { title: "Assign products", description: "Tag products with one or more categories or sub-categories.", icon: Tag },
+                { title: "Reflected in your storefront", description: "Your category structure and product assignments sync to your store navigation.", icon: StoreIcon },
+              ]}
+            />
             <CategoriesManager />
           </TabsContent>
           <TabsContent value="shopify">
@@ -4117,6 +4142,17 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           </TabsContent>
 
           <TabsContent value="suppliers">
+            <OnboardingSteps
+              storageKey="suppliers"
+              title="Import products from a supplier"
+              description="Pull blank products from our integrated suppliers into your catalog in a few clicks."
+              steps={[
+                { title: "Choose a supplier", description: "Pick S&S Activewear or SanMar and browse their live catalog.", icon: Truck },
+                { title: "Select products", description: "Filter by category, search by style, then tick the products you want.", icon: CheckCircle2 },
+                { title: "Import to your catalog", description: "Click Import to copy the selected products with all variants and images.", icon: Download },
+                { title: "Edit & publish", description: "Imported products appear in the Products tab, ready to edit and push to your store.", icon: StoreIcon },
+              ]}
+            />
             <Tabs defaultValue="ssactivewear" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
