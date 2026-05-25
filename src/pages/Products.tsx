@@ -1235,22 +1235,21 @@ function ProductForm({
               </div>
               <Switch checked={unlimitedStock} onCheckedChange={setUnlimitedStock} />
             </div>
-            {!unlimitedStock && (
-              <div className="space-y-2">
-                <Label className="text-xs">Stock quantity</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={stockQty}
-                  onChange={(e) => setStockQty(e.target.value)}
-                  placeholder="0"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Storefront will show out-of-stock when this reaches 0.
-                </p>
-              </div>
-            )}
+            <div className={`space-y-2 transition-opacity ${unlimitedStock ? "opacity-50" : ""}`}>
+              <Label className="text-xs">Stock quantity</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={stockQty}
+                onChange={(e) => setStockQty(e.target.value)}
+                placeholder="0"
+                disabled={unlimitedStock}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Storefront will show out-of-stock when this reaches 0.
+              </p>
+            </div>
           </div>
         </div>
 
