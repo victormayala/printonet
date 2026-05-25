@@ -1378,7 +1378,7 @@ function NewStoreDialog({
     onCreated();
   };
 
-  const canCheck = values.name.trim().length >= 2 && !checking;
+  
 
   return (
     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
