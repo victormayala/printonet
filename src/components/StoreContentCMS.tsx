@@ -991,7 +991,13 @@ function AssetsPanel({ store }: { store: CorporateStore }) {
 
   return (
     <div className="space-y-4">
+      <PanelHeader
+        icon={Images}
+        title="Assets"
+        description="Upload images and files used across the storefront. Copy the URL to paste into a section."
+      />
       <div
+
         onDragOver={(e) => {
           e.preventDefault();
           setDrag(true);
