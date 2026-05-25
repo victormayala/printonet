@@ -303,3 +303,20 @@ function BlockPreviewInner({ type, data }: { type: string; data: any }) {
       );
   }
 }
+
+export function BlockPreview({
+  type,
+  data,
+  baseUrl,
+}: {
+  type: string;
+  data: any;
+  baseUrl?: string;
+}) {
+  return (
+    <BaseUrlContext.Provider value={baseUrl}>
+      <BlockPreviewInner type={type} data={data} />
+    </BaseUrlContext.Provider>
+  );
+}
+
