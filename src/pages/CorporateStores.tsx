@@ -529,7 +529,7 @@ export default function CorporateStores() {
                           <div className="space-y-1">
                             <StatusBadge status={s.status} />
                             {s.error_message && s.status === "failed" && (
-                              <div className="text-xs text-destructive max-w-xs truncate" title={s.error_message}>
+                              <div className="text-xs text-amber-700 dark:text-amber-500 max-w-xs truncate" title={s.error_message}>
                                 {s.error_message}
                               </div>
                             )}
@@ -877,7 +877,7 @@ function StoreFormFields({
                 className="font-mono"
               />
             </div>
-            {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
+            {errors.primary_color && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.primary_color}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="font">Font family</Label>
@@ -960,19 +960,19 @@ function StoreFormFields({
         <div className="space-y-2">
           <Label htmlFor="name">Store name</Label>
           <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Acme Company Store" />
-          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          {errors.name && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.name}</p>}
         </div>
         <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
           <div className="space-y-2">
             <Label htmlFor="email">Contact email</Label>
             <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="store@acme.com" />
-            {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
+            {errors.contact_email && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.contact_email}</p>}
           </div>
           {!hideCustomDomain && (
             <div className="space-y-2">
               <Label htmlFor="domain">Custom domain (optional)</Label>
               <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.acme.com" />
-              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+              {errors.custom_domain && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.custom_domain}</p>}
             </div>
           )}
         </div>
@@ -1444,7 +1444,7 @@ function NewStoreDialog({
                 ) : slugCheck && slugCheck.available && chosenSlug === slugify(slugDraft) ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 ) : slugCheck && !slugCheck.available ? (
-                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
                 ) : null}
               </div>
             </div>
@@ -1458,7 +1458,7 @@ function NewStoreDialog({
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-xs text-destructive">
+                    <p className="text-xs text-amber-700 dark:text-amber-500">
                       <span className="font-medium">{slugCheck.tenant_slug}</span> is taken. Try one of these:
                     </p>
                     {slugCheck.suggestions && slugCheck.suggestions.length > 0 && (
@@ -1497,7 +1497,7 @@ function NewStoreDialog({
           </div>
 
           {provision.isError && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-sm text-amber-900 dark:text-amber-200">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
               <div className="space-y-1">
                 <p className="font-medium">Couldn't create your store</p>
