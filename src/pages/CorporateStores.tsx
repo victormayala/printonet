@@ -545,7 +545,6 @@ export default function CorporateStores() {
                                 </Button>
                                 <StoreActions
                                   store={s}
-                                  compact
                                   onResumeSetup={() => {
                                     setResumeStore(s);
                                     setOpen(true);
