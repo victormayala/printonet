@@ -3854,7 +3854,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                     {/* Category filter */}
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
                       <SelectTrigger className="w-[140px] h-9 text-xs">
-                        <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent>
