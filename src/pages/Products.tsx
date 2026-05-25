@@ -3762,6 +3762,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           ) : null}
 
           <TabsContent value="products">
+            {!(showAddForm || editingProduct !== undefined) && (
+              <OnboardingSteps
+                storageKey="products"
+                title="Manage & publish your products"
+                description="Refine product details, then push them to your connected storefront."
+                steps={[
+                  { title: "Preview, edit or push", description: "Use the row menu to preview a product, edit its details, or push it to your store.", icon: MousePointerClick },
+                  { title: "Complete product info", description: "Add images, descriptions, variants, profit margins and fees while editing.", icon: Edit3 },
+                  { title: "Set pricing & margins", description: "Apply markup in bulk or per product to control your retail pricing.", icon: DollarSign },
+                  { title: "Goes live in your storefront", description: "Pushed products and their details appear automatically in your store.", icon: StoreIcon },
+                ]}
+              />
+            )}
             {showAddForm || editingProduct !== undefined ? (
               <Card>
                 <CardHeader>
