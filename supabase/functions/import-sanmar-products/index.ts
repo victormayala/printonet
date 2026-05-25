@@ -541,8 +541,9 @@ Deno.serve(async (req) => {
             sizes: parts.map(p => ({
               size: p.size || 'OS',
               sku: p.partId || `${sid}-${colorName}-${p.size || 'OS'}`,
-              price: p.price, qty: 0,
+              price: p.price, msrp: (p as any).msrp || 0, qty: 0,
             })),
+
           }))
 
           const firstPart = enriched.parts.find(p => p.frontImage) || enriched.parts[0]
