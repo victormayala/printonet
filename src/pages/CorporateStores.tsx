@@ -1759,6 +1759,12 @@ function NewStoreDialog({
                   onClick={async () => {
                     try {
                       await publishStore.mutateAsync();
+                      toast({
+                        title: "Store published — Stripe not connected yet",
+                        description:
+                          "You need to connect Stripe to be able to accept payments in your store checkout. Please finish setting up your Stripe checkout as soon as possible.",
+                        duration: 10000,
+                      });
                       finishOnboarding();
                     } catch {
                       /* handled in onError */
