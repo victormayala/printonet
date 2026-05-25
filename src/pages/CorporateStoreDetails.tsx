@@ -479,14 +479,15 @@ export default function CorporateStoreDetails() {
           <TabsTrigger value="shipping-tax" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <Truck className="h-4 w-4" /> Shipping & Tax
           </TabsTrigger>
-          <TabsTrigger value="content" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
-            <Type className="h-4 w-4" /> Content
-          </TabsTrigger>
           <TabsTrigger value="customers" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <Users className="h-4 w-4" /> Customers
           </TabsTrigger>
+          <Separator orientation="vertical" className="h-6 mx-1 bg-border" />
           <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <Paintbrush className="h-4 w-4" /> Branding
+          </TabsTrigger>
+          <TabsTrigger value="content" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <Type className="h-4 w-4" /> Content
           </TabsTrigger>
         </TabsList>
 
