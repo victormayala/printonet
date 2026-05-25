@@ -710,10 +710,8 @@ function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResum
       });
       refetch();
     } catch (e) {
-      toast({
-        title: `Could not ${action} store`,
+      notify.error(`Could not ${action} store`, {
         description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
       });
     } finally {
       setBusy(null);
