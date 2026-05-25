@@ -92,11 +92,13 @@ type Product = {
   decoration_methods?: string[] | null;
 };
 
-type DecorationMethod = "dtg" | "dtf" | "embroidery";
-const DECORATION_METHODS: { value: DecorationMethod; label: string; feeKey: "dtg_fee" | "dtf_fee" | "embroidery_fee" }[] = [
+type DecorationMethod = "dtg" | "dtf" | "embroidery" | "screen_printing" | "sublimation";
+const DECORATION_METHODS: { value: DecorationMethod; label: string; feeKey: "dtg_fee" | "dtf_fee" | "embroidery_fee" | "screen_printing_fee" | "sublimation_fee" }[] = [
   { value: "dtg", label: "DTG", feeKey: "dtg_fee" },
   { value: "dtf", label: "DTF", feeKey: "dtf_fee" },
   { value: "embroidery", label: "Embroidery", feeKey: "embroidery_fee" },
+  { value: "screen_printing", label: "Screen Printing", feeKey: "screen_printing_fee" },
+  { value: "sublimation", label: "Sublimation", feeKey: "sublimation_fee" },
 ];
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
