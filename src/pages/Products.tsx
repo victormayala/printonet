@@ -954,7 +954,7 @@ function ProductForm({
               </Button>
               {variants.length > 0 && (
                 <>
-                  <Button type="button" size="sm" variant="ghost" onClick={resetAllPricesToSupplier}>
+                  <Button type="button" size="sm" variant="outline" onClick={resetAllPricesToSupplier}>
                     Reset to supplier
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
