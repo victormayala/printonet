@@ -571,27 +571,27 @@ export default function CorporateStoreDetails() {
           </div>
         </TabsContent>
 
-        <TabsContent value="products" className="mt-0">
+        <TabsContent forceMount value="products" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomizableProducts store={store} />
         </TabsContent>
 
-        <TabsContent value="theme" className="mt-0">
+        <TabsContent forceMount value="theme" className="mt-0 data-[state=inactive]:hidden">
           <StoreThemeTab store={store} />
         </TabsContent>
 
-        <TabsContent value="customizer" className="mt-0">
+        <TabsContent forceMount value="customizer" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomizerSettings store={store} />
         </TabsContent>
 
-        <TabsContent value="shipping-tax" className="mt-0">
+        <TabsContent forceMount value="shipping-tax" className="mt-0 data-[state=inactive]:hidden">
           <StoreShippingTax store={store} />
         </TabsContent>
 
-        <TabsContent value="content" className="mt-0">
+        <TabsContent forceMount value="content" className="mt-0 data-[state=inactive]:hidden">
           <StoreContentCMS store={store} />
         </TabsContent>
 
-        <TabsContent value="customers" className="mt-0">
+        <TabsContent forceMount value="customers" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomers storeId={store.id} />
         </TabsContent>
       </Tabs>
