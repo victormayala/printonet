@@ -1247,7 +1247,7 @@ export function StoreContentCMS({ store }: { store: CorporateStore }) {
               <Home className="h-4 w-4" /> Homepage
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-1.5">
-              <SettingsIcon className="h-4 w-4" /> Site settings
+              <SettingsIcon className="h-4 w-4" /> Header &amp; Footer
             </TabsTrigger>
             <TabsTrigger value="pages" className="gap-1.5">
               <FileText className="h-4 w-4" /> Pages
