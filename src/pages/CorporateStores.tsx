@@ -1264,7 +1264,9 @@ function NewStoreDialog({
         favicon ? uploadAsset(user.id, tempId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
-      const placeholderSlug = `__tmp_${tempId.replace(/-/g, "").slice(0, 16)}`;
+      // Use a slug-safe placeholder ([a-z0-9-]) so the storefront's tenant
+      // validator accepts it for theme-listing calls during onboarding.
+      const placeholderSlug = `pending-${tempId.replace(/-/g, "").slice(0, 16)}`;
 
       const { data, error } = await supabase
         .from("corporate_stores")
