@@ -1158,14 +1158,18 @@ function NewStoreDialog({
   const [favicon, setFavicon] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const resumeSlug = resumeStore
+    ? ((resumeStore as CorporateStore & { requested_slug?: string | null }).requested_slug
+        ?? (resumeStore.tenant_slug?.startsWith("pending-") ? null : resumeStore.tenant_slug))
+    : null;
   const [slugCheck, setSlugCheck] = useState<SlugCheck | null>(
-    isResume && resumeStore?.tenant_slug
-      ? { available: true, tenant_slug: resumeStore.tenant_slug, suggestions: [] }
+    isResume && resumeSlug
+      ? { available: true, tenant_slug: resumeSlug, suggestions: [] }
       : null,
   );
-  const [chosenSlug, setChosenSlug] = useState<string | null>(resumeStore?.tenant_slug ?? null);
-  const [slugDraft, setSlugDraft] = useState<string>(resumeStore?.tenant_slug ?? "");
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState<boolean>(!!resumeStore?.tenant_slug);
+  const [chosenSlug, setChosenSlug] = useState<string | null>(resumeSlug);
+  const [slugDraft, setSlugDraft] = useState<string>(resumeSlug ?? "");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState<boolean>(!!resumeSlug);
   const [showCustomDomain, setShowCustomDomain] = useState<boolean>(!!resumeStore?.custom_domain);
   const [checking, setChecking] = useState(false);
 
