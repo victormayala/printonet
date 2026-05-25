@@ -1241,13 +1241,13 @@ export function StoreContentCMS({ store }: { store: CorporateStore }) {
           </div>
         )}
 
-        <Tabs defaultValue="blocks">
+        <Tabs defaultValue="settings">
           <TabsList className="flex-wrap">
-            <TabsTrigger value="blocks" className="gap-1.5">
-              <Home className="h-4 w-4" /> Homepage
-            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-1.5">
               <SettingsIcon className="h-4 w-4" /> Header &amp; Footer
+            </TabsTrigger>
+            <TabsTrigger value="blocks" className="gap-1.5">
+              <Home className="h-4 w-4" /> Homepage
             </TabsTrigger>
             <TabsTrigger value="pages" className="gap-1.5">
               <FileText className="h-4 w-4" /> Pages
@@ -1261,11 +1261,11 @@ export function StoreContentCMS({ store }: { store: CorporateStore }) {
           </TabsList>
           <Separator className="my-4" />
 
-          <TabsContent value="blocks">
-            <HomepageBlocksPanel store={store} canPublish={canPublish} />
-          </TabsContent>
           <TabsContent value="settings">
             <SiteSettingsPanel store={store} canPublish={canPublish} />
+          </TabsContent>
+          <TabsContent value="blocks">
+            <HomepageBlocksPanel store={store} canPublish={canPublish} />
           </TabsContent>
           <TabsContent value="pages">
             <ContentPagesPanel store={store} canPublish={canPublish} />
