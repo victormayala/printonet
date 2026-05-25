@@ -843,6 +843,7 @@ function StoreFormFields({
   existing,
   onClearExisting,
   hideCustomDomain,
+  compact,
 }: {
   values: FormValues;
   setField: <K extends keyof FormValues>(k: K, v: FormValues[K]) => void;
@@ -860,63 +861,24 @@ function StoreFormFields({
   };
   onClearExisting?: (kind: "logo" | "favicon" | "footer") => void;
   hideCustomDomain?: boolean;
+  /** When true, hides branding sections behind a collapsible "Branding (optional)" toggle. */
+  compact?: boolean;
 }) {
-  return (
-    <div className="space-y-6 py-2">
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Identity</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 space-y-1">
-            <Label>Account type</Label>
-            <Select
-              value={values.store_type}
-              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
-                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
-            </p>
-          </div>
-          <div className="col-span-2 space-y-1">
-            <Label htmlFor="name">Store name</Label>
-            <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
-            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="email">Contact email</Label>
-            <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
-            {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
-          </div>
-          {!hideCustomDomain && (
-            <div className="space-y-1">
-              <Label htmlFor="domain">Custom domain (optional)</Label>
-              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
-              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
-            </div>
-          )}
-        </div>
-      </section>
+  const [brandingOpen, setBrandingOpen] = useState(false);
 
-      <Separator />
-
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visual theme</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
+  const brandingSections = (
+    <>
+      <section className="space-y-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Visual theme</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="space-y-2">
             <Label htmlFor="primary">Primary color</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
                 value={values.primary_color}
                 onChange={(e) => setField("primary_color", e.target.value)}
-                className="h-10 w-12 rounded border bg-background cursor-pointer"
+                className="h-10 w-12 rounded border bg-background cursor-pointer shrink-0"
               />
               <Input
                 id="primary"
@@ -927,7 +889,7 @@ function StoreFormFields({
             </div>
             {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="font">Font family</Label>
             <Select value={values.font_family} onValueChange={(v) => setField("font_family", v)}>
               <SelectTrigger id="font">
@@ -945,11 +907,9 @@ function StoreFormFields({
         </div>
       </section>
 
-      <Separator />
-
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Brand assets</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <section className="space-y-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Brand assets</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <LogoField
             label="Main logo"
             value={logo}
@@ -978,6 +938,80 @@ function StoreFormFields({
           )}
         </div>
       </section>
+    </>
+  );
+
+  return (
+    <div className="space-y-6 py-1">
+      <section className="space-y-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store details</h3>
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <Label>Account type</Label>
+            <Select
+              value={values.store_type}
+              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
+                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Store name</Label>
+            <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
+            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          </div>
+          <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
+            <div className="space-y-2">
+              <Label htmlFor="email">Contact email</Label>
+              <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
+              {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
+            </div>
+            {!hideCustomDomain && (
+              <div className="space-y-2">
+                <Label htmlFor="domain">Custom domain (optional)</Label>
+                <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
+                {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {compact ? (
+        <Collapsible open={brandingOpen} onOpenChange={setBrandingOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-left text-sm transition-colors hover:bg-muted"
+            >
+              <div>
+                <div className="font-medium">Branding (optional)</div>
+                <div className="text-xs text-muted-foreground">
+                  Logo, color, and font — you can also set this later.
+                </div>
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${brandingOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-6 pt-5">
+            {brandingSections}
+          </CollapsibleContent>
+        </Collapsible>
+      ) : (
+        <>
+          <Separator />
+          {brandingSections}
+        </>
+      )}
     </div>
   );
 }
