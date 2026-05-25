@@ -3767,10 +3767,10 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                 title="Manage & publish your products"
                 description="Refine product details, then push them to your connected storefront."
                 steps={[
-                  { title: "Preview, edit or push", description: "Use the row menu to preview a product, edit its details, or push it to your store.", icon: MousePointerClick },
-                  { title: "Complete product info", description: "Add images, descriptions, variants, profit margins and fees while editing.", icon: Edit3 },
-                  { title: "Set pricing & margins", description: "Apply markup in bulk or per product to control your retail pricing.", icon: DollarSign },
-                  { title: "Goes live in your storefront", description: "Pushed products and their details appear automatically in your store.", icon: StoreIcon },
+                  { title: "Preview, edit or push", description: "Use the row menu to preview a product, edit its details, or push it to your store." },
+                  { title: "Complete product info", description: "Add images, descriptions, variants, profit margins and fees while editing." },
+                  { title: "Set pricing & margins", description: "Apply markup in bulk or per product to control your retail pricing." },
+                  { title: "Goes live in your storefront", description: "Pushed products and their details appear automatically in your store." },
                 ]}
               />
             )}
@@ -4125,9 +4125,9 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
               title="Organize your storefront with categories"
               description="Build a category tree that mirrors how customers browse your store."
               steps={[
-                { title: "Create categories", description: "Add top-level categories and as many sub-categories as you need.", icon: FolderPlus },
-                { title: "Assign products", description: "Tag products with one or more categories or sub-categories.", icon: Tag },
-                { title: "Reflected in your storefront", description: "Your category structure and product assignments sync to your store navigation.", icon: StoreIcon },
+                { title: "Create categories", description: "Add top-level categories and as many sub-categories as you need." },
+                { title: "Assign products", description: "Tag products with one or more categories or sub-categories." },
+                { title: "Reflected in your storefront", description: "Your category structure and product assignments sync to your store navigation." },
               ]}
             />
             <CategoriesManager />
@@ -4146,10 +4146,10 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
               title="Import products from a supplier"
               description="Pull blank products from our integrated suppliers into your catalog in a few clicks."
               steps={[
-                { title: "Choose a supplier", description: "Pick S&S Activewear or SanMar and browse their live catalog.", icon: Truck },
-                { title: "Select products", description: "Filter by category, search by style, then tick the products you want.", icon: CheckCircle2 },
-                { title: "Import to your catalog", description: "Click Import to copy the selected products with all variants and images.", icon: Download },
-                { title: "Edit & publish", description: "Imported products appear in the Products tab, ready to edit and push to your store.", icon: StoreIcon },
+                { title: "Choose a supplier", description: "Pick S&S Activewear or SanMar and browse their live catalog." },
+                { title: "Select products", description: "Filter by category, search by style, then tick the products you want." },
+                { title: "Import to your catalog", description: "Click Import to copy the selected products with all variants and images." },
+                { title: "Edit & publish", description: "Imported products appear in the Products tab, ready to edit and push to your store." },
               ]}
             />
             <Tabs defaultValue="ssactivewear" className="w-full">
