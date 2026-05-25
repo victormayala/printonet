@@ -11,6 +11,7 @@ export type CorporateStore = {
   secondary_logo_url: string | null;
   favicon_url: string | null;
   tenant_slug: string | null;
+  requested_slug: string | null;
   store_type: "corporate" | "retail";
   status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;

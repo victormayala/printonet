@@ -208,6 +208,7 @@ export type Database = {
           name: string
           platform_fee_bps: number
           primary_color: string
+          requested_slug: string | null
           secondary_logo_url: string | null
           shipping_flat_amount: number
           shipping_label: string
@@ -243,6 +244,7 @@ export type Database = {
           name: string
           platform_fee_bps?: number
           primary_color?: string
+          requested_slug?: string | null
           secondary_logo_url?: string | null
           shipping_flat_amount?: number
           shipping_label?: string
@@ -278,6 +280,7 @@ export type Database = {
           name?: string
           platform_fee_bps?: number
           primary_color?: string
+          requested_slug?: string | null
           secondary_logo_url?: string | null
           shipping_flat_amount?: number
           shipping_label?: string
