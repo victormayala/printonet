@@ -105,12 +105,12 @@ export function StoreThemePicker({
                 </div>
               )}
             </div>
-            <div className="p-3 space-y-2">
-              <div className="flex items-start justify-between gap-2">
+            <div className="p-2.5 space-y-1">
+              <div className="flex items-start justify-between gap-1.5">
                 <div className="min-w-0">
-                  <div className="font-medium text-sm truncate">{t.name}</div>
+                  <div className="font-medium text-xs truncate">{t.name}</div>
                   {t.tagline && (
-                    <div className="text-xs text-muted-foreground line-clamp-1">{t.tagline}</div>
+                    <div className="text-[10px] text-muted-foreground line-clamp-1">{t.tagline}</div>
                   )}
                 </div>
                 {t.demo_url && (
@@ -119,21 +119,12 @@ export function StoreThemePicker({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 text-xs text-primary hover:underline inline-flex items-center gap-1"
+                    className="shrink-0 text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
                   >
-                    Preview <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
               </div>
-              {t.best_for && t.best_for.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {t.best_for.slice(0, 3).map((b) => (
-                    <Badge key={b} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal">
-                      {b}
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
           </button>
         );
