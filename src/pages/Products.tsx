@@ -1151,117 +1151,127 @@ function ProductForm({
         </div>
       )}
 
-      {/* ============ Inventory ============ */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center gap-2">
-          <Package className="h-4 w-4 text-muted-foreground" />
-          <Label className="text-base">Inventory</Label>
-        </div>
-        <div className="rounded-lg border p-4 space-y-3 bg-muted/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-sm">Unlimited stock</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Always purchasable (recommended for print-on-demand).
-              </p>
-            </div>
-            <Switch checked={unlimitedStock} onCheckedChange={setUnlimitedStock} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2 items-start">
+        {/* ============ Inventory ============ */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-base">Inventory</Label>
           </div>
-          {!unlimitedStock && (
+          <div className="rounded-lg border p-4 space-y-3 bg-muted/10">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">Unlimited stock</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Always purchasable (recommended for print-on-demand).
+                </p>
+              </div>
+              <Switch checked={unlimitedStock} onCheckedChange={setUnlimitedStock} />
+            </div>
+            {!unlimitedStock && (
+              <div className="space-y-2">
+                <Label className="text-xs">Stock quantity</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={stockQty}
+                  onChange={(e) => setStockQty(e.target.value)}
+                  placeholder="0"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Storefront will show out-of-stock when this reaches 0.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ============ Shipping ============ */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Truck className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-base">Shipping</Label>
+          </div>
+          <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
+            <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
+              <div className="space-y-2">
+                <Label className="text-xs">Weight</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Unit</Label>
+                <Select value={weightUnit} onValueChange={(v) => setWeightUnit(v as "lbs" | "kg")}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lbs">lbs</SelectItem>
+                    <SelectItem value="kg">kg</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label className="text-xs">Stock quantity</Label>
-              <Input
-                type="number"
-                min="0"
-                step="1"
-                value={stockQty}
-                onChange={(e) => setStockQty(e.target.value)}
-                placeholder="0"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Storefront will show out-of-stock when this reaches 0.
+              <Label className="text-xs">Dimensions</Label>
+              <div className="grid grid-cols-[1fr,1fr,1fr,auto] gap-2">
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                  placeholder="L"
+                />
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={pwidth}
+                  onChange={(e) => setPwidth(e.target.value)}
+                  placeholder="W"
+                />
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={pheight}
+                  onChange={(e) => setPheight(e.target.value)}
+                  placeholder="H"
+                />
+                <Select value={dimensionUnit} onValueChange={(v) => setDimensionUnit(v as "in" | "cm")}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in">in</SelectItem>
+                    <SelectItem value="cm">cm</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============ Visibility ============ */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-base">Visibility</Label>
+          </div>
+          <div className="rounded-lg border p-4 bg-muted/10 flex items-start gap-3">
+            <Switch checked={isActive} onCheckedChange={setIsActive} />
+            <div className="space-y-0.5">
+              <Label>Active (visible to customers)</Label>
+              <p className="text-xs text-muted-foreground">
+                When on, the product is published and visible in your storefront. When off, it's saved as a draft and hidden from customers.
               </p>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* ============ Shipping ============ */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center gap-2">
-          <Truck className="h-4 w-4 text-muted-foreground" />
-          <Label className="text-base">Shipping</Label>
-        </div>
-        <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
-          <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
-            <div className="space-y-2">
-              <Label className="text-xs">Weight</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Unit</Label>
-              <Select value={weightUnit} onValueChange={(v) => setWeightUnit(v as "lbs" | "kg")}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="lbs">lbs</SelectItem>
-                  <SelectItem value="kg">kg</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Dimensions</Label>
-            <div className="grid grid-cols-[1fr,1fr,1fr,auto] gap-2">
-              <Input
-                type="number" step="0.01" min="0"
-                value={length}
-                onChange={(e) => setLength(e.target.value)}
-                placeholder="Length"
-              />
-              <Input
-                type="number" step="0.01" min="0"
-                value={pwidth}
-                onChange={(e) => setPwidth(e.target.value)}
-                placeholder="Width"
-              />
-              <Input
-                type="number" step="0.01" min="0"
-                value={pheight}
-                onChange={(e) => setPheight(e.target.value)}
-                placeholder="Height"
-              />
-              <Select value={dimensionUnit} onValueChange={(v) => setDimensionUnit(v as "in" | "cm")}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in">in</SelectItem>
-                  <SelectItem value="cm">cm</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-start gap-3 rounded-md border bg-muted/30 p-3">
-        <Switch checked={isActive} onCheckedChange={setIsActive} />
-        <div className="space-y-0.5">
-          <Label>Active (visible to customers)</Label>
-          <p className="text-xs text-muted-foreground">
-            When on, the product is published and visible in your storefront. When off, it's saved as a draft and hidden from customers.
-          </p>
-        </div>
-      </div>
       <div className="flex gap-3 pt-2">
         <Button onClick={handleSave} disabled={saving} className="gap-2" data-product-form-save>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
