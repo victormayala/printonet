@@ -42,6 +42,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { toast as notify } from "sonner";
 
 const FONT_OPTIONS = [
   "Inter", "Space Grotesk", "Roboto", "Open Sans", "Lato", "Montserrat",
@@ -130,11 +131,7 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
       // Refresh row from DB
       window.location.reload();
     } catch (e) {
-      toast({
-        title: "Could not refresh status",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not refresh status", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setRefreshing(false);
     }
@@ -165,11 +162,7 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
       if (!url) throw new Error("No dashboard URL");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast({
-        title: "Could not open Stripe dashboard",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not open Stripe dashboard", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setOpening(false);
     }
@@ -188,11 +181,7 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
       if (!url) throw new Error("No onboarding URL");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast({
-        title: "Could not start Stripe onboarding",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not start Stripe onboarding", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setOnboarding(false);
     }
@@ -278,7 +267,7 @@ function PlatformFeeCell({ store }: { store: CorporateStore }) {
   const save = async () => {
     const pct = Number(value);
     if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
-      toast({ title: "Enter a value between 0 and 100", variant: "destructive" });
+      notify.error("Enter a value between 0 and 100");
       setValue(initial);
       return;
     }
@@ -291,7 +280,7 @@ function PlatformFeeCell({ store }: { store: CorporateStore }) {
       .eq("id", store.id);
     setSaving(false);
     if (error) {
-      toast({ title: "Could not save fee", description: error.message, variant: "destructive" });
+      notify.error("Could not save fee", { description: error.message });
       setValue(initial);
       return;
     }
@@ -363,11 +352,11 @@ function LogoField({
               const file = e.target.files?.[0] ?? null;
               if (!file) return onChange(null);
               if (!ACCEPTED_MIME.includes(file.type)) {
-                toast({ title: "Unsupported file type", variant: "destructive" });
+                notify.error("Unsupported file type");
                 return;
               }
               if (file.size > MAX_LOGO_BYTES) {
-                toast({ title: "File too large (max 4 MB)", variant: "destructive" });
+                notify.error("File too large (max 4 MB)");
                 return;
               }
               onChange(file);
@@ -540,7 +529,7 @@ export default function CorporateStores() {
                           <div className="space-y-1">
                             <StatusBadge status={s.status} />
                             {s.error_message && s.status === "failed" && (
-                              <div className="text-xs text-destructive max-w-xs truncate" title={s.error_message}>
+                              <div className="text-xs text-amber-700 dark:text-amber-500 max-w-xs truncate" title={s.error_message}>
                                 {s.error_message}
                               </div>
                             )}
@@ -627,7 +616,7 @@ function CopyField({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
+      notify.error("Copy failed");
     }
   };
   return (
@@ -652,7 +641,7 @@ function PasswordCopyField({ label, value }: { label: string; value: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
+      notify.error("Copy failed");
     }
   };
   return (
@@ -721,10 +710,8 @@ function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResum
       });
       refetch();
     } catch (e) {
-      toast({
-        title: `Could not ${action} store`,
+      notify.error(`Could not ${action} store`, {
         description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
       });
     } finally {
       setBusy(null);
@@ -890,7 +877,7 @@ function StoreFormFields({
                 className="font-mono"
               />
             </div>
-            {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
+            {errors.primary_color && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.primary_color}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="font">Font family</Label>
@@ -973,19 +960,19 @@ function StoreFormFields({
         <div className="space-y-2">
           <Label htmlFor="name">Store name</Label>
           <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Acme Company Store" />
-          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          {errors.name && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.name}</p>}
         </div>
         <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
           <div className="space-y-2">
             <Label htmlFor="email">Contact email</Label>
             <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="store@acme.com" />
-            {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
+            {errors.contact_email && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.contact_email}</p>}
           </div>
           {!hideCustomDomain && (
             <div className="space-y-2">
               <Label htmlFor="domain">Custom domain (optional)</Label>
               <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.acme.com" />
-              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+              {errors.custom_domain && <p className="text-xs text-amber-700 dark:text-amber-500">{errors.custom_domain}</p>}
             </div>
           )}
         </div>
@@ -1144,7 +1131,7 @@ function NewStoreDialog({
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
-      toast({ title: "Store still provisioning", description: "Please wait a moment.", variant: "destructive" });
+      notify.error("Store still provisioning", { description: "Please wait a moment." });
       return;
     }
     setStripeLoading(true);
@@ -1160,11 +1147,7 @@ function NewStoreDialog({
       window.open(url, "_blank", "noopener,noreferrer");
       setStripeOnboardingOpened(true);
     } catch (e) {
-      toast({
-        title: "Could not start Stripe onboarding",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not start Stripe onboarding", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setStripeLoading(false);
     }
@@ -1180,11 +1163,7 @@ function NewStoreDialog({
       if (error) throw error;
       setStripeStatus(data as { connected: boolean; charges_enabled: boolean; details_submitted: boolean });
     } catch (e) {
-      toast({
-        title: "Could not check Stripe status",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not check Stripe status", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setStripeLoading(false);
     }
@@ -1231,11 +1210,7 @@ function NewStoreDialog({
       if (available) setChosenSlug(baseSlug);
       else setChosenSlug(null);
     } catch (e) {
-      toast({
-        title: "Could not check slug availability",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not check slug availability", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setChecking(false);
     }
@@ -1310,7 +1285,7 @@ function NewStoreDialog({
       if (data?.store_id) setProvisionedStoreId(data.store_id);
     },
     onError: (e: Error) => {
-      toast({ title: "Could not start setup", description: e.message, variant: "destructive" });
+      notify.error("Could not start setup", { description: e.message });
     },
   });
 
@@ -1340,7 +1315,7 @@ function NewStoreDialog({
   const goNextFromStep1 = async () => {
     if (!validateStep1()) return;
     if (!chosenSlug) {
-      toast({ title: "Please confirm a site address", variant: "destructive" });
+      notify.error("Please confirm a site address");
       return;
     }
     if (provisionedStoreId) {
@@ -1394,11 +1369,7 @@ function NewStoreDialog({
       }
       setStep(3);
     } catch (e) {
-      toast({
-        title: "Couldn't save branding & theme",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Couldn't save branding & theme", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setSeedingTemplate(false);
     }
@@ -1473,7 +1444,7 @@ function NewStoreDialog({
                 ) : slugCheck && slugCheck.available && chosenSlug === slugify(slugDraft) ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 ) : slugCheck && !slugCheck.available ? (
-                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
                 ) : null}
               </div>
             </div>
@@ -1487,7 +1458,7 @@ function NewStoreDialog({
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-xs text-destructive">
+                    <p className="text-xs text-amber-700 dark:text-amber-500">
                       <span className="font-medium">{slugCheck.tenant_slug}</span> is taken. Try one of these:
                     </p>
                     {slugCheck.suggestions && slugCheck.suggestions.length > 0 && (
@@ -1526,7 +1497,7 @@ function NewStoreDialog({
           </div>
 
           {provision.isError && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-sm text-amber-900 dark:text-amber-200">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
               <div className="space-y-1">
                 <p className="font-medium">Couldn't create your store</p>
@@ -1779,7 +1750,7 @@ export function EditStoreDialog({
       onSaved();
     },
     onError: (e: Error) => {
-      toast({ title: "Could not save changes", description: e.message, variant: "destructive" });
+      notify.error("Could not save changes", { description: e.message });
     },
   });
 
