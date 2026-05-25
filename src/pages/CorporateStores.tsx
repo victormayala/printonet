@@ -31,6 +31,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -1754,27 +1755,43 @@ function NewStoreDialog({
             </Button>
             <div className="flex items-center gap-3">
               {!stripeStatus?.connected && (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await publishStore.mutateAsync();
-                      toast({
-                        title: "Store published — Stripe not connected yet",
-                        description:
-                          "You need to connect Stripe to be able to accept payments in your store checkout. Please finish setting up your Stripe checkout as soon as possible.",
-                        duration: 10000,
-                      });
-                      finishOnboarding();
-                    } catch {
-                      /* handled in onError */
-                    }
-                  }}
-                  disabled={publishStore.isPending || !provisionedStoreId}
-                >
-                  {publishStore.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Skip and Publish Store
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={publishStore.isPending || !provisionedStoreId}
+                    >
+                      {publishStore.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Skip and Publish Store
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Publish without Stripe?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You need to connect Stripe to be able to accept payments in your
+                        store checkout. Your store will go live, but customers won't be
+                        able to complete purchases until Stripe is connected. Please
+                        finish setting up your Stripe checkout as soon as possible.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Go back</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          try {
+                            await publishStore.mutateAsync();
+                            finishOnboarding();
+                          } catch {
+                            /* handled in onError */
+                          }
+                        }}
+                      >
+                        Publish anyway
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
               <Button
                 onClick={async () => {
