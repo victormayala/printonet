@@ -3880,7 +3880,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
 
                     {/* Sort */}
                     <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                      <SelectTrigger className="w-[140px] h-9 text-xs gap-2">
+                      <SelectTrigger className="w-[160px] h-9 text-xs gap-2 whitespace-nowrap">
                         <ArrowUpDown className="h-3.5 w-3.5 shrink-0" />
                         <SelectValue placeholder="Sort" />
                       </SelectTrigger>
