@@ -1219,19 +1219,8 @@ function ProductForm({
             </div>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Dimensions</Label>
-              <Select value={dimensionUnit} onValueChange={(v) => setDimensionUnit(v as "in" | "cm")}>
-                <SelectTrigger className="w-24 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in">in</SelectItem>
-                  <SelectItem value="cm">cm</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
+            <Label className="text-xs">Dimensions</Label>
+            <div className="grid grid-cols-[1fr,1fr,1fr,auto] gap-2">
               <Input
                 type="number" step="0.01" min="0"
                 value={length}
@@ -1250,6 +1239,15 @@ function ProductForm({
                 onChange={(e) => setPheight(e.target.value)}
                 placeholder="Height"
               />
+              <Select value={dimensionUnit} onValueChange={(v) => setDimensionUnit(v as "in" | "cm")}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in">in</SelectItem>
+                  <SelectItem value="cm">cm</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
