@@ -15,7 +15,6 @@ html {
    (Radix injects a stylesheet that pads position:fixed/sticky nodes when scroll is locked). */
 body[data-scroll-locked][data-scroll-locked] {
   --removed-body-scroll-bar-size: 0px !important;
-  overflow-y: scroll !important;
   margin-right: 0 !important;
   padding-right: 0 !important;
 }
@@ -39,7 +38,6 @@ body[data-scroll-locked] [style*="position: sticky"] {
 }
 
 .with-scroll-bars-hidden.with-scroll-bars-hidden {
-  overflow-y: scroll !important;
   padding-right: 0 !important;
 }
 
