@@ -1428,7 +1428,7 @@ function NewStoreDialog({
       <StepIndicator step={step} total={3} labels={STEP_LABELS} />
 
       {step === 1 && (
-        <div className="space-y-6 py-1">
+        <div className="space-y-5 rounded-lg border bg-muted/40 p-5">
           <StoreFormFields
             values={values}
             setField={setField}
@@ -1515,35 +1515,15 @@ function NewStoreDialog({
             )}
           </div>
 
-          <Collapsible open={showCustomDomain} onOpenChange={setShowCustomDomain}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-left text-sm transition-colors hover:bg-muted"
-              >
-                <div>
-                  <div className="font-medium">Use a custom domain (optional)</div>
-                  <div className="text-xs text-muted-foreground">
-                    Bring your own domain like <span className="font-mono">merch.pepsico.com</span>.
-                  </div>
-                </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${showCustomDomain ? "rotate-180" : ""}`} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4 space-y-2">
-              <Label htmlFor="domain">Custom domain</Label>
-              <Input
-                id="domain"
-                value={values.custom_domain}
-                onChange={(e) => setField("custom_domain", e.target.value)}
-                placeholder="merch.pepsico.com"
-              />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Point an A record to <code className="font-mono">185.158.133.1</code> and add a{" "}
-                <code className="font-mono">_lovable</code> TXT record. Then add the domain in Project Settings → Domains.
-              </p>
-            </CollapsibleContent>
-          </Collapsible>
+          <div className="flex items-start gap-3 rounded-md border bg-muted/40 px-4 py-3 text-sm">
+            <Globe className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+            <div>
+              <div className="font-medium">Want to use your own domain?</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                You can connect a custom domain like <span className="font-mono">merch.pepsico.com</span> after your store is created — from the store's settings page.
+              </div>
+            </div>
+          </div>
 
           {provision.isError && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
@@ -1569,7 +1549,7 @@ function NewStoreDialog({
       )}
 
       {step === 2 && (
-        <div className="space-y-5 py-1">
+        <div className="space-y-5 rounded-lg border bg-muted/40 p-5">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose a theme</h3>
             <p className="text-xs text-muted-foreground">
