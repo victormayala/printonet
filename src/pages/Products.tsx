@@ -3867,7 +3867,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
 
                     {/* Status filter */}
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-[120px] h-9 text-xs gap-2">
+                      <SelectTrigger className="w-[140px] h-9 text-xs gap-2 whitespace-nowrap">
                         <CircleDot className="h-3.5 w-3.5 shrink-0" />
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
