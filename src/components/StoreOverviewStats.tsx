@@ -34,7 +34,7 @@ export function StoreOverviewStats({ store }: { store: CorporateStore }) {
         supabase
           .from("corporate_store_products")
           .select("id", { count: "exact", head: true })
-          .eq("corporate_store_id", store.id),
+          .eq("store_id", store.id),
         supabase
           .from("customer_profiles")
           .select("id", { count: "exact", head: true })
