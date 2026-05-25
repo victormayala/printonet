@@ -3,8 +3,12 @@
  * storefront — meant to give the editor an at-a-glance idea of layout and
  * content as they edit drafts.
  */
+import { createContext, useContext } from "react";
 import { ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const BaseUrlContext = createContext<string | undefined>(undefined);
+
 
 /**
  * Resolves possibly-relative image URLs (like "/defaults/banner-hero.jpg")
