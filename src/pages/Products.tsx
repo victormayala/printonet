@@ -2935,7 +2935,12 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
             </DialogHeader>
             {loadingDetails ? <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> : detailStyle ? (
               <div className="space-y-4">
-                {detailStyle.description && <p className="text-sm text-muted-foreground">{detailStyle.description}</p>}
+                {detailStyle.description && (
+                  <div
+                    className="prose prose-sm max-w-none text-sm text-muted-foreground prose-strong:text-foreground prose-headings:text-foreground"
+                    dangerouslySetInnerHTML={{ __html: detailStyle.description }}
+                  />
+                )}
                 <div className="text-sm"><span className="font-medium">{detailStyle.variants?.length || 0}</span> colors available</div>
                 <div className="space-y-3">
                   {detailStyle.variants?.map((variant: any, idx: number) => (
