@@ -42,6 +42,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { toast as notify } from "sonner";
 
 const FONT_OPTIONS = [
   "Inter", "Space Grotesk", "Roboto", "Open Sans", "Lato", "Montserrat",
@@ -130,11 +131,7 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
       // Refresh row from DB
       window.location.reload();
     } catch (e) {
-      toast({
-        title: "Could not refresh status",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not refresh status", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setRefreshing(false);
     }
@@ -165,11 +162,7 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
       if (!url) throw new Error("No dashboard URL");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast({
-        title: "Could not open Stripe dashboard",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not open Stripe dashboard", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setOpening(false);
     }
@@ -188,11 +181,7 @@ function PaymentsCell({ store }: { store: CorporateStore }) {
       if (!url) throw new Error("No onboarding URL");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast({
-        title: "Could not start Stripe onboarding",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not start Stripe onboarding", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setOnboarding(false);
     }
@@ -278,7 +267,7 @@ function PlatformFeeCell({ store }: { store: CorporateStore }) {
   const save = async () => {
     const pct = Number(value);
     if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
-      toast({ title: "Enter a value between 0 and 100", variant: "destructive" });
+      notify.error("Enter a value between 0 and 100");
       setValue(initial);
       return;
     }
@@ -291,7 +280,7 @@ function PlatformFeeCell({ store }: { store: CorporateStore }) {
       .eq("id", store.id);
     setSaving(false);
     if (error) {
-      toast({ title: "Could not save fee", description: error.message, variant: "destructive" });
+      notify.error("Could not save fee", { description: error.message });
       setValue(initial);
       return;
     }
@@ -363,11 +352,11 @@ function LogoField({
               const file = e.target.files?.[0] ?? null;
               if (!file) return onChange(null);
               if (!ACCEPTED_MIME.includes(file.type)) {
-                toast({ title: "Unsupported file type", variant: "destructive" });
+                notify.error("Unsupported file type");
                 return;
               }
               if (file.size > MAX_LOGO_BYTES) {
-                toast({ title: "File too large (max 4 MB)", variant: "destructive" });
+                notify.error("File too large (max 4 MB)");
                 return;
               }
               onChange(file);
@@ -627,7 +616,7 @@ function CopyField({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
+      notify.error("Copy failed");
     }
   };
   return (
@@ -652,7 +641,7 @@ function PasswordCopyField({ label, value }: { label: string; value: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
+      notify.error("Copy failed");
     }
   };
   return (
@@ -1144,7 +1133,7 @@ function NewStoreDialog({
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
-      toast({ title: "Store still provisioning", description: "Please wait a moment.", variant: "destructive" });
+      notify.error("Store still provisioning", { description: "Please wait a moment." });
       return;
     }
     setStripeLoading(true);
@@ -1160,11 +1149,7 @@ function NewStoreDialog({
       window.open(url, "_blank", "noopener,noreferrer");
       setStripeOnboardingOpened(true);
     } catch (e) {
-      toast({
-        title: "Could not start Stripe onboarding",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not start Stripe onboarding", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setStripeLoading(false);
     }
@@ -1180,11 +1165,7 @@ function NewStoreDialog({
       if (error) throw error;
       setStripeStatus(data as { connected: boolean; charges_enabled: boolean; details_submitted: boolean });
     } catch (e) {
-      toast({
-        title: "Could not check Stripe status",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not check Stripe status", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setStripeLoading(false);
     }
@@ -1231,11 +1212,7 @@ function NewStoreDialog({
       if (available) setChosenSlug(baseSlug);
       else setChosenSlug(null);
     } catch (e) {
-      toast({
-        title: "Could not check slug availability",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Could not check slug availability", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setChecking(false);
     }
@@ -1310,7 +1287,7 @@ function NewStoreDialog({
       if (data?.store_id) setProvisionedStoreId(data.store_id);
     },
     onError: (e: Error) => {
-      toast({ title: "Could not start setup", description: e.message, variant: "destructive" });
+      notify.error("Could not start setup", { description: e.message });
     },
   });
 
@@ -1340,7 +1317,7 @@ function NewStoreDialog({
   const goNextFromStep1 = async () => {
     if (!validateStep1()) return;
     if (!chosenSlug) {
-      toast({ title: "Please confirm a site address", variant: "destructive" });
+      notify.error("Please confirm a site address");
       return;
     }
     if (provisionedStoreId) {
@@ -1394,11 +1371,7 @@ function NewStoreDialog({
       }
       setStep(3);
     } catch (e) {
-      toast({
-        title: "Couldn't save branding & theme",
-        description: e instanceof Error ? e.message : undefined,
-        variant: "destructive",
-      });
+      notify.error("Couldn't save branding & theme", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setSeedingTemplate(false);
     }
@@ -1779,7 +1752,7 @@ export function EditStoreDialog({
       onSaved();
     },
     onError: (e: Error) => {
-      toast({ title: "Could not save changes", description: e.message, variant: "destructive" });
+      notify.error("Could not save changes", { description: e.message });
     },
   });
 
