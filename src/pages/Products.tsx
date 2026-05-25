@@ -29,7 +29,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { OnboardingSteps } from "@/components/OnboardingSteps";
-import { MousePointerClick, FolderPlus, Tag, Store as StoreIcon, Edit3, DollarSign, ImagePlus, CheckCircle2 } from "lucide-react";
 import CategoriesManager, { useCategories, useCategoryLinks, buildCategoryTree } from "@/components/CategoriesManager";
 import { Skeleton } from "@/components/ui/skeleton";
 
