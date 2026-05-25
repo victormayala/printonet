@@ -508,6 +508,7 @@ function ProductForm({
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [showAddVariant, setShowAddVariant] = useState(false);
+  const [priceReference, setPriceReference] = useState<PriceReference>("wholesale");
 
   useEffect(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
