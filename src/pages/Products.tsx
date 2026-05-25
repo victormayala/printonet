@@ -465,7 +465,7 @@ function ProductForm({
   const [imageRight, setImageRight] = useState(product?.image_side2 || "");
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [productType, setProductType] = useState<"single" | "variable">(product?.product_type || "single");
-  const [status, setStatus] = useState<"draft" | "published">(product?.status || "draft");
+  // Status auto-syncs with the Active toggle (published when active, draft when inactive)
   const [weight, setWeight] = useState(product?.weight?.toString() || "");
   const [weightUnit, setWeightUnit] = useState<"lbs" | "kg">(product?.weight_unit || "lbs");
   const [length, setLength] = useState(product?.length?.toString() || "");
@@ -713,7 +713,7 @@ function ProductForm({
       image_side2: imageRight || null,
       is_active: isActive,
       product_type: productType,
-      status,
+      status: isActive ? "published" : "draft",
       weight: weight === "" ? null : Number(weight),
       weight_unit: weightUnit,
       length: length === "" ? null : Number(length),
@@ -765,32 +765,18 @@ function ProductForm({
 
   return (
     <div className="space-y-5">
-      {/* Product Type + Status */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Product Type</Label>
-          <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select product type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="single">Single Product</SelectItem>
-              <SelectItem value="variable">Variable Product</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "published")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Product Type */}
+      <div className="space-y-2">
+        <Label>Product Type</Label>
+        <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select product type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single">Single Product</SelectItem>
+            <SelectItem value="variable">Variable Product</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
@@ -1269,9 +1255,14 @@ function ProductForm({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3 rounded-md border bg-muted/30 p-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
-        <Label>Active (visible to customers)</Label>
+        <div className="space-y-0.5">
+          <Label>Active (visible to customers)</Label>
+          <p className="text-xs text-muted-foreground">
+            When on, the product is published and visible in your storefront. When off, it's saved as a draft and hidden from customers.
+          </p>
+        </div>
       </div>
       <div className="flex gap-3 pt-2">
         <Button onClick={handleSave} disabled={saving} className="gap-2" data-product-form-save>
