@@ -1157,45 +1157,76 @@ function ProductForm({
                       <div className="space-y-2">
                         <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sizes</Label>
                         <div className="rounded-lg border overflow-hidden">
-                          <div className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b">
-                            <span>Size</span>
-                            <span>SKU</span>
-                            <span className="text-right">Price ($)</span>
-                          </div>
-                          {selectedVariant.sizes?.length ? (
-                            [...selectedVariant.sizes]
-                              .map((s: any, originalIdx: number) => ({ s, originalIdx }))
-                              .sort((a, b) => {
-                                const order = ["XXS","XS","S","SM","M","MD","L","LG","XL","XLG","2XL","XXL","3XL","XXXL","4XL","5XL","6XL","7XL"];
-                                const norm = (v: string) => (v || "").toString().toUpperCase().trim();
-                                const ai = order.indexOf(norm(a.s.size));
-                                const bi = order.indexOf(norm(b.s.size));
-                                if (ai === -1 && bi === -1) return norm(a.s.size).localeCompare(norm(b.s.size));
-                                if (ai === -1) return 1;
-                                if (bi === -1) return -1;
-                                return ai - bi;
-                              })
-                              .map(({ s, originalIdx: sIdx }) => (
-                              <div key={sIdx} className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center">
-                                <span className="text-xs font-medium">{s.size || "—"}</span>
-                                <Input
-                                  value={s.sku || ""}
-                                  onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { sku: e.target.value })}
-                                  className="h-7 text-xs"
-                                  placeholder="SKU"
-                                />
-                                <Input
-                                  type="number" step="0.01" min="0"
-                                  value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
-                                  onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
-                                  className="h-7 text-xs text-right"
-                                />
-                              </div>
-                            ))
-                          ) : (
-                            <div className="px-3 py-4 text-center text-xs text-muted-foreground">No sizes</div>
-                          )}
+                          {(() => {
+                            const showRef = priceReference !== "wholesale";
+                            const gridCls = showRef
+                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center"
+                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center";
+                            const headerCls = showRef
+                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b"
+                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b";
+                            return (
+                              <>
+                                <div className={headerCls}>
+                                  <span>Size</span>
+                                  <span>SKU</span>
+                                  {showRef && <span className="text-right">{PRICE_REF_LABEL[priceReference]} ($)</span>}
+                                  <span className="text-right">Price ($)</span>
+                                </div>
+                                {selectedVariant.sizes?.length ? (
+                                  [...selectedVariant.sizes]
+                                    .map((s: any, originalIdx: number) => ({ s, originalIdx }))
+                                    .sort((a, b) => {
+                                      const order = ["XXS","XS","S","SM","M","MD","L","LG","XL","XLG","2XL","XXL","3XL","XXXL","4XL","5XL","6XL","7XL"];
+                                      const norm = (v: string) => (v || "").toString().toUpperCase().trim();
+                                      const ai = order.indexOf(norm(a.s.size));
+                                      const bi = order.indexOf(norm(b.s.size));
+                                      if (ai === -1 && bi === -1) return norm(a.s.size).localeCompare(norm(b.s.size));
+                                      if (ai === -1) return 1;
+                                      if (bi === -1) return -1;
+                                      return ai - bi;
+                                    })
+                                    .map(({ s, originalIdx: sIdx }) => {
+                                      const refVal = sizeRefValue(s, priceReference);
+                                      return (
+                                        <div key={sIdx} className={gridCls}>
+                                          <span className="text-xs font-medium">{s.size || "—"}</span>
+                                          <Input
+                                            value={s.sku || ""}
+                                            onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { sku: e.target.value })}
+                                            className="h-7 text-xs"
+                                            placeholder="SKU"
+                                          />
+                                          {showRef && (priceReference === "map" ? (
+                                            <Input
+                                              type="number" step="0.01" min="0"
+                                              value={s.map_price !== undefined && s.map_price !== null && s.map_price !== "" ? Number(Number(s.map_price).toFixed(2)) : ""}
+                                              onChange={(e) => updateVariantSizeMap(selectedVariantIdx, sIdx, e.target.value)}
+                                              className="h-7 text-xs text-right"
+                                              placeholder="—"
+                                            />
+                                          ) : (
+                                            <span className="text-xs text-right text-muted-foreground">
+                                              {refVal !== null ? `$${refVal.toFixed(2)}` : "—"}
+                                            </span>
+                                          ))}
+                                          <Input
+                                            type="number" step="0.01" min="0"
+                                            value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
+                                            onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
+                                            className="h-7 text-xs text-right"
+                                          />
+                                        </div>
+                                      );
+                                    })
+                                ) : (
+                                  <div className="px-3 py-4 text-center text-xs text-muted-foreground">No sizes</div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
+
                       </div>
                     </div>
                   ) : (
