@@ -17,9 +17,9 @@ import {
   CheckCircle2,
   FileText,
   Home,
-  Image as ImageIcon,
   Images,
   Loader2,
+
   MousePointerClick,
   Navigation,
   Plus,
