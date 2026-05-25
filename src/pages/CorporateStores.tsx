@@ -500,7 +500,63 @@ export default function CorporateStores() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {stores.map((s) => (
+                    {stores.map((s) => {
+                      // Stores that haven't completed onboarding (step 1 → 2 → publish)
+                      // sit in 'provisioning' with a placeholder tenant_slug. Hide all
+                      // details and surface only a "Finish setup" CTA + warning that
+                      // the chosen URL isn't reserved yet.
+                      const isUnpublished = s.status === "provisioning";
+                      if (isUnpublished) {
+                        const detailColSpan = isSuperAdmin ? 4 : 3;
+                        return (
+                          <TableRow key={s.id} className="bg-amber-50/40 dark:bg-amber-950/10">
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="h-8 w-8 rounded shrink-0"
+                                  style={{ background: s.primary_color }}
+                                />
+                                <div className="min-w-0">
+                                  <div className="font-medium truncate">{s.name}</div>
+                                  <div className="text-xs text-muted-foreground">Setup incomplete</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell colSpan={detailColSpan}>
+                              <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
+                                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                <span>
+                                  Finish onboarding to publish this store. Your chosen
+                                  site address isn't reserved yet — someone else could
+                                  claim it if you don't complete setup.
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setResumeStore(s);
+                                    setOpen(true);
+                                  }}
+                                >
+                                  Finish setup
+                                </Button>
+                                <StoreActions
+                                  store={s}
+                                  compact
+                                  onResumeSetup={() => {
+                                    setResumeStore(s);
+                                    setOpen(true);
+                                  }}
+                                />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                      return (
                       <TableRow key={s.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -578,7 +634,8 @@ export default function CorporateStores() {
                           />
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
