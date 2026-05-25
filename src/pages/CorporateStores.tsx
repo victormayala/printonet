@@ -844,6 +844,7 @@ function StoreFormFields({
   onClearExisting,
   hideCustomDomain,
   compact,
+  section = "all",
 }: {
   values: FormValues;
   setField: <K extends keyof FormValues>(k: K, v: FormValues[K]) => void;
@@ -863,6 +864,8 @@ function StoreFormFields({
   hideCustomDomain?: boolean;
   /** When true, hides branding sections behind a collapsible "Branding (optional)" toggle. */
   compact?: boolean;
+  /** Render only one section. Defaults to "all". */
+  section?: "identity" | "branding" | "all";
 }) {
   const [brandingOpen, setBrandingOpen] = useState(false);
 
