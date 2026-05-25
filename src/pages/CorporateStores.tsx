@@ -1428,7 +1428,7 @@ function NewStoreDialog({
       <StepIndicator step={step} total={3} labels={STEP_LABELS} />
 
       {step === 1 && (
-        <div className="space-y-5 rounded-lg border bg-amber-50/50 p-5">
+        <div className="space-y-5 rounded-lg border bg-sky-50/60 p-5">
           <StoreFormFields
             values={values}
             setField={setField}
@@ -1464,7 +1464,7 @@ function NewStoreDialog({
                   setSlugManuallyEdited(true);
                   setSlugDraft(e.target.value.toLowerCase());
                 }}
-                placeholder="my-store"
+                placeholder="acme"
                 className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-mono"
               />
               <div className="flex items-center px-3 text-xs text-muted-foreground border-l">
@@ -1515,7 +1515,7 @@ function NewStoreDialog({
             )}
           </div>
 
-          <div className="flex items-start gap-3 rounded-md border bg-amber-50/50 px-4 py-3 text-sm">
+          <div className="flex items-start gap-3 rounded-md border bg-sky-50/60 px-4 py-3 text-sm">
             <Globe className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
             <div>
               <div className="font-medium">Want to use your own domain?</div>
@@ -1549,7 +1549,7 @@ function NewStoreDialog({
       )}
 
       {step === 2 && (
-        <div className="space-y-5 rounded-lg border bg-amber-50/50 p-5">
+        <div className="space-y-5 rounded-lg border bg-sky-50/60 p-5">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose a theme</h3>
             <p className="text-xs text-muted-foreground">
@@ -1572,7 +1572,7 @@ function NewStoreDialog({
             <CollapsibleTrigger asChild>
               <button
                 type="button"
-                className="group flex w-full items-center justify-between rounded-md border bg-amber-50/50 px-4 py-3 text-left text-sm transition-colors hover:bg-amber-100/60"
+                className="group flex w-full items-center justify-between rounded-md border bg-sky-50/60 px-4 py-3 text-left text-sm transition-colors hover:bg-sky-100/60"
               >
                 <div>
                   <div className="font-medium">Branding (optional)</div>
@@ -1639,7 +1639,7 @@ function NewStoreDialog({
                 </div>
               ) : stripeOnboardingOpened ? (
                 <div className="space-y-3">
-                  <div className="rounded-md border bg-amber-50/50 p-3 text-sm">
+                  <div className="rounded-md border bg-sky-50/60 p-3 text-sm">
                     Finish onboarding in the new Stripe tab, then click the button below to verify.
                   </div>
                   <div className="flex gap-2">
