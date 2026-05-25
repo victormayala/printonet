@@ -1,94 +1,48 @@
 
-# Plan: VPS-hosted DAM for `product-images`
+## Heads-up on MAP
 
-## Goal
+A quick reality check before we build: **MAP (Minimum Advertised Price) is not exposed by SanMar's PromoStandards API** — they only publish `List` (MSRP) and `Customer` (wholesale). **S&S Activewear** likewise returns `customerPrice` (wholesale) and `piecePrice` (open-line / MSRP-equivalent), but no dedicated MAP field. MAP is governed by separate written pricing policies from each supplier.
 
-Stop new catalog mockup uploads from filling Lovable Cloud Storage. Route them to a self-hosted DAM on your VPS, served as public URLs (like today) so the Customizer/Fabric.js canvas keeps working with zero changes downstream. Existing Lovable URLs keep working — no migration.
+So the realistic split is:
+- **Wholesale** — already imported
+- **MSRP** — will be imported automatically from both suppliers
+- **MAP** — captured as a **manual override** field per variant (no API source). The toggle still shows the column; if no MAP is set it falls back to "—".
 
-## End-state architecture
+## What gets built
 
-```text
- Browser (Dashboard / Customizer)
-        |
-        | 1. ask for upload URL
-        v
- Supabase Edge Function: dam-sign-upload
-        | (HMAC-signs a short-lived PUT URL for MinIO)
-        v
- VPS  ── Nginx (TLS) ──► MinIO  (bucket: product-images)
-                            ▲
-                            │ 2. PUT file directly from browser
-                            │
- Browser ────────────────────┘
-        |
-        | 3. save returned public URL in DB
-        v
- Supabase row (products.image_url = https://dam.printonet.com/product-images/<key>)
-```
+### 1. Importers — pull MSRP alongside wholesale
 
-Reads stay identical to today: `<img src="https://dam.printonet.com/...">`. No proxying through edge functions.
+**`supabase/functions/import-sanmar-products/index.ts`**
+- Make two pricing calls per product: `Customer` (wholesale, current behavior) and `List` (MSRP, new).
+- Store `msrp` on each size in addition to existing `price`/`cost`.
 
-## VPS setup (we'll script this for you, you run it)
+**`supabase/functions/import-ssactivewear-products/index.ts`**
+- Already fetches both `customerPrice` and `piecePrice` but only uses one. Persist `piecePrice` as `msrp` on each size.
 
-What you need on the VPS:
-1. A subdomain pointed at the VPS (e.g. `dam.printonet.com`).
-2. Docker + docker-compose installed.
-3. Ports 80/443 open.
+No DB migration is required — `variants` is a `jsonb` array on `inventory_products`, so the new `msrp` and `map_price` fields slot into each size object directly.
 
-We'll deliver a `docker-compose.yml` + Nginx config that provisions:
-- **MinIO** — S3-compatible object store, single bucket `product-images` set to **public read**.
-- **Nginx** — TLS termination via Let's Encrypt (Certbot), reverse-proxy to MinIO on `dam.printonet.com`, with required CORS headers so Fabric.js canvas reads don't taint:
-  - `Access-Control-Allow-Origin: *` (or the list of tenant origins)
-  - `Access-Control-Allow-Methods: GET, HEAD`
-  - `Cross-Origin-Resource-Policy: cross-origin`
-- **Cache headers** — `Cache-Control: public, max-age=31536000, immutable` for `/product-images/*` (keys are content-addressed so this is safe).
-- Optional: Cloudflare in front of `dam.printonet.com` for free CDN + DDoS — recommended.
+### 2. Product edit page — display toggle
 
-Credentials needed back from you to wire into Lovable:
-- `DAM_S3_ENDPOINT` (e.g. `https://dam.printonet.com`)
-- `DAM_S3_REGION` (any, e.g. `us-east-1` — MinIO ignores)
-- `DAM_S3_ACCESS_KEY` + `DAM_S3_SECRET_KEY` (MinIO service account, scoped to `product-images` bucket, write-only)
-- `DAM_PUBLIC_BASE_URL` (likely same as endpoint)
+In `src/pages/Products.tsx`:
+- Add a small segmented control at the top of the variant pricing panel: **Wholesale · MSRP · MAP** (defaults to Wholesale).
+- The toggle only changes the **reference column** rendered in the size table and the "Base cost" readout — it does NOT change `computeVariantFinalPrice`, decoration-fee math, or "Apply pricing to all colors" (you asked for display-only).
+- When **MSRP** is selected, show the `msrp` value per size; if missing, render "—".
+- When **MAP** is selected, show the `map_price` value per size and make the field **editable** (since MAP is manual).
+- Toggle state is local component state — not persisted per product. Reset when switching products.
 
-## Lovable-side changes
+### 3. Re-import note
 
-### New edge function: `dam-sign-upload`
-- Auth: requires logged-in user, RLS-style ownership check (user owns the target product / store).
-- Input: `{ filename, contentType, size, scope: "product-images", storeId?, productId? }`.
-- Validates content-type (`image/*`), size (≤ ~25 MB), filename sanitization.
-- Generates a content-addressed key: `tenants/<user_id>/<storeId>/<uuid>.<ext>`.
-- Uses AWS SigV4 (via `npm:@aws-sdk/s3-request-presigner`) against MinIO endpoint to mint a 5-minute PUT URL.
-- Returns `{ upload_url, public_url, key }`.
+Existing products imported before this change won't have `msrp` populated until they're re-imported. The UI handles missing values gracefully ("—").
 
-### Frontend
-- A small `useDamUpload()` hook that: calls `dam-sign-upload` → `fetch(upload_url, { method: "PUT", body: file })` → returns `public_url`.
-- Swap the existing `product-images` upload paths to use it:
-  - `src/components/StoreCustomizableProducts.tsx`
-  - `src/components/CategoriesManager.tsx`
-  - any other place that currently calls `supabase.storage.from("product-images").upload(...)` (we'll audit before coding).
-- All other buckets (`design-exports`, `brand-assets`, `template-thumbnails`, `corporate-store-assets`) keep using Lovable Cloud Storage — untouched.
+## Out of scope
 
-### Database
-- No schema changes required: `image_url` columns already store full URLs. Mix of `…supabase.co/storage/v1/…` and `https://dam.printonet.com/…` URLs is fine.
-- Optional: add a `storage_provider` text column on the products table for future analytics. Not required for it to work.
+- No changes to how the **selling price** is calculated or shown to customers.
+- No changes to Push-to-Store / Shopify / Woo exports.
+- No persistent per-product preference for which column to show.
+- No automatic MAP fetching (not technically possible from either supplier API).
 
-### Customizer / SDK compatibility
-- `proxy-image` edge function (Canvas CORS proxy) already handles cross-origin mockups by base64-encoding them. With proper CORS headers on Nginx it will rarely be needed for DAM URLs — but it's a free safety net.
-- Print fulfillment public URLs, WooCommerce/Shopify exports, embed SDK all consume whatever URL is stored — no changes.
+## Files touched
 
-## Rollout
-
-1. You stand up the VPS (we hand you compose file + Nginx config + a setup README).
-2. You give us the 4 secrets above; we add them via the secrets tool.
-3. We deploy `dam-sign-upload` and switch the product-image upload paths.
-4. Smoke test: upload a mockup → confirm `dam.printonet.com` URL is saved → confirm it loads in the Customizer canvas without tainting.
-
-## Risks & notes
-
-- **CORS misconfiguration** is the most common failure mode — we'll include a verification curl in the README.
-- **Bucket made private by accident** → images 403. Public read policy is part of the compose bootstrap.
-- **No Cloudflare** → all bandwidth hits the VPS. Recommended but optional.
-- **Backups** — MinIO data dir should be on a backed-up volume; out of scope for this plan but worth flagging.
-- This plan **only covers `product-images`**. If you later want to move `design-exports` (the high-volume one), it's the same pattern but with signed-read URLs for print fulfillment privacy — happy to plan that separately.
-
-Approve and I'll start with the edge function + compose bundle.
+- `supabase/functions/import-sanmar-products/index.ts`
+- `supabase/functions/import-ssactivewear-products/index.ts`
+- `src/pages/Products.tsx`
