@@ -52,17 +52,6 @@ type NavItem = {
 const navItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   {
-    title: "My Stores",
-    url: "/corporate-stores",
-    icon: Building2,
-    matchPaths: ["/corporate-stores"],
-    subItems: [
-      { title: "Stores", to: "/corporate-stores", icon: Store },
-      { title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag },
-      { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
-    ],
-  },
-  {
     title: "Catalog",
     url: "/products",
     icon: BookOpen,
@@ -71,6 +60,17 @@ const navItems: NavItem[] = [
       { title: "Products", to: "/products", icon: Package },
       { title: "Categories", to: "/products?tab=categories", icon: LayoutGrid },
       { title: "Suppliers", to: "/suppliers", icon: Truck },
+    ],
+  },
+  {
+    title: "My Stores",
+    url: "/corporate-stores",
+    icon: Building2,
+    matchPaths: ["/corporate-stores"],
+    subItems: [
+      { title: "Stores", to: "/corporate-stores", icon: Store },
+      { title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag },
+      { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
     ],
   },
   { title: "Orders", url: "/orders", icon: ShoppingBag },
