@@ -1671,21 +1671,40 @@ function NewStoreDialog({
           </Card>
 
           <DialogFooter className="gap-2 sm:justify-between items-center">
-            <Button variant="ghost" size="sm" onClick={() => setStep(2)} disabled={provision.isPending}>
+            <Button variant="ghost" size="sm" onClick={() => setStep(2)} disabled={provision.isPending || publishStore.isPending}>
               Back
             </Button>
             <div className="flex items-center gap-3">
               {!stripeStatus?.connected && (
-                <button
-                  type="button"
-                  onClick={finishOnboarding}
-                  className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await publishStore.mutateAsync();
+                      finishOnboarding();
+                    } catch {
+                      /* handled in onError */
+                    }
+                  }}
+                  disabled={publishStore.isPending || !provisionedStoreId}
                 >
-                  Skip for now
-                </button>
+                  {publishStore.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Skip and Publish Store
+                </Button>
               )}
-              <Button onClick={finishOnboarding}>
-                {stripeStatus?.connected ? "Finish setup" : "Finish"}
+              <Button
+                onClick={async () => {
+                  try {
+                    await publishStore.mutateAsync();
+                    finishOnboarding();
+                  } catch {
+                    /* handled in onError */
+                  }
+                }}
+                disabled={publishStore.isPending || !provisionedStoreId}
+              >
+                {publishStore.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {stripeStatus?.connected ? "Publish store" : "Finish"}
               </Button>
             </div>
           </DialogFooter>
