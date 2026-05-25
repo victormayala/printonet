@@ -4,6 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reserve scrollbar space to prevent layout shift when Radix popovers/dialogs lock scroll */
+html {
+  scrollbar-gutter: stable;
+}
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 98%;
