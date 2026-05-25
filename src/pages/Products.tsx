@@ -22,7 +22,7 @@ import {
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List, Eye,
   ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles,
-  Truck, Search, Download, Send, MoreVertical
+  Truck, Search, Download, Send, MoreVertical, CircleDot
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -3853,7 +3853,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                   <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     {/* Category filter */}
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
-                      <SelectTrigger className="w-[140px] h-9 text-xs">
+                      <SelectTrigger className="w-[140px] h-9 text-xs gap-2">
                         <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
@@ -3867,7 +3867,8 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
 
                     {/* Status filter */}
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-[120px] h-9 text-xs">
+                      <SelectTrigger className="w-[120px] h-9 text-xs gap-2">
+                        <CircleDot className="h-3.5 w-3.5 shrink-0" />
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -3879,7 +3880,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
 
                     {/* Sort */}
                     <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                      <SelectTrigger className="w-[140px] h-9 text-xs">
+                      <SelectTrigger className="w-[140px] h-9 text-xs gap-2">
                         <ArrowUpDown className="h-3.5 w-3.5 shrink-0" />
                         <SelectValue placeholder="Sort" />
                       </SelectTrigger>
