@@ -31,6 +31,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { OnboardingSteps } from "@/components/OnboardingSteps";
 import CategoriesManager, { useCategories, useCategoryLinks, buildCategoryTree } from "@/components/CategoriesManager";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+type PriceReference = "wholesale" | "msrp" | "map";
+const PRICE_REF_LABEL: Record<PriceReference, string> = {
+  wholesale: "Wholesale",
+  msrp: "MSRP",
+  map: "MAP",
+};
 
 function SupplierTabSkeleton() {
   return (
