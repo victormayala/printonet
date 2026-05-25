@@ -47,14 +47,17 @@ type NavItem = {
   /** Path prefixes that should expand & highlight this parent. */
   matchPaths?: string[];
   subItems?: SubItem[];
+  /** Tailwind text-color class applied to the icon in resting state for visual grouping. */
+  iconColor?: string;
 };
 
 const navItems: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, iconColor: "text-indigo-500" },
   {
     title: "Catalog",
     url: "/products",
     icon: BookOpen,
+    iconColor: "text-emerald-500",
     matchPaths: ["/products", "/suppliers"],
     subItems: [
       { title: "Products", to: "/products", icon: Package },
@@ -66,6 +69,7 @@ const navItems: NavItem[] = [
     title: "My Stores",
     url: "/corporate-stores",
     icon: Building2,
+    iconColor: "text-sky-500",
     matchPaths: ["/corporate-stores"],
     subItems: [
       { title: "Stores", to: "/corporate-stores", icon: Store },
@@ -73,7 +77,7 @@ const navItems: NavItem[] = [
       { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
     ],
   },
-  { title: "Orders", url: "/orders", icon: ShoppingBag },
+  { title: "Orders", url: "/orders", icon: ShoppingBag, iconColor: "text-amber-500" },
 ];
 
 const profileItem: NavItem = {
