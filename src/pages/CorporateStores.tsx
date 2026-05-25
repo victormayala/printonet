@@ -1369,8 +1369,13 @@ function NewStoreDialog({
         favicon ? uploadAsset(user!.id, provisionedStoreId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
-      // Persist branding fields (color, font, logos). Skip if nothing meaningful changed.
-      const updatePayload: Record<string, unknown> = {
+      // Persist branding fields (color, font, logos).
+      const updatePayload: {
+        primary_color: string;
+        font_family: string;
+        logo_url?: string;
+        favicon_url?: string;
+      } = {
         primary_color: values.primary_color,
         font_family: values.font_family,
       };
