@@ -1115,7 +1115,13 @@ function NavigationPanel({ store, canPublish }: { store: CorporateStore; canPubl
 
   return (
     <div className="space-y-4">
+      <PanelHeader
+        icon={Navigation}
+        title="Navigation menu"
+        description="Top-bar links shown on every storefront page. Saved changes go live immediately."
+      />
       {items.map((it, i) => (
+
         <div key={i} className="flex gap-2 items-end">
           <div className="space-y-1 flex-1">
             <Label className="text-xs">Label</Label>
