@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, Copy, Check, Eye, EyeOff, Building2, ShoppingBag, Globe } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, Copy, Check, Eye, EyeOff, Building2, ShoppingBag, Globe, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -842,6 +843,7 @@ function StoreFormFields({
   existing,
   onClearExisting,
   hideCustomDomain,
+  compact,
 }: {
   values: FormValues;
   setField: <K extends keyof FormValues>(k: K, v: FormValues[K]) => void;
@@ -859,63 +861,24 @@ function StoreFormFields({
   };
   onClearExisting?: (kind: "logo" | "favicon" | "footer") => void;
   hideCustomDomain?: boolean;
+  /** When true, hides branding sections behind a collapsible "Branding (optional)" toggle. */
+  compact?: boolean;
 }) {
-  return (
-    <div className="space-y-6 py-2">
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Identity</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 space-y-1">
-            <Label>Account type</Label>
-            <Select
-              value={values.store_type}
-              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
-                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
-            </p>
-          </div>
-          <div className="col-span-2 space-y-1">
-            <Label htmlFor="name">Store name</Label>
-            <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
-            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="email">Contact email</Label>
-            <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
-            {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
-          </div>
-          {!hideCustomDomain && (
-            <div className="space-y-1">
-              <Label htmlFor="domain">Custom domain (optional)</Label>
-              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
-              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
-            </div>
-          )}
-        </div>
-      </section>
+  const [brandingOpen, setBrandingOpen] = useState(false);
 
-      <Separator />
-
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visual theme</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
+  const brandingSections = (
+    <>
+      <section className="space-y-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Visual theme</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="space-y-2">
             <Label htmlFor="primary">Primary color</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
                 value={values.primary_color}
                 onChange={(e) => setField("primary_color", e.target.value)}
-                className="h-10 w-12 rounded border bg-background cursor-pointer"
+                className="h-10 w-12 rounded border bg-background cursor-pointer shrink-0"
               />
               <Input
                 id="primary"
@@ -926,7 +889,7 @@ function StoreFormFields({
             </div>
             {errors.primary_color && <p className="text-xs text-destructive">{errors.primary_color}</p>}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="font">Font family</Label>
             <Select value={values.font_family} onValueChange={(v) => setField("font_family", v)}>
               <SelectTrigger id="font">
@@ -944,11 +907,9 @@ function StoreFormFields({
         </div>
       </section>
 
-      <Separator />
-
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Brand assets</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <section className="space-y-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Brand assets</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <LogoField
             label="Main logo"
             value={logo}
@@ -977,6 +938,80 @@ function StoreFormFields({
           )}
         </div>
       </section>
+    </>
+  );
+
+  return (
+    <div className="space-y-6 py-1">
+      <section className="space-y-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store details</h3>
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <Label>Account type</Label>
+            <Select
+              value={values.store_type}
+              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
+                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Store name</Label>
+            <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
+            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          </div>
+          <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
+            <div className="space-y-2">
+              <Label htmlFor="email">Contact email</Label>
+              <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
+              {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
+            </div>
+            {!hideCustomDomain && (
+              <div className="space-y-2">
+                <Label htmlFor="domain">Custom domain (optional)</Label>
+                <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
+                {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {compact ? (
+        <Collapsible open={brandingOpen} onOpenChange={setBrandingOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-left text-sm transition-colors hover:bg-muted"
+            >
+              <div>
+                <div className="font-medium">Branding (optional)</div>
+                <div className="text-xs text-muted-foreground">
+                  Logo, color, and font — you can also set this later.
+                </div>
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${brandingOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-6 pt-5">
+            {brandingSections}
+          </CollapsibleContent>
+        </Collapsible>
+      ) : (
+        <>
+          <Separator />
+          {brandingSections}
+        </>
+      )}
     </div>
   );
 }
@@ -1070,6 +1105,8 @@ function NewStoreDialog({
       : null,
   );
   const [chosenSlug, setChosenSlug] = useState<string | null>(resumeStore?.tenant_slug ?? null);
+  const [slugDraft, setSlugDraft] = useState<string>(resumeStore?.tenant_slug ?? "");
+  const [showCustomDomain, setShowCustomDomain] = useState<boolean>(!!resumeStore?.custom_domain);
   const [checking, setChecking] = useState(false);
 
   const [provisionedStoreId, setProvisionedStoreId] = useState<string | null>(resumeStore?.id ?? null);
@@ -1188,6 +1225,30 @@ function NewStoreDialog({
       setChecking(false);
     }
   };
+
+  // Auto-seed the slug draft from the store name when entering step 2,
+  // and run a debounced availability check as the user edits it.
+  useEffect(() => {
+    if (step !== 2 || isResume) return;
+    if (!slugDraft && values.name) {
+      setSlugDraft(slugify(values.name));
+    }
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (step !== 2) return;
+    const candidate = slugify(slugDraft);
+    if (!candidate || candidate.length < 2) {
+      setSlugCheck(null);
+      setChosenSlug(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      callSlugCheck({ tenant_slug: candidate });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [slugDraft, step]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // Step 2 → step 3: insert the corporate_stores row directly. The linked
   // Lovable storefront serves it via platform-rpc by tenant_slug — no
@@ -1317,7 +1378,7 @@ function NewStoreDialog({
     onCreated();
   };
 
-  const canCheck = values.name.trim().length >= 2 && !checking;
+  
 
   return (
     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1343,6 +1404,7 @@ function NewStoreDialog({
             favicon={favicon}
             setFavicon={setFavicon}
             hideCustomDomain
+            compact
           />
           <DialogFooter>
             <Button onClick={goNextFromStep1}>Continue</Button>
@@ -1351,85 +1413,102 @@ function NewStoreDialog({
       )}
 
       {step === 2 && (
-        <div className="space-y-5 py-2">
-          <div className="rounded-md border p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-medium">Site address</div>
-                <div className="text-xs text-muted-foreground">
-                  We'll generate a URL-friendly slug from your store name.
-                </div>
+        <div className="space-y-6 py-1">
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="slug" className="text-sm font-medium">
+                Site address
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                This is the public URL where your store will live. Edit it if you'd like.
+              </p>
+            </div>
+
+            <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+              <div className="hidden sm:flex items-center px-3 bg-muted/60 text-sm text-muted-foreground font-mono border-r">
+                stores.printonet.com/
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!canCheck}
-                onClick={() => callSlugCheck({ store_name: values.name })}
-              >
-                {checking && <Loader2 className="h-3 w-3 animate-spin" />}
-                Check availability
-              </Button>
+              <Input
+                id="slug"
+                value={slugDraft}
+                onChange={(e) => setSlugDraft(e.target.value.toLowerCase())}
+                placeholder="my-store"
+                className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-mono"
+              />
+              <div className="flex items-center px-3 text-xs text-muted-foreground border-l">
+                {checking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : slugCheck && slugCheck.available && chosenSlug === slugify(slugDraft) ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : slugCheck && !slugCheck.available ? (
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                ) : null}
+              </div>
             </div>
 
             {slugCheck && (
-              <div className="space-y-2">
+              <div className="min-h-[1.25rem]">
                 {slugCheck.available && chosenSlug ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                    <span>
-                      <span className="font-medium">{chosenSlug}</span> is available
-                    </span>
-                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                    <span className="font-medium">{chosenSlug}</span> is available — your store will be at{" "}
+                    <span className="font-mono">stores.printonet.com/{chosenSlug}</span>
+                  </p>
                 ) : (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>
-                        <span className="font-medium">{slugCheck.tenant_slug}</span> is taken
-                      </span>
-                    </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-destructive">
+                      <span className="font-medium">{slugCheck.tenant_slug}</span> is taken. Try one of these:
+                    </p>
                     {slugCheck.suggestions && slugCheck.suggestions.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs text-muted-foreground">Pick a suggestion:</div>
-                        <div className="flex flex-wrap gap-2">
-                          {slugCheck.suggestions.map((s) => {
-                            const selected = chosenSlug === s;
-                            return (
-                              <Button
-                                key={s}
-                                type="button"
-                                size="sm"
-                                variant={selected ? "default" : "outline"}
-                                onClick={() => callSlugCheck({ tenant_slug: s })}
-                              >
-                                {s}
-                              </Button>
-                            );
-                          })}
-                        </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {slugCheck.suggestions.map((s) => (
+                          <Button
+                            key={s}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs font-mono"
+                            onClick={() => setSlugDraft(s)}
+                          >
+                            {s}
+                          </Button>
+                        ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             )}
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="domain">Custom domain (optional)</Label>
-            <Input
-              id="domain"
-              value={values.custom_domain}
-              onChange={(e) => setField("custom_domain", e.target.value)}
-              placeholder="merch.pepsico.com"
-            />
-            <p className="text-xs text-muted-foreground">
-              Bring your own domain, or skip and use the site address above. To activate it, point an A record to
-              <code className="font-mono mx-1">185.158.133.1</code> and add a <code className="font-mono">_lovable</code>{" "}
-              TXT record, then add the domain in Project Settings → Domains on Lovable.
-            </p>
-          </div>
+          <Collapsible open={showCustomDomain} onOpenChange={setShowCustomDomain}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-left text-sm transition-colors hover:bg-muted"
+              >
+                <div>
+                  <div className="font-medium">Use a custom domain (optional)</div>
+                  <div className="text-xs text-muted-foreground">
+                    Bring your own domain like <span className="font-mono">merch.pepsico.com</span>.
+                  </div>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${showCustomDomain ? "rotate-180" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 space-y-2">
+              <Label htmlFor="domain">Custom domain</Label>
+              <Input
+                id="domain"
+                value={values.custom_domain}
+                onChange={(e) => setField("custom_domain", e.target.value)}
+                placeholder="merch.pepsico.com"
+              />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Point an A record to <code className="font-mono">185.158.133.1</code> and add a{" "}
+                <code className="font-mono">_lovable</code> TXT record. Then add the domain in Project Settings → Domains.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
 
           {provision.isError && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
@@ -1456,6 +1535,7 @@ function NewStoreDialog({
           </DialogFooter>
         </div>
       )}
+
 
       {step === 3 && (
         <div className="space-y-5 py-2">
@@ -1556,15 +1636,26 @@ function NewStoreDialog({
             </CardContent>
           </Card>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(3)} disabled={provision.isPending}>
+          <DialogFooter className="gap-2 sm:justify-between items-center">
+            <Button variant="ghost" size="sm" onClick={() => setStep(3)} disabled={provision.isPending}>
               Back
             </Button>
-            <Button variant="ghost" onClick={finishOnboarding}>
-              {stripeStatus?.connected ? "Finish" : "Skip & finish"}
-            </Button>
-            {stripeStatus?.connected && <Button onClick={finishOnboarding}>Finish</Button>}
+            <div className="flex items-center gap-3">
+              {!stripeStatus?.connected && (
+                <button
+                  type="button"
+                  onClick={finishOnboarding}
+                  className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                >
+                  Skip for now
+                </button>
+              )}
+              <Button onClick={finishOnboarding}>
+                {stripeStatus?.connected ? "Finish setup" : "Finish"}
+              </Button>
+            </div>
           </DialogFooter>
+
         </div>
       )}
     </DialogContent>
