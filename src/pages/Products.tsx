@@ -556,8 +556,7 @@ function ProductForm({
       const m = Number(s?.msrp);
       return m > 0 ? m : null;
     }
-    const mp = Number(s?.map_price);
-    return mp > 0 ? mp : null;
+    return null;
   };
   const variantRefMin = (v: any, ref: PriceReference): number | null => {
     const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
