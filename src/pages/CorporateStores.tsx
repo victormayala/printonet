@@ -1428,7 +1428,7 @@ function NewStoreDialog({
       <StepIndicator step={step} total={3} labels={STEP_LABELS} />
 
       {step === 1 && (
-        <div className="space-y-6 py-1">
+        <div className="space-y-5 rounded-lg border bg-muted/40 p-5">
           <StoreFormFields
             values={values}
             setField={setField}
