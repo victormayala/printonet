@@ -765,32 +765,18 @@ function ProductForm({
 
   return (
     <div className="space-y-5">
-      {/* Product Type + Status */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Product Type</Label>
-          <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select product type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="single">Single Product</SelectItem>
-              <SelectItem value="variable">Variable Product</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "published")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Product Type */}
+      <div className="space-y-2">
+        <Label>Product Type</Label>
+        <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select product type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single">Single Product</SelectItem>
+            <SelectItem value="variable">Variable Product</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
