@@ -128,7 +128,6 @@ import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
 import { StoreCustomers } from "@/components/StoreCustomers";
 import { StoreShippingTax } from "@/components/StoreShippingTax";
 import { StoreContentCMS } from "@/components/StoreContentCMS";
-import { StoreThemeTab } from "@/components/StoreThemeTab";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 
 
