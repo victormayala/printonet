@@ -15,10 +15,17 @@ import {
   ArrowUp,
   Code2,
   CheckCircle2,
+  FileText,
+  Home,
+  Image as ImageIcon,
+  Images,
   Loader2,
+  MousePointerClick,
+  Navigation,
   Plus,
   Save,
   Send,
+  Settings as SettingsIcon,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -26,6 +33,9 @@ import type { CorporateStore } from "@/types/corporateStore";
 import { cms } from "@/lib/cmsClient";
 import { BlockEditor, BLOCK_TYPES } from "@/components/cms/BlockEditor";
 import { SiteSettingsEditor, ContentPageEditor } from "@/components/cms/SiteSettingsEditor";
+import { metaFor } from "@/components/cms/blockMeta";
+import { cn } from "@/lib/utils";
+
 
 // Bump in lock-step with storefront's `PLATFORM_CMS_SCHEMA_VERSION`.
 const PLATFORM_CMS_SCHEMA_VERSION = 8;
