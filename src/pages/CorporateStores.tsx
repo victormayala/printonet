@@ -1549,7 +1549,7 @@ function NewStoreDialog({
       )}
 
       {step === 2 && (
-        <div className="space-y-5 py-1">
+        <div className="space-y-5 rounded-lg border bg-muted/40 p-5">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose a theme</h3>
             <p className="text-xs text-muted-foreground">
