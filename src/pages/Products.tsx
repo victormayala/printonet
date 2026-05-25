@@ -855,7 +855,7 @@ function ProductForm({
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {IMAGE_SIDES.map(({ key, label, value, setter }) => {
           const printAreaKey = key === "left" ? "side1" : key === "right" ? "side2" : key;
           return (
