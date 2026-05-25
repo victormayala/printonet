@@ -620,8 +620,8 @@ function SiteSettingsPanel({ store, canPublish }: { store: CorporateStore; canPu
     <div className="space-y-4">
       <PanelHeader
         icon={SettingsIcon}
-        title="Site-wide settings"
-        description="Branding, footer, SEO defaults, and other settings that apply to every page of the storefront."
+        title="Header & Footer"
+        description="Announcement bar, footer columns, social links, contact info, and SEO defaults that apply to every page of the storefront."
       />
       <div className="rounded-lg border bg-card p-4 space-y-4">
         <div className="text-xs text-muted-foreground">
