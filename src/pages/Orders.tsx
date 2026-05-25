@@ -324,7 +324,7 @@ export default function Orders() {
                       {row.customer_email || "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{row.status || "—"}</Badge>
+                      <StatusBadge status={row.status} />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                       <span className="flex items-center gap-1.5">
