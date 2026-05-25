@@ -1336,49 +1336,61 @@ function NewStoreDialog({
     return true;
   };
 
-  const goNextFromStep1 = () => {
+  // Step 1 → Step 2: validate identity, ensure slug, provision the store row.
+  const goNextFromStep1 = async () => {
     if (!validateStep1()) return;
-    setStep(2);
-  };
-
-  const goNextFromStep2 = async () => {
     if (!chosenSlug) {
       toast({ title: "Please confirm a site address", variant: "destructive" });
       return;
     }
-    // If already reserved, just continue.
     if (provisionedStoreId) {
-      setStep(3);
+      setStep(2);
       return;
     }
     try {
       await provision.mutateAsync();
-      setStep(3);
+      setStep(2);
     } catch {
-      // Stay on step 2; inline error block below will show details.
+      // Stay on step 1; inline error block below will show details.
     }
   };
 
-  const goNextFromStep3 = async () => {
+  // Step 2 → Step 3: upload branding assets, persist branding, apply selected template.
+  const goNextFromStep2 = async () => {
     if (!provisionedStoreId) {
-      setStep(4);
-      return;
-    }
-    if (templateSeeded) {
-      setStep(4);
+      setStep(3);
       return;
     }
     setSeedingTemplate(true);
     try {
+      // Upload new branding assets if the user added any.
+      const [newLogoUrl, newFaviconUrl] = await Promise.all([
+        logo ? uploadAsset(user!.id, provisionedStoreId, logo, "logo") : Promise.resolve(null),
+        favicon ? uploadAsset(user!.id, provisionedStoreId, favicon, "favicon") : Promise.resolve(null),
+      ]);
+
+      // Persist branding fields (color, font, logos). Skip if nothing meaningful changed.
+      const updatePayload: Record<string, unknown> = {
+        primary_color: values.primary_color,
+        font_family: values.font_family,
+      };
+      if (newLogoUrl) updatePayload.logo_url = newLogoUrl;
+      if (newFaviconUrl) updatePayload.favicon_url = newFaviconUrl;
+      const { error: updateErr } = await supabase
+        .from("corporate_stores")
+        .update(updatePayload)
+        .eq("id", provisionedStoreId);
+      if (updateErr) throw updateErr;
+
       // Apply selected template via set-template; storefront uses its default otherwise.
-      if (selectedTemplateId) {
+      if (selectedTemplateId && !templateSeeded) {
         await cms(provisionedStoreId, "set-template", { template_id: selectedTemplateId });
+        setTemplateSeeded(true);
       }
-      setTemplateSeeded(true);
-      setStep(4);
+      setStep(3);
     } catch (e) {
       toast({
-        title: "Couldn't apply theme",
+        title: "Couldn't save branding & theme",
         description: e instanceof Error ? e.message : undefined,
         variant: "destructive",
       });
