@@ -565,17 +565,6 @@ function ProductForm({
     if (ref === "wholesale") return variantBaseCost(v);
     return null;
   };
-  const updateVariantSizeMap = (vIdx: number, sIdx: number, value: string) => {
-    const num = value === "" ? null : Number(value);
-    setVariants((prev) =>
-      prev.map((v, i) => {
-        if (i !== vIdx) return v;
-        const sizes = [...(v.sizes || [])];
-        sizes[sIdx] = { ...sizes[sIdx], map_price: num === null || Number.isNaN(num) ? null : num };
-        return { ...v, sizes };
-      })
-    );
-  };
 
   const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee", value: string) => {
     setVariants((prev) =>
