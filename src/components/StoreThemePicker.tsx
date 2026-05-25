@@ -117,7 +117,7 @@ export function StoreThemePicker({
                 </div>
                 {t.demo_url && (
                   <a
-                    href={t.demo_url}
+                    href={t.demo_url.replace(/\/placeholder(\/|$|\?|#)/, "/demo$1")}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
