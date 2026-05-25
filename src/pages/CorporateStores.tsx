@@ -1378,6 +1378,7 @@ function NewStoreDialog({
             favicon={favicon}
             setFavicon={setFavicon}
             hideCustomDomain
+            compact
           />
           <DialogFooter>
             <Button onClick={goNextFromStep1}>Continue</Button>
