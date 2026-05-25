@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { UserNav } from "@/components/UserNav";
+import { Outlet } from "react-router-dom";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </header>
           <main className="flex-1 overflow-auto min-w-0">
             <div className="max-w-[1280px] mx-auto w-full min-w-0">
-              {children}
+              {children ?? <Outlet />}
             </div>
           </main>
         </div>
