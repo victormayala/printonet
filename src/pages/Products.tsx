@@ -1083,12 +1083,30 @@ function ProductForm({
                             <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
                           </div>
                           <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                              <ToggleGroup
+                                type="single"
+                                size="sm"
+                                value={priceReference}
+                                onValueChange={(v) => v && setPriceReference(v as PriceReference)}
+                                className="h-6"
+                              >
+                                <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
+                                <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
+                                <ToggleGroupItem value="map" className="h-6 px-2 text-[10px]">MAP</ToggleGroupItem>
+                              </ToggleGroup>
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-[10px]">Base cost</Label>
-                                <Input type="text" value={`$${baseCostNum.toFixed(2)}`} readOnly className="h-8 mt-1 bg-muted text-xs" />
+                                <Label className="text-[10px]">Base {PRICE_REF_LABEL[priceReference].toLowerCase()}</Label>
+                                {(() => {
+                                  const ref = variantRefMin(selectedVariant, priceReference);
+                                  const display = ref !== null ? `$${ref.toFixed(2)}` : "—";
+                                  return <Input type="text" value={display} readOnly className="h-8 mt-1 bg-muted text-xs" />;
+                                })()}
                               </div>
+
                               <div>
                                 <Label className="text-[10px]">Profit margin ($)</Label>
                                 <Input
