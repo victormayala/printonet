@@ -3853,7 +3853,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                   <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     {/* Category filter */}
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
-                      <SelectTrigger className="w-[140px] h-9 text-xs gap-2">
+                      <SelectTrigger className="w-[160px] h-9 text-xs gap-2 whitespace-nowrap">
                         <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
