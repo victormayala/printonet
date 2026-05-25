@@ -652,6 +652,7 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
   const [newSlug, setNewSlug] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -659,6 +660,10 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
       const res = await cms<{ pages: ContentPage[] }>(store.id, "list-content-pages");
       setPages(res.pages);
       setDrafts(Object.fromEntries(res.pages.map((p) => [p.id, p.draft])));
+      setSelectedId((prev) => {
+        if (prev && res.pages.some((p) => p.id === prev)) return prev;
+        return res.pages[0]?.id ?? null;
+      });
     } catch (e: any) {
       toast({ title: "Could not load pages", description: e.message, variant: "destructive" });
     } finally {
@@ -706,6 +711,7 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
     setBusy(id);
     try {
       await cms(store.id, "delete-content-page", { id });
+      if (selectedId === id) setSelectedId(null);
       await load();
     } catch (e: any) {
       toast({ title: "Delete failed", description: e.message, variant: "destructive" });
@@ -718,13 +724,18 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
     if (!newSlug.trim()) return;
     setBusy("__new");
     try {
+      const before = new Set((pages ?? []).map((p) => p.id));
       await cms(store.id, "upsert-content-page", {
         slug: newSlug.trim(),
         enabled: true,
         draft: { title: newSlug.trim(), blocks: [] },
       });
       setNewSlug("");
-      await load();
+      const res = await cms<{ pages: ContentPage[] }>(store.id, "list-content-pages");
+      setPages(res.pages);
+      setDrafts(Object.fromEntries(res.pages.map((p) => [p.id, p.draft])));
+      const created = res.pages.find((p) => !before.has(p.id));
+      if (created) setSelectedId(created.id);
     } catch (e: any) {
       toast({ title: "Create failed", description: e.message, variant: "destructive" });
     } finally {
@@ -740,81 +751,202 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
     );
   }
 
+  const selected = pages?.find((p) => p.id === selectedId) ?? null;
+  const selectedDraft = selected ? drafts[selected.id] ?? selected.draft : null;
+  const draftDirty =
+    !!selected && JSON.stringify(selectedDraft ?? {}) !== JSON.stringify(selected.draft ?? {});
+
   return (
     <div className="space-y-4">
-      <div className="flex items-end gap-2 rounded-md border p-4 bg-muted/30">
-        <div className="space-y-1 flex-1">
-          <Label className="text-xs">New page slug</Label>
-          <Input
-            value={newSlug}
-            onChange={(e) => setNewSlug(e.target.value)}
-            placeholder="about"
-          />
+      <PanelHeader
+        icon={FileText}
+        title="Content pages"
+        description="Standalone pages like About, FAQ, or Terms — each lives at its own URL on the storefront."
+      />
+
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3 bg-card">
+        <div className="space-y-1 flex-1 min-w-[200px]">
+          <Label className="text-xs">New page URL</Label>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground">/</span>
+            <Input
+              value={newSlug}
+              onChange={(e) => setNewSlug(e.target.value)}
+              placeholder="about"
+              className="h-9"
+            />
+          </div>
         </div>
-        <Button onClick={create} disabled={busy === "__new" || !newSlug.trim()}>
-          <Plus className="h-4 w-4" /> Create page
+        <Button onClick={create} disabled={busy === "__new" || !newSlug.trim()} size="sm">
+          {busy === "__new" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Create page
         </Button>
       </div>
 
-      {pages?.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">No pages yet.</p>
-      )}
+      {pages?.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-16 text-center">
+          <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm font-medium">No content pages yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Enter a URL slug above (like “about”) to create your first page.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Pages ({pages?.length ?? 0})
+              </span>
+            </div>
+            <div className="p-2 space-y-1 max-h-[640px] overflow-auto">
+              {pages?.map((p) => {
+                const isSelected = p.id === selectedId;
+                const isDirty =
+                  JSON.stringify(drafts[p.id] ?? {}) !== JSON.stringify(p.draft ?? {});
+                const title = (drafts[p.id]?.title ?? p.draft?.title ?? p.slug) as string;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedId(p.id)}
+                    className={cn(
+                      "flex items-start gap-2 rounded-md border px-2.5 py-2 cursor-pointer transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-transparent hover:bg-muted/60",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded",
+                        isSelected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium truncate">{title}</span>
+                        {!p.enabled && (
+                          <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                            Hidden
+                          </Badge>
+                        )}
+                        {isDirty && (
+                          <span
+                            className="h-1.5 w-1.5 rounded-full bg-amber-500"
+                            title="Unsaved changes"
+                          />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate font-mono">/{p.slug}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-      {pages?.map((p) => (
-        <Card key={p.id}>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <Badge variant="secondary" className="font-mono">/{p.slug}</Badge>
-              {p.published_at ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Published
-                </Badge>
-              ) : (
-                <Badge variant="outline">Draft only</Badge>
-              )}
-            </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => remove(p.id)}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={p.enabled}
-                onCheckedChange={(v) =>
-                  setPages((ps) => ps?.map((x) => (x.id === p.id ? { ...x, enabled: v } : x)) ?? null)
-                }
-              />
-              <Label className="text-sm">Enabled</Label>
-            </div>
-            <ContentPageEditor
-              storeId={store.id}
-              data={drafts[p.id] ?? p.draft}
-              onChange={(v) => setDrafts((d) => ({ ...d, [p.id]: v }))}
-            />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => save(p)} disabled={busy === p.id}>
-                <Save className="h-4 w-4" /> Save draft
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => publish(p.id)}
-                disabled={!canPublish || busy === p.id}
-              >
-                <Send className="h-4 w-4" /> Publish
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+          <div className="rounded-lg border bg-card min-h-[400px]">
+            {!selected ? (
+              <div className="h-full flex items-center justify-center py-20 text-center px-6">
+                <div>
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm font-medium">Select a page to edit</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-3 border-b p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold">
+                        Editing: {(selectedDraft?.title ?? selected.slug) as string}
+                      </h4>
+                      {selected.published_at ? (
+                        <Badge variant="default" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Published
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Draft only</Badge>
+                      )}
+                      {draftDirty && <Badge variant="secondary">Unsaved changes</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">/{selected.slug}</p>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => remove(selected.id)}
+                    className="text-destructive hover:text-destructive"
+                    title="Delete page"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={selected.enabled}
+                      onCheckedChange={(v) =>
+                        setPages(
+                          (ps) =>
+                            ps?.map((x) => (x.id === selected.id ? { ...x, enabled: v } : x)) ??
+                            null,
+                        )
+                      }
+                    />
+                    <Label className="text-sm">Visible on storefront</Label>
+                  </div>
+                  <ContentPageEditor
+                    storeId={store.id}
+                    data={selectedDraft}
+                    onChange={(v) => setDrafts((d) => ({ ...d, [selected.id]: v }))}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-2 border-t bg-muted/30 px-4 py-3">
+                  <p className="text-xs text-muted-foreground">
+                    {selected.published_at
+                      ? `Last published ${new Date(selected.published_at).toLocaleString()}`
+                      : "Not yet published"}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => save(selected)}
+                      disabled={busy === selected.id || !draftDirty}
+                    >
+                      {busy === selected.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save draft
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => publish(selected.id)}
+                      disabled={!canPublish || busy === selected.id}
+                    >
+                      <Send className="h-4 w-4" /> Publish
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function AssetsPanel({ store }: { store: CorporateStore }) {
   const [busy, setBusy] = useState(false);
