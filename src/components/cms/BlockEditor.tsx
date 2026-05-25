@@ -1,5 +1,5 @@
 import { BLOCK_TYPES, type BlockType } from "@/lib/cms.types";
-import { TextField, TextareaField, AssetField, SelectField, ArrayField } from "./fields";
+import { TextField, TextareaField, AssetField, SelectField, ArrayField, ColorField } from "./fields";
 
 type Props<T = any> = {
   storeId: string;
