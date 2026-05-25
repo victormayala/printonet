@@ -617,26 +617,34 @@ function SiteSettingsPanel({ store, canPublish }: { store: CorporateStore; canPu
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-muted-foreground">
-        Last published:{" "}
-        {settings?.published_at ? new Date(settings.published_at).toLocaleString() : "never"}
+      <PanelHeader
+        icon={SettingsIcon}
+        title="Site-wide settings"
+        description="Branding, footer, SEO defaults, and other settings that apply to every page of the storefront."
+      />
+      <div className="rounded-lg border bg-card p-4 space-y-4">
+        <div className="text-xs text-muted-foreground">
+          Last published:{" "}
+          {settings?.published_at ? new Date(settings.published_at).toLocaleString() : "never"}
+        </div>
+        <SiteSettingsEditor storeId={store.id} data={draft} onChange={setDraft} />
       </div>
-      <SiteSettingsEditor storeId={store.id} data={draft} onChange={setDraft} />
       <div className="flex gap-2">
-        <Button onClick={save} disabled={busy !== null}>
+        <Button variant="outline" onClick={save} disabled={busy !== null}>
           {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save draft
         </Button>
-        <Button variant="default" onClick={publish} disabled={!canPublish || busy !== null}>
+        <Button onClick={publish} disabled={!canPublish || busy !== null}>
           <Send className="h-4 w-4" /> Publish
         </Button>
-        <Button variant="outline" onClick={discard} disabled={busy !== null}>
+        <Button variant="ghost" onClick={discard} disabled={busy !== null}>
           Discard draft
         </Button>
       </div>
     </div>
   );
 }
+
 
 function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPublish: boolean }) {
   const [pages, setPages] = useState<ContentPage[] | null>(null);
