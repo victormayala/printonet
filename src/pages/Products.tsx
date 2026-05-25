@@ -1081,7 +1081,7 @@ function ProductForm({
                               >
                                 <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
                                 <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
-                                <ToggleGroupItem value="map" className="h-6 px-2 text-[10px]">MAP</ToggleGroupItem>
+                                
                               </ToggleGroup>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
@@ -1184,19 +1184,11 @@ function ProductForm({
                                             className="h-7 text-xs"
                                             placeholder="SKU"
                                           />
-                                          {showRef && (priceReference === "map" ? (
-                                            <Input
-                                              type="number" step="0.01" min="0"
-                                              value={s.map_price !== undefined && s.map_price !== null && s.map_price !== "" ? Number(Number(s.map_price).toFixed(2)) : ""}
-                                              onChange={(e) => updateVariantSizeMap(selectedVariantIdx, sIdx, e.target.value)}
-                                              className="h-7 text-xs text-right"
-                                              placeholder="—"
-                                            />
-                                          ) : (
+                                          {showRef && (
                                             <span className="text-xs text-right text-muted-foreground">
                                               {refVal !== null ? `$${refVal.toFixed(2)}` : "—"}
                                             </span>
-                                          ))}
+                                          )}
                                           <Input
                                             type="number" step="0.01" min="0"
                                             value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
