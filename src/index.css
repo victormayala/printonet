@@ -4,9 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Reserve scrollbar space and prevent Radix popovers from shifting the page */
+/* Keep scrollbar space stable so Radix dropdown scroll-lock can't shift the page */
 html {
   scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 /* Override react-remove-scroll inline styles applied by Radix Select/Dialog/Popover */
 body {
