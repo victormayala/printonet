@@ -1242,9 +1242,12 @@ function NewStoreDialog({
   }, [slugDraft, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-  // Step 2 → step 3: insert the corporate_stores row directly. The linked
-  // Lovable storefront serves it via platform-rpc by tenant_slug — no
-  // WordPress provisioning is performed.
+  // Step 1 → step 2: insert a placeholder corporate_stores row in
+  // 'provisioning' status with a non-claimable temp slug. The real
+  // tenant_slug (the public URL) is NOT reserved until the user explicitly
+  // publishes from step 3. This lets the theme picker scope its requests
+  // to a real storeId while keeping the chosen URL available to others
+  // until publish time.
   const provision = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not signed in");
@@ -1261,6 +1264,8 @@ function NewStoreDialog({
         favicon ? uploadAsset(user.id, tempId, favicon, "favicon") : Promise.resolve(null),
       ]);
 
+      const placeholderSlug = `__tmp_${tempId.replace(/-/g, "").slice(0, 16)}`;
+
       const { data, error } = await supabase
         .from("corporate_stores")
         .insert({
@@ -1273,8 +1278,8 @@ function NewStoreDialog({
           store_type: values.store_type,
           logo_url,
           favicon_url,
-          tenant_slug: finalSlug,
-          status: "active",
+          tenant_slug: placeholderSlug,
+          status: "provisioning",
         })
         .select("id")
         .single();
@@ -1286,6 +1291,38 @@ function NewStoreDialog({
     },
     onError: (e: Error) => {
       notify.error("Could not start setup", { description: e.message });
+    },
+  });
+
+  // Step 3: actually publish the store — re-checks the chosen URL is still
+  // available, assigns it as the real tenant_slug, and flips status to active.
+  const publishStore = useMutation({
+    mutationFn: async () => {
+      if (!provisionedStoreId) throw new Error("Store not ready yet");
+      if (!chosenSlug) throw new Error("Missing site address");
+
+      // Re-check availability at publish time to handle races.
+      const { data: existing, error: checkErr } = await supabase
+        .from("corporate_stores")
+        .select("id,tenant_slug")
+        .eq("tenant_slug", chosenSlug)
+        .neq("id", provisionedStoreId)
+        .maybeSingle();
+      if (checkErr) throw checkErr;
+      if (existing) {
+        throw new Error(
+          `The address "${chosenSlug}" was just claimed by another store. Go back to step 1 and pick a different one.`,
+        );
+      }
+
+      const { error } = await supabase
+        .from("corporate_stores")
+        .update({ tenant_slug: chosenSlug, status: "active" })
+        .eq("id", provisionedStoreId);
+      if (error) throw error;
+    },
+    onError: (e: Error) => {
+      notify.error("Could not publish store", { description: e.message });
     },
   });
 
@@ -1634,21 +1671,40 @@ function NewStoreDialog({
           </Card>
 
           <DialogFooter className="gap-2 sm:justify-between items-center">
-            <Button variant="ghost" size="sm" onClick={() => setStep(2)} disabled={provision.isPending}>
+            <Button variant="ghost" size="sm" onClick={() => setStep(2)} disabled={provision.isPending || publishStore.isPending}>
               Back
             </Button>
             <div className="flex items-center gap-3">
               {!stripeStatus?.connected && (
-                <button
-                  type="button"
-                  onClick={finishOnboarding}
-                  className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await publishStore.mutateAsync();
+                      finishOnboarding();
+                    } catch {
+                      /* handled in onError */
+                    }
+                  }}
+                  disabled={publishStore.isPending || !provisionedStoreId}
                 >
-                  Skip for now
-                </button>
+                  {publishStore.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Skip and Publish Store
+                </Button>
               )}
-              <Button onClick={finishOnboarding}>
-                {stripeStatus?.connected ? "Finish setup" : "Finish"}
+              <Button
+                onClick={async () => {
+                  try {
+                    await publishStore.mutateAsync();
+                    finishOnboarding();
+                  } catch {
+                    /* handled in onError */
+                  }
+                }}
+                disabled={publishStore.isPending || !provisionedStoreId}
+              >
+                {publishStore.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {stripeStatus?.connected ? "Publish store" : "Finish"}
               </Button>
             </div>
           </DialogFooter>
