@@ -1100,7 +1100,7 @@ function NewStoreDialog({
 }) {
   const { user } = useAuth();
   const isResume = !!resumeStore;
-  const [step, setStep] = useState(isResume ? 3 : 1);
+  const [step, setStep] = useState(isResume ? 2 : 1);
   const [values, setValues] = useState<FormValues>({
     name: resumeStore?.name ?? "",
     contact_email: resumeStore?.contact_email ?? "",
