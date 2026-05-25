@@ -1521,6 +1521,25 @@ function NewStoreDialog({
 
       {step === 2 && (
         <div className="space-y-5 rounded-lg border bg-sky-50/60 p-5">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Branding (optional)</h3>
+              <p className="text-xs text-muted-foreground">
+                Logo, color, and font — you can also set this later.
+              </p>
+            </div>
+            <StoreFormFields
+              values={values}
+              setField={setField}
+              errors={errors}
+              logo={logo}
+              setLogo={setLogo}
+              favicon={favicon}
+              setFavicon={setFavicon}
+              section="branding"
+            />
+          </div>
+
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose a theme</h3>
             <p className="text-xs text-muted-foreground">
@@ -1538,35 +1557,6 @@ function NewStoreDialog({
               </div>
             )}
           </div>
-
-          <Collapsible defaultOpen={isResume}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="group flex w-full items-center justify-between rounded-md border bg-sky-50/60 px-4 py-3 text-left text-sm transition-colors hover:bg-sky-100/60"
-              >
-                <div>
-                  <div className="font-medium">Branding (optional)</div>
-                  <div className="text-xs text-muted-foreground">
-                    Logo, color, and font — you can also set this later.
-                  </div>
-                </div>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-5">
-              <StoreFormFields
-                values={values}
-                setField={setField}
-                errors={errors}
-                logo={logo}
-                setLogo={setLogo}
-                favicon={favicon}
-                setFavicon={setFavicon}
-                section="branding"
-              />
-            </CollapsibleContent>
-          </Collapsible>
 
           <DialogFooter className="gap-2">
             {!isResume && (
