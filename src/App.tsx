@@ -66,10 +66,10 @@ const isPotentialStoreHost =
   !currentHost.endsWith(".lovable.app") &&
   !currentHost.endsWith(".lovableproject.com");
 
-function DashboardRoute({ children }: { children: React.ReactNode }) {
+function DashboardRoute() {
   return (
     <ProtectedRoute>
-      <DashboardLayout>{children}</DashboardLayout>
+      <DashboardLayout />
     </ProtectedRoute>
   );
 }
@@ -84,7 +84,21 @@ const App = () => (
           <Routes>
             {/* Redirect root to auth */}
             <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <DashboardRoute><Dashboard /></DashboardRoute>} />
+            <Route element={<DashboardRoute />}>
+              <Route path="/dashboard" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Dashboard />} />
+              <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Products initialTab="products" />} />
+              <Route path="/storefront" element={<Navigate to="/corporate-stores?tab=shopify" replace />} />
+              <Route path="/corporate-stores" element={<CorporateStores />} />
+              <Route path="/corporate-stores/:id" element={<CorporateStoreDetails />} />
+              <Route path="/suppliers" element={<Products initialTab="suppliers" />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/customizer" element={<Navigate to="/corporate-stores" replace />} />
+              <Route path="/customizer/brand" element={<Navigate to="/corporate-stores" replace />} />
+              <Route path="/customizer/developers" element={<Navigate to="/corporate-stores" replace />} />
+              <Route path="/brand-settings" element={<Navigate to="/corporate-stores" replace />} />
+              <Route path="/developers" element={<Navigate to="/corporate-stores" replace />} />
+              <Route path="/profile" element={<ProfileSettings />} />
+            </Route>
 
             {/* Auth */}
             <Route path="/auth" element={<Auth />} />
@@ -105,18 +119,6 @@ const App = () => (
             <Route path="/layers-preview" element={<LayersPreview />} />
 
             {/* Dashboard */}
-            <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <DashboardRoute><Products initialTab="products" /></DashboardRoute>} />
-            <Route path="/storefront" element={<Navigate to="/corporate-stores?tab=shopify" replace />} />
-            <Route path="/corporate-stores" element={<DashboardRoute><CorporateStores /></DashboardRoute>} />
-            <Route path="/corporate-stores/:id" element={<DashboardRoute><CorporateStoreDetails /></DashboardRoute>} />
-            <Route path="/suppliers" element={<DashboardRoute><Products initialTab="suppliers" /></DashboardRoute>} />
-            <Route path="/orders" element={<DashboardRoute><Orders /></DashboardRoute>} />
-            <Route path="/customizer" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/customizer/brand" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/customizer/developers" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/brand-settings" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/developers" element={<Navigate to="/corporate-stores" replace />} />
-            <Route path="/profile" element={<DashboardRoute><ProfileSettings /></DashboardRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/billing" element={<Navigate to="/profile?tab=billing" replace />} />
             <Route path="/billing/return" element={<BillingReturn />} />
