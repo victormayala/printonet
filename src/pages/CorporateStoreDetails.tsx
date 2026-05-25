@@ -574,11 +574,7 @@ export default function CorporateStoreDetails() {
           <StoreCustomizableProducts store={store} />
         </TabsContent>
 
-        <TabsContent forceMount value="theme" className="mt-0 data-[state=inactive]:hidden">
-          <StoreThemeTab store={store} />
-        </TabsContent>
-
-        <TabsContent forceMount value="customizer" className="mt-0 data-[state=inactive]:hidden">
+        <TabsContent forceMount value="branding" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomizerSettings store={store} />
         </TabsContent>
 
