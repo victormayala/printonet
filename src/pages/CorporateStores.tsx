@@ -1339,6 +1339,7 @@ function NewStoreDialog({
           logo_url,
           favicon_url,
           tenant_slug: placeholderSlug,
+          requested_slug: finalSlug,
           status: "provisioning",
         })
         .select("id")
