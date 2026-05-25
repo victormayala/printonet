@@ -392,7 +392,7 @@ export default function Orders() {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Status:</span>{" "}
-                      <Badge variant="secondary" className="text-[10px]">{selectedOrder.status || "—"}</Badge>
+                      <StatusBadge status={selectedOrder.status} className="text-[10px]" />
                     </div>
                     {selectedOrder.application_fee_amount != null && (
                       <div className="col-span-2">
