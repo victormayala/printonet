@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead,
@@ -323,7 +324,7 @@ export default function Orders() {
                       {row.customer_email || "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{row.status || "—"}</Badge>
+                      <StatusBadge status={row.status} />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                       <span className="flex items-center gap-1.5">
@@ -391,7 +392,7 @@ export default function Orders() {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Status:</span>{" "}
-                      <Badge variant="secondary" className="text-[10px]">{selectedOrder.status || "—"}</Badge>
+                      <StatusBadge status={selectedOrder.status} className="text-[10px]" />
                     </div>
                     {selectedOrder.application_fee_amount != null && (
                       <div className="col-span-2">
@@ -472,9 +473,7 @@ export default function Orders() {
                               {(sess.product_data as { name?: string } | null)?.name || "Customizer session"}
                             </div>
                             <div className="text-xs text-muted-foreground font-mono">{sid}</div>
-                            <Badge variant="outline" className="mt-1 text-[10px]">
-                              {sess.status}
-                            </Badge>
+                            <StatusBadge status={sess.status} className="mt-1 text-[10px]" />
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Button variant="outline" size="sm" asChild>
