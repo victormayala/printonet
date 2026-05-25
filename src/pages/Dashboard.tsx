@@ -65,15 +65,21 @@ function KpiCard({
   value,
   hint,
   accent,
+  tint,
 }: {
   icon: React.ElementType;
   label: string;
   value: string;
   hint?: string;
   accent?: string;
+  tint?: string;
 }) {
   return (
-    <Card className="relative overflow-hidden">
+    <Card
+      className={`relative overflow-hidden transition-shadow hover:shadow-md ${
+        tint ?? ""
+      }`}
+    >
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
