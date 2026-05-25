@@ -43,10 +43,18 @@ import AdminInvites from "./pages/admin/AdminInvites";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      // Show cached data instantly on every navigation; refetch silently
+      // in the background instead of flashing a full-page spinner.
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
       staleTime: 5 * 60 * 1000,
+      // Keep query data in memory for the whole session so revisiting
+      // a page renders from cache with no loading state.
+      gcTime: Infinity,
+      // When a query key changes (e.g. switching store ids), keep the
+      // previously rendered data on screen while the new request runs.
+      placeholderData: (previousData: unknown) => previousData,
     },
   },
 });
