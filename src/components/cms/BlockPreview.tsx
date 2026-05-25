@@ -3,11 +3,42 @@
  * storefront — meant to give the editor an at-a-glance idea of layout and
  * content as they edit drafts.
  */
+import { createContext, useContext } from "react";
 import { ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function Img({ src, alt, className }: { src?: string; alt?: string; className?: string }) {
-  if (!src) {
+const BaseUrlContext = createContext<string | undefined>(undefined);
+
+
+/**
+ * Resolves possibly-relative image URLs (like "/defaults/banner-hero.jpg")
+ * against the storefront origin so they load from the dashboard.
+ */
+function resolveUrl(src: string | undefined, baseUrl?: string): string | undefined {
+  if (!src) return undefined;
+  const trimmed = src.trim();
+  if (!trimmed) return undefined;
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
+  if (!baseUrl) return trimmed; // best-effort
+  try {
+    return new URL(trimmed, baseUrl.replace(/\/+$/, "") + "/").toString();
+  } catch {
+    return trimmed;
+  }
+}
+
+function Img({
+  src,
+  alt,
+  className,
+}: {
+  src?: string;
+  alt?: string;
+  className?: string;
+}) {
+  const baseUrl = useContext(BaseUrlContext);
+  const resolved = resolveUrl(src, baseUrl);
+  if (!resolved) {
     return (
       <div
         className={cn(
@@ -19,8 +50,19 @@ function Img({ src, alt, className }: { src?: string; alt?: string; className?: 
       </div>
     );
   }
-  return <img src={src} alt={alt ?? ""} className={cn("object-cover", className)} />;
+  return (
+    <img
+      src={resolved}
+      alt={alt ?? ""}
+      className={cn("object-cover", className)}
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+      }}
+    />
+  );
 }
+
+
 
 function FauxBtn({ label, variant = "primary" }: { label?: string; variant?: "primary" | "ghost" }) {
   if (!label) return null;
@@ -111,8 +153,9 @@ function TestimonialsPreview({ d }: { d: any }) {
             <p className="text-[10px] italic line-clamp-3">"{it?.quote || "Great product!"}"</p>
             <div className="flex items-center gap-1.5">
               <div className="h-4 w-4 rounded-full bg-muted overflow-hidden">
-                {it?.avatar_url && <img src={it.avatar_url} className="h-full w-full object-cover" alt="" />}
+                {it?.avatar_url && <Img src={it.avatar_url} className="h-full w-full" />}
               </div>
+
               <div>
                 <p className="text-[9px] font-medium">{it?.author || "Author"}</p>
                 {it?.role && <p className="text-[8px] text-muted-foreground">{it.role}</p>}
@@ -172,8 +215,9 @@ function CategoryBentoPreview({ d }: { d: any }) {
               )}
             >
               {it?.image_url && (
-                <img src={it.image_url} className="absolute inset-0 h-full w-full object-cover" alt="" />
+                <Img src={it.image_url} className="absolute inset-0 h-full w-full" />
               )}
+
               {it?.label && (
                 <span className="relative text-[9px] font-medium text-background bg-foreground/60 px-1 rounded">
                   {it.label}
@@ -227,7 +271,7 @@ function BenefitsGridPreview({ d }: { d: any }) {
   );
 }
 
-export function BlockPreview({ type, data }: { type: string; data: any }) {
+function BlockPreviewInner({ type, data }: { type: string; data: any }) {
   switch (type) {
     case "hero":
       return <HeroPreview d={data} />;
@@ -259,3 +303,20 @@ export function BlockPreview({ type, data }: { type: string; data: any }) {
       );
   }
 }
+
+export function BlockPreview({
+  type,
+  data,
+  baseUrl,
+}: {
+  type: string;
+  data: any;
+  baseUrl?: string;
+}) {
+  return (
+    <BaseUrlContext.Provider value={baseUrl}>
+      <BlockPreviewInner type={type} data={data} />
+    </BaseUrlContext.Provider>
+  );
+}
+

@@ -465,7 +465,16 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
                       Schematic — actual storefront styling may differ
                     </span>
                   </div>
-                  <BlockPreview type={selected.block_type} data={selectedDraft} />
+                  <BlockPreview
+                    type={selected.block_type}
+                    data={selectedDraft}
+                    baseUrl={
+                      store.custom_domain
+                        ? `https://${store.custom_domain}`
+                        : `https://stores.printonet.com/${store.tenant_slug}`
+                    }
+                  />
+
                 </div>
 
                 {/* Editor body */}
