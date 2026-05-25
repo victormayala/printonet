@@ -3107,7 +3107,7 @@ function VariantManagerDialog({
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
   };
 
-  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee", value: number) => {
+  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee", value: number) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -3334,7 +3334,7 @@ function VariantManagerDialog({
                         {DECORATION_METHODS.filter((m) =>
                           ((product.decoration_methods as DecorationMethod[] | null | undefined) ?? []).includes(m.value)
                         ).flatMap((m) => {
-                          const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee"; label: string }[] = [
+                          const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee"; label: string }[] = [
                             { key: m.feeKey, label: `${m.label} fee ($)` },
                           ];
                           if (m.value === "embroidery") {
