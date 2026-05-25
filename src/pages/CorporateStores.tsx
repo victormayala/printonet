@@ -1226,6 +1226,30 @@ function NewStoreDialog({
     }
   };
 
+  // Auto-seed the slug draft from the store name when entering step 2,
+  // and run a debounced availability check as the user edits it.
+  useEffect(() => {
+    if (step !== 2 || isResume) return;
+    if (!slugDraft && values.name) {
+      setSlugDraft(slugify(values.name));
+    }
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (step !== 2) return;
+    const candidate = slugify(slugDraft);
+    if (!candidate || candidate.length < 2) {
+      setSlugCheck(null);
+      setChosenSlug(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      callSlugCheck({ tenant_slug: candidate });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [slugDraft, step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   // Step 2 → step 3: insert the corporate_stores row directly. The linked
   // Lovable storefront serves it via platform-rpc by tenant_slug — no
   // WordPress provisioning is performed.
