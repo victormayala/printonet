@@ -212,7 +212,7 @@ export function DashboardSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map(renderItem)}
-              {isSuperAdmin && renderItem({ title: "Admin", url: "/admin", icon: Shield })}
+              {isSuperAdmin && renderItem({ title: "Admin", url: "/admin", icon: Shield, iconColor: "text-violet-500" })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
