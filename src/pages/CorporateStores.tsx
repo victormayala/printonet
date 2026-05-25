@@ -1636,15 +1636,26 @@ function NewStoreDialog({
             </CardContent>
           </Card>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(3)} disabled={provision.isPending}>
+          <DialogFooter className="gap-2 sm:justify-between items-center">
+            <Button variant="ghost" size="sm" onClick={() => setStep(3)} disabled={provision.isPending}>
               Back
             </Button>
-            <Button variant="ghost" onClick={finishOnboarding}>
-              {stripeStatus?.connected ? "Finish" : "Skip & finish"}
-            </Button>
-            {stripeStatus?.connected && <Button onClick={finishOnboarding}>Finish</Button>}
+            <div className="flex items-center gap-3">
+              {!stripeStatus?.connected && (
+                <button
+                  type="button"
+                  onClick={finishOnboarding}
+                  className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                >
+                  Skip for now
+                </button>
+              )}
+              <Button onClick={finishOnboarding}>
+                {stripeStatus?.connected ? "Finish setup" : "Finish"}
+              </Button>
+            </div>
           </DialogFooter>
+
         </div>
       )}
     </DialogContent>
