@@ -6,8 +6,36 @@
 import { ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function Img({ src, alt, className }: { src?: string; alt?: string; className?: string }) {
-  if (!src) {
+/**
+ * Resolves possibly-relative image URLs (like "/defaults/banner-hero.jpg")
+ * against the storefront origin so they load from the dashboard.
+ */
+function resolveUrl(src: string | undefined, baseUrl?: string): string | undefined {
+  if (!src) return undefined;
+  const trimmed = src.trim();
+  if (!trimmed) return undefined;
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
+  if (!baseUrl) return trimmed; // best-effort
+  try {
+    return new URL(trimmed, baseUrl.replace(/\/+$/, "") + "/").toString();
+  } catch {
+    return trimmed;
+  }
+}
+
+function Img({
+  src,
+  alt,
+  className,
+  baseUrl,
+}: {
+  src?: string;
+  alt?: string;
+  className?: string;
+  baseUrl?: string;
+}) {
+  const resolved = resolveUrl(src, baseUrl);
+  if (!resolved) {
     return (
       <div
         className={cn(
@@ -19,8 +47,18 @@ function Img({ src, alt, className }: { src?: string; alt?: string; className?: 
       </div>
     );
   }
-  return <img src={src} alt={alt ?? ""} className={cn("object-cover", className)} />;
+  return (
+    <img
+      src={resolved}
+      alt={alt ?? ""}
+      className={cn("object-cover", className)}
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+      }}
+    />
+  );
 }
+
 
 function FauxBtn({ label, variant = "primary" }: { label?: string; variant?: "primary" | "ghost" }) {
   if (!label) return null;
