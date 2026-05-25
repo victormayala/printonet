@@ -3,7 +3,7 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { UserNav } from "@/components/UserNav";
 import { Outlet } from "react-router-dom";
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
