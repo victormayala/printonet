@@ -268,36 +268,49 @@ Deno.serve(async (req) => {
       const mediaXml = await soapCall(PS_MEDIA, buildGetMediaContent(productId)).catch(() => '')
       const mediaMap = mediaXml ? parseMediaContent(mediaXml) : new Map()
 
-      // Pricing must be requested with the parent style productId.
-      // Try valid PromoStandards price types and with/without explicit configurationType.
-      const priceMap = new Map<string, number>()
-      let pricingErrorSample = ''
-      let pricingResponseSample = ''
-      const pricingAttempts: Array<{ label: string; priceType: 'Customer' | 'List'; includeConfigurationType: boolean }> = [
-        { label: 'customer-blank', priceType: 'Customer', includeConfigurationType: true },
-        { label: 'list-blank', priceType: 'List', includeConfigurationType: true },
-        { label: 'customer-default', priceType: 'Customer', includeConfigurationType: false },
-        { label: 'list-default', priceType: 'List', includeConfigurationType: false },
-      ]
-      for (const attempt of pricingAttempts) {
-        try {
-          console.log(`Pricing: trying ${attempt.label} for ${productId}`)
-          const pricingXml = await soapCall(PS_PRICING, buildGetPricing(productId, attempt.priceType, attempt.includeConfigurationType))
-          if (!pricingResponseSample) pricingResponseSample = pricingXml.substring(0, 400)
-          const parsedPrices = parsePricing(pricingXml)
-          if (parsedPrices.size > 0) {
-            for (const [k, v] of parsedPrices.entries()) priceMap.set(k, v)
-            console.log(`Pricing: ${attempt.label} returned ${parsedPrices.size} prices for ${productId}`)
-            break
+      // Helper: try a sequence of priceType/configurationType attempts and return
+      // the first non-empty partId→price map.
+      const fetchPriceMap = async (
+        attempts: Array<{ label: string; priceType: 'Customer' | 'List'; includeConfigurationType: boolean }>
+      ): Promise<Map<string, number>> => {
+        const out = new Map<string, number>()
+        for (const attempt of attempts) {
+          try {
+            console.log(`Pricing: trying ${attempt.label} for ${productId}`)
+            const pricingXml = await soapCall(
+              PS_PRICING,
+              buildGetPricing(productId, attempt.priceType, attempt.includeConfigurationType),
+            )
+            const parsed = parsePricing(pricingXml)
+            if (parsed.size > 0) {
+              for (const [k, v] of parsed.entries()) out.set(k, v)
+              console.log(`Pricing: ${attempt.label} returned ${parsed.size} prices for ${productId}`)
+              return out
+            }
+          } catch (e) {
+            console.log(`Pricing error ${attempt.label}:`, (e as Error).message)
           }
-        } catch (e) {
-          if (!pricingErrorSample) pricingErrorSample = `${attempt.label}: ${(e as Error).message}`
         }
+        return out
       }
-      if (pricingErrorSample) console.log('PRICING ERROR sample:', pricingErrorSample)
-      if (pricingResponseSample) console.log('PRICING RESPONSE sample:', pricingResponseSample)
 
-      console.log(`Enriched ${productId}: ${mediaMap.size} media colors, ${priceMap.size} prices, ${product.parts.length} parts`)
+      // Wholesale (Customer) — preferred, with List as a last-resort fallback so
+      // we never end up with a $0 base price.
+      const priceMap = await fetchPriceMap([
+        { label: 'customer-blank', priceType: 'Customer', includeConfigurationType: true },
+        { label: 'customer-default', priceType: 'Customer', includeConfigurationType: false },
+        { label: 'list-blank-fallback', priceType: 'List', includeConfigurationType: true },
+        { label: 'list-default-fallback', priceType: 'List', includeConfigurationType: false },
+      ])
+
+      // MSRP (List) — independent call so the UI can show published/non-wholesale
+      // pricing alongside wholesale cost.
+      const msrpMap = await fetchPriceMap([
+        { label: 'msrp-list-blank', priceType: 'List', includeConfigurationType: true },
+        { label: 'msrp-list-default', priceType: 'List', includeConfigurationType: false },
+      ])
+
+      console.log(`Enriched ${productId}: ${mediaMap.size} media colors, ${priceMap.size} prices, ${msrpMap.size} MSRPs, ${product.parts.length} parts`)
 
       // Build enriched parts
       const parts = product.parts.map(p => {
@@ -307,6 +320,7 @@ Deno.serve(async (req) => {
           color: p.color,
           size: p.size,
           price: priceMap.get(p.partId) || 0,
+          msrp: msrpMap.get(p.partId) || 0,
           frontImage: colorMedia.front,
           backImage: colorMedia.back,
           sideImage: colorMedia.side,
@@ -317,6 +331,7 @@ Deno.serve(async (req) => {
 
       return { ...product, parts }
     }
+
 
     // ============ ACTION: browse ============
 
