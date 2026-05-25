@@ -1056,7 +1056,7 @@ function ProductForm({
                                 />
                               </div>
                               {DECORATION_METHODS.filter((m) => decorationMethods.includes(m.value)).flatMap((m) => {
-                                const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee"; label: string }[] = [
+                                const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee"; label: string }[] = [
                                   { key: m.feeKey, label: `${m.label} fee ($)` },
                                 ];
                                 if (m.value === "embroidery") {
