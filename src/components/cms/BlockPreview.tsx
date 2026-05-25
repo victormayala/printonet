@@ -31,13 +31,12 @@ function Img({
   src,
   alt,
   className,
-  baseUrl,
 }: {
   src?: string;
   alt?: string;
   className?: string;
-  baseUrl?: string;
 }) {
+  const baseUrl = useContext(BaseUrlContext);
   const resolved = resolveUrl(src, baseUrl);
   if (!resolved) {
     return (
@@ -62,6 +61,7 @@ function Img({
     />
   );
 }
+
 
 
 function FauxBtn({ label, variant = "primary" }: { label?: string; variant?: "primary" | "ghost" }) {
