@@ -143,7 +143,7 @@ export function DashboardSidebar() {
                 }
               }}
             >
-              <item.icon className="h-4 w-4 shrink-0" />
+              <item.icon className={`h-4 w-4 shrink-0 ${item.iconColor ?? ""}`} />
               {!collapsed && <span>{item.title}</span>}
             </RouterNavLink>
           </SidebarMenuButton>
