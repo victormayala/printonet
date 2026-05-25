@@ -38,11 +38,16 @@ TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
+>(({ className, forceMount, ...props }, ref) => (
+  // Force-mount all tab panels so inactive tabs preserve their state
+  // (queries, scroll, form input) instead of remounting on every switch.
+  // Radix hides inactive panels via `hidden`, and we add `data-[state=inactive]:hidden`
+  // as a defensive CSS fallback so layout never reserves space for them.
   <TabsPrimitive.Content
     ref={ref}
+    forceMount={forceMount ?? true}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=inactive]:hidden",
       className,
     )}
     {...props}
