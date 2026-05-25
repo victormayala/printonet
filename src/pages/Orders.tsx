@@ -473,9 +473,7 @@ export default function Orders() {
                               {(sess.product_data as { name?: string } | null)?.name || "Customizer session"}
                             </div>
                             <div className="text-xs text-muted-foreground font-mono">{sid}</div>
-                            <Badge variant="outline" className="mt-1 text-[10px]">
-                              {sess.status}
-                            </Badge>
+                            <StatusBadge status={sess.status} className="mt-1 text-[10px]" />
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Button variant="outline" size="sm" asChild>
