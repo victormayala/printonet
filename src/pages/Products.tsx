@@ -2289,7 +2289,10 @@ function SSActivewearImport({ onDone }: { onDone: () => void }) {
             ) : detailStyle ? (
               <div className="space-y-4">
                 {detailStyle.description && (
-                  <p className="text-sm text-muted-foreground">{detailStyle.description}</p>
+                  <div
+                    className="prose prose-sm max-w-none text-sm text-muted-foreground prose-strong:text-foreground prose-headings:text-foreground"
+                    dangerouslySetInnerHTML={{ __html: detailStyle.description }}
+                  />
                 )}
                 <div className="text-sm">
                   <span className="font-medium">{detailStyle.variants?.length || 0}</span> colors available
