@@ -954,7 +954,7 @@ function ProductForm({
               </Button>
               {variants.length > 0 && (
                 <>
-                  <Button type="button" size="sm" variant="ghost" onClick={resetAllPricesToSupplier}>
+                  <Button type="button" size="sm" variant="outline" onClick={resetAllPricesToSupplier}>
                     Reset to supplier
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={applyPricingToAllColors} disabled={!selectedVariant}>
@@ -3227,7 +3227,7 @@ function VariantManagerDialog({
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={resetAllPricesToSupplier} disabled={variants.length === 0}>
+              <Button size="sm" variant="outline" onClick={resetAllPricesToSupplier} disabled={variants.length === 0}>
                 Reset to supplier
               </Button>
               <Button size="sm" variant="outline" onClick={applyPricingToAll} disabled={!selected}>
