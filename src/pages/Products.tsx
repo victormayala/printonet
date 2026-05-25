@@ -1260,14 +1260,19 @@ function ProductForm({
             <Eye className="h-4 w-4 text-muted-foreground" />
             <Label className="text-base">Visibility</Label>
           </div>
-          <div className="rounded-lg border p-4 bg-muted/10 flex-1 flex flex-col justify-center gap-3">
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
-            <div className="space-y-0.5">
-              <Label>Active (visible to customers)</Label>
-              <p className="text-xs text-muted-foreground">
-                When on, the product is published and visible in your storefront. When off, it's saved as a draft and hidden from customers.
-              </p>
+          <div className="rounded-lg border p-4 bg-muted/10 flex-1 flex flex-col justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">Active</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Visible to customers in your storefront.
+                </p>
+              </div>
+              <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
+            <p className="text-[11px] text-muted-foreground">
+              When off, the product is saved as a draft and hidden from customers.
+            </p>
           </div>
         </div>
       </div>
