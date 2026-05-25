@@ -844,6 +844,7 @@ function StoreFormFields({
   onClearExisting,
   hideCustomDomain,
   compact,
+  section = "all",
 }: {
   values: FormValues;
   setField: <K extends keyof FormValues>(k: K, v: FormValues[K]) => void;
@@ -863,6 +864,8 @@ function StoreFormFields({
   hideCustomDomain?: boolean;
   /** When true, hides branding sections behind a collapsible "Branding (optional)" toggle. */
   compact?: boolean;
+  /** Render only one section. Defaults to "all". */
+  section?: "identity" | "branding" | "all";
 }) {
   const [brandingOpen, setBrandingOpen] = useState(false);
 
@@ -941,51 +944,62 @@ function StoreFormFields({
     </>
   );
 
+  if (section === "branding") {
+    return <div className="space-y-6 py-1">{brandingSections}</div>;
+  }
+
+  const identitySection = (
+    <section className="space-y-4">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store details</h3>
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label>Account type</Label>
+          <Select
+            value={values.store_type}
+            onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
+              <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="name">Store name</Label>
+          <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
+          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+        </div>
+        <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
+          <div className="space-y-2">
+            <Label htmlFor="email">Contact email</Label>
+            <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
+            {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
+          </div>
+          {!hideCustomDomain && (
+            <div className="space-y-2">
+              <Label htmlFor="domain">Custom domain (optional)</Label>
+              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
+              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
+  if (section === "identity") {
+    return <div className="space-y-6 py-1">{identitySection}</div>;
+  }
+
   return (
     <div className="space-y-6 py-1">
-      <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store details</h3>
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <Label>Account type</Label>
-            <Select
-              value={values.store_type}
-              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
-                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Store name</Label>
-            <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
-            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-          </div>
-          <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
-            <div className="space-y-2">
-              <Label htmlFor="email">Contact email</Label>
-              <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
-              {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
-            </div>
-            {!hideCustomDomain && (
-              <div className="space-y-2">
-                <Label htmlFor="domain">Custom domain (optional)</Label>
-                <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
-                {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
+      {identitySection}
       {compact ? (
         <Collapsible open={brandingOpen} onOpenChange={setBrandingOpen}>
           <CollapsibleTrigger asChild>
@@ -1086,7 +1100,7 @@ function NewStoreDialog({
 }) {
   const { user } = useAuth();
   const isResume = !!resumeStore;
-  const [step, setStep] = useState(isResume ? 3 : 1);
+  const [step, setStep] = useState(isResume ? 2 : 1);
   const [values, setValues] = useState<FormValues>({
     name: resumeStore?.name ?? "",
     contact_email: resumeStore?.contact_email ?? "",
@@ -1106,6 +1120,7 @@ function NewStoreDialog({
   );
   const [chosenSlug, setChosenSlug] = useState<string | null>(resumeStore?.tenant_slug ?? null);
   const [slugDraft, setSlugDraft] = useState<string>(resumeStore?.tenant_slug ?? "");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState<boolean>(!!resumeStore?.tenant_slug);
   const [showCustomDomain, setShowCustomDomain] = useState<boolean>(!!resumeStore?.custom_domain);
   const [checking, setChecking] = useState(false);
 
@@ -1125,7 +1140,7 @@ function NewStoreDialog({
   const [seedingTemplate, setSeedingTemplate] = useState(false);
   const [templateSeeded, setTemplateSeeded] = useState(false);
 
-  const STEP_LABELS = ["Create Store", "Choose Address", "Choose Theme", "Connect Stripe"];
+  const STEP_LABELS = ["Store & Address", "Theme & Branding", "Connect Stripe"];
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
@@ -1226,17 +1241,19 @@ function NewStoreDialog({
     }
   };
 
-  // Auto-seed the slug draft from the store name when entering step 2,
-  // and run a debounced availability check as the user edits it.
+  // Keep the slug in sync with the store name until the user manually edits it.
   useEffect(() => {
-    if (step !== 2 || isResume) return;
-    if (!slugDraft && values.name) {
+    if (isResume || slugManuallyEdited) return;
+    if (values.name) {
       setSlugDraft(slugify(values.name));
+    } else {
+      setSlugDraft("");
     }
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [values.name, isResume, slugManuallyEdited]);
 
+  // Debounced availability check whenever the slug draft changes (step 1).
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 1 || isResume) return;
     const candidate = slugify(slugDraft);
     if (!candidate || candidate.length < 2) {
       setSlugCheck(null);
@@ -1319,49 +1336,66 @@ function NewStoreDialog({
     return true;
   };
 
-  const goNextFromStep1 = () => {
+  // Step 1 → Step 2: validate identity, ensure slug, provision the store row.
+  const goNextFromStep1 = async () => {
     if (!validateStep1()) return;
-    setStep(2);
-  };
-
-  const goNextFromStep2 = async () => {
     if (!chosenSlug) {
       toast({ title: "Please confirm a site address", variant: "destructive" });
       return;
     }
-    // If already reserved, just continue.
     if (provisionedStoreId) {
-      setStep(3);
+      setStep(2);
       return;
     }
     try {
       await provision.mutateAsync();
-      setStep(3);
+      setStep(2);
     } catch {
-      // Stay on step 2; inline error block below will show details.
+      // Stay on step 1; inline error block below will show details.
     }
   };
 
-  const goNextFromStep3 = async () => {
+  // Step 2 → Step 3: upload branding assets, persist branding, apply selected template.
+  const goNextFromStep2 = async () => {
     if (!provisionedStoreId) {
-      setStep(4);
-      return;
-    }
-    if (templateSeeded) {
-      setStep(4);
+      setStep(3);
       return;
     }
     setSeedingTemplate(true);
     try {
+      // Upload new branding assets if the user added any.
+      const [newLogoUrl, newFaviconUrl] = await Promise.all([
+        logo ? uploadAsset(user!.id, provisionedStoreId, logo, "logo") : Promise.resolve(null),
+        favicon ? uploadAsset(user!.id, provisionedStoreId, favicon, "favicon") : Promise.resolve(null),
+      ]);
+
+      // Persist branding fields (color, font, logos).
+      const updatePayload: {
+        primary_color: string;
+        font_family: string;
+        logo_url?: string;
+        favicon_url?: string;
+      } = {
+        primary_color: values.primary_color,
+        font_family: values.font_family,
+      };
+      if (newLogoUrl) updatePayload.logo_url = newLogoUrl;
+      if (newFaviconUrl) updatePayload.favicon_url = newFaviconUrl;
+      const { error: updateErr } = await supabase
+        .from("corporate_stores")
+        .update(updatePayload)
+        .eq("id", provisionedStoreId);
+      if (updateErr) throw updateErr;
+
       // Apply selected template via set-template; storefront uses its default otherwise.
-      if (selectedTemplateId) {
+      if (selectedTemplateId && !templateSeeded) {
         await cms(provisionedStoreId, "set-template", { template_id: selectedTemplateId });
+        setTemplateSeeded(true);
       }
-      setTemplateSeeded(true);
-      setStep(4);
+      setStep(3);
     } catch (e) {
       toast({
-        title: "Couldn't apply theme",
+        title: "Couldn't save branding & theme",
         description: e instanceof Error ? e.message : undefined,
         variant: "destructive",
       });
@@ -1391,10 +1425,10 @@ function NewStoreDialog({
         </DialogDescription>
       </DialogHeader>
 
-      <StepIndicator step={step} total={4} labels={STEP_LABELS} />
+      <StepIndicator step={step} total={3} labels={STEP_LABELS} />
 
       {step === 1 && (
-        <>
+        <div className="space-y-6 py-1">
           <StoreFormFields
             values={values}
             setField={setField}
@@ -1404,23 +1438,18 @@ function NewStoreDialog({
             favicon={favicon}
             setFavicon={setFavicon}
             hideCustomDomain
-            compact
+            section="identity"
           />
-          <DialogFooter>
-            <Button onClick={goNextFromStep1}>Continue</Button>
-          </DialogFooter>
-        </>
-      )}
 
-      {step === 2 && (
-        <div className="space-y-6 py-1">
+          <Separator />
+
           <div className="space-y-3">
             <div>
               <Label htmlFor="slug" className="text-sm font-medium">
                 Site address
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                This is the public URL where your store will live. Edit it if you'd like.
+                The public URL where your store will live. Edit it if you'd like.
               </p>
             </div>
 
@@ -1431,7 +1460,10 @@ function NewStoreDialog({
               <Input
                 id="slug"
                 value={slugDraft}
-                onChange={(e) => setSlugDraft(e.target.value.toLowerCase())}
+                onChange={(e) => {
+                  setSlugManuallyEdited(true);
+                  setSlugDraft(e.target.value.toLowerCase());
+                }}
                 placeholder="my-store"
                 className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-mono"
               />
@@ -1467,7 +1499,10 @@ function NewStoreDialog({
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs font-mono"
-                            onClick={() => setSlugDraft(s)}
+                            onClick={() => {
+                              setSlugManuallyEdited(true);
+                              setSlugDraft(s);
+                            }}
                           >
                             {s}
                           </Button>
@@ -1524,11 +1559,8 @@ function NewStoreDialog({
             </div>
           )}
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStep(1)} disabled={provision.isPending}>
-              Back
-            </Button>
-            <Button onClick={goNextFromStep2} disabled={!chosenSlug || provision.isPending}>
+          <DialogFooter>
+            <Button onClick={goNextFromStep1} disabled={!chosenSlug || provision.isPending}>
               {provision.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {provision.isError ? "Try again" : "Continue"}
             </Button>
@@ -1536,38 +1568,62 @@ function NewStoreDialog({
         </div>
       )}
 
+      {step === 2 && (
+        <div className="space-y-5 py-1">
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose a theme</h3>
+            <p className="text-xs text-muted-foreground">
+              Pick a starting design — you can change it anytime from store settings.
+            </p>
+            {provisionedStoreId ? (
+              <StoreThemePicker
+                storeId={provisionedStoreId}
+                selectedId={selectedTemplateId}
+                onSelect={setSelectedTemplateId}
+              />
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
+                <Loader2 className="h-4 w-4 animate-spin" /> Preparing store…
+              </div>
+            )}
+          </div>
 
-      {step === 3 && (
-        <div className="space-y-5 py-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Choose a theme</CardTitle>
-              <CardDescription>
-                Pick a starting design for your storefront. You can change it anytime from store settings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {provisionedStoreId ? (
-                <StoreThemePicker
-                  storeId={provisionedStoreId}
-                  selectedId={selectedTemplateId}
-                  onSelect={setSelectedTemplateId}
-                />
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Preparing store…
+          <Collapsible defaultOpen={isResume}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="group flex w-full items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-left text-sm transition-colors hover:bg-muted"
+              >
+                <div>
+                  <div className="font-medium">Branding (optional)</div>
+                  <div className="text-xs text-muted-foreground">
+                    Logo, color, and font — you can also set this later.
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-5">
+              <StoreFormFields
+                values={values}
+                setField={setField}
+                errors={errors}
+                logo={logo}
+                setLogo={setLogo}
+                favicon={favicon}
+                setFavicon={setFavicon}
+                section="branding"
+              />
+            </CollapsibleContent>
+          </Collapsible>
 
           <DialogFooter className="gap-2">
             {!isResume && (
-              <Button variant="outline" onClick={() => setStep(2)} disabled={seedingTemplate}>
+              <Button variant="outline" onClick={() => setStep(1)} disabled={seedingTemplate}>
                 Back
               </Button>
             )}
-            <Button onClick={goNextFromStep3} disabled={seedingTemplate || !provisionedStoreId}>
+            <Button onClick={goNextFromStep2} disabled={seedingTemplate || !provisionedStoreId}>
               {seedingTemplate && <Loader2 className="h-4 w-4 animate-spin" />}
               Continue
             </Button>
@@ -1575,7 +1631,7 @@ function NewStoreDialog({
         </div>
       )}
 
-      {step === 4 && (
+      {step === 3 && (
         <div className="space-y-5 py-2">
           <Card>
             <CardHeader>
@@ -1637,7 +1693,7 @@ function NewStoreDialog({
           </Card>
 
           <DialogFooter className="gap-2 sm:justify-between items-center">
-            <Button variant="ghost" size="sm" onClick={() => setStep(3)} disabled={provision.isPending}>
+            <Button variant="ghost" size="sm" onClick={() => setStep(2)} disabled={provision.isPending}>
               Back
             </Button>
             <div className="flex items-center gap-3">
@@ -1655,7 +1711,6 @@ function NewStoreDialog({
               </Button>
             </div>
           </DialogFooter>
-
         </div>
       )}
     </DialogContent>
