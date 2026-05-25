@@ -545,9 +545,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0 pl-3">
-                        <Badge variant={o.status === "paid" ? "default" : "secondary"}>
-                          {o.status}
-                        </Badge>
+                        <StatusBadge status={o.status} />
                         <div className="text-sm font-semibold tabular-nums">
                           {fmtMoney(o.amount_total ?? 0, o.currency ?? currency)}
                         </div>
