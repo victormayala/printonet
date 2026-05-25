@@ -84,6 +84,7 @@ const profileItem: NavItem = {
   title: "Profile",
   url: "/profile",
   icon: User,
+  iconColor: "text-rose-500",
   matchPaths: ["/profile"],
   subItems: [
     { title: "Profile", to: "/profile", icon: User },
