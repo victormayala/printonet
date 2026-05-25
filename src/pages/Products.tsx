@@ -765,23 +765,23 @@ function ProductForm({
 
   return (
     <div className="space-y-5">
-      {/* Product Type */}
-      <div className="space-y-2">
-        <Label>Product Type</Label>
-        <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select product type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="single">Single Product</SelectItem>
-            <SelectItem value="variable">Variable Product</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Name</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Name</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
+        </div>
+        <div className="space-y-2">
+          <Label>Product Type</Label>
+          <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select product type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="single">Single Product</SelectItem>
+              <SelectItem value="variable">Variable Product</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -855,7 +855,7 @@ function ProductForm({
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {IMAGE_SIDES.map(({ key, label, value, setter }) => {
           const printAreaKey = key === "left" ? "side1" : key === "right" ? "side2" : key;
           return (
