@@ -972,19 +972,19 @@ function StoreFormFields({
         </div>
         <div className="space-y-2">
           <Label htmlFor="name">Store name</Label>
-          <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
+          <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Acme Company Store" />
           {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
         </div>
         <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
           <div className="space-y-2">
             <Label htmlFor="email">Contact email</Label>
-            <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
+            <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="store@acme.com" />
             {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
           </div>
           {!hideCustomDomain && (
             <div className="space-y-2">
               <Label htmlFor="domain">Custom domain (optional)</Label>
-              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
+              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.acme.com" />
               {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
             </div>
           )}
@@ -1428,7 +1428,7 @@ function NewStoreDialog({
       <StepIndicator step={step} total={3} labels={STEP_LABELS} />
 
       {step === 1 && (
-        <div className="space-y-5 rounded-lg border bg-muted/40 p-5">
+        <div className="space-y-5 rounded-lg border bg-amber-50/50 p-5">
           <StoreFormFields
             values={values}
             setField={setField}
@@ -1515,12 +1515,12 @@ function NewStoreDialog({
             )}
           </div>
 
-          <div className="flex items-start gap-3 rounded-md border bg-muted/40 px-4 py-3 text-sm">
+          <div className="flex items-start gap-3 rounded-md border bg-amber-50/50 px-4 py-3 text-sm">
             <Globe className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
             <div>
               <div className="font-medium">Want to use your own domain?</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                You can connect a custom domain like <span className="font-mono">merch.pepsico.com</span> after your store is created — from the store's settings page.
+                You can connect a custom domain like <span className="font-mono">merch.yourcompany.com</span> after your store is created — from the store's settings page.
               </div>
             </div>
           </div>
@@ -1549,7 +1549,7 @@ function NewStoreDialog({
       )}
 
       {step === 2 && (
-        <div className="space-y-5 rounded-lg border bg-muted/40 p-5">
+        <div className="space-y-5 rounded-lg border bg-amber-50/50 p-5">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose a theme</h3>
             <p className="text-xs text-muted-foreground">
@@ -1572,7 +1572,7 @@ function NewStoreDialog({
             <CollapsibleTrigger asChild>
               <button
                 type="button"
-                className="group flex w-full items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-left text-sm transition-colors hover:bg-muted"
+                className="group flex w-full items-center justify-between rounded-md border bg-amber-50/50 px-4 py-3 text-left text-sm transition-colors hover:bg-amber-100/60"
               >
                 <div>
                   <div className="font-medium">Branding (optional)</div>
@@ -1639,7 +1639,7 @@ function NewStoreDialog({
                 </div>
               ) : stripeOnboardingOpened ? (
                 <div className="space-y-3">
-                  <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                  <div className="rounded-md border bg-amber-50/50 p-3 text-sm">
                     Finish onboarding in the new Stripe tab, then click the button below to verify.
                   </div>
                   <div className="flex gap-2">
