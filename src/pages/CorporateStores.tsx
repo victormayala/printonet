@@ -507,7 +507,11 @@ export default function CorporateStores() {
                       // the chosen URL isn't reserved yet.
                       const isUnpublished = s.status === "provisioning";
                       if (isUnpublished) {
-                        const detailColSpan = isSuperAdmin ? 4 : 3;
+                        const displaySlug =
+                          s.requested_slug ??
+                          (s.tenant_slug && !s.tenant_slug.startsWith("pending-")
+                            ? s.tenant_slug
+                            : null);
                         return (
                           <TableRow key={s.id} className="bg-amber-50/40 dark:bg-amber-950/10">
                             <TableCell>
@@ -522,7 +526,7 @@ export default function CorporateStores() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell colSpan={detailColSpan}>
+                            <TableCell colSpan={isSuperAdmin ? 3 : 2}>
                               <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
                                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                                 <span>
@@ -531,6 +535,15 @@ export default function CorporateStores() {
                                   claim it if you don't complete setup.
                                 </span>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {displaySlug ? (
+                                <span className="text-sm font-mono text-muted-foreground inline-flex items-center gap-1">
+                                  stores.printonet.com/{displaySlug}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
