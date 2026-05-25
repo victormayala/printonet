@@ -680,8 +680,10 @@ function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResum
   const [pushOpen, setPushOpen] = useState(false);
   const [busy, setBusy] = useState<null | "pause" | "resume" | "delete">(null);
 
-  const refetch = () =>
+  const refetch = () => {
     queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard", user?.id] });
+  };
 
   const runManage = async (action: "pause" | "resume" | "delete") => {
     setBusy(action);
