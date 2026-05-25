@@ -4121,6 +4121,16 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           </TabsContent>
 
           <TabsContent value="categories">
+            <OnboardingSteps
+              storageKey="categories"
+              title="Organize your storefront with categories"
+              description="Build a category tree that mirrors how customers browse your store."
+              steps={[
+                { title: "Create categories", description: "Add top-level categories and as many sub-categories as you need.", icon: FolderPlus },
+                { title: "Assign products", description: "Tag products with one or more categories or sub-categories.", icon: Tag },
+                { title: "Reflected in your storefront", description: "Your category structure and product assignments sync to your store navigation.", icon: StoreIcon },
+              ]}
+            />
             <CategoriesManager />
           </TabsContent>
           <TabsContent value="shopify">
@@ -4132,6 +4142,17 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
           </TabsContent>
 
           <TabsContent value="suppliers">
+            <OnboardingSteps
+              storageKey="suppliers"
+              title="Import products from a supplier"
+              description="Pull blank products from our integrated suppliers into your catalog in a few clicks."
+              steps={[
+                { title: "Choose a supplier", description: "Pick S&S Activewear or SanMar and browse their live catalog.", icon: Truck },
+                { title: "Select products", description: "Filter by category, search by style, then tick the products you want.", icon: CheckCircle2 },
+                { title: "Import to your catalog", description: "Click Import to copy the selected products with all variants and images.", icon: Download },
+                { title: "Edit & publish", description: "Imported products appear in the Products tab, ready to edit and push to your store.", icon: StoreIcon },
+              ]}
+            />
             <Tabs defaultValue="ssactivewear" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="ssactivewear" className="gap-2"><Truck className="h-4 w-4" /> S&S Activewear</TabsTrigger>
