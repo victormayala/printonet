@@ -13,18 +13,34 @@ html {
    Since html has overflow-y: scroll, the scrollbar is always present, so Radix's
    scrollbar-width compensation must be neutralized on body AND on fixed/sticky elements
    (Radix injects a stylesheet that pads position:fixed/sticky nodes when scroll is locked). */
-body[data-scroll-locked] {
+body[data-scroll-locked][data-scroll-locked] {
   --removed-body-scroll-bar-size: 0px !important;
+  overflow-y: scroll !important;
   margin-right: 0 !important;
   padding-right: 0 !important;
 }
 body[data-scroll-locked] .fixed,
 body[data-scroll-locked] .sticky,
+body[data-scroll-locked] .right-scroll-bar-position,
+body[data-scroll-locked] .width-before-scroll-bar,
 body[data-scroll-locked] [style*="position: fixed"],
 body[data-scroll-locked] [style*="position: sticky"] {
   --removed-body-scroll-bar-size: 0px !important;
   padding-right: 0 !important;
   margin-right: 0 !important;
+}
+
+.right-scroll-bar-position.right-scroll-bar-position {
+  right: 0 !important;
+}
+
+.width-before-scroll-bar.width-before-scroll-bar {
+  margin-right: 0 !important;
+}
+
+.with-scroll-bars-hidden.with-scroll-bars-hidden {
+  overflow-y: scroll !important;
+  padding-right: 0 !important;
 }
 
 @layer base {
