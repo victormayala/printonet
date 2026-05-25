@@ -1413,85 +1413,102 @@ function NewStoreDialog({
       )}
 
       {step === 2 && (
-        <div className="space-y-5 py-2">
-          <div className="rounded-md border p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-medium">Site address</div>
-                <div className="text-xs text-muted-foreground">
-                  We'll generate a URL-friendly slug from your store name.
-                </div>
+        <div className="space-y-6 py-1">
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="slug" className="text-sm font-medium">
+                Site address
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                This is the public URL where your store will live. Edit it if you'd like.
+              </p>
+            </div>
+
+            <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+              <div className="hidden sm:flex items-center px-3 bg-muted/60 text-sm text-muted-foreground font-mono border-r">
+                stores.printonet.com/
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!canCheck}
-                onClick={() => callSlugCheck({ store_name: values.name })}
-              >
-                {checking && <Loader2 className="h-3 w-3 animate-spin" />}
-                Check availability
-              </Button>
+              <Input
+                id="slug"
+                value={slugDraft}
+                onChange={(e) => setSlugDraft(e.target.value.toLowerCase())}
+                placeholder="my-store"
+                className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-mono"
+              />
+              <div className="flex items-center px-3 text-xs text-muted-foreground border-l">
+                {checking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : slugCheck && slugCheck.available && chosenSlug === slugify(slugDraft) ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : slugCheck && !slugCheck.available ? (
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                ) : null}
+              </div>
             </div>
 
             {slugCheck && (
-              <div className="space-y-2">
+              <div className="min-h-[1.25rem]">
                 {slugCheck.available && chosenSlug ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                    <span>
-                      <span className="font-medium">{chosenSlug}</span> is available
-                    </span>
-                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                    <span className="font-medium">{chosenSlug}</span> is available — your store will be at{" "}
+                    <span className="font-mono">stores.printonet.com/{chosenSlug}</span>
+                  </p>
                 ) : (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>
-                        <span className="font-medium">{slugCheck.tenant_slug}</span> is taken
-                      </span>
-                    </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-destructive">
+                      <span className="font-medium">{slugCheck.tenant_slug}</span> is taken. Try one of these:
+                    </p>
                     {slugCheck.suggestions && slugCheck.suggestions.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs text-muted-foreground">Pick a suggestion:</div>
-                        <div className="flex flex-wrap gap-2">
-                          {slugCheck.suggestions.map((s) => {
-                            const selected = chosenSlug === s;
-                            return (
-                              <Button
-                                key={s}
-                                type="button"
-                                size="sm"
-                                variant={selected ? "default" : "outline"}
-                                onClick={() => callSlugCheck({ tenant_slug: s })}
-                              >
-                                {s}
-                              </Button>
-                            );
-                          })}
-                        </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {slugCheck.suggestions.map((s) => (
+                          <Button
+                            key={s}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs font-mono"
+                            onClick={() => setSlugDraft(s)}
+                          >
+                            {s}
+                          </Button>
+                        ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             )}
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="domain">Custom domain (optional)</Label>
-            <Input
-              id="domain"
-              value={values.custom_domain}
-              onChange={(e) => setField("custom_domain", e.target.value)}
-              placeholder="merch.pepsico.com"
-            />
-            <p className="text-xs text-muted-foreground">
-              Bring your own domain, or skip and use the site address above. To activate it, point an A record to
-              <code className="font-mono mx-1">185.158.133.1</code> and add a <code className="font-mono">_lovable</code>{" "}
-              TXT record, then add the domain in Project Settings → Domains on Lovable.
-            </p>
-          </div>
+          <Collapsible open={showCustomDomain} onOpenChange={setShowCustomDomain}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-left text-sm transition-colors hover:bg-muted"
+              >
+                <div>
+                  <div className="font-medium">Use a custom domain (optional)</div>
+                  <div className="text-xs text-muted-foreground">
+                    Bring your own domain like <span className="font-mono">merch.pepsico.com</span>.
+                  </div>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${showCustomDomain ? "rotate-180" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 space-y-2">
+              <Label htmlFor="domain">Custom domain</Label>
+              <Input
+                id="domain"
+                value={values.custom_domain}
+                onChange={(e) => setField("custom_domain", e.target.value)}
+                placeholder="merch.pepsico.com"
+              />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Point an A record to <code className="font-mono">185.158.133.1</code> and add a{" "}
+                <code className="font-mono">_lovable</code> TXT record. Then add the domain in Project Settings → Domains.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
 
           {provision.isError && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
@@ -1518,6 +1535,7 @@ function NewStoreDialog({
           </DialogFooter>
         </div>
       )}
+
 
       {step === 3 && (
         <div className="space-y-5 py-2">
