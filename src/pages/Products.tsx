@@ -31,6 +31,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { OnboardingSteps } from "@/components/OnboardingSteps";
 import CategoriesManager, { useCategories, useCategoryLinks, buildCategoryTree } from "@/components/CategoriesManager";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+type PriceReference = "wholesale" | "msrp" | "map";
+const PRICE_REF_LABEL: Record<PriceReference, string> = {
+  wholesale: "Wholesale",
+  msrp: "MSRP",
+  map: "MAP",
+};
 
 function SupplierTabSkeleton() {
   return (
@@ -500,6 +508,7 @@ function ProductForm({
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [showAddVariant, setShowAddVariant] = useState(false);
+  const [priceReference, setPriceReference] = useState<PriceReference>("wholesale");
 
   useEffect(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
@@ -535,6 +544,40 @@ function ProductForm({
     return productBaseCost;
   };
   const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
+
+  // Reference-price helpers (display only — does NOT affect selling price math).
+  const sizeRefValue = (s: any, ref: PriceReference): number | null => {
+    if (ref === "wholesale") {
+      const c = Number(s?.cost);
+      if (c > 0) return c;
+      const p = Number(s?.price);
+      return p > 0 ? p : null;
+    }
+    if (ref === "msrp") {
+      const m = Number(s?.msrp);
+      return m > 0 ? m : null;
+    }
+    const mp = Number(s?.map_price);
+    return mp > 0 ? mp : null;
+  };
+  const variantRefMin = (v: any, ref: PriceReference): number | null => {
+    const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
+    const vals = sizes.map((s: any) => sizeRefValue(s, ref)).filter((n): n is number => n !== null && n > 0);
+    if (vals.length > 0) return Math.min(...vals);
+    if (ref === "wholesale") return variantBaseCost(v);
+    return null;
+  };
+  const updateVariantSizeMap = (vIdx: number, sIdx: number, value: string) => {
+    const num = value === "" ? null : Number(value);
+    setVariants((prev) =>
+      prev.map((v, i) => {
+        if (i !== vIdx) return v;
+        const sizes = [...(v.sizes || [])];
+        sizes[sIdx] = { ...sizes[sIdx], map_price: num === null || Number.isNaN(num) ? null : num };
+        return { ...v, sizes };
+      })
+    );
+  };
 
   const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee", value: string) => {
     setVariants((prev) =>
@@ -1040,12 +1083,30 @@ function ProductForm({
                             <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
                           </div>
                           <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                              <ToggleGroup
+                                type="single"
+                                size="sm"
+                                value={priceReference}
+                                onValueChange={(v) => v && setPriceReference(v as PriceReference)}
+                                className="h-6"
+                              >
+                                <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
+                                <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
+                                <ToggleGroupItem value="map" className="h-6 px-2 text-[10px]">MAP</ToggleGroupItem>
+                              </ToggleGroup>
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-[10px]">Base cost</Label>
-                                <Input type="text" value={`$${baseCostNum.toFixed(2)}`} readOnly className="h-8 mt-1 bg-muted text-xs" />
+                                <Label className="text-[10px]">Base {PRICE_REF_LABEL[priceReference].toLowerCase()}</Label>
+                                {(() => {
+                                  const ref = variantRefMin(selectedVariant, priceReference);
+                                  const display = ref !== null ? `$${ref.toFixed(2)}` : "—";
+                                  return <Input type="text" value={display} readOnly className="h-8 mt-1 bg-muted text-xs" />;
+                                })()}
                               </div>
+
                               <div>
                                 <Label className="text-[10px]">Profit margin ($)</Label>
                                 <Input
@@ -1096,45 +1157,76 @@ function ProductForm({
                       <div className="space-y-2">
                         <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sizes</Label>
                         <div className="rounded-lg border overflow-hidden">
-                          <div className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b">
-                            <span>Size</span>
-                            <span>SKU</span>
-                            <span className="text-right">Price ($)</span>
-                          </div>
-                          {selectedVariant.sizes?.length ? (
-                            [...selectedVariant.sizes]
-                              .map((s: any, originalIdx: number) => ({ s, originalIdx }))
-                              .sort((a, b) => {
-                                const order = ["XXS","XS","S","SM","M","MD","L","LG","XL","XLG","2XL","XXL","3XL","XXXL","4XL","5XL","6XL","7XL"];
-                                const norm = (v: string) => (v || "").toString().toUpperCase().trim();
-                                const ai = order.indexOf(norm(a.s.size));
-                                const bi = order.indexOf(norm(b.s.size));
-                                if (ai === -1 && bi === -1) return norm(a.s.size).localeCompare(norm(b.s.size));
-                                if (ai === -1) return 1;
-                                if (bi === -1) return -1;
-                                return ai - bi;
-                              })
-                              .map(({ s, originalIdx: sIdx }) => (
-                              <div key={sIdx} className="grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center">
-                                <span className="text-xs font-medium">{s.size || "—"}</span>
-                                <Input
-                                  value={s.sku || ""}
-                                  onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { sku: e.target.value })}
-                                  className="h-7 text-xs"
-                                  placeholder="SKU"
-                                />
-                                <Input
-                                  type="number" step="0.01" min="0"
-                                  value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
-                                  onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
-                                  className="h-7 text-xs text-right"
-                                />
-                              </div>
-                            ))
-                          ) : (
-                            <div className="px-3 py-4 text-center text-xs text-muted-foreground">No sizes</div>
-                          )}
+                          {(() => {
+                            const showRef = priceReference !== "wholesale";
+                            const gridCls = showRef
+                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center"
+                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center";
+                            const headerCls = showRef
+                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b"
+                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b";
+                            return (
+                              <>
+                                <div className={headerCls}>
+                                  <span>Size</span>
+                                  <span>SKU</span>
+                                  {showRef && <span className="text-right">{PRICE_REF_LABEL[priceReference]} ($)</span>}
+                                  <span className="text-right">Price ($)</span>
+                                </div>
+                                {selectedVariant.sizes?.length ? (
+                                  [...selectedVariant.sizes]
+                                    .map((s: any, originalIdx: number) => ({ s, originalIdx }))
+                                    .sort((a, b) => {
+                                      const order = ["XXS","XS","S","SM","M","MD","L","LG","XL","XLG","2XL","XXL","3XL","XXXL","4XL","5XL","6XL","7XL"];
+                                      const norm = (v: string) => (v || "").toString().toUpperCase().trim();
+                                      const ai = order.indexOf(norm(a.s.size));
+                                      const bi = order.indexOf(norm(b.s.size));
+                                      if (ai === -1 && bi === -1) return norm(a.s.size).localeCompare(norm(b.s.size));
+                                      if (ai === -1) return 1;
+                                      if (bi === -1) return -1;
+                                      return ai - bi;
+                                    })
+                                    .map(({ s, originalIdx: sIdx }) => {
+                                      const refVal = sizeRefValue(s, priceReference);
+                                      return (
+                                        <div key={sIdx} className={gridCls}>
+                                          <span className="text-xs font-medium">{s.size || "—"}</span>
+                                          <Input
+                                            value={s.sku || ""}
+                                            onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { sku: e.target.value })}
+                                            className="h-7 text-xs"
+                                            placeholder="SKU"
+                                          />
+                                          {showRef && (priceReference === "map" ? (
+                                            <Input
+                                              type="number" step="0.01" min="0"
+                                              value={s.map_price !== undefined && s.map_price !== null && s.map_price !== "" ? Number(Number(s.map_price).toFixed(2)) : ""}
+                                              onChange={(e) => updateVariantSizeMap(selectedVariantIdx, sIdx, e.target.value)}
+                                              className="h-7 text-xs text-right"
+                                              placeholder="—"
+                                            />
+                                          ) : (
+                                            <span className="text-xs text-right text-muted-foreground">
+                                              {refVal !== null ? `$${refVal.toFixed(2)}` : "—"}
+                                            </span>
+                                          ))}
+                                          <Input
+                                            type="number" step="0.01" min="0"
+                                            value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
+                                            onChange={(e) => updateVariantSize(selectedVariantIdx, sIdx, { price: e.target.value })}
+                                            className="h-7 text-xs text-right"
+                                          />
+                                        </div>
+                                      );
+                                    })
+                                ) : (
+                                  <div className="px-3 py-4 text-center text-xs text-muted-foreground">No sizes</div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
+
                       </div>
                     </div>
                   ) : (
