@@ -1,0 +1,1 @@
+ALTER TABLE public.corporate_stores ADD COLUMN IF NOT EXISTS requested_slug text;
