@@ -454,6 +454,19 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
                   </Button>
                 </div>
 
+                {/* Live preview */}
+                <div className="border-b bg-gradient-to-b from-muted/40 to-muted/10 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Live preview
+                    </Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      Schematic — actual storefront styling may differ
+                    </span>
+                  </div>
+                  <BlockPreview type={selected.block_type} data={selectedDraft} />
+                </div>
+
                 {/* Editor body */}
                 <div className="p-4 space-y-4">
                   <div className="flex items-center gap-2">
@@ -468,6 +481,7 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
                     />
                     <Label className="text-sm">Visible on storefront</Label>
                   </div>
+
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
