@@ -944,51 +944,62 @@ function StoreFormFields({
     </>
   );
 
+  if (section === "branding") {
+    return <div className="space-y-6 py-1">{brandingSections}</div>;
+  }
+
+  const identitySection = (
+    <section className="space-y-4">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store details</h3>
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label>Account type</Label>
+          <Select
+            value={values.store_type}
+            onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
+              <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="name">Store name</Label>
+          <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
+          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+        </div>
+        <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
+          <div className="space-y-2">
+            <Label htmlFor="email">Contact email</Label>
+            <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
+            {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
+          </div>
+          {!hideCustomDomain && (
+            <div className="space-y-2">
+              <Label htmlFor="domain">Custom domain (optional)</Label>
+              <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
+              {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
+  if (section === "identity") {
+    return <div className="space-y-6 py-1">{identitySection}</div>;
+  }
+
   return (
     <div className="space-y-6 py-1">
-      <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store details</h3>
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <Label>Account type</Label>
-            <Select
-              value={values.store_type}
-              onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
-                <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Store name</Label>
-            <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} placeholder="Pepsico Corporate Merch" />
-            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-          </div>
-          <div className={hideCustomDomain ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-5"}>
-            <div className="space-y-2">
-              <Label htmlFor="email">Contact email</Label>
-              <Input id="email" type="email" value={values.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="merch@pepsico.com" />
-              {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email}</p>}
-            </div>
-            {!hideCustomDomain && (
-              <div className="space-y-2">
-                <Label htmlFor="domain">Custom domain (optional)</Label>
-                <Input id="domain" value={values.custom_domain} onChange={(e) => setField("custom_domain", e.target.value)} placeholder="merch.pepsico.com" />
-                {errors.custom_domain && <p className="text-xs text-destructive">{errors.custom_domain}</p>}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
+      {identitySection}
       {compact ? (
         <Collapsible open={brandingOpen} onOpenChange={setBrandingOpen}>
           <CollapsibleTrigger asChild>
