@@ -271,7 +271,7 @@ function BenefitsGridPreview({ d }: { d: any }) {
   );
 }
 
-export function BlockPreview({ type, data }: { type: string; data: any }) {
+function BlockPreviewInner({ type, data }: { type: string; data: any }) {
   switch (type) {
     case "hero":
       return <HeroPreview d={data} />;
