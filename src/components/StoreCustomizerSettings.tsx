@@ -1,29 +1,37 @@
 import { useState } from "react";
-import { Paintbrush, Code, Palette } from "lucide-react";
+import { Paintbrush, Code, Palette, Info, Image as ImageIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StoreBrandSettings } from "@/components/StoreBrandSettings";
 import { StoreThemeTab } from "@/components/StoreThemeTab";
+import { StoreIdentityTab } from "@/components/StoreIdentityTab";
+import { StoreBrandingTab } from "@/components/StoreBrandingTab";
 import Developers from "@/pages/Developers";
 import { CorporateStore } from "@/types/corporateStore";
 
-type Tab = "theme" | "brand" | "developers";
+type Tab = "identity" | "branding" | "theme" | "brand" | "developers";
 
 export function StoreCustomizerSettings({ store }: { store: CorporateStore }) {
-  const [tab, setTab] = useState<Tab>("theme");
+  const [tab, setTab] = useState<Tab>("identity");
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Store Branding Settings</CardTitle>
         <CardDescription>
-          Manage your storefront theme and customizer appearance for{" "}
+          Manage your storefront identity, branding, theme and customizer for{" "}
           <span className="font-medium text-foreground">{store.name}</span>.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <TabsList className="mb-4 w-full sm:w-auto flex-wrap">
+            <TabsTrigger value="identity" className="gap-2 flex-1 sm:flex-none">
+              <Info className="h-4 w-4" /> Identity
+            </TabsTrigger>
+            <TabsTrigger value="branding" className="gap-2 flex-1 sm:flex-none">
+              <ImageIcon className="h-4 w-4" /> Branding
+            </TabsTrigger>
             <TabsTrigger value="theme" className="gap-2 flex-1 sm:flex-none">
               <Palette className="h-4 w-4" /> Theme
             </TabsTrigger>
@@ -34,6 +42,12 @@ export function StoreCustomizerSettings({ store }: { store: CorporateStore }) {
               <Code className="h-4 w-4" /> Developers
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="identity" className="mt-0 border rounded-lg p-4 sm:p-6 bg-muted/30">
+            <StoreIdentityTab store={store} />
+          </TabsContent>
+          <TabsContent value="branding" className="mt-0 border rounded-lg p-4 sm:p-6 bg-muted/30">
+            <StoreBrandingTab store={store} />
+          </TabsContent>
           <TabsContent value="theme" className="mt-0 border rounded-lg p-4 sm:p-6 bg-muted/30">
             <StoreThemeTab store={store} />
           </TabsContent>
