@@ -3815,22 +3815,11 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
               </Card>
             ) : (
               <>
-                <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 mb-6">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {filteredAndSortedProducts.length > 0 && (
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedProductIds.size === filteredAndSortedProducts.length && filteredAndSortedProducts.length > 0}
-                          onChange={toggleSelectAllProducts}
-                          className="rounded border-input"
-                        />
-                        Select all
-                      </label>
-                    )}
-                    {selectedProductIds.size > 0 ? (
-                      <>
-                        <span className="text-sm text-muted-foreground">{selectedProductIds.size} selected</span>
+                <div className="flex flex-col gap-3 mb-6">
+                  {selectedProductIds.size > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap rounded-md border bg-muted/30 px-3 py-2">
+                      <span className="text-sm font-medium">{selectedProductIds.size} selected</span>
+                      <div className="ml-auto flex items-center gap-2 flex-wrap">
                         <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={openPushDialog}>
                           <Send className="h-3.5 w-3.5" />
                           Push to Store
@@ -3843,11 +3832,24 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                           {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                           Delete ({selectedProductIds.size})
                         </Button>
-                      </>
-                    ) : (
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {filteredAndSortedProducts.length > 0 && (
+                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedProductIds.size === filteredAndSortedProducts.length && filteredAndSortedProducts.length > 0}
+                            onChange={toggleSelectAllProducts}
+                            className="rounded border-input"
+                          />
+                          Select all
+                        </label>
+                      )}
                       <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
-                    )}
-                  </div>
+                    </div>
                   <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     {/* Category filter */}
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
@@ -3915,6 +3917,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                     <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2 h-9">
                       <Plus className="h-4 w-4" /> Add Product
                     </Button>
+                  </div>
                   </div>
                 </div>
 
