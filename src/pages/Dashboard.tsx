@@ -324,56 +324,64 @@ export default function Dashboard() {
               ? "No prior period data"
               : `${revenueDelta >= 0 ? "▲" : "▼"} ${Math.abs(revenueDelta).toFixed(1)}% vs prev 30d`
           }
-          accent="bg-emerald-500/10 text-emerald-600"
+          accent="bg-emerald-500/15 text-emerald-600"
+          tint="bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/60"
         />
         <KpiCard
           icon={ShoppingBag}
           label="Orders (30d)"
           value={ordersLast30.length.toLocaleString()}
           hint={`AOV ${fmtMoney(aov, currency)}`}
-          accent="bg-blue-500/10 text-blue-600"
+          accent="bg-blue-500/15 text-blue-600"
+          tint="bg-blue-50/60 border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/60"
         />
         <KpiCard
           icon={Users}
           label="Customers"
           value={customerCount.toLocaleString()}
           hint="Across all stores"
-          accent="bg-purple-500/10 text-purple-600"
+          accent="bg-purple-500/15 text-purple-600"
+          tint="bg-purple-50/60 border-purple-100 dark:bg-purple-950/20 dark:border-purple-900/60"
         />
         <KpiCard
           icon={Building2}
           label="Active Stores"
           value={`${activeStores}`}
           hint={`${stores.length} total`}
-          accent="bg-amber-500/10 text-amber-600"
+          accent="bg-amber-500/15 text-amber-600"
+          tint="bg-amber-50/60 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/60"
         />
         <KpiCard
           icon={Package}
           label="Inventory Products"
           value={productCount.toLocaleString()}
           hint="In your catalog"
-          accent="bg-rose-500/10 text-rose-600"
+          accent="bg-rose-500/15 text-rose-600"
+          tint="bg-rose-50/60 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/60"
         />
         <KpiCard
           icon={Palette}
           label="Customizable Live"
           value={customizableCount.toLocaleString()}
           hint="Products with Customizer on"
-          accent="bg-pink-500/10 text-pink-600"
+          accent="bg-pink-500/15 text-pink-600"
+          tint="bg-pink-50/60 border-pink-100 dark:bg-pink-950/20 dark:border-pink-900/60"
         />
         <KpiCard
           icon={Truck}
           label="External Integrations"
           value={integrationCount.toLocaleString()}
           hint="Shopify · WooCommerce"
-          accent="bg-cyan-500/10 text-cyan-600"
+          accent="bg-cyan-500/15 text-cyan-600"
+          tint="bg-cyan-50/60 border-cyan-100 dark:bg-cyan-950/20 dark:border-cyan-900/60"
         />
         <KpiCard
           icon={Zap}
           label={`Orders Today${todayFilter === "all" ? "" : ` · ${todayFilter}`}`}
           value={ordersToday.length.toLocaleString()}
           hint={`${fmtMoney(revenueToday, currency)} today`}
-          accent="bg-indigo-500/10 text-indigo-600"
+          accent="bg-indigo-500/15 text-indigo-600"
+          tint="bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/20 dark:border-indigo-900/60"
         />
       </div>
 
