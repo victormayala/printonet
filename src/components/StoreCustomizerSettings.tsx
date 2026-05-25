@@ -17,7 +17,7 @@ export function StoreCustomizerSettings({ store }: { store: CorporateStore }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Store Branding Settings</CardTitle>
+        <CardTitle>Branding</CardTitle>
         <CardDescription>
           Manage your storefront identity, branding, theme and customizer for{" "}
           <span className="font-medium text-foreground">{store.name}</span>.

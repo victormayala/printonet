@@ -82,15 +82,20 @@ import {
   Eye,
   EyeOff,
   Globe,
+  LayoutDashboard,
   Loader2,
   Mail,
   Package,
+  Paintbrush,
   Pause,
   PauseCircle,
   Pencil,
   Play,
+  ShoppingBag,
   Trash2,
+  Truck,
   Type,
+  Users,
 } from "lucide-react";
 import {
   Dialog,
@@ -464,26 +469,33 @@ export default function CorporateStoreDetails() {
       )}
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="branding">Store Branding Settings</TabsTrigger>
-          <TabsTrigger value="shipping-tax">Shipping & Tax</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="customers">Customers</TabsTrigger>
+        <TabsList className="bg-muted/60 border h-auto flex-wrap gap-1 p-1.5">
+          <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <LayoutDashboard className="h-4 w-4" /> Overview
+          </TabsTrigger>
+          <TabsTrigger value="products" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <ShoppingBag className="h-4 w-4" /> Products
+          </TabsTrigger>
+          <TabsTrigger value="shipping-tax" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <Truck className="h-4 w-4" /> Shipping & Tax
+          </TabsTrigger>
+          <TabsTrigger value="content" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <Type className="h-4 w-4" /> Content
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <Users className="h-4 w-4" /> Customers
+          </TabsTrigger>
+          <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <Paintbrush className="h-4 w-4" /> Branding
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-0">
           <StoreOverviewStats store={store} />
         </TabsContent>
 
-
         <TabsContent forceMount value="products" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomizableProducts store={store} />
-        </TabsContent>
-
-        <TabsContent forceMount value="branding" className="mt-0 data-[state=inactive]:hidden">
-          <StoreCustomizerSettings store={store} />
         </TabsContent>
 
         <TabsContent forceMount value="shipping-tax" className="mt-0 data-[state=inactive]:hidden">
@@ -496,6 +508,10 @@ export default function CorporateStoreDetails() {
 
         <TabsContent forceMount value="customers" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomers storeId={store.id} />
+        </TabsContent>
+
+        <TabsContent forceMount value="branding" className="mt-0 data-[state=inactive]:hidden">
+          <StoreCustomizerSettings store={store} />
         </TabsContent>
       </Tabs>
 
