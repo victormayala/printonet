@@ -10,9 +10,21 @@ html {
   overflow-y: scroll;
 }
 /* Override react-remove-scroll inline styles applied by Radix Select/Dialog/Popover */
+body,
+body * {
+  margin-right: revert !important;
+}
 body {
-  margin-right: 0 !important;
   padding-right: 0 !important;
+}
+/* Radix adds padding-right to fixed/sticky elements to compensate for scrollbar removal */
+body[data-scroll-locked] [data-radix-scroll-area-viewport],
+header,
+[data-scroll-locked] header,
+.sticky,
+.fixed {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
 }
 
 @layer base {
