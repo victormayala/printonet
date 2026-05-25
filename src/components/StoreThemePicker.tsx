@@ -3,6 +3,7 @@ import { Loader2, ExternalLink, Check } from "lucide-react";
 import { cms } from "@/lib/cmsClient";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import classicThemeThumb from "@/assets/classic-theme.svg";
 
 const STOREFRONT_PUBLIC_BASE = "https://stores.printonet.com";
 
