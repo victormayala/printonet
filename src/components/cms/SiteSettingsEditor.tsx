@@ -1,5 +1,35 @@
 import { TextField, TextareaField, AssetField, BoolField, ArrayField } from "./fields";
 import { DEFAULT_SITE_SETTINGS } from "@/lib/cms.types";
+import { Megaphone, PanelBottom, Share2, Mail, Search } from "lucide-react";
+
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border bg-card">
+      <header className="flex items-start gap-3 border-b px-4 py-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold leading-tight">{title}</h3>
+          {description ? (
+            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+          ) : null}
+        </div>
+      </header>
+      <div className="space-y-3 p-4">{children}</div>
+    </section>
+  );
+}
 
 export function SiteSettingsEditor({
   storeId,
