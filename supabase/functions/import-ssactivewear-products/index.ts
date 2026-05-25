@@ -342,8 +342,10 @@ Deno.serve(async (req) => {
             size: s.sizeName || s.size2Name || 'OS',
             sku: s.sku,
             price: s.customerPrice || s.piecePrice || 0,
+            msrp: Number(s.piecePrice) || 0,
             qty: s.qty ?? 0,
           })),
+
         }
       })
 
