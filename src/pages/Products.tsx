@@ -92,11 +92,13 @@ type Product = {
   decoration_methods?: string[] | null;
 };
 
-type DecorationMethod = "dtg" | "dtf" | "embroidery";
-const DECORATION_METHODS: { value: DecorationMethod; label: string; feeKey: "dtg_fee" | "dtf_fee" | "embroidery_fee" }[] = [
+type DecorationMethod = "dtg" | "dtf" | "embroidery" | "screen_printing" | "sublimation";
+const DECORATION_METHODS: { value: DecorationMethod; label: string; feeKey: "dtg_fee" | "dtf_fee" | "embroidery_fee" | "screen_printing_fee" | "sublimation_fee" }[] = [
   { value: "dtg", label: "DTG", feeKey: "dtg_fee" },
   { value: "dtf", label: "DTF", feeKey: "dtf_fee" },
   { value: "embroidery", label: "Embroidery", feeKey: "embroidery_fee" },
+  { value: "screen_printing", label: "Screen Printing", feeKey: "screen_printing_fee" },
+  { value: "sublimation", label: "Sublimation", feeKey: "sublimation_fee" },
 ];
 
 const CATEGORIES = ["T-Shirts", "Hoodies", "Mugs", "Phone Cases", "Tote Bags", "Hats", "Other"];
@@ -534,7 +536,7 @@ function ProductForm({
   };
   const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
 
-  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee", value: string) => {
+  const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee", value: string) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -556,7 +558,7 @@ function ProductForm({
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.embroidery_setup_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0);
+    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.embroidery_setup_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0) + (Number(p.screen_printing_fee) || 0) + (Number(p.sublimation_fee) || 0);
   };
 
   // Snapshot cost from current price the first time we overwrite price,
@@ -1054,7 +1056,7 @@ function ProductForm({
                                 />
                               </div>
                               {DECORATION_METHODS.filter((m) => decorationMethods.includes(m.value)).flatMap((m) => {
-                                const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee"; label: string }[] = [
+                                const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee"; label: string }[] = [
                                   { key: m.feeKey, label: `${m.label} fee ($)` },
                                 ];
                                 if (m.value === "embroidery") {
@@ -3105,7 +3107,7 @@ function VariantManagerDialog({
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
   };
 
-  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee", value: number) => {
+  const updatePricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee", value: number) => {
     setVariants((prev) =>
       prev.map((v, i) =>
         i === idx ? { ...v, pricing: { ...(v.pricing || {}), [field]: value } } : v
@@ -3332,7 +3334,7 @@ function VariantManagerDialog({
                         {DECORATION_METHODS.filter((m) =>
                           ((product.decoration_methods as DecorationMethod[] | null | undefined) ?? []).includes(m.value)
                         ).flatMap((m) => {
-                          const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee"; label: string }[] = [
+                          const fields: { key: "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee"; label: string }[] = [
                             { key: m.feeKey, label: `${m.label} fee ($)` },
                           ];
                           if (m.value === "embroidery") {
