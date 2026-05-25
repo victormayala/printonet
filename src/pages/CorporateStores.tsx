@@ -1139,7 +1139,7 @@ function NewStoreDialog({
   const [seedingTemplate, setSeedingTemplate] = useState(false);
   const [templateSeeded, setTemplateSeeded] = useState(false);
 
-  const STEP_LABELS = ["Create Store", "Choose Address", "Choose Theme", "Connect Stripe"];
+  const STEP_LABELS = ["Store & Address", "Theme & Branding", "Connect Stripe"];
 
   const startStripeOnboarding = async () => {
     if (!provisionedStoreId) {
