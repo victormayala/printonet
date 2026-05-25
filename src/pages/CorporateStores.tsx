@@ -1120,6 +1120,7 @@ function NewStoreDialog({
   );
   const [chosenSlug, setChosenSlug] = useState<string | null>(resumeStore?.tenant_slug ?? null);
   const [slugDraft, setSlugDraft] = useState<string>(resumeStore?.tenant_slug ?? "");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState<boolean>(!!resumeStore?.tenant_slug);
   const [showCustomDomain, setShowCustomDomain] = useState<boolean>(!!resumeStore?.custom_domain);
   const [checking, setChecking] = useState(false);
 
