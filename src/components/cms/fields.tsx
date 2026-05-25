@@ -32,6 +32,63 @@ export function TextField({
   );
 }
 
+export function ColorField({
+  label,
+  help,
+  value,
+  onChange,
+  placeholder = "#000000",
+}: Base & { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const v = (value ?? "").trim();
+  const isValidHex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex gap-2 items-center">
+        <div className="relative h-10 w-10 shrink-0 rounded-md border overflow-hidden">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: isValidHex
+                ? v
+                : "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, hsl(var(--background)) 0% 50%) 50% / 12px 12px",
+            }}
+            aria-hidden
+          />
+          <input
+            type="color"
+            value={isValidHex ? (v.length === 4
+              ? `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`
+              : v) : "#000000"}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            aria-label={`${label} color picker`}
+          />
+        </div>
+        <Input
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1 font-mono text-sm"
+          maxLength={20}
+        />
+        {value && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => onChange("")}
+            title="Clear"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      {help && <p className="text-[11px] text-muted-foreground">{help}</p>}
+    </div>
+  );
+}
+
 export function TextareaField({
   label,
   help,
