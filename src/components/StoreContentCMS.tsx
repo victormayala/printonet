@@ -494,38 +494,15 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
 
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">
-                        {rawMode ? "Draft data (raw JSON)" : "Section content"}
-                      </Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 gap-1 text-xs"
-                        onClick={() => setRawMode((v) => !v)}
-                      >
-                        <Code2 className="h-3 w-3" />
-                        {rawMode ? "Use form" : "Edit JSON"}
-                      </Button>
-                    </div>
-                    {rawMode ? (
-                      <JsonField
-                        value={selectedDraft}
-                        onChange={(v) =>
-                          setDrafts((d) => ({ ...d, [selected.id]: v }))
-                        }
-                      />
-                    ) : (
-                      <BlockEditor
-                        storeId={store.id}
-                        type={selected.block_type}
-                        data={selectedDraft}
-                        onChange={(v) =>
-                          setDrafts((d) => ({ ...d, [selected.id]: v }))
-                        }
-                      />
-                    )}
+                    <Label className="text-xs text-muted-foreground">Section content</Label>
+                    <BlockEditor
+                      storeId={store.id}
+                      type={selected.block_type}
+                      data={selectedDraft}
+                      onChange={(v) =>
+                        setDrafts((d) => ({ ...d, [selected.id]: v }))
+                      }
+                    />
                   </div>
                 </div>
 

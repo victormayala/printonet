@@ -1,5 +1,5 @@
 import { BLOCK_TYPES, type BlockType } from "@/lib/cms.types";
-import { TextField, TextareaField, AssetField, SelectField, ArrayField } from "./fields";
+import { TextField, TextareaField, AssetField, SelectField, ArrayField, ColorField } from "./fields";
 
 type Props<T = any> = {
   storeId: string;
@@ -261,7 +261,7 @@ function BenefitsGridEditor({ data, onChange }: Props) {
               <TextField label="Title *" value={it.title} onChange={(v) => up({ title: v } as any)} maxLength={80} />
             </div>
             <TextareaField label="Body" value={it.body} onChange={(v) => up({ body: v } as any)} maxLength={300} />
-            <TextField label="Accent colour (e.g. #FF6600)" value={it.accent_color} onChange={(v) => up({ accent_color: v } as any)} maxLength={20} />
+            <ColorField label="Accent colour" value={it.accent_color} onChange={(v) => up({ accent_color: v } as any)} help="e.g. #FF6600" />
           </>
         )}
       />
