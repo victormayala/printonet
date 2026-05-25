@@ -71,7 +71,7 @@ export function StoreThemePicker({
   const effectiveSelected = selectedId ?? data.default_template_id;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
       {data.templates.map((t) => {
         const isSelected = effectiveSelected === t.id;
         const img = resolveImage(t.preview_image_url);
