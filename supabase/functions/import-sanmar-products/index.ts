@@ -487,10 +487,12 @@ Deno.serve(async (req) => {
             size: p.size || 'OS',
             sku: p.partId || `${style_id}-${colorName}-${p.size || 'OS'}`,
             price: p.price,
+            msrp: (p as any).msrp || 0,
             casePrice: 0,
             salePrice: 0,
             qty: 0,
           })),
+
         }))
 
         return jsonResponse({
