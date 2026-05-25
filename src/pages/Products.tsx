@@ -545,6 +545,40 @@ function ProductForm({
   };
   const baseCostNum = selectedVariant ? variantBaseCost(selectedVariant) : productBaseCost;
 
+  // Reference-price helpers (display only — does NOT affect selling price math).
+  const sizeRefValue = (s: any, ref: PriceReference): number | null => {
+    if (ref === "wholesale") {
+      const c = Number(s?.cost);
+      if (c > 0) return c;
+      const p = Number(s?.price);
+      return p > 0 ? p : null;
+    }
+    if (ref === "msrp") {
+      const m = Number(s?.msrp);
+      return m > 0 ? m : null;
+    }
+    const mp = Number(s?.map_price);
+    return mp > 0 ? mp : null;
+  };
+  const variantRefMin = (v: any, ref: PriceReference): number | null => {
+    const sizes = Array.isArray(v?.sizes) ? v.sizes : [];
+    const vals = sizes.map((s: any) => sizeRefValue(s, ref)).filter((n): n is number => n !== null && n > 0);
+    if (vals.length > 0) return Math.min(...vals);
+    if (ref === "wholesale") return variantBaseCost(v);
+    return null;
+  };
+  const updateVariantSizeMap = (vIdx: number, sIdx: number, value: string) => {
+    const num = value === "" ? null : Number(value);
+    setVariants((prev) =>
+      prev.map((v, i) => {
+        if (i !== vIdx) return v;
+        const sizes = [...(v.sizes || [])];
+        sizes[sIdx] = { ...sizes[sIdx], map_price: num === null || Number.isNaN(num) ? null : num };
+        return { ...v, sizes };
+      })
+    );
+  };
+
   const updateVariantPricing = (idx: number, field: "margin" | "embroidery_fee" | "embroidery_setup_fee" | "dtg_fee" | "dtf_fee" | "screen_printing_fee" | "sublimation_fee", value: string) => {
     setVariants((prev) =>
       prev.map((v, i) =>
