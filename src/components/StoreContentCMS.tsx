@@ -15,10 +15,17 @@ import {
   ArrowUp,
   Code2,
   CheckCircle2,
+  FileText,
+  Home,
+  Images,
   Loader2,
+
+  MousePointerClick,
+  Navigation,
   Plus,
   Save,
   Send,
+  Settings as SettingsIcon,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -26,6 +33,9 @@ import type { CorporateStore } from "@/types/corporateStore";
 import { cms } from "@/lib/cmsClient";
 import { BlockEditor, BLOCK_TYPES } from "@/components/cms/BlockEditor";
 import { SiteSettingsEditor, ContentPageEditor } from "@/components/cms/SiteSettingsEditor";
+import { metaFor } from "@/components/cms/blockMeta";
+import { cn } from "@/lib/utils";
+
 
 // Bump in lock-step with storefront's `PLATFORM_CMS_SCHEMA_VERSION`.
 const PLATFORM_CMS_SCHEMA_VERSION = 8;
@@ -93,19 +103,36 @@ function JsonField({
   );
 }
 
+function PanelHeader({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <h3 className="font-semibold leading-tight">{title}</h3>
+        <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; canPublish: boolean }) {
   const [blocks, setBlocks] = useState<Block[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
   const [newType, setNewType] = useState("hero");
-  const [rawIds, setRawIds] = useState<Set<string>>(new Set());
-  const toggleRaw = (id: string) =>
-    setRawIds((s) => {
-      const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [rawMode, setRawMode] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,6 +140,10 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
       const res = await cms<{ blocks: Block[] }>(store.id, "list-blocks");
       setBlocks(res.blocks);
       setDrafts(Object.fromEntries(res.blocks.map((b) => [b.id, b.draft_data])));
+      setSelectedId((prev) => {
+        if (prev && res.blocks.some((b) => b.id === prev)) return prev;
+        return res.blocks[0]?.id ?? null;
+      });
     } catch (e: any) {
       toast({ title: "Could not load blocks", description: e.message, variant: "destructive" });
     } finally {
@@ -160,6 +191,7 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
     setBusy(id);
     try {
       await cms(store.id, "delete-block", { id });
+      if (selectedId === id) setSelectedId(null);
       await load();
     } catch (e: any) {
       toast({ title: "Delete failed", description: e.message, variant: "destructive" });
@@ -186,13 +218,18 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
   const addBlock = async () => {
     setBusy("__new");
     try {
+      const before = new Set((blocks ?? []).map((b) => b.id));
       await cms(store.id, "upsert-block", {
         block_type: newType.trim(),
         enabled: true,
         draft_data: {},
       });
       toast({ title: "Block created" });
-      await load();
+      const res = await cms<{ blocks: Block[] }>(store.id, "list-blocks");
+      setBlocks(res.blocks);
+      setDrafts(Object.fromEntries(res.blocks.map((b) => [b.id, b.draft_data])));
+      const created = res.blocks.find((b) => !before.has(b.id));
+      if (created) setSelectedId(created.id);
     } catch (e: any) {
       toast({ title: "Create failed", description: e.message, variant: "destructive" });
     } finally {
@@ -221,132 +258,292 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
     );
   }
 
+  const selected = blocks?.find((b) => b.id === selectedId) ?? null;
+  const selectedIdx = selected ? blocks!.findIndex((b) => b.id === selected.id) : -1;
+  const selectedMeta = selected ? metaFor(selected.block_type) : null;
+  const selectedDraft = selected ? drafts[selected.id] ?? selected.draft_data : null;
+  const draftDirty =
+    !!selected &&
+    JSON.stringify(selectedDraft ?? {}) !== JSON.stringify(selected.draft_data ?? {});
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-md border p-4 bg-muted/30">
+      <PanelHeader
+        icon={Home}
+        title="Homepage sections"
+        description="Each block is one section on your storefront homepage, top to bottom. Click a block on the left to edit it."
+      />
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3 bg-card">
         <div className="space-y-1">
-          <Label className="text-xs">New block type</Label>
+          <Label className="text-xs">Add a new section</Label>
           <select
             value={newType}
             onChange={(e) => setNewType(e.target.value)}
-            className="flex h-10 w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex h-9 w-56 rounded-md border border-input bg-background px-3 py-1 text-sm"
           >
             {BLOCK_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t}>
+                {metaFor(t).label}
+              </option>
             ))}
           </select>
         </div>
-        <Button onClick={addBlock} disabled={busy === "__new" || !newType.trim()}>
+        <Button onClick={addBlock} disabled={busy === "__new" || !newType.trim()} size="sm">
           {busy === "__new" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Add block
+          Add section
         </Button>
         <div className="flex-1" />
-        <Button variant="outline" onClick={publishAll} disabled={!canPublish || busy === "__all"}>
+        <Button variant="outline" onClick={publishAll} disabled={!canPublish || busy === "__all"} size="sm">
           {busy === "__all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          Publish all
+          Publish all drafts
         </Button>
       </div>
 
-      {blocks?.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">No blocks yet.</p>
-      )}
+      {blocks?.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-16 text-center">
+          <Home className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm font-medium">No homepage sections yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Pick a section type above and click “Add section” to begin.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          {/* LEFT: section list */}
+          <div className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Sections ({blocks?.length ?? 0})
+              </span>
+            </div>
+            <div className="p-2 space-y-1 max-h-[640px] overflow-auto">
+              {blocks?.map((b, idx) => {
+                const meta = metaFor(b.block_type);
+                const Icon = meta.icon;
+                const summary = meta.summary?.(drafts[b.id] ?? b.draft_data);
+                const isSelected = b.id === selectedId;
+                const isDirty =
+                  JSON.stringify(drafts[b.id] ?? {}) !== JSON.stringify(b.draft_data ?? {});
+                return (
+                  <div
+                    key={b.id}
+                    className={cn(
+                      "group flex items-start gap-2 rounded-md border px-2.5 py-2 cursor-pointer transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-transparent hover:bg-muted/60",
+                    )}
+                    onClick={() => setSelectedId(b.id)}
+                  >
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold bg-muted text-muted-foreground">
+                      {idx + 1}
+                    </span>
+                    <div
+                      className={cn(
+                        "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded",
+                        isSelected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium truncate">{meta.label}</span>
+                        {!b.enabled && (
+                          <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                            Hidden
+                          </Badge>
+                        )}
+                        {isDirty && (
+                          <span
+                            className="h-1.5 w-1.5 rounded-full bg-amber-500"
+                            title="Unsaved changes"
+                          />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {summary || (b.published_at ? "Published" : "Draft only")}
+                      </p>
+                    </div>
+                    <div className="flex flex-col -my-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          reorder(idx, -1);
+                        }}
+                        disabled={idx === 0}
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          reorder(idx, 1);
+                        }}
+                        disabled={idx === (blocks?.length ?? 1) - 1}
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-      {blocks?.map((b, idx) => (
-        <Card key={b.id}>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <Badge variant="secondary" className="font-mono">{b.block_type}</Badge>
-              {b.published_at ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Published
-                </Badge>
-              ) : (
-                <Badge variant="outline">Draft only</Badge>
-              )}
-              <span className="text-xs text-muted-foreground truncate">id: {b.id}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button size="icon" variant="ghost" onClick={() => reorder(idx, -1)} disabled={idx === 0}>
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => reorder(idx, 1)}
-                disabled={idx === (blocks?.length ?? 1) - 1}
-              >
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => remove(b.id)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={b.enabled}
-                onCheckedChange={(v) => {
-                  setBlocks((bs) => bs?.map((x) => (x.id === b.id ? { ...x, enabled: v } : x)) ?? null);
-                }}
-              />
-              <Label className="text-sm">Enabled on storefront</Label>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">
-                  {rawIds.has(b.id) ? "Draft data (raw JSON)" : "Block content"}
-                </Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 gap-1 text-xs"
-                  onClick={() => toggleRaw(b.id)}
-                >
-                  <Code2 className="h-3 w-3" />
-                  {rawIds.has(b.id) ? "Use form" : "Edit JSON"}
-                </Button>
+          {/* RIGHT: editor */}
+          <div className="rounded-lg border bg-card min-h-[400px]">
+            {!selected ? (
+              <div className="h-full flex items-center justify-center py-20 text-center px-6">
+                <div>
+                  <MousePointerClick className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm font-medium">Select a section to edit</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Choose any block from the list on the left.
+                  </p>
+                </div>
               </div>
-              {rawIds.has(b.id) ? (
-                <JsonField
-                  value={drafts[b.id] ?? b.draft_data}
-                  onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
-                />
-              ) : (
-                <BlockEditor
-                  storeId={store.id}
-                  type={b.block_type}
-                  data={drafts[b.id] ?? b.draft_data}
-                  onChange={(v) => setDrafts((d) => ({ ...d, [b.id]: v }))}
-                />
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => save(b)} disabled={busy === b.id}>
-                {busy === b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save draft
-              </Button>
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => publish(b.id)}
-                disabled={!canPublish || busy === b.id}
-              >
-                <Send className="h-4 w-4" /> Publish
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            ) : (
+              <>
+                {/* Editor header */}
+                <div className="flex items-start gap-3 border-b p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    {(() => {
+                      const Icon = selectedMeta!.icon;
+                      return <Icon className="h-5 w-5" />;
+                    })()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Section {selectedIdx + 1} of {blocks!.length}
+                      </span>
+                      <span className="text-muted-foreground">·</span>
+                      <h4 className="font-semibold">Editing: {selectedMeta!.label}</h4>
+                      {selected.published_at ? (
+                        <Badge variant="default" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Published
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Draft only</Badge>
+                      )}
+                      {draftDirty && (
+                        <Badge variant="secondary" className="gap-1">
+                          Unsaved changes
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{selectedMeta!.description}</p>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => remove(selected.id)}
+                    className="text-destructive hover:text-destructive"
+                    title="Delete section"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Editor body */}
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={selected.enabled}
+                      onCheckedChange={(v) => {
+                        setBlocks(
+                          (bs) =>
+                            bs?.map((x) => (x.id === selected.id ? { ...x, enabled: v } : x)) ?? null,
+                        );
+                      }}
+                    />
+                    <Label className="text-sm">Visible on storefront</Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-muted-foreground">
+                        {rawMode ? "Draft data (raw JSON)" : "Section content"}
+                      </Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 gap-1 text-xs"
+                        onClick={() => setRawMode((v) => !v)}
+                      >
+                        <Code2 className="h-3 w-3" />
+                        {rawMode ? "Use form" : "Edit JSON"}
+                      </Button>
+                    </div>
+                    {rawMode ? (
+                      <JsonField
+                        value={selectedDraft}
+                        onChange={(v) =>
+                          setDrafts((d) => ({ ...d, [selected.id]: v }))
+                        }
+                      />
+                    ) : (
+                      <BlockEditor
+                        storeId={store.id}
+                        type={selected.block_type}
+                        data={selectedDraft}
+                        onChange={(v) =>
+                          setDrafts((d) => ({ ...d, [selected.id]: v }))
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Editor footer */}
+                <div className="flex items-center justify-between gap-2 border-t bg-muted/30 px-4 py-3">
+                  <p className="text-xs text-muted-foreground">
+                    {selected.published_at
+                      ? `Last published ${new Date(selected.published_at).toLocaleString()}`
+                      : "Not yet published"}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => save(selected)}
+                      disabled={busy === selected.id || !draftDirty}
+                    >
+                      {busy === selected.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save draft
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => publish(selected.id)}
+                      disabled={!canPublish || busy === selected.id}
+                    >
+                      <Send className="h-4 w-4" /> Publish
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function SiteSettingsPanel({ store, canPublish }: { store: CorporateStore; canPublish: boolean }) {
   const [settings, setSettings] = useState<any>(null);
@@ -420,20 +617,27 @@ function SiteSettingsPanel({ store, canPublish }: { store: CorporateStore; canPu
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-muted-foreground">
-        Last published:{" "}
-        {settings?.published_at ? new Date(settings.published_at).toLocaleString() : "never"}
+      <PanelHeader
+        icon={SettingsIcon}
+        title="Site-wide settings"
+        description="Branding, footer, SEO defaults, and other settings that apply to every page of the storefront."
+      />
+      <div className="rounded-lg border bg-card p-4 space-y-4">
+        <div className="text-xs text-muted-foreground">
+          Last published:{" "}
+          {settings?.published_at ? new Date(settings.published_at).toLocaleString() : "never"}
+        </div>
+        <SiteSettingsEditor storeId={store.id} data={draft} onChange={setDraft} />
       </div>
-      <SiteSettingsEditor storeId={store.id} data={draft} onChange={setDraft} />
       <div className="flex gap-2">
-        <Button onClick={save} disabled={busy !== null}>
+        <Button variant="outline" onClick={save} disabled={busy !== null}>
           {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save draft
         </Button>
-        <Button variant="default" onClick={publish} disabled={!canPublish || busy !== null}>
+        <Button onClick={publish} disabled={!canPublish || busy !== null}>
           <Send className="h-4 w-4" /> Publish
         </Button>
-        <Button variant="outline" onClick={discard} disabled={busy !== null}>
+        <Button variant="ghost" onClick={discard} disabled={busy !== null}>
           Discard draft
         </Button>
       </div>
@@ -441,12 +645,14 @@ function SiteSettingsPanel({ store, canPublish }: { store: CorporateStore; canPu
   );
 }
 
+
 function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPublish: boolean }) {
   const [pages, setPages] = useState<ContentPage[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
   const [newSlug, setNewSlug] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -454,6 +660,10 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
       const res = await cms<{ pages: ContentPage[] }>(store.id, "list-content-pages");
       setPages(res.pages);
       setDrafts(Object.fromEntries(res.pages.map((p) => [p.id, p.draft])));
+      setSelectedId((prev) => {
+        if (prev && res.pages.some((p) => p.id === prev)) return prev;
+        return res.pages[0]?.id ?? null;
+      });
     } catch (e: any) {
       toast({ title: "Could not load pages", description: e.message, variant: "destructive" });
     } finally {
@@ -501,6 +711,7 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
     setBusy(id);
     try {
       await cms(store.id, "delete-content-page", { id });
+      if (selectedId === id) setSelectedId(null);
       await load();
     } catch (e: any) {
       toast({ title: "Delete failed", description: e.message, variant: "destructive" });
@@ -513,13 +724,18 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
     if (!newSlug.trim()) return;
     setBusy("__new");
     try {
+      const before = new Set((pages ?? []).map((p) => p.id));
       await cms(store.id, "upsert-content-page", {
         slug: newSlug.trim(),
         enabled: true,
         draft: { title: newSlug.trim(), blocks: [] },
       });
       setNewSlug("");
-      await load();
+      const res = await cms<{ pages: ContentPage[] }>(store.id, "list-content-pages");
+      setPages(res.pages);
+      setDrafts(Object.fromEntries(res.pages.map((p) => [p.id, p.draft])));
+      const created = res.pages.find((p) => !before.has(p.id));
+      if (created) setSelectedId(created.id);
     } catch (e: any) {
       toast({ title: "Create failed", description: e.message, variant: "destructive" });
     } finally {
@@ -535,81 +751,202 @@ function ContentPagesPanel({ store, canPublish }: { store: CorporateStore; canPu
     );
   }
 
+  const selected = pages?.find((p) => p.id === selectedId) ?? null;
+  const selectedDraft = selected ? drafts[selected.id] ?? selected.draft : null;
+  const draftDirty =
+    !!selected && JSON.stringify(selectedDraft ?? {}) !== JSON.stringify(selected.draft ?? {});
+
   return (
     <div className="space-y-4">
-      <div className="flex items-end gap-2 rounded-md border p-4 bg-muted/30">
-        <div className="space-y-1 flex-1">
-          <Label className="text-xs">New page slug</Label>
-          <Input
-            value={newSlug}
-            onChange={(e) => setNewSlug(e.target.value)}
-            placeholder="about"
-          />
+      <PanelHeader
+        icon={FileText}
+        title="Content pages"
+        description="Standalone pages like About, FAQ, or Terms — each lives at its own URL on the storefront."
+      />
+
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3 bg-card">
+        <div className="space-y-1 flex-1 min-w-[200px]">
+          <Label className="text-xs">New page URL</Label>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground">/</span>
+            <Input
+              value={newSlug}
+              onChange={(e) => setNewSlug(e.target.value)}
+              placeholder="about"
+              className="h-9"
+            />
+          </div>
         </div>
-        <Button onClick={create} disabled={busy === "__new" || !newSlug.trim()}>
-          <Plus className="h-4 w-4" /> Create page
+        <Button onClick={create} disabled={busy === "__new" || !newSlug.trim()} size="sm">
+          {busy === "__new" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Create page
         </Button>
       </div>
 
-      {pages?.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">No pages yet.</p>
-      )}
+      {pages?.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-16 text-center">
+          <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm font-medium">No content pages yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Enter a URL slug above (like “about”) to create your first page.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Pages ({pages?.length ?? 0})
+              </span>
+            </div>
+            <div className="p-2 space-y-1 max-h-[640px] overflow-auto">
+              {pages?.map((p) => {
+                const isSelected = p.id === selectedId;
+                const isDirty =
+                  JSON.stringify(drafts[p.id] ?? {}) !== JSON.stringify(p.draft ?? {});
+                const title = (drafts[p.id]?.title ?? p.draft?.title ?? p.slug) as string;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedId(p.id)}
+                    className={cn(
+                      "flex items-start gap-2 rounded-md border px-2.5 py-2 cursor-pointer transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-transparent hover:bg-muted/60",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded",
+                        isSelected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium truncate">{title}</span>
+                        {!p.enabled && (
+                          <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                            Hidden
+                          </Badge>
+                        )}
+                        {isDirty && (
+                          <span
+                            className="h-1.5 w-1.5 rounded-full bg-amber-500"
+                            title="Unsaved changes"
+                          />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate font-mono">/{p.slug}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-      {pages?.map((p) => (
-        <Card key={p.id}>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <Badge variant="secondary" className="font-mono">/{p.slug}</Badge>
-              {p.published_at ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Published
-                </Badge>
-              ) : (
-                <Badge variant="outline">Draft only</Badge>
-              )}
-            </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => remove(p.id)}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={p.enabled}
-                onCheckedChange={(v) =>
-                  setPages((ps) => ps?.map((x) => (x.id === p.id ? { ...x, enabled: v } : x)) ?? null)
-                }
-              />
-              <Label className="text-sm">Enabled</Label>
-            </div>
-            <ContentPageEditor
-              storeId={store.id}
-              data={drafts[p.id] ?? p.draft}
-              onChange={(v) => setDrafts((d) => ({ ...d, [p.id]: v }))}
-            />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => save(p)} disabled={busy === p.id}>
-                <Save className="h-4 w-4" /> Save draft
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => publish(p.id)}
-                disabled={!canPublish || busy === p.id}
-              >
-                <Send className="h-4 w-4" /> Publish
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+          <div className="rounded-lg border bg-card min-h-[400px]">
+            {!selected ? (
+              <div className="h-full flex items-center justify-center py-20 text-center px-6">
+                <div>
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm font-medium">Select a page to edit</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-3 border-b p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold">
+                        Editing: {(selectedDraft?.title ?? selected.slug) as string}
+                      </h4>
+                      {selected.published_at ? (
+                        <Badge variant="default" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Published
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Draft only</Badge>
+                      )}
+                      {draftDirty && <Badge variant="secondary">Unsaved changes</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">/{selected.slug}</p>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => remove(selected.id)}
+                    className="text-destructive hover:text-destructive"
+                    title="Delete page"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={selected.enabled}
+                      onCheckedChange={(v) =>
+                        setPages(
+                          (ps) =>
+                            ps?.map((x) => (x.id === selected.id ? { ...x, enabled: v } : x)) ??
+                            null,
+                        )
+                      }
+                    />
+                    <Label className="text-sm">Visible on storefront</Label>
+                  </div>
+                  <ContentPageEditor
+                    storeId={store.id}
+                    data={selectedDraft}
+                    onChange={(v) => setDrafts((d) => ({ ...d, [selected.id]: v }))}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-2 border-t bg-muted/30 px-4 py-3">
+                  <p className="text-xs text-muted-foreground">
+                    {selected.published_at
+                      ? `Last published ${new Date(selected.published_at).toLocaleString()}`
+                      : "Not yet published"}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => save(selected)}
+                      disabled={busy === selected.id || !draftDirty}
+                    >
+                      {busy === selected.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save draft
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => publish(selected.id)}
+                      disabled={!canPublish || busy === selected.id}
+                    >
+                      <Send className="h-4 w-4" /> Publish
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function AssetsPanel({ store }: { store: CorporateStore }) {
   const [busy, setBusy] = useState(false);
@@ -654,7 +991,13 @@ function AssetsPanel({ store }: { store: CorporateStore }) {
 
   return (
     <div className="space-y-4">
+      <PanelHeader
+        icon={Images}
+        title="Assets"
+        description="Upload images and files used across the storefront. Copy the URL to paste into a section."
+      />
       <div
+
         onDragOver={(e) => {
           e.preventDefault();
           setDrag(true);
@@ -772,7 +1115,13 @@ function NavigationPanel({ store, canPublish }: { store: CorporateStore; canPubl
 
   return (
     <div className="space-y-4">
+      <PanelHeader
+        icon={Navigation}
+        title="Navigation menu"
+        description="Top-bar links shown on every storefront page. Saved changes go live immediately."
+      />
       {items.map((it, i) => (
+
         <div key={i} className="flex gap-2 items-end">
           <div className="space-y-1 flex-1">
             <Label className="text-xs">Label</Label>
@@ -893,13 +1242,24 @@ export function StoreContentCMS({ store }: { store: CorporateStore }) {
 
         <Tabs defaultValue="blocks">
           <TabsList className="flex-wrap">
-            <TabsTrigger value="blocks">Homepage</TabsTrigger>
-            <TabsTrigger value="settings">Site settings</TabsTrigger>
-            <TabsTrigger value="pages">Content pages</TabsTrigger>
-            <TabsTrigger value="nav">Navigation</TabsTrigger>
-            <TabsTrigger value="assets">Assets</TabsTrigger>
+            <TabsTrigger value="blocks" className="gap-1.5">
+              <Home className="h-4 w-4" /> Homepage
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-1.5">
+              <SettingsIcon className="h-4 w-4" /> Site settings
+            </TabsTrigger>
+            <TabsTrigger value="pages" className="gap-1.5">
+              <FileText className="h-4 w-4" /> Pages
+            </TabsTrigger>
+            <TabsTrigger value="nav" className="gap-1.5">
+              <Navigation className="h-4 w-4" /> Navigation
+            </TabsTrigger>
+            <TabsTrigger value="assets" className="gap-1.5">
+              <Images className="h-4 w-4" /> Assets
+            </TabsTrigger>
           </TabsList>
           <Separator className="my-4" />
+
           <TabsContent value="blocks">
             <HomepageBlocksPanel store={store} canPublish={canPublish} />
           </TabsContent>
