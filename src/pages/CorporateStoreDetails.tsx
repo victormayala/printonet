@@ -503,16 +503,16 @@ export default function CorporateStoreDetails() {
           <StoreShippingTax store={store} />
         </TabsContent>
 
-        <TabsContent forceMount value="content" className="mt-0 data-[state=inactive]:hidden">
-          <StoreContentCMS store={store} />
-        </TabsContent>
-
         <TabsContent forceMount value="customers" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomers storeId={store.id} />
         </TabsContent>
 
         <TabsContent forceMount value="branding" className="mt-0 data-[state=inactive]:hidden">
           <StoreCustomizerSettings store={store} />
+        </TabsContent>
+
+        <TabsContent forceMount value="content" className="mt-0 data-[state=inactive]:hidden">
+          <StoreContentCMS store={store} />
         </TabsContent>
       </Tabs>
 
