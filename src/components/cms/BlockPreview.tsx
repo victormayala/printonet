@@ -153,8 +153,9 @@ function TestimonialsPreview({ d }: { d: any }) {
             <p className="text-[10px] italic line-clamp-3">"{it?.quote || "Great product!"}"</p>
             <div className="flex items-center gap-1.5">
               <div className="h-4 w-4 rounded-full bg-muted overflow-hidden">
-                {it?.avatar_url && <img src={it.avatar_url} className="h-full w-full object-cover" alt="" />}
+                {it?.avatar_url && <Img src={it.avatar_url} className="h-full w-full" />}
               </div>
+
               <div>
                 <p className="text-[9px] font-medium">{it?.author || "Author"}</p>
                 {it?.role && <p className="text-[8px] text-muted-foreground">{it.role}</p>}
