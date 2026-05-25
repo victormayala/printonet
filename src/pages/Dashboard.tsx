@@ -489,12 +489,7 @@ export default function Dashboard() {
                 <div className="space-y-1.5">
                   {statusBreakdown.map(([status, count]) => (
                     <div key={status} className="flex items-center justify-between text-sm">
-                      <Badge
-                        variant={status === "paid" ? "default" : "secondary"}
-                        className="capitalize"
-                      >
-                        {status}
-                      </Badge>
+                      <StatusBadge status={status} />
                       <span className="tabular-nums text-muted-foreground">{count}</span>
                     </div>
                   ))}
