@@ -1241,17 +1241,19 @@ function NewStoreDialog({
     }
   };
 
-  // Auto-seed the slug draft from the store name when entering step 2,
-  // and run a debounced availability check as the user edits it.
+  // Keep the slug in sync with the store name until the user manually edits it.
   useEffect(() => {
-    if (step !== 2 || isResume) return;
-    if (!slugDraft && values.name) {
+    if (isResume || slugManuallyEdited) return;
+    if (values.name) {
       setSlugDraft(slugify(values.name));
+    } else {
+      setSlugDraft("");
     }
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [values.name, isResume, slugManuallyEdited]);
 
+  // Debounced availability check whenever the slug draft changes (step 1).
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 1 || isResume) return;
     const candidate = slugify(slugDraft);
     if (!candidate || candidate.length < 2) {
       setSlugCheck(null);
