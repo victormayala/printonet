@@ -363,7 +363,7 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
   };
 
   const loading = settingsQ.isLoading || zonesQ.isLoading;
-  const taxAuto = taxEnabled;
+  const taxDisabled = !taxEnabled;
 
   if (loading) {
     return (
@@ -426,22 +426,22 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
         <CardHeader>
           <CardTitle>Tax</CardTitle>
           <CardDescription>
-            Choose Stripe automatic tax or set a single manual rate. Manual tax is applied to the
-            order total at checkout.
+            Charge a single manual tax rate on the order total at checkout. Turn this off if your
+            prices already include tax or you don't collect tax in this store.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>
-              <p className="text-sm font-medium">Use Stripe automatic tax</p>
+              <p className="text-sm font-medium">Charge tax at checkout</p>
               <p className="text-xs text-muted-foreground">
-                When on, manual tax fields below are ignored.
+                When on, the rate below is added to every order in the cart and at checkout.
               </p>
             </div>
             <Switch checked={taxEnabled} onCheckedChange={setTaxEnabled} />
           </div>
 
-          <div className={`grid gap-4 sm:grid-cols-2 ${taxAuto ? "opacity-50 pointer-events-none" : ""}`}>
+          <div className={`grid gap-4 sm:grid-cols-2 ${taxDisabled ? "opacity-50 pointer-events-none" : ""}`}>
             <div className="space-y-1.5">
               <Label htmlFor="tax-label">Tax label</Label>
               <Input
