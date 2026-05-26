@@ -102,6 +102,22 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         .in("id", ids);
       if (pErr) throw pErr;
       const pMap = new Map((prods ?? []).map((p) => [p.id, p]));
+
+      // Pull the front-view logo overlay (if any) for each linked product so
+      // the thumbnail can show the corporate logo composited on top.
+      const { data: logoRows } = await supabase
+        .from("corporate_store_product_logos")
+        .select("product_id,view,logo_url,position")
+        .eq("store_id", store.id)
+        .in("product_id", ids)
+        .eq("view", "front");
+      const logoMap = new Map<string, LogoOverlay>(
+        (logoRows ?? []).map((r) => [
+          r.product_id,
+          { logo_url: r.logo_url, position: r.position as LogoOverlay["position"] },
+        ]),
+      );
+
       return (links ?? [])
         .map((l) => {
           const product = pMap.get(l.product_id);
@@ -110,6 +126,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             id: l.id,
             product_id: l.product_id,
             customizable: !!l.customizable,
+            front_logo: logoMap.get(l.product_id) ?? null,
             product,
           } as Row;
         })
