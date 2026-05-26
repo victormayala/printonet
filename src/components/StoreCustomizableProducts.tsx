@@ -53,7 +53,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [copied, setCopied] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
 
+  const isCorporate = store.store_type === "corporate";
   const queryKey = ["store_customizer_flags", store.id];
 
   /**
