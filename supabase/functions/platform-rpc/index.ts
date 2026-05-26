@@ -186,6 +186,16 @@ Deno.serve(async (req) => {
     return data ?? [];
   };
 
+  const fetchVolumeDiscounts = async (storeId: string) => {
+    const { data, error } = await supabase
+      .from("corporate_store_volume_discounts" as never)
+      .select("id, min_qty, max_qty, discount_pct, sort_order")
+      .eq("store_id", storeId)
+      .order("min_qty", { ascending: true });
+    if (error) return [];
+    return data ?? [];
+  };
+
   try {
     switch (op) {
       case "get_user_store_limit": {
