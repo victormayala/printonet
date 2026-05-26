@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
+import { EditProductLogoDialog, type EditableProduct } from "@/components/EditProductLogoDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,12 +31,16 @@ type Row = {
   product_id: string;
   customizable: boolean;
   front_logo: LogoOverlay | null;
+  logo_view_count: number;
   product: {
     id: string;
     name: string;
     category: string | null;
     base_price: number;
     image_front: string | null;
+    image_back: string | null;
+    image_side1: string | null;
+    image_side2: string | null;
   };
 };
 
@@ -48,7 +53,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [copied, setCopied] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
 
+  const isCorporate = store.store_type === "corporate";
   const queryKey = ["store_customizer_flags", store.id];
 
   /**
@@ -98,25 +105,29 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       if (ids.length === 0) return [];
       const { data: prods, error: pErr } = await supabase
         .from("inventory_products")
-        .select("id,name,category,base_price,image_front")
+        .select("id,name,category,base_price,image_front,image_back,image_side1,image_side2")
         .in("id", ids);
       if (pErr) throw pErr;
       const pMap = new Map((prods ?? []).map((p) => [p.id, p]));
 
-      // Pull the front-view logo overlay (if any) for each linked product so
-      // the thumbnail can show the corporate logo composited on top.
+      // Pull all logo overlay rows so we can show the front thumbnail AND
+      // know how many views each product has logos on.
       const { data: logoRows } = await supabase
         .from("corporate_store_product_logos")
         .select("product_id,view,logo_url,position")
         .eq("store_id", store.id)
-        .in("product_id", ids)
-        .eq("view", "front");
-      const logoMap = new Map<string, LogoOverlay>(
-        (logoRows ?? []).map((r) => [
-          r.product_id,
-          { logo_url: r.logo_url, position: r.position as LogoOverlay["position"] },
-        ]),
-      );
+        .in("product_id", ids);
+      const frontLogoMap = new Map<string, LogoOverlay>();
+      const viewCountMap = new Map<string, number>();
+      for (const r of logoRows ?? []) {
+        viewCountMap.set(r.product_id, (viewCountMap.get(r.product_id) ?? 0) + 1);
+        if (r.view === "front") {
+          frontLogoMap.set(r.product_id, {
+            logo_url: r.logo_url,
+            position: r.position as LogoOverlay["position"],
+          });
+        }
+      }
 
       return (links ?? [])
         .map((l) => {
@@ -126,7 +137,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             id: l.id,
             product_id: l.product_id,
             customizable: !!l.customizable,
-            front_logo: logoMap.get(l.product_id) ?? null,
+            front_logo: frontLogoMap.get(l.product_id) ?? null,
+            logo_view_count: viewCountMap.get(l.product_id) ?? 0,
             product,
           } as Row;
         })
@@ -402,11 +414,33 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                       <p className="text-sm font-medium truncate">{p.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
+                        {isCorporate && r.logo_view_count > 0 && (
+                          <span className="ml-1">· logo on {r.logo_view_count} view{r.logo_view_count === 1 ? "" : "s"}</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                       <TooltipProvider delayDuration={200}>
+                        {isCorporate && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                disabled={busy || bulkBusy}
+                                onClick={() => setEditingProduct(p)}
+                                aria-label={`Edit logo placement for ${p.name}`}
+                              >
+                                <ImagePlus className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {r.logo_view_count > 0 ? "Edit logo placement" : "Add corporate logo"}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted/60">
@@ -456,6 +490,15 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           setPushOpen(v);
           if (!v) qc.invalidateQueries({ queryKey });
         }}
+      />
+      <EditProductLogoDialog
+        store={store}
+        product={editingProduct}
+        open={!!editingProduct}
+        onOpenChange={(v) => {
+          if (!v) setEditingProduct(null);
+        }}
+        onSaved={() => qc.invalidateQueries({ queryKey })}
       />
     </Card>
   );
