@@ -370,7 +370,7 @@ export function PushProductsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[85vh] flex flex-col gap-4">
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col gap-4 overflow-hidden">
         <DialogHeader>
           <DialogTitle>Push products to {store.name}</DialogTitle>
           <DialogDescription>
@@ -380,7 +380,7 @@ export function PushProductsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden pr-1">
           <div className="relative shrink-0">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -391,7 +391,7 @@ export function PushProductsDialog({
             />
           </div>
 
-          <div className="flex items-center justify-between text-sm shrink-0">
+          <div className="flex items-center justify-between gap-4 text-sm shrink-0">
             <button
               type="button"
               onClick={toggleAll}
@@ -400,7 +400,7 @@ export function PushProductsDialog({
             >
               {allSelected ? "Deselect all" : "Select all"}
             </button>
-            <span className="text-muted-foreground">{selected.size} selected</span>
+            <span className="shrink-0 text-muted-foreground">{selected.size} selected</span>
           </div>
 
           <ScrollArea className="flex-1 min-h-0 rounded border">
@@ -592,7 +592,7 @@ export function PushProductsDialog({
           </ScrollArea>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pushing}>
             Cancel
           </Button>
