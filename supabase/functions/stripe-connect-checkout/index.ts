@@ -183,9 +183,19 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (e) {
-    console.error("stripe-connect-checkout error:", e);
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
+  } catch (e: any) {
+    console.error("[stripe-connect-checkout] FATAL", {
+      message: e?.message,
+      stripeError: e?.stripeError,
+      stripeStatus: e?.stripeStatus,
+      stripeRequestId: e?.stripeRequestId,
+      stack: e?.stack,
+    });
+    return new Response(JSON.stringify({
+      error: e?.message || "unknown_error",
+      stripeError: e?.stripeError || null,
+      stripeRequestId: e?.stripeRequestId || null,
+    }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
