@@ -3751,6 +3751,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   void tenantSyncOpen; void setTenantSyncOpen;
   void corporateStores; void setCorporateStores;
   void loadingStores; void syncingStoreId; void storeSyncResults;
+  void globalPriceSource; void applyingGlobalSource; void applyGlobalPriceSource;
 
 
   const toggleProductSelect = (id: string) => {
@@ -4121,22 +4122,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                       <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
                     </div>
                   <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-                    {/* Global storefront price source */}
-                    <div className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 h-9" title="Sets the storefront price for all products">
-                      <span className="text-[11px] font-medium text-muted-foreground">Show:</span>
-                      <ToggleGroup
-                        type="single"
-                        size="sm"
-                        value={globalPriceSource}
-                        onValueChange={(v) => v && v !== globalPriceSource && applyGlobalPriceSource(v as PriceReference)}
-                        disabled={applyingGlobalSource}
-                        className="h-7"
-                      >
-                        <ToggleGroupItem value="wholesale" className="h-7 px-2.5 text-[11px]">Wholesale</ToggleGroupItem>
-                        <ToggleGroupItem value="msrp" className="h-7 px-2.5 text-[11px]">MSRP</ToggleGroupItem>
-                      </ToggleGroup>
-                      {applyingGlobalSource && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-                    </div>
+
 
 
                     {/* Category filter */}

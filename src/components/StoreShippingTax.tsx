@@ -39,7 +39,7 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
       const { data, error } = await supabase
         .from("corporate_stores")
         .select(
-          "id, tax_enabled, tax_rate_bps, tax_inclusive, tax_label, shipping_label, shipping_flat_amount, free_shipping_threshold",
+          "id, tax_enabled, tax_rate_bps, tax_inclusive, tax_label, shipping_label, shipping_flat_amount, free_shipping_threshold, default_price_source",
         )
         .eq("id", store.id)
         .maybeSingle();
@@ -68,6 +68,8 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
   const [shippingLabel, setShippingLabel] = useState("Standard shipping");
   const [shippingFlat, setShippingFlat] = useState("0.00");
   const [freeThreshold, setFreeThreshold] = useState("");
+  const [priceSource, setPriceSource] = useState<"wholesale" | "msrp">("wholesale");
+  const [applyingPriceSource, setApplyingPriceSource] = useState(false);
   const [zones, setZones] = useState<ShippingZone[]>([]);
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingZones, setSavingZones] = useState(false);
@@ -82,7 +84,82 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
     setShippingLabel(s.shipping_label ?? "Standard shipping");
     setShippingFlat(centsToDollars(s.shipping_flat_amount));
     setFreeThreshold(centsToDollars(s.free_shipping_threshold));
+    setPriceSource((s.default_price_source as "wholesale" | "msrp") ?? "wholesale");
   }, [settingsQ.data]);
+
+  const refValueFor = (sz: any, ref: "wholesale" | "msrp"): number | null => {
+    if (ref === "wholesale") {
+      const c = Number(sz?.cost);
+      if (c > 0) return c;
+      const p = Number(sz?.price);
+      return p > 0 ? p : null;
+    }
+    const m = Number(sz?.msrp);
+    return m > 0 ? m : null;
+  };
+
+  const applyPriceSource = async (next: "wholesale" | "msrp") => {
+    if (next === priceSource) return;
+    setApplyingPriceSource(true);
+    setPriceSource(next);
+    try {
+      // 1) Save on the store.
+      const { error: storeErr } = await supabase
+        .from("corporate_stores")
+        .update({ default_price_source: next } as any)
+        .eq("id", store.id);
+      if (storeErr) throw storeErr;
+
+      // 2) Rewrite prices for products linked to this store only.
+      const { data: links, error: linkErr } = await supabase
+        .from("corporate_store_products")
+        .select("product_id")
+        .eq("store_id", store.id);
+      if (linkErr) throw linkErr;
+
+      const ids = (links ?? []).map((l: any) => l.product_id).filter(Boolean);
+      let updated = 0;
+      if (ids.length > 0) {
+        const { data: prods, error: prodErr } = await supabase
+          .from("inventory_products")
+          .select("id, variants")
+          .in("id", ids);
+        if (prodErr) throw prodErr;
+
+        await Promise.all(
+          (prods ?? []).map(async (p: any) => {
+            const variants = Array.isArray(p.variants) ? p.variants : [];
+            const nextVariants = variants.map((v: any) => {
+              const sizes = (v.sizes || []).map((sz: any) => {
+                const refVal = refValueFor(sz, next);
+                if (refVal == null || refVal <= 0) return sz;
+                return { ...sz, price: Math.round(refVal * 100) / 100 };
+              });
+              return { ...v, sizes };
+            });
+            await supabase
+              .from("inventory_products")
+              .update({ variants: nextVariants, price_source: next } as any)
+              .eq("id", p.id);
+            updated += 1;
+          }),
+        );
+      }
+      toast({
+        title: `Storefront price source → ${next === "wholesale" ? "Wholesale" : "MSRP"}`,
+        description: `Applied to ${updated} product${updated === 1 ? "" : "s"} in this store.`,
+      });
+      qc.invalidateQueries({ queryKey: ["store-shipping-tax", store.id] });
+    } catch (e) {
+      toast({
+        title: "Could not change price source",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setApplyingPriceSource(false);
+    }
+  };
 
   useEffect(() => {
     if (!zonesQ.data) return;
@@ -286,6 +363,52 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
 
   return (
     <div className="space-y-6">
+      {/* Pricing source */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Storefront pricing</CardTitle>
+          <CardDescription>
+            Choose which reference price is shown to customers in this store. Switching this
+            instantly rewrites every product price for this store only — other stores aren't affected.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
+            <div className="flex-1 min-w-[180px]">
+              <p className="text-sm font-medium">Price source</p>
+              <p className="text-xs text-muted-foreground">
+                {priceSource === "wholesale"
+                  ? "Wholesale cost is shown as the selling price."
+                  : "MSRP is shown as the selling price."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={priceSource === "wholesale" ? "default" : "outline"}
+                disabled={applyingPriceSource}
+                onClick={() => applyPriceSource("wholesale")}
+              >
+                Wholesale
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={priceSource === "msrp" ? "default" : "outline"}
+                disabled={applyingPriceSource}
+                onClick={() => applyPriceSource("msrp")}
+              >
+                MSRP
+              </Button>
+              {applyingPriceSource && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tax */}
       <Card>
         <CardHeader>
