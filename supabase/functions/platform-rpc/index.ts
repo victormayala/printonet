@@ -278,10 +278,12 @@ Deno.serve(async (req) => {
           .in("id", ids)
           .eq("is_active", true);
         if (prodsErr) throw prodsErr;
+        const logoMap = await fetchStoreProductLogos(supabase, storeId, ids);
         const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
         const products = (links ?? []).map((l) => ({
           ...l,
           inventory_products: byId.get(l.product_id) ?? null,
+          logo_overlays: logoMap.get(l.product_id) ?? [],
         }));
         return json(200, { products });
       }
@@ -314,7 +316,14 @@ Deno.serve(async (req) => {
           .eq("id", productId)
           .maybeSingle();
         if (prodErr) throw prodErr;
-        return json(200, { product: { ...link, inventory_products: normalizeStorefrontProduct(prod, priceSource) } });
+        const logoMap = await fetchStoreProductLogos(supabase, storeId, [productId]);
+        return json(200, {
+          product: {
+            ...link,
+            inventory_products: normalizeStorefrontProduct(prod, priceSource),
+            logo_overlays: logoMap.get(productId) ?? [],
+          },
+        });
       }
 
       case "create_order": {
