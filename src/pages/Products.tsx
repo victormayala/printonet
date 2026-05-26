@@ -4209,13 +4209,19 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                     ))}
                   </div>
                 ) : products.length === 0 ? (
-                  <Card className="flex flex-col items-center py-16 text-center">
-                    <Package className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="font-medium mb-1">No products yet</p>
-                    <p className="text-sm text-muted-foreground mb-4">Add products manually or import from Shopify / WooCommerce.</p>
-                    <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2">
-                      <Plus className="h-4 w-4" /> Add Your First Product
-                    </Button>
+                  <Card className="flex flex-col items-center py-16 text-center px-6">
+                    <div className="bg-muted rounded-full p-4 mb-5">
+                      <Package className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <p className="font-semibold text-lg mb-2">Your catalog is empty</p>
+                    <p className="text-sm text-muted-foreground max-w-md mb-2">
+                      Get started by importing products from suppliers like S&S Activewear and SanMar, or create your own products manually in the Products section under Catalog.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+                      <Button onClick={() => { setShowAddForm(true); setEditingProduct(null); }} className="gap-2">
+                        <Plus className="h-4 w-4" /> Create Product
+                      </Button>
+                    </div>
                   </Card>
                 ) : filteredAndSortedProducts.length === 0 ? (
                   <Card className="flex flex-col items-center py-12 text-center">
