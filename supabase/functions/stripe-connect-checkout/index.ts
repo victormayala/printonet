@@ -112,6 +112,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Pre-flight: log connected account capabilities + currency. Common cause
+    // of an embedded checkout error AFTER session creation is missing
+    // card_payments or a non-USD default currency on the connected account.
+    try {
+      const acctRes = await fetch(
+        `https://api.stripe.com/v1/accounts/${store.stripe_account_id}`,
+        { headers: { Authorization: `Bearer ${STRIPE_SECRET}` } },
+      );
+      const acct = await acctRes.json();
+      console.log("[stripe-connect-checkout] account snapshot", {
+        id: acct?.id,
+        country: acct?.country,
+        default_currency: acct?.default_currency,
+        charges_enabled: acct?.charges_enabled,
+        payouts_enabled: acct?.payouts_enabled,
+        details_submitted: acct?.details_submitted,
+        capabilities: acct?.capabilities,
+        requirements_currently_due: acct?.requirements?.currently_due,
+        requirements_disabled_reason: acct?.requirements?.disabled_reason,
+      });
+    } catch (e) {
+      console.error("[stripe-connect-checkout] account fetch failed", e);
+    }
+
     const params: Record<string, string> = {
       "line_items[0][price_data][currency]": "usd",
       "line_items[0][price_data][product_data][name]": productName || store.name || "Custom Product",
