@@ -31,12 +31,16 @@ type Row = {
   product_id: string;
   customizable: boolean;
   front_logo: LogoOverlay | null;
+  logo_view_count: number;
   product: {
     id: string;
     name: string;
     category: string | null;
     base_price: number;
     image_front: string | null;
+    image_back: string | null;
+    image_side1: string | null;
+    image_side2: string | null;
   };
 };
 
