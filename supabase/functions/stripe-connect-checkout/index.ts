@@ -24,13 +24,39 @@ async function stripeRequest(
     "Content-Type": "application/x-www-form-urlencoded",
   };
   if (stripeAccount) headers["Stripe-Account"] = stripeAccount;
+  console.log("[stripe-connect-checkout] -> Stripe", {
+    path,
+    stripeAccount: stripeAccount || null,
+    paramKeys: Object.keys(params),
+    amount: params["line_items[0][price_data][unit_amount]"],
+    quantity: params["line_items[0][quantity]"],
+    application_fee_amount: params["payment_intent_data[application_fee_amount]"] || null,
+  });
   const res = await fetch(`https://api.stripe.com/v1${path}`, {
     method: "POST",
     headers,
     body: new URLSearchParams(params).toString(),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || `Stripe error ${res.status}`);
+  if (!res.ok) {
+    console.error("[stripe-connect-checkout] <- Stripe ERROR", {
+      status: res.status,
+      stripeAccount: stripeAccount || null,
+      requestId: res.headers.get("request-id"),
+      error: data?.error || data,
+    });
+    const err: any = new Error(data?.error?.message || `Stripe error ${res.status}`);
+    err.stripeError = data?.error;
+    err.stripeRequestId = res.headers.get("request-id");
+    err.stripeStatus = res.status;
+    throw err;
+  }
+  console.log("[stripe-connect-checkout] <- Stripe OK", {
+    status: res.status,
+    requestId: res.headers.get("request-id"),
+    sessionId: data?.id,
+    hasClientSecret: !!data?.client_secret,
+  });
   return data;
 }
 
@@ -86,6 +112,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Pre-flight: log connected account capabilities + currency. Common cause
+    // of an embedded checkout error AFTER session creation is missing
+    // card_payments or a non-USD default currency on the connected account.
+    try {
+      const acctRes = await fetch(
+        `https://api.stripe.com/v1/accounts/${store.stripe_account_id}`,
+        { headers: { Authorization: `Bearer ${STRIPE_SECRET}` } },
+      );
+      const acct = await acctRes.json();
+      console.log("[stripe-connect-checkout] account snapshot", {
+        id: acct?.id,
+        country: acct?.country,
+        default_currency: acct?.default_currency,
+        charges_enabled: acct?.charges_enabled,
+        payouts_enabled: acct?.payouts_enabled,
+        details_submitted: acct?.details_submitted,
+        capabilities: acct?.capabilities,
+        requirements_currently_due: acct?.requirements?.currently_due,
+        requirements_disabled_reason: acct?.requirements?.disabled_reason,
+      });
+    } catch (e) {
+      console.error("[stripe-connect-checkout] account fetch failed", e);
+    }
+
     const params: Record<string, string> = {
       "line_items[0][price_data][currency]": "usd",
       "line_items[0][price_data][product_data][name]": productName || store.name || "Custom Product",
@@ -133,9 +183,19 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (e) {
-    console.error("stripe-connect-checkout error:", e);
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
+  } catch (e: any) {
+    console.error("[stripe-connect-checkout] FATAL", {
+      message: e?.message,
+      stripeError: e?.stripeError,
+      stripeStatus: e?.stripeStatus,
+      stripeRequestId: e?.stripeRequestId,
+      stack: e?.stack,
+    });
+    return new Response(JSON.stringify({
+      error: e?.message || "unknown_error",
+      stripeError: e?.stripeError || null,
+      stripeRequestId: e?.stripeRequestId || null,
+    }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
