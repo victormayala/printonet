@@ -129,17 +129,29 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
         await Promise.all(
           (prods ?? []).map(async (p: any) => {
             const variants = Array.isArray(p.variants) ? p.variants : [];
+            const allPrices: number[] = [];
             const nextVariants = variants.map((v: any) => {
               const sizes = (v.sizes || []).map((sz: any) => {
                 const refVal = refValueFor(sz, next);
+                const nextPrice =
+                  refVal != null && refVal > 0
+                    ? Math.round(refVal * 100) / 100
+                    : Number(sz?.price) || 0;
+                if (nextPrice > 0) allPrices.push(nextPrice);
                 if (refVal == null || refVal <= 0) return sz;
                 return { ...sz, price: Math.round(refVal * 100) / 100 };
               });
               return { ...v, sizes };
             });
+            const nextBase =
+              allPrices.length > 0 ? Math.min(...allPrices) : undefined;
             await supabase
               .from("inventory_products")
-              .update({ variants: nextVariants, price_source: next } as any)
+              .update({
+                variants: nextVariants,
+                price_source: next,
+                ...(nextBase != null ? { base_price: nextBase } : {}),
+              } as any)
               .eq("id", p.id);
             updated += 1;
           }),
