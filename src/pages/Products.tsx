@@ -3758,6 +3758,28 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     setPushResults(null);
     try {
       const ids = Array.from(selectedProductIds);
+
+      // Hosted store push — link products via corporate_store_products.
+      if (integration.kind === "hosted") {
+        const rows = ids.map((pid, idx) => ({
+          user_id: user!.id,
+          store_id: integration.store_id,
+          product_id: pid,
+          is_active: true,
+          sort_order: idx,
+        }));
+        const { error: linkErr } = await supabase
+          .from("corporate_store_products")
+          .upsert(rows, { onConflict: "store_id,product_id" });
+        if (linkErr) throw linkErr;
+        const data = { created: ids.length, updated: 0, failed: 0, errors: [] as string[] };
+        setPushResults(data);
+        toast({ title: `Added ${ids.length} product${ids.length === 1 ? "" : "s"} to ${integration.name}` });
+        setSelectedProductIds(new Set());
+        fetchProducts();
+        return;
+      }
+
       const creds = integration.credentials as any;
 
       // Invoke edge function ONCE PER PRODUCT to stay under the 150s edge timeout.
