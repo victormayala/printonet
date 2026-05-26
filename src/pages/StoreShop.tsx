@@ -81,9 +81,10 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
         const prices: number[] = [];
         for (const v of variants) {
           for (const sz of v?.sizes ?? []) {
-            const val =
-              priceSource === "msrp"
-                ? Number(sz?.msrp)
+            const val = priceSource === "msrp"
+              ? Number(sz?.msrp)
+              : Number(sz?.cost) > 0
+                ? Number(sz?.cost)
                 : Number(sz?.price);
             if (val > 0) prices.push(val);
           }

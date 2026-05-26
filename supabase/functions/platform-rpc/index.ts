@@ -75,6 +75,33 @@ function normalizeUnlimitedStockProduct(product: Record<string, unknown> | null)
   };
 }
 
+type StorefrontPriceSource = "wholesale" | "msrp";
+
+function normalizeStorefrontProduct(product: Record<string, unknown> | null, priceSource: StorefrontPriceSource) {
+  const normalized = normalizeUnlimitedStockProduct(product);
+  if (!normalized) return null;
+  const prices: number[] = [];
+  const variants = Array.isArray(normalized.variants) ? normalized.variants : [];
+  for (const variant of variants) {
+    const sizes = variant && typeof variant === "object" && Array.isArray((variant as { sizes?: unknown }).sizes)
+      ? (variant as { sizes: Record<string, unknown>[] }).sizes
+      : [];
+    for (const size of sizes) {
+      const value = priceSource === "msrp"
+        ? Number(size.msrp)
+        : Number(size.cost) > 0
+          ? Number(size.cost)
+          : Number(size.price);
+      if (value > 0) prices.push(value);
+    }
+  }
+  return {
+    ...normalized,
+    price_source: priceSource,
+    ...(prices.length > 0 ? { base_price: Math.min(...prices) } : {}),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
@@ -190,7 +217,7 @@ Deno.serve(async (req) => {
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
               "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
-              "tax_rate_bps, tax_inclusive, tax_label",
+              "tax_rate_bps, tax_inclusive, tax_label, default_price_source",
           )
           .eq("status", "active")
           .ilike("custom_domain", domain)
@@ -211,7 +238,7 @@ Deno.serve(async (req) => {
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
               "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
-              "tax_rate_bps, tax_inclusive, tax_label",
+              "tax_rate_bps, tax_inclusive, tax_label, default_price_source",
           )
           .eq("status", "active")
           .ilike("tenant_slug", slug)
@@ -234,6 +261,13 @@ Deno.serve(async (req) => {
         if (linksErr) throw linksErr;
         const ids = (links ?? []).map((l) => l.product_id);
         if (ids.length === 0) return json(200, { products: [] });
+        const { data: storeRow, error: storeErr } = await supabase
+          .from("corporate_stores")
+          .select("default_price_source")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (storeErr) throw storeErr;
+        const priceSource = storeRow?.default_price_source === "msrp" ? "msrp" : "wholesale";
         const { data: prods, error: prodsErr } = await supabase
           .from("inventory_products")
           .select(
@@ -244,7 +278,7 @@ Deno.serve(async (req) => {
           .in("id", ids)
           .eq("is_active", true);
         if (prodsErr) throw prodsErr;
-        const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
+        const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
         const products = (links ?? []).map((l) => ({
           ...l,
           inventory_products: byId.get(l.product_id) ?? null,
@@ -267,13 +301,20 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (linkErr) throw linkErr;
         if (!link) return json(404, { error: "product_not_found" });
+        const { data: storeRow, error: storeErr } = await supabase
+          .from("corporate_stores")
+          .select("default_price_source")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (storeErr) throw storeErr;
+        const priceSource = storeRow?.default_price_source === "msrp" ? "msrp" : "wholesale";
         const { data: prod, error: prodErr } = await supabase
           .from("inventory_products")
           .select("*")
           .eq("id", productId)
           .maybeSingle();
         if (prodErr) throw prodErr;
-        return json(200, { product: { ...link, inventory_products: normalizeUnlimitedStockProduct(prod) } });
+        return json(200, { product: { ...link, inventory_products: normalizeStorefrontProduct(prod, priceSource) } });
       }
 
       case "create_order": {
@@ -901,7 +942,7 @@ Deno.serve(async (req) => {
           "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
           "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
           "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
-          "tax_rate_bps, tax_inclusive, tax_label";
+          "tax_rate_bps, tax_inclusive, tax_label, default_price_source";
 
         let storeQuery = supabase
           .from("corporate_stores")
@@ -938,7 +979,8 @@ Deno.serve(async (req) => {
             .in("id", ids)
             .eq("is_active", true);
           if (prodsErr) throw prodsErr;
-          const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
+          const priceSource = storeRow.default_price_source === "msrp" ? "msrp" : "wholesale";
+          const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
           return (links ?? []).map((l) => ({
             ...l,
             inventory_products: byId.get(l.product_id) ?? null,
