@@ -76,6 +76,23 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
         prods = (data as any) ?? [];
       }
 
+      // Pull front-view corporate logo overlays for these products.
+      const logoMap = new Map<string, LogoOverlay>();
+      if (productIds.length > 0) {
+        const { data: logoRows } = await supabase
+          .from("corporate_store_product_logos")
+          .select("product_id,view,logo_url,position")
+          .eq("store_id", s.id)
+          .in("product_id", productIds)
+          .eq("view", "front");
+        for (const r of logoRows ?? []) {
+          logoMap.set(r.product_id, {
+            logo_url: r.logo_url,
+            position: r.position as LogoOverlay["position"],
+          });
+        }
+      }
+
       if (cancelled) return;
       const priceSource = ((s as any).default_price_source as "wholesale" | "msrp") ?? "wholesale";
       const computePrice = (p: { base_price: number; variants: any }): number => {
@@ -103,6 +120,7 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
           image_front: p.image_front,
           base_price: computePrice(p),
           customizable: customizableMap.get(p.id) ?? false,
+          front_logo: logoMap.get(p.id) ?? null,
         }))
         .sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
       setProducts(productList);
