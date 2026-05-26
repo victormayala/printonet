@@ -1,5 +1,5 @@
 import { useParams, useSearchParams, Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -164,10 +164,11 @@ export default function Checkout() {
     );
   }
 
-  const fetchClientSecret = async (): Promise<string> => {
+  const fetchClientSecret = useCallback(async (): Promise<string> => {
     if (!checkoutSession?.clientSecret) throw new Error("Checkout session is not ready");
     return checkoutSession.clientSecret;
-  };
+  }, [checkoutSession?.clientSecret]);
+  const checkoutOptions = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -210,7 +211,7 @@ export default function Checkout() {
             <h2 className="text-lg font-semibold text-foreground mb-4">Payment</h2>
             {checkoutSession ? (
               <div className="rounded-xl border border-border overflow-hidden">
-                <EmbeddedCheckoutProvider stripe={checkoutSession.stripePromise} options={{ fetchClientSecret }}>
+                <EmbeddedCheckoutProvider stripe={checkoutSession.stripePromise} options={checkoutOptions}>
                   <EmbeddedCheckout />
                 </EmbeddedCheckoutProvider>
               </div>
