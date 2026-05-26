@@ -3678,6 +3678,76 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const [loadingStores] = useState(false);
   const [syncingStoreId] = useState<string | null>(null);
   const [storeSyncResults] = useState<Record<string, { ok: boolean; message: string; count?: number }>>({});
+
+  // Global storefront price source — applies to ALL products in the store.
+  const [globalPriceSource, setGlobalPriceSource] = useState<PriceReference>("wholesale");
+  const [applyingGlobalSource, setApplyingGlobalSource] = useState(false);
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("default_price_source")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const src = ((data as any)?.default_price_source as PriceReference) || "wholesale";
+      setGlobalPriceSource(src);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  const refValueFor = (s: any, ref: PriceReference): number | null => {
+    if (ref === "wholesale") {
+      const c = Number(s?.cost);
+      if (c > 0) return c;
+      const p = Number(s?.price);
+      return p > 0 ? p : null;
+    }
+    const m = Number(s?.msrp);
+    return m > 0 ? m : null;
+  };
+
+  const applyGlobalPriceSource = async (next: PriceReference) => {
+    if (!user?.id) return;
+    setApplyingGlobalSource(true);
+    setGlobalPriceSource(next);
+    try {
+      // 1) Save as the user's default.
+      await supabase
+        .from("profiles")
+        .update({ default_price_source: next } as any)
+        .eq("id", user.id);
+
+      // 2) Rewrite every product's variants/sizes to the chosen source.
+      const updates = products.map(async (p: any) => {
+        const variants = Array.isArray(p.variants) ? p.variants : [];
+        const nextVariants = variants.map((v: any) => {
+          const sizes = (v.sizes || []).map((s: any) => {
+            const refVal = refValueFor(s, next);
+            if (refVal == null || refVal <= 0) return s;
+            return { ...s, price: Math.round(refVal * 100) / 100 };
+          });
+          return { ...v, sizes };
+        });
+        return supabase
+          .from("inventory_products")
+          .update({ variants: nextVariants, price_source: next } as any)
+          .eq("id", p.id);
+      });
+      await Promise.all(updates);
+      toast({
+        title: `Storefront price source → ${next === "wholesale" ? "Wholesale" : "MSRP"}`,
+        description: `Applied to ${products.length} product${products.length === 1 ? "" : "s"}.`,
+      });
+      fetchProducts();
+    } catch (e: any) {
+      toast({ title: "Couldn't apply globally", description: e?.message, variant: "destructive" });
+    } finally {
+      setApplyingGlobalSource(false);
+    }
+  };
   void tenantSyncOpen; void setTenantSyncOpen;
   void corporateStores; void setCorporateStores;
   void loadingStores; void syncingStoreId; void storeSyncResults;
