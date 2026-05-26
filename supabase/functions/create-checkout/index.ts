@@ -32,7 +32,7 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      ui_mode: "embedded",
+      ui_mode: "embedded_page",
       return_url: returnUrl || `${req.headers.get("origin") || "https://platform.printonet.com"}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
       ...(customerEmail && { customer_email: customerEmail }),
       ...(sessionId && { metadata: { sessionId } }),
