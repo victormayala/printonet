@@ -491,6 +491,15 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           if (!v) qc.invalidateQueries({ queryKey });
         }}
       />
+      <EditProductLogoDialog
+        store={store}
+        product={editingProduct}
+        open={!!editingProduct}
+        onOpenChange={(v) => {
+          if (!v) setEditingProduct(null);
+        }}
+        onSaved={() => qc.invalidateQueries({ queryKey })}
+      />
     </Card>
   );
 }
