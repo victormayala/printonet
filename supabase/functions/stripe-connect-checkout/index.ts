@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       "line_items[0][price_data][unit_amount]": String(amountInCents),
       "line_items[0][quantity]": String(quantity || 1),
       mode: "payment",
-      ui_mode: "embedded",
+      ui_mode: "embedded_page",
       "payment_method_types[0]": "card",
       return_url:
         returnUrl ||
