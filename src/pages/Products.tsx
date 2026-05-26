@@ -3696,18 +3696,39 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     });
   };
 
+  const loadPushTargets = async () => {
+    setLoadingIntegrations(true);
+    const [{ data: integ }, { data: stores }] = await Promise.all([
+      supabase
+        .from("store_integrations")
+        .select("*")
+        .eq("user_id", user?.id || "")
+        .in("platform", ["shopify", "woocommerce"]),
+      supabase
+        .from("corporate_stores")
+        .select("id,name,store_type,status,tenant_slug")
+        .eq("user_id", user?.id || "")
+        .neq("status", "failed"),
+    ]);
+    const hosted = (stores || []).map((s: any) => ({
+      id: `hosted:${s.id}`,
+      kind: "hosted",
+      platform: "hosted",
+      store_id: s.id,
+      store_url: s.tenant_slug ? `${s.tenant_slug} · Hosted store` : "Hosted store",
+      name: s.name,
+      store_type: s.store_type,
+    }));
+    const external = (integ || []).map((i: any) => ({ ...i, kind: "external" }));
+    setIntegrations([...hosted, ...external]);
+    setLoadingIntegrations(false);
+  };
+
   const handlePushSingleProduct = async (productId: string) => {
     setSelectedProductIds(new Set([productId]));
     setPushResults(null);
     setPushDialogOpen(true);
-    setLoadingIntegrations(true);
-    const { data } = await supabase
-      .from("store_integrations")
-      .select("*")
-      .eq("user_id", user?.id || "")
-      .in("platform", ["shopify", "woocommerce"]);
-    setIntegrations(data || []);
-    setLoadingIntegrations(false);
+    await loadPushTargets();
   };
 
   const getPushedPlatforms = (product: Product): string[] => {
@@ -3729,14 +3750,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const openPushDialog = async () => {
     setPushResults(null);
     setPushDialogOpen(true);
-    setLoadingIntegrations(true);
-    const { data } = await supabase
-      .from("store_integrations")
-      .select("*")
-      .eq("user_id", user?.id || "")
-      .in("platform", ["shopify", "woocommerce"]);
-    setIntegrations(data || []);
-    setLoadingIntegrations(false);
+    await loadPushTargets();
   };
 
   const handlePushToStore = async (integration: any) => {
@@ -3744,6 +3758,28 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     setPushResults(null);
     try {
       const ids = Array.from(selectedProductIds);
+
+      // Hosted store push — link products via corporate_store_products.
+      if (integration.kind === "hosted") {
+        const rows = ids.map((pid, idx) => ({
+          user_id: user!.id,
+          store_id: integration.store_id,
+          product_id: pid,
+          is_active: true,
+          sort_order: idx,
+        }));
+        const { error: linkErr } = await supabase
+          .from("corporate_store_products")
+          .upsert(rows, { onConflict: "store_id,product_id" });
+        if (linkErr) throw linkErr;
+        const data = { created: ids.length, updated: 0, failed: 0, errors: [] as string[] };
+        setPushResults(data);
+        toast({ title: `Added ${ids.length} product${ids.length === 1 ? "" : "s"} to ${integration.name}` });
+        setSelectedProductIds(new Set());
+        fetchProducts();
+        return;
+      }
+
       const creds = integration.credentials as any;
 
       // Invoke edge function ONCE PER PRODUCT to stay under the 150s edge timeout.
@@ -4369,7 +4405,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             ) : integrations.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <Store className="h-10 w-10 mx-auto text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify or WooCommerce store first.</p>
+                <p className="text-sm text-muted-foreground">No stores available. Create a hosted store or connect a Shopify / WooCommerce store first.</p>
               </div>
             ) : pushResults ? (
               <div className="space-y-3">
@@ -4392,27 +4428,35 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
               </div>
             ) : (
               <div className="space-y-3">
-                {integrations.map((integ) => (
-                  <Button
-                    key={integ.id}
-                    variant="outline"
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    disabled={pushingIntegrationId !== null}
-                    onClick={() => handlePushToStore(integ)}
-                  >
-                    {pushingIntegrationId === integ.id ? (
-                      <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                    ) : integ.platform === "shopify" ? (
-                      <ShoppingBag className="h-5 w-5 shrink-0" />
-                    ) : (
-                      <Globe className="h-5 w-5 shrink-0" />
-                    )}
-                    <div className="text-left">
-                      <p className="font-medium text-sm capitalize">{integ.platform}</p>
-                      <p className="text-xs text-muted-foreground">{integ.store_url}</p>
-                    </div>
-                  </Button>
-                ))}
+                {integrations.map((integ) => {
+                  const isHosted = integ.kind === "hosted";
+                  const label = isHosted
+                    ? integ.name
+                    : integ.platform;
+                  return (
+                    <Button
+                      key={integ.id}
+                      variant="outline"
+                      className="w-full justify-start gap-3 h-auto py-3"
+                      disabled={pushingIntegrationId !== null}
+                      onClick={() => handlePushToStore(integ)}
+                    >
+                      {pushingIntegrationId === integ.id ? (
+                        <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                      ) : isHosted ? (
+                        <Store className="h-5 w-5 shrink-0" />
+                      ) : integ.platform === "shopify" ? (
+                        <ShoppingBag className="h-5 w-5 shrink-0" />
+                      ) : (
+                        <Globe className="h-5 w-5 shrink-0" />
+                      )}
+                      <div className="text-left">
+                        <p className="font-medium text-sm capitalize">{label}</p>
+                        <p className="text-xs text-muted-foreground">{integ.store_url}</p>
+                      </div>
+                    </Button>
+                  );
+                })}
               </div>
             )}
           </DialogContent>
