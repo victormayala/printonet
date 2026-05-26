@@ -829,6 +829,7 @@ function ProductForm({
       },
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
       decoration_methods: decorationMethods,
+      price_source: priceReference,
       ...(productType === "variable" ? {
         variants: variants.map((v) => ({
           ...v,
