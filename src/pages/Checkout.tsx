@@ -9,6 +9,15 @@ import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
+type CustomizerSessionRow = {
+  store_id?: string | null;
+  product_data?: { name?: string; base_price?: number } | null;
+  design_output?: { sides?: { previewPNG?: string; designPNG?: string }[] } | null;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export default function Checkout() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [searchParams] = useSearchParams();
@@ -35,16 +44,17 @@ export default function Checkout() {
       return;
     }
 
-    (supabase as any)
+    supabase
       .rpc("get_customizer_sessions", { p_ids: ids })
-      .then(({ data }: { data: any }) => {
-        const sid = data?.find((r: any) => r.store_id)?.store_id ?? null;
+      .then(({ data }) => {
+        const sessions = (data ?? []) as CustomizerSessionRow[];
+        const sid = sessions.find((r) => r.store_id)?.store_id ?? null;
         setStoreId(sid);
 
-        if (items.length === 0 && data && data[0]) {
-          const pd = data[0].product_data as any;
-          const dout = data[0].design_output as any;
-          const side = dout?.sides?.find((s: any) => s.previewPNG || s.designPNG);
+        if (items.length === 0 && sessions[0]) {
+          const pd = sessions[0].product_data;
+          const dout = sessions[0].design_output;
+          const side = dout?.sides?.find((s) => s.previewPNG || s.designPNG);
           const qty = parseInt(searchParams.get("qty") || "1", 10);
           const price = priceOverride
             ? parseInt(priceOverride, 10)
@@ -73,7 +83,7 @@ export default function Checkout() {
         })),
       );
     }
-  }, [sessionId, items.length]);
+  }, [sessionId, items, searchParams, priceOverride]);
 
   const totalCents = useMemo(
     () => previews.reduce((sum, p) => sum + p.price * p.qty, 0),
@@ -137,8 +147,8 @@ export default function Checkout() {
           }
         }
         if (!cancelled && items.length > 0) clearCart();
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Unable to start checkout.");
+      } catch (e: unknown) {
+        if (!cancelled) setError(getErrorMessage(e, "Unable to start checkout."));
       }
     };
 
@@ -147,6 +157,12 @@ export default function Checkout() {
       cancelled = true;
     };
   }, [loading, error, previews.length, checkoutSession, storeId, totalCents, productName, cartSessionIds, items.length, clearCart]);
+
+  const fetchClientSecret = useCallback(async (): Promise<string> => {
+    if (!checkoutSession?.clientSecret) throw new Error("Checkout session is not ready");
+    return checkoutSession.clientSecret;
+  }, [checkoutSession?.clientSecret]);
+  const checkoutOptions = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
 
   if (loading) {
     return (
@@ -163,12 +179,6 @@ export default function Checkout() {
       </div>
     );
   }
-
-  const fetchClientSecret = useCallback(async (): Promise<string> => {
-    if (!checkoutSession?.clientSecret) throw new Error("Checkout session is not ready");
-    return checkoutSession.clientSecret;
-  }, [checkoutSession?.clientSecret]);
-  const checkoutOptions = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
 
   return (
     <div className="min-h-screen bg-background">
