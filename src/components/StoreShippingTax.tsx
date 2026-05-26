@@ -68,6 +68,8 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
   const [shippingLabel, setShippingLabel] = useState("Standard shipping");
   const [shippingFlat, setShippingFlat] = useState("0.00");
   const [freeThreshold, setFreeThreshold] = useState("");
+  const [priceSource, setPriceSource] = useState<"wholesale" | "msrp">("wholesale");
+  const [applyingPriceSource, setApplyingPriceSource] = useState(false);
   const [zones, setZones] = useState<ShippingZone[]>([]);
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingZones, setSavingZones] = useState(false);
