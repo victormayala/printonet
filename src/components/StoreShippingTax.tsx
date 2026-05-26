@@ -84,7 +84,82 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
     setShippingLabel(s.shipping_label ?? "Standard shipping");
     setShippingFlat(centsToDollars(s.shipping_flat_amount));
     setFreeThreshold(centsToDollars(s.free_shipping_threshold));
+    setPriceSource((s.default_price_source as "wholesale" | "msrp") ?? "wholesale");
   }, [settingsQ.data]);
+
+  const refValueFor = (sz: any, ref: "wholesale" | "msrp"): number | null => {
+    if (ref === "wholesale") {
+      const c = Number(sz?.cost);
+      if (c > 0) return c;
+      const p = Number(sz?.price);
+      return p > 0 ? p : null;
+    }
+    const m = Number(sz?.msrp);
+    return m > 0 ? m : null;
+  };
+
+  const applyPriceSource = async (next: "wholesale" | "msrp") => {
+    if (next === priceSource) return;
+    setApplyingPriceSource(true);
+    setPriceSource(next);
+    try {
+      // 1) Save on the store.
+      const { error: storeErr } = await supabase
+        .from("corporate_stores")
+        .update({ default_price_source: next } as any)
+        .eq("id", store.id);
+      if (storeErr) throw storeErr;
+
+      // 2) Rewrite prices for products linked to this store only.
+      const { data: links, error: linkErr } = await supabase
+        .from("corporate_store_products")
+        .select("product_id")
+        .eq("store_id", store.id);
+      if (linkErr) throw linkErr;
+
+      const ids = (links ?? []).map((l: any) => l.product_id).filter(Boolean);
+      let updated = 0;
+      if (ids.length > 0) {
+        const { data: prods, error: prodErr } = await supabase
+          .from("inventory_products")
+          .select("id, variants")
+          .in("id", ids);
+        if (prodErr) throw prodErr;
+
+        await Promise.all(
+          (prods ?? []).map(async (p: any) => {
+            const variants = Array.isArray(p.variants) ? p.variants : [];
+            const nextVariants = variants.map((v: any) => {
+              const sizes = (v.sizes || []).map((sz: any) => {
+                const refVal = refValueFor(sz, next);
+                if (refVal == null || refVal <= 0) return sz;
+                return { ...sz, price: Math.round(refVal * 100) / 100 };
+              });
+              return { ...v, sizes };
+            });
+            await supabase
+              .from("inventory_products")
+              .update({ variants: nextVariants, price_source: next } as any)
+              .eq("id", p.id);
+            updated += 1;
+          }),
+        );
+      }
+      toast({
+        title: `Storefront price source → ${next === "wholesale" ? "Wholesale" : "MSRP"}`,
+        description: `Applied to ${updated} product${updated === 1 ? "" : "s"} in this store.`,
+      });
+      qc.invalidateQueries({ queryKey: ["store-shipping-tax", store.id] });
+    } catch (e) {
+      toast({
+        title: "Could not change price source",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setApplyingPriceSource(false);
+    }
+  };
 
   useEffect(() => {
     if (!zonesQ.data) return;
