@@ -363,6 +363,52 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
 
   return (
     <div className="space-y-6">
+      {/* Pricing source */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Storefront pricing</CardTitle>
+          <CardDescription>
+            Choose which reference price is shown to customers in this store. Switching this
+            instantly rewrites every product price for this store only — other stores aren't affected.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
+            <div className="flex-1 min-w-[180px]">
+              <p className="text-sm font-medium">Price source</p>
+              <p className="text-xs text-muted-foreground">
+                {priceSource === "wholesale"
+                  ? "Wholesale cost is shown as the selling price."
+                  : "MSRP is shown as the selling price."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={priceSource === "wholesale" ? "default" : "outline"}
+                disabled={applyingPriceSource}
+                onClick={() => applyPriceSource("wholesale")}
+              >
+                Wholesale
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={priceSource === "msrp" ? "default" : "outline"}
+                disabled={applyingPriceSource}
+                onClick={() => applyPriceSource("msrp")}
+              >
+                MSRP
+              </Button>
+              {applyingPriceSource && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tax */}
       <Card>
         <CardHeader>
