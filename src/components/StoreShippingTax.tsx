@@ -750,7 +750,7 @@ function VolumeDiscountsCard({ storeId }: { storeId: string }) {
         .filter((r) => !r.db_id)
         .map((r) => ({ store_id: storeId, min_qty: r.min_qty, max_qty: r.max_qty, discount_pct: r.discount_pct, sort_order: r.sort_order }));
       if (inserts.length > 0) {
-        const { error } = await supabase.from("corporate_store_volume_discounts" as never).insert(inserts);
+        const { error } = await supabase.from("corporate_store_volume_discounts" as never).insert(inserts as never);
         if (error) throw error;
       }
 
