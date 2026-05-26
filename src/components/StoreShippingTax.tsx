@@ -627,6 +627,240 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
           </div>
         </CardContent>
       </Card>
+
+      <VolumeDiscountsCard storeId={store.id} />
     </div>
+  );
+}
+
+// ---------------- Volume discounts ----------------
+
+type DiscountTier = {
+  id: string;
+  db_id: string | null;
+  min_qty: string;
+  max_qty: string; // empty string = "and up"
+  discount_pct: string;
+};
+
+function VolumeDiscountsCard({ storeId }: { storeId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["store-volume-discounts", storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("corporate_store_volume_discounts" as never)
+        .select("id, min_qty, max_qty, discount_pct")
+        .eq("store_id", storeId)
+        .order("min_qty", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; min_qty: number; max_qty: number | null; discount_pct: number }>;
+    },
+  });
+
+  const [tiers, setTiers] = useState<DiscountTier[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!q.data) return;
+    setTiers(
+      q.data.map((t) => ({
+        id: t.id,
+        db_id: t.id,
+        min_qty: String(t.min_qty),
+        max_qty: t.max_qty == null ? "" : String(t.max_qty),
+        discount_pct: String(t.discount_pct),
+      })),
+    );
+  }, [q.data]);
+
+  const addTier = () => {
+    const lastMax = tiers.reduce((acc, t) => {
+      const m = Number(t.max_qty);
+      return Number.isFinite(m) && m > acc ? m : acc;
+    }, 0);
+    setTiers((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        db_id: null,
+        min_qty: String(lastMax + 1 || 1),
+        max_qty: "",
+        discount_pct: "0",
+      },
+    ]);
+  };
+
+  const updateTier = (id: string, patch: Partial<DiscountTier>) =>
+    setTiers((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+
+  const removeTier = (id: string) => setTiers((prev) => prev.filter((t) => t.id !== id));
+
+  const save = async () => {
+    const rows: { db_id: string | null; min_qty: number; max_qty: number | null; discount_pct: number; sort_order: number }[] = [];
+    for (let i = 0; i < tiers.length; i++) {
+      const t = tiers[i];
+      const min = Number(t.min_qty);
+      const max = t.max_qty.trim() === "" ? null : Number(t.max_qty);
+      const pct = Number(t.discount_pct);
+      if (!Number.isFinite(min) || min < 1) {
+        toast({ title: `Tier ${i + 1}: min quantity must be 1 or more`, variant: "destructive" });
+        return;
+      }
+      if (max != null && (!Number.isFinite(max) || max < min)) {
+        toast({ title: `Tier ${i + 1}: max must be ≥ min`, variant: "destructive" });
+        return;
+      }
+      if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+        toast({ title: `Tier ${i + 1}: discount must be 0–100%`, variant: "destructive" });
+        return;
+      }
+      rows.push({ db_id: t.db_id, min_qty: Math.floor(min), max_qty: max == null ? null : Math.floor(max), discount_pct: pct, sort_order: i });
+    }
+
+    // Overlap check
+    const sorted = [...rows].sort((a, b) => a.min_qty - b.min_qty);
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const cur = sorted[i];
+      const prevEnd = prev.max_qty ?? Number.POSITIVE_INFINITY;
+      if (cur.min_qty <= prevEnd) {
+        toast({ title: "Tiers overlap. Each range must start above the previous tier's max.", variant: "destructive" });
+        return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      const keep = rows.filter((r) => r.db_id).map((r) => r.db_id as string);
+      let del = supabase.from("corporate_store_volume_discounts" as never).delete().eq("store_id", storeId);
+      if (keep.length > 0) del = del.not("id", "in", `(${keep.join(",")})`);
+      const { error: delErr } = await del;
+      if (delErr) throw delErr;
+
+      for (const r of rows.filter((x) => x.db_id)) {
+        const { error } = await supabase
+          .from("corporate_store_volume_discounts" as never)
+          .update({ min_qty: r.min_qty, max_qty: r.max_qty, discount_pct: r.discount_pct, sort_order: r.sort_order } as never)
+          .eq("id", r.db_id as string);
+        if (error) throw error;
+      }
+
+      const inserts = rows
+        .filter((r) => !r.db_id)
+        .map((r) => ({ store_id: storeId, min_qty: r.min_qty, max_qty: r.max_qty, discount_pct: r.discount_pct, sort_order: r.sort_order }));
+      if (inserts.length > 0) {
+        const { error } = await supabase.from("corporate_store_volume_discounts" as never).insert(inserts as never);
+        if (error) throw error;
+      }
+
+      toast({ title: "Volume discounts saved" });
+      qc.invalidateQueries({ queryKey: ["store-volume-discounts", storeId] });
+    } catch (e) {
+      toast({
+        title: "Could not save discounts",
+        description: e instanceof Error ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+        <div>
+          <CardTitle>Volume discounts</CardTitle>
+          <CardDescription>
+            Offer a percentage discount based on the number of items in the cart.
+            Ranges must not overlap. Leave the max blank for an open-ended top tier
+            (e.g. <em>25 and up</em>).
+          </CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={addTier}>
+          <Plus className="h-4 w-4" /> Add tier
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {q.isLoading ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : tiers.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            No tiers yet — all quantities are charged at the regular price.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="hidden sm:grid grid-cols-12 gap-3 px-1 text-xs text-muted-foreground">
+              <div className="col-span-3">Min quantity</div>
+              <div className="col-span-3">Max quantity</div>
+              <div className="col-span-4">Discount (%)</div>
+              <div className="col-span-2 text-right">Actions</div>
+            </div>
+            {tiers.map((t, idx) => (
+              <div key={t.id} className="rounded-md border p-3">
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-12 sm:col-span-3 space-y-1.5">
+                    <Label className="text-xs sm:hidden">Min quantity</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={t.min_qty}
+                      onChange={(e) => updateTier(t.id, { min_qty: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-span-12 sm:col-span-3 space-y-1.5">
+                    <Label className="text-xs sm:hidden">Max quantity</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="and up"
+                      value={t.max_qty}
+                      onChange={(e) => updateTier(t.id, { max_qty: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-span-10 sm:col-span-4 space-y-1.5">
+                    <Label className="text-xs sm:hidden">Discount (%)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      value={t.discount_pct}
+                      onChange={(e) => updateTier(t.id, { discount_pct: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-span-2 flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => removeTier(t.id)}
+                      aria-label={`Remove tier ${idx + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t.min_qty || "?"}{t.max_qty ? `–${t.max_qty}` : "+"} items → {t.discount_pct || "0"}% off
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button onClick={save} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save discounts
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

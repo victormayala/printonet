@@ -190,6 +190,39 @@ export type Database = {
           },
         ]
       }
+      corporate_store_volume_discounts: {
+        Row: {
+          created_at: string
+          discount_pct: number
+          id: string
+          max_qty: number | null
+          min_qty: number
+          sort_order: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discount_pct: number
+          id?: string
+          max_qty?: number | null
+          min_qty: number
+          sort_order?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discount_pct?: number
+          id?: string
+          max_qty?: number | null
+          min_qty?: number
+          sort_order?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       corporate_stores: {
         Row: {
           accent_color: string
