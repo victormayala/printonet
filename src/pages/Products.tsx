@@ -507,11 +507,13 @@ function ProductForm({
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [showAddVariant, setShowAddVariant] = useState(false);
-  const [priceReference, setPriceReference] = useState<PriceReference>("wholesale");
+  const [priceReference, setPriceReference] = useState<PriceReference>(
+    ((product as any)?.price_source as PriceReference) || "wholesale"
+  );
   const [defaultPriceSource, setDefaultPriceSource] = useState<PriceReference>("wholesale");
   const [savingDefault, setSavingDefault] = useState(false);
 
-  // Load the user's global default price source (wholesale | MSRP) and seed the toggle.
+  // Load the user's global default price source (wholesale | MSRP).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -525,10 +527,12 @@ function ProductForm({
       const src = ((data as any)?.default_price_source as PriceReference) || "wholesale";
       if (cancelled) return;
       setDefaultPriceSource(src);
-      setPriceReference(src);
+      // New products inherit the global default; existing products keep their saved source.
+      if (!product) setPriceReference(src);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [product?.id]);
+
 
   const saveDefaultPriceSource = async (src: PriceReference) => {
     setSavingDefault(true);
