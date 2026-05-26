@@ -370,8 +370,8 @@ export function PushProductsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[85vh] flex flex-col gap-4 overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[85dvh] p-0 gap-0 overflow-hidden">
+        <DialogHeader className="border-b px-6 py-5 pr-16">
           <DialogTitle>Push products to {store.name}</DialogTitle>
           <DialogDescription>
             {isCorporate
@@ -380,14 +380,14 @@ export function PushProductsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+        <div className="flex min-h-0 flex-col gap-4 overflow-hidden px-6 py-4">
           <div className="relative shrink-0">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
+              className="h-11 pl-9"
             />
           </div>
 
@@ -403,14 +403,18 @@ export function PushProductsDialog({
             <span className="shrink-0 text-muted-foreground">{selected.size} selected</span>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 rounded border">
+          <ScrollArea className="min-h-[280px] flex-1 rounded-md border">
             {isLoading ? (
-              <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <div className="flex h-full min-h-[280px] items-center justify-center text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading products...
               </div>
             ) : filtered.length === 0 ? (
-              <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-                No active products found.
+              <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground">
+                <Package className="h-9 w-9 text-muted-foreground/70" />
+                <p className="font-medium text-foreground">No active products found</p>
+                <p className="max-w-sm">
+                  Import supplier products or create products manually in Catalog before pushing them to this store.
+                </p>
               </div>
             ) : (
               <div className="divide-y">
@@ -592,7 +596,7 @@ export function PushProductsDialog({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="shrink-0">
+        <DialogFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pushing}>
             Cancel
           </Button>
