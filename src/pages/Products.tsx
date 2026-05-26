@@ -1238,19 +1238,15 @@ function ProductForm({
                         <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sizes</Label>
                         <div className="rounded-lg border overflow-hidden">
                           {(() => {
-                            const showRef = priceReference !== "wholesale";
-                            const gridCls = showRef
-                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center"
-                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center";
-                            const headerCls = showRef
-                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b"
-                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b";
+                            const gridCls = "grid grid-cols-[1fr,2fr,1fr,1fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center";
+                            const headerCls = "grid grid-cols-[1fr,2fr,1fr,1fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b";
                             return (
                               <>
                                 <div className={headerCls}>
                                   <span>Size</span>
                                   <span>SKU</span>
-                                  {showRef && <span className="text-right">{PRICE_REF_LABEL[priceReference]} ($)</span>}
+                                  <span className={`text-right ${priceReference === "wholesale" ? "text-foreground font-semibold" : ""}`}>Wholesale ($)</span>
+                                  <span className={`text-right ${priceReference === "msrp" ? "text-foreground font-semibold" : ""}`}>MSRP ($)</span>
                                   <span className="text-right">Price ($)</span>
                                 </div>
                                 {selectedVariant.sizes?.length ? (
@@ -1267,7 +1263,8 @@ function ProductForm({
                                       return ai - bi;
                                     })
                                     .map(({ s, originalIdx: sIdx }) => {
-                                      const refVal = sizeRefValue(s, priceReference);
+                                      const wholesaleVal = sizeRefValue(s, "wholesale");
+                                      const msrpVal = sizeRefValue(s, "msrp");
                                       return (
                                         <div key={sIdx} className={gridCls}>
                                           <span className="text-xs font-medium">{s.size || "—"}</span>
@@ -1277,11 +1274,12 @@ function ProductForm({
                                             className="h-7 text-xs"
                                             placeholder="SKU"
                                           />
-                                          {showRef && (
-                                            <span className="text-xs text-right text-muted-foreground">
-                                              {refVal !== null ? `$${refVal.toFixed(2)}` : "—"}
-                                            </span>
-                                          )}
+                                          <span className={`text-xs text-right ${priceReference === "wholesale" ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                                            {wholesaleVal !== null ? `$${wholesaleVal.toFixed(2)}` : "—"}
+                                          </span>
+                                          <span className={`text-xs text-right ${priceReference === "msrp" ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                                            {msrpVal !== null ? `$${msrpVal.toFixed(2)}` : "—"}
+                                          </span>
                                           <Input
                                             type="number" step="0.01" min="0"
                                             value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
