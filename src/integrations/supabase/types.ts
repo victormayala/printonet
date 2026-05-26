@@ -505,6 +505,7 @@ export type Database = {
           is_active: boolean
           length: number | null
           name: string
+          price_source: string
           print_areas: Json | null
           product_type: string
           sale_price: number | null
@@ -536,6 +537,7 @@ export type Database = {
           is_active?: boolean
           length?: number | null
           name: string
+          price_source?: string
           print_areas?: Json | null
           product_type?: string
           sale_price?: number | null
@@ -567,6 +569,7 @@ export type Database = {
           is_active?: boolean
           length?: number | null
           name?: string
+          price_source?: string
           print_areas?: Json | null
           product_type?: string
           sale_price?: number | null
