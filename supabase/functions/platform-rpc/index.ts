@@ -942,7 +942,7 @@ Deno.serve(async (req) => {
           "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
           "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
           "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
-          "tax_rate_bps, tax_inclusive, tax_label";
+          "tax_rate_bps, tax_inclusive, tax_label, default_price_source";
 
         let storeQuery = supabase
           .from("corporate_stores")
@@ -979,7 +979,8 @@ Deno.serve(async (req) => {
             .in("id", ids)
             .eq("is_active", true);
           if (prodsErr) throw prodsErr;
-          const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
+          const priceSource = storeRow.default_price_source === "msrp" ? "msrp" : "wholesale";
+          const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
           return (links ?? []).map((l) => ({
             ...l,
             inventory_products: byId.get(l.product_id) ?? null,
