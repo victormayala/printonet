@@ -1025,10 +1025,12 @@ Deno.serve(async (req) => {
             .eq("is_active", true);
           if (prodsErr) throw prodsErr;
           const priceSource = storeRow.default_price_source === "msrp" ? "msrp" : "wholesale";
+          const logoMap = await fetchStoreProductLogos(supabase, storeRow.id, ids);
           const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
           return (links ?? []).map((l) => ({
             ...l,
             inventory_products: byId.get(l.product_id) ?? null,
+            logo_overlays: logoMap.get(l.product_id) ?? [],
           }));
         })();
 
