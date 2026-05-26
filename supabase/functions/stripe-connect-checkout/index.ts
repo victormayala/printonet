@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
       "line_items[0][quantity]": String(quantity || 1),
       mode: "payment",
       ui_mode: "embedded",
+      "payment_method_types[0]": "card",
       return_url:
         returnUrl ||
         "https://platform.printonet.com/checkout/return?session_id={CHECKOUT_SESSION_ID}",
