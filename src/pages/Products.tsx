@@ -566,11 +566,19 @@ function ProductForm({
         return { ...v, sizes };
       })
     );
+  };
+
+  // Switching the storefront price source: persist the choice and rewrite
+  // every size's `price` to the chosen reference across ALL colors.
+  const changePriceSource = (next: PriceReference) => {
+    setPriceReference(next);
+    applyReferenceAsSellingPrice(next, "all");
     toast({
-      title: `${PRICE_REF_LABEL[ref]} applied as selling price`,
-      description: scope === "all" ? "All colors updated." : "Current color updated.",
+      title: `Storefront price → ${PRICE_REF_LABEL[next]}`,
+      description: "All sizes updated. Save the product to apply.",
     });
   };
+
 
   useEffect(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
