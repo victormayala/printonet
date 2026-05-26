@@ -414,11 +414,33 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                       <p className="text-sm font-medium truncate">{p.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {p.category ?? "—"} · ${Number(p.base_price ?? 0).toFixed(2)}
+                        {isCorporate && r.logo_view_count > 0 && (
+                          <span className="ml-1">· logo on {r.logo_view_count} view{r.logo_view_count === 1 ? "" : "s"}</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                       <TooltipProvider delayDuration={200}>
+                        {isCorporate && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                disabled={busy || bulkBusy}
+                                onClick={() => setEditingProduct(p)}
+                                aria-label={`Edit logo placement for ${p.name}`}
+                              >
+                                <ImagePlus className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {r.logo_view_count > 0 ? "Edit logo placement" : "Add corporate logo"}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted/60">
