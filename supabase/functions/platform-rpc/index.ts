@@ -1047,6 +1047,7 @@ Deno.serve(async (req) => {
         })();
 
         const zonesPromise = fetchShippingZones(storeRow.id);
+        const discountsPromise = fetchVolumeDiscounts(storeRow.id);
 
         const categoriesPromise = (async () => {
           if (!storeRow.tenant_slug) return null;
@@ -1063,15 +1064,16 @@ Deno.serve(async (req) => {
           return data ?? [];
         })();
 
-        const [products, zones, categories] = await Promise.all([
+        const [products, zones, volume_discounts, categories] = await Promise.all([
           productsPromise,
           zonesPromise,
+          discountsPromise,
           categoriesPromise,
         ]);
 
         return json(200, {
           data: {
-            store: { ...storeRow, shipping_zones: zones },
+            store: { ...storeRow, shipping_zones: zones, volume_discounts },
             products,
             categories,
           },
