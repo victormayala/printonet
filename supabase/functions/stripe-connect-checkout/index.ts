@@ -24,13 +24,39 @@ async function stripeRequest(
     "Content-Type": "application/x-www-form-urlencoded",
   };
   if (stripeAccount) headers["Stripe-Account"] = stripeAccount;
+  console.log("[stripe-connect-checkout] -> Stripe", {
+    path,
+    stripeAccount: stripeAccount || null,
+    paramKeys: Object.keys(params),
+    amount: params["line_items[0][price_data][unit_amount]"],
+    quantity: params["line_items[0][quantity]"],
+    application_fee_amount: params["payment_intent_data[application_fee_amount]"] || null,
+  });
   const res = await fetch(`https://api.stripe.com/v1${path}`, {
     method: "POST",
     headers,
     body: new URLSearchParams(params).toString(),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || `Stripe error ${res.status}`);
+  if (!res.ok) {
+    console.error("[stripe-connect-checkout] <- Stripe ERROR", {
+      status: res.status,
+      stripeAccount: stripeAccount || null,
+      requestId: res.headers.get("request-id"),
+      error: data?.error || data,
+    });
+    const err: any = new Error(data?.error?.message || `Stripe error ${res.status}`);
+    err.stripeError = data?.error;
+    err.stripeRequestId = res.headers.get("request-id");
+    err.stripeStatus = res.status;
+    throw err;
+  }
+  console.log("[stripe-connect-checkout] <- Stripe OK", {
+    status: res.status,
+    requestId: res.headers.get("request-id"),
+    sessionId: data?.id,
+    hasClientSecret: !!data?.client_secret,
+  });
   return data;
 }
 
