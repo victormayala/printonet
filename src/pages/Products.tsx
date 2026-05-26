@@ -1129,20 +1129,57 @@ function ProductForm({
                             <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
                           </div>
                           <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
                               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
-                              <ToggleGroup
-                                type="single"
-                                size="sm"
-                                value={priceReference}
-                                onValueChange={(v) => v && setPriceReference(v as PriceReference)}
-                                className="h-6"
-                              >
-                                <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
-                                <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
-                                
-                              </ToggleGroup>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <ToggleGroup
+                                  type="single"
+                                  size="sm"
+                                  value={priceReference}
+                                  onValueChange={(v) => v && setPriceReference(v as PriceReference)}
+                                  className="h-6"
+                                >
+                                  <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
+                                  <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
+                                </ToggleGroup>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-6 px-2 text-[10px]"
+                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "variant")}
+                                  title={`Set selling price for this color to ${PRICE_REF_LABEL[priceReference]}`}
+                                >
+                                  Use as price
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 px-2 text-[10px]"
+                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "all")}
+                                  title={`Set selling price for all colors to ${PRICE_REF_LABEL[priceReference]}`}
+                                >
+                                  All colors
+                                </Button>
+                                {defaultPriceSource !== priceReference ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-[10px]"
+                                    disabled={savingDefault}
+                                    onClick={() => saveDefaultPriceSource(priceReference)}
+                                    title="Use this as the default for new products"
+                                  >
+                                    Set as default
+                                  </Button>
+                                ) : (
+                                  <span className="text-[10px] text-muted-foreground">default</span>
+                                )}
+                              </div>
                             </div>
+
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <Label className="text-[10px]">Base {PRICE_REF_LABEL[priceReference].toLowerCase()}</Label>
