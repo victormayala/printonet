@@ -4369,7 +4369,15 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                             )}
                           </div>
                         </div>
-                        <span className="w-24 text-right text-sm font-medium tabular-nums">${p.base_price.toFixed(2)}</span>
+                        <div className="w-32 text-right text-sm tabular-nums">
+                          <span className="font-medium">${p.base_price.toFixed(2)}</span>
+                          {(() => {
+                            const msrp = Array.isArray(p.variants) ? Math.min(...p.variants.flatMap((v: any) => (v.sizes || []).map((s: any) => Number(s.msrp) || Infinity).filter((n: number) => n > 0)), Infinity) : Infinity;
+                            return msrp > 0 && msrp !== Infinity ? (
+                              <span className="text-xs text-muted-foreground ml-1.5">MSRP ${msrp.toFixed(2)}</span>
+                            ) : null;
+                          })()}
+                        </div>
                         <span className="w-20 text-center">
                           <span className={`text-xs px-2 py-0.5 rounded-full ${p.is_active ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
                             {p.is_active ? "Active" : "Inactive"}
