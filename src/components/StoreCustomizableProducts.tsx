@@ -29,6 +29,7 @@ type Row = {
   id: string; // corporate_store_products.id
   product_id: string;
   customizable: boolean;
+  front_logo: LogoOverlay | null;
   product: {
     id: string;
     name: string;
