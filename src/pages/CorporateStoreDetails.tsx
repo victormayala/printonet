@@ -477,7 +477,7 @@ export default function CorporateStoreDetails() {
             <ShoppingBag className="h-4 w-4" /> Products
           </TabsTrigger>
           <TabsTrigger value="shipping-tax" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
-            <Truck className="h-4 w-4" /> Shipping & Tax
+            <Truck className="h-4 w-4" /> Pricing, Shipping & Tax
           </TabsTrigger>
           <TabsTrigger value="customers" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <Users className="h-4 w-4" /> Customers
