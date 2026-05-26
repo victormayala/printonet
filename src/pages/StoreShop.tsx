@@ -192,13 +192,13 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
           <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {products.map((p) => (
               <Card key={p.id} className="overflow-hidden flex flex-col">
-                <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                  {p.image_front ? (
-                    <img src={p.image_front} alt={p.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <Package className="h-10 w-10 text-muted-foreground" />
-                  )}
-                </div>
+                <ProductLogoThumbnail
+                  mockupUrl={p.image_front}
+                  overlay={p.front_logo}
+                  alt={p.name}
+                  className="aspect-square w-full"
+                  iconClassName="h-10 w-10 text-muted-foreground"
+                />
                 <CardContent className="p-3 flex-1 flex flex-col gap-2">
                   <div className="flex-1">
                     <p className="text-sm font-medium line-clamp-2">{p.name}</p>
