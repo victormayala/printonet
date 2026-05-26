@@ -29,7 +29,7 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
       let storeQuery = supabase
         .from("corporate_stores")
         .select(
-          "id,user_id,name,tenant_slug,custom_domain,status,primary_color,accent_color,font_family,logo_url,secondary_logo_url,favicon_url,customizer_logo_dark_url,customizer_theme,customizer_border_radius,store_type,shipping_label,shipping_flat_amount,free_shipping_threshold,tax_label,tax_inclusive,tax_rate_bps,tax_enabled,created_at,updated_at"
+          "id,user_id,name,tenant_slug,custom_domain,status,primary_color,accent_color,font_family,logo_url,secondary_logo_url,favicon_url,customizer_logo_dark_url,customizer_theme,customizer_border_radius,store_type,shipping_label,shipping_flat_amount,free_shipping_threshold,tax_label,tax_inclusive,tax_rate_bps,tax_enabled,default_price_source,created_at,updated_at"
         )
         .eq("status", "active");
       storeQuery = customDomainHost
@@ -63,20 +63,44 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
         category: string | null;
         base_price: number;
         image_front: string | null;
+        variants: any;
       }> = [];
       if (productIds.length > 0) {
         const { data } = await supabase
           .from("inventory_products")
-          .select("id,name,category,base_price,image_front")
+          .select("id,name,category,base_price,image_front,variants")
           .in("id", productIds)
           .eq("is_active", true);
-        prods = data ?? [];
+        prods = (data as any) ?? [];
       }
 
       if (cancelled) return;
+      const priceSource = ((s as any).default_price_source as "wholesale" | "msrp") ?? "wholesale";
+      const computePrice = (p: { base_price: number; variants: any }): number => {
+        const variants = Array.isArray(p.variants) ? p.variants : [];
+        const prices: number[] = [];
+        for (const v of variants) {
+          for (const sz of v?.sizes ?? []) {
+            const val =
+              priceSource === "msrp"
+                ? Number(sz?.msrp)
+                : Number(sz?.price);
+            if (val > 0) prices.push(val);
+          }
+        }
+        if (prices.length > 0) return Math.min(...prices);
+        return Number(p.base_price ?? 0);
+      };
       const orderIndex = new Map(productIds.map((id, i) => [id, i]));
       const productList: ProductLite[] = prods
-        .map((p) => ({ ...p, customizable: customizableMap.get(p.id) ?? false }))
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          image_front: p.image_front,
+          base_price: computePrice(p),
+          customizable: customizableMap.get(p.id) ?? false,
+        }))
         .sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
       setProducts(productList);
     })();
