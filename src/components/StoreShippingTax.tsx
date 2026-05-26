@@ -769,12 +769,10 @@ function VolumeDiscountsCard({ storeId }: { storeId: string }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-        <div>
+        <div className="space-y-1.5 max-w-2xl">
           <CardTitle>Volume discounts</CardTitle>
           <CardDescription>
-            Offer a percentage discount based on the number of items in the cart.
-            Ranges must not overlap. Leave the max blank for an open-ended top tier
-            (e.g. <em>25 and up</em>).
+            Apply a percentage discount based on cart quantity. Leave the max blank for an open-ended top tier.
           </CardDescription>
         </div>
         <Button variant="outline" size="sm" onClick={addTier}>
