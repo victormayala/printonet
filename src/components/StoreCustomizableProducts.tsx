@@ -391,13 +391,13 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                     key={r.id}
                     className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/40"
                   >
-                    <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                      {p.image_front ? (
-                        <img src={p.image_front} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
+                    <ProductLogoThumbnail
+                      mockupUrl={p.image_front}
+                      overlay={r.front_logo}
+                      alt={p.name}
+                      className="h-10 w-10 rounded overflow-hidden shrink-0"
+                      iconClassName="h-4 w-4 text-muted-foreground"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{p.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
