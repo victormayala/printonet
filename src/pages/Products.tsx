@@ -3696,18 +3696,39 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
     });
   };
 
+  const loadPushTargets = async () => {
+    setLoadingIntegrations(true);
+    const [{ data: integ }, { data: stores }] = await Promise.all([
+      supabase
+        .from("store_integrations")
+        .select("*")
+        .eq("user_id", user?.id || "")
+        .in("platform", ["shopify", "woocommerce"]),
+      supabase
+        .from("corporate_stores")
+        .select("id,name,store_type,status,tenant_slug")
+        .eq("user_id", user?.id || "")
+        .neq("status", "failed"),
+    ]);
+    const hosted = (stores || []).map((s: any) => ({
+      id: `hosted:${s.id}`,
+      kind: "hosted",
+      platform: "hosted",
+      store_id: s.id,
+      store_url: s.tenant_slug ? `${s.tenant_slug} · Hosted store` : "Hosted store",
+      name: s.name,
+      store_type: s.store_type,
+    }));
+    const external = (integ || []).map((i: any) => ({ ...i, kind: "external" }));
+    setIntegrations([...hosted, ...external]);
+    setLoadingIntegrations(false);
+  };
+
   const handlePushSingleProduct = async (productId: string) => {
     setSelectedProductIds(new Set([productId]));
     setPushResults(null);
     setPushDialogOpen(true);
-    setLoadingIntegrations(true);
-    const { data } = await supabase
-      .from("store_integrations")
-      .select("*")
-      .eq("user_id", user?.id || "")
-      .in("platform", ["shopify", "woocommerce"]);
-    setIntegrations(data || []);
-    setLoadingIntegrations(false);
+    await loadPushTargets();
   };
 
   const getPushedPlatforms = (product: Product): string[] => {
@@ -3729,14 +3750,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const openPushDialog = async () => {
     setPushResults(null);
     setPushDialogOpen(true);
-    setLoadingIntegrations(true);
-    const { data } = await supabase
-      .from("store_integrations")
-      .select("*")
-      .eq("user_id", user?.id || "")
-      .in("platform", ["shopify", "woocommerce"]);
-    setIntegrations(data || []);
-    setLoadingIntegrations(false);
+    await loadPushTargets();
   };
 
   const handlePushToStore = async (integration: any) => {
