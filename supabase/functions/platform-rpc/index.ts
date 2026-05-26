@@ -77,6 +77,42 @@ function normalizeUnlimitedStockProduct(product: Record<string, unknown> | null)
 
 type StorefrontPriceSource = "wholesale" | "msrp";
 
+/**
+ * Fetch per-product corporate logo overlays for a store. Each entry is keyed
+ * by product_id and contains one record per view (front/back/left/right) with
+ * the logo image URL and percentage-based position so the storefront can
+ * composite it over the matching mockup image.
+ *
+ * Shape returned to clients:
+ *   logo_overlays: Array<{
+ *     view: "front" | "back" | "left" | "right",
+ *     logo_url: string,
+ *     position: { x_pct, y_pct, width_pct, rotation_deg }
+ *   }>
+ */
+async function fetchStoreProductLogos(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  storeId: string,
+  productIds: string[],
+): Promise<Map<string, Array<{ view: string; logo_url: string; position: unknown }>>> {
+  const map = new Map<string, Array<{ view: string; logo_url: string; position: unknown }>>();
+  if (!storeId || productIds.length === 0) return map;
+  const { data, error } = await supabase
+    .from("corporate_store_product_logos")
+    .select("product_id, view, logo_url, position")
+    .eq("store_id", storeId)
+    .in("product_id", productIds);
+  if (error) return map; // non-fatal: just no overlays
+  for (const row of data ?? []) {
+    const pid = String(row.product_id);
+    const arr = map.get(pid) ?? [];
+    arr.push({ view: row.view, logo_url: row.logo_url, position: row.position });
+    map.set(pid, arr);
+  }
+  return map;
+}
+
 function normalizeStorefrontProduct(product: Record<string, unknown> | null, priceSource: StorefrontPriceSource) {
   const normalized = normalizeUnlimitedStockProduct(product);
   if (!normalized) return null;
@@ -278,10 +314,12 @@ Deno.serve(async (req) => {
           .in("id", ids)
           .eq("is_active", true);
         if (prodsErr) throw prodsErr;
+        const logoMap = await fetchStoreProductLogos(supabase, storeId, ids);
         const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
         const products = (links ?? []).map((l) => ({
           ...l,
           inventory_products: byId.get(l.product_id) ?? null,
+          logo_overlays: logoMap.get(l.product_id) ?? [],
         }));
         return json(200, { products });
       }
@@ -314,7 +352,14 @@ Deno.serve(async (req) => {
           .eq("id", productId)
           .maybeSingle();
         if (prodErr) throw prodErr;
-        return json(200, { product: { ...link, inventory_products: normalizeStorefrontProduct(prod, priceSource) } });
+        const logoMap = await fetchStoreProductLogos(supabase, storeId, [productId]);
+        return json(200, {
+          product: {
+            ...link,
+            inventory_products: normalizeStorefrontProduct(prod, priceSource),
+            logo_overlays: logoMap.get(productId) ?? [],
+          },
+        });
       }
 
       case "create_order": {
@@ -980,10 +1025,12 @@ Deno.serve(async (req) => {
             .eq("is_active", true);
           if (prodsErr) throw prodsErr;
           const priceSource = storeRow.default_price_source === "msrp" ? "msrp" : "wholesale";
+          const logoMap = await fetchStoreProductLogos(supabase, storeRow.id, ids);
           const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
           return (links ?? []).map((l) => ({
             ...l,
             inventory_products: byId.get(l.product_id) ?? null,
+            logo_overlays: logoMap.get(l.product_id) ?? [],
           }));
         })();
 
