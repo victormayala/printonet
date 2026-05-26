@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
+import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ type Row = {
   id: string; // corporate_store_products.id
   product_id: string;
   customizable: boolean;
+  front_logo: LogoOverlay | null;
   product: {
     id: string;
     name: string;
@@ -100,6 +102,22 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         .in("id", ids);
       if (pErr) throw pErr;
       const pMap = new Map((prods ?? []).map((p) => [p.id, p]));
+
+      // Pull the front-view logo overlay (if any) for each linked product so
+      // the thumbnail can show the corporate logo composited on top.
+      const { data: logoRows } = await supabase
+        .from("corporate_store_product_logos")
+        .select("product_id,view,logo_url,position")
+        .eq("store_id", store.id)
+        .in("product_id", ids)
+        .eq("view", "front");
+      const logoMap = new Map<string, LogoOverlay>(
+        (logoRows ?? []).map((r) => [
+          r.product_id,
+          { logo_url: r.logo_url, position: r.position as LogoOverlay["position"] },
+        ]),
+      );
+
       return (links ?? [])
         .map((l) => {
           const product = pMap.get(l.product_id);
@@ -108,6 +126,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             id: l.id,
             product_id: l.product_id,
             customizable: !!l.customizable,
+            front_logo: logoMap.get(l.product_id) ?? null,
             product,
           } as Row;
         })
@@ -372,13 +391,13 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                     key={r.id}
                     className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/40"
                   >
-                    <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                      {p.image_front ? (
-                        <img src={p.image_front} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
+                    <ProductLogoThumbnail
+                      mockupUrl={p.image_front}
+                      overlay={r.front_logo}
+                      alt={p.name}
+                      className="h-10 w-10 rounded overflow-hidden shrink-0"
+                      iconClassName="h-4 w-4 text-muted-foreground"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{p.name}</p>
                       <p className="text-xs text-muted-foreground truncate">

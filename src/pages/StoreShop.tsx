@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CorporateStore } from "@/types/corporateStore";
 import { applyBrandCSS, type BrandConfig, DEFAULT_BRAND_CONFIG } from "@/lib/brand-config";
+import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 
 type ProductLite = {
   id: string;
@@ -14,6 +15,7 @@ type ProductLite = {
   base_price: number;
   image_front: string | null;
   customizable?: boolean;
+  front_logo?: LogoOverlay | null;
 };
 
 export default function StoreShop({ customDomainHost }: { customDomainHost?: string }) {
@@ -74,6 +76,23 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
         prods = (data as any) ?? [];
       }
 
+      // Pull front-view corporate logo overlays for these products.
+      const logoMap = new Map<string, LogoOverlay>();
+      if (productIds.length > 0) {
+        const { data: logoRows } = await supabase
+          .from("corporate_store_product_logos")
+          .select("product_id,view,logo_url,position")
+          .eq("store_id", s.id)
+          .in("product_id", productIds)
+          .eq("view", "front");
+        for (const r of logoRows ?? []) {
+          logoMap.set(r.product_id, {
+            logo_url: r.logo_url,
+            position: r.position as LogoOverlay["position"],
+          });
+        }
+      }
+
       if (cancelled) return;
       const priceSource = ((s as any).default_price_source as "wholesale" | "msrp") ?? "wholesale";
       const computePrice = (p: { base_price: number; variants: any }): number => {
@@ -101,6 +120,7 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
           image_front: p.image_front,
           base_price: computePrice(p),
           customizable: customizableMap.get(p.id) ?? false,
+          front_logo: logoMap.get(p.id) ?? null,
         }))
         .sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
       setProducts(productList);
@@ -172,13 +192,13 @@ export default function StoreShop({ customDomainHost }: { customDomainHost?: str
           <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {products.map((p) => (
               <Card key={p.id} className="overflow-hidden flex flex-col">
-                <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                  {p.image_front ? (
-                    <img src={p.image_front} alt={p.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <Package className="h-10 w-10 text-muted-foreground" />
-                  )}
-                </div>
+                <ProductLogoThumbnail
+                  mockupUrl={p.image_front}
+                  overlay={p.front_logo}
+                  alt={p.name}
+                  className="aspect-square w-full"
+                  iconClassName="h-10 w-10 text-muted-foreground"
+                />
                 <CardContent className="p-3 flex-1 flex flex-col gap-2">
                   <div className="flex-1">
                     <p className="text-sm font-medium line-clamp-2">{p.name}</p>
