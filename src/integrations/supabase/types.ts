@@ -199,6 +199,7 @@ export type Database = {
           customizer_border_radius: number
           customizer_logo_dark_url: string | null
           customizer_theme: string
+          default_price_source: string
           error_message: string | null
           favicon_url: string | null
           font_family: string
@@ -235,6 +236,7 @@ export type Database = {
           customizer_border_radius?: number
           customizer_logo_dark_url?: string | null
           customizer_theme?: string
+          default_price_source?: string
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
@@ -271,6 +273,7 @@ export type Database = {
           customizer_border_radius?: number
           customizer_logo_dark_url?: string | null
           customizer_theme?: string
+          default_price_source?: string
           error_message?: string | null
           favicon_url?: string | null
           font_family?: string
