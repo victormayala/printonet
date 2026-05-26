@@ -105,25 +105,29 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       if (ids.length === 0) return [];
       const { data: prods, error: pErr } = await supabase
         .from("inventory_products")
-        .select("id,name,category,base_price,image_front")
+        .select("id,name,category,base_price,image_front,image_back,image_side1,image_side2")
         .in("id", ids);
       if (pErr) throw pErr;
       const pMap = new Map((prods ?? []).map((p) => [p.id, p]));
 
-      // Pull the front-view logo overlay (if any) for each linked product so
-      // the thumbnail can show the corporate logo composited on top.
+      // Pull all logo overlay rows so we can show the front thumbnail AND
+      // know how many views each product has logos on.
       const { data: logoRows } = await supabase
         .from("corporate_store_product_logos")
         .select("product_id,view,logo_url,position")
         .eq("store_id", store.id)
-        .in("product_id", ids)
-        .eq("view", "front");
-      const logoMap = new Map<string, LogoOverlay>(
-        (logoRows ?? []).map((r) => [
-          r.product_id,
-          { logo_url: r.logo_url, position: r.position as LogoOverlay["position"] },
-        ]),
-      );
+        .in("product_id", ids);
+      const frontLogoMap = new Map<string, LogoOverlay>();
+      const viewCountMap = new Map<string, number>();
+      for (const r of logoRows ?? []) {
+        viewCountMap.set(r.product_id, (viewCountMap.get(r.product_id) ?? 0) + 1);
+        if (r.view === "front") {
+          frontLogoMap.set(r.product_id, {
+            logo_url: r.logo_url,
+            position: r.position as LogoOverlay["position"],
+          });
+        }
+      }
 
       return (links ?? [])
         .map((l) => {
@@ -133,7 +137,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             id: l.id,
             product_id: l.product_id,
             customizable: !!l.customizable,
-            front_logo: logoMap.get(l.product_id) ?? null,
+            front_logo: frontLogoMap.get(l.product_id) ?? null,
+            logo_view_count: viewCountMap.get(l.product_id) ?? 0,
             product,
           } as Row;
         })
