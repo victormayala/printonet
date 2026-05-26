@@ -39,7 +39,7 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
       const { data, error } = await supabase
         .from("corporate_stores")
         .select(
-          "id, tax_enabled, tax_rate_bps, tax_inclusive, tax_label, shipping_label, shipping_flat_amount, free_shipping_threshold",
+          "id, tax_enabled, tax_rate_bps, tax_inclusive, tax_label, shipping_label, shipping_flat_amount, free_shipping_threshold, default_price_source",
         )
         .eq("id", store.id)
         .maybeSingle();
