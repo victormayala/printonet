@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
               "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
-              "tax_rate_bps, tax_inclusive, tax_label",
+              "tax_rate_bps, tax_inclusive, tax_label, default_price_source",
           )
           .eq("status", "active")
           .ilike("custom_domain", domain)
@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
               "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
-              "tax_rate_bps, tax_inclusive, tax_label",
+              "tax_rate_bps, tax_inclusive, tax_label, default_price_source",
           )
           .eq("status", "active")
           .ilike("tenant_slug", slug)
@@ -261,6 +261,13 @@ Deno.serve(async (req) => {
         if (linksErr) throw linksErr;
         const ids = (links ?? []).map((l) => l.product_id);
         if (ids.length === 0) return json(200, { products: [] });
+        const { data: storeRow, error: storeErr } = await supabase
+          .from("corporate_stores")
+          .select("default_price_source")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (storeErr) throw storeErr;
+        const priceSource = storeRow?.default_price_source === "msrp" ? "msrp" : "wholesale";
         const { data: prods, error: prodsErr } = await supabase
           .from("inventory_products")
           .select(
@@ -271,7 +278,7 @@ Deno.serve(async (req) => {
           .in("id", ids)
           .eq("is_active", true);
         if (prodsErr) throw prodsErr;
-        const byId = new Map((prods ?? []).map((p) => [p.id, normalizeUnlimitedStockProduct(p)]));
+        const byId = new Map((prods ?? []).map((p) => [p.id, normalizeStorefrontProduct(p, priceSource)]));
         const products = (links ?? []).map((l) => ({
           ...l,
           inventory_products: byId.get(l.product_id) ?? null,
