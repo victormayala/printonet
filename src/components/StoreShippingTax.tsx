@@ -741,7 +741,7 @@ function VolumeDiscountsCard({ storeId }: { storeId: string }) {
       for (const r of rows.filter((x) => x.db_id)) {
         const { error } = await supabase
           .from("corporate_store_volume_discounts" as never)
-          .update({ min_qty: r.min_qty, max_qty: r.max_qty, discount_pct: r.discount_pct, sort_order: r.sort_order })
+          .update({ min_qty: r.min_qty, max_qty: r.max_qty, discount_pct: r.discount_pct, sort_order: r.sort_order } as never)
           .eq("id", r.db_id as string);
         if (error) throw error;
       }
