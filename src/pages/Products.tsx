@@ -508,6 +508,65 @@ function ProductForm({
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [showAddVariant, setShowAddVariant] = useState(false);
   const [priceReference, setPriceReference] = useState<PriceReference>("wholesale");
+  const [defaultPriceSource, setDefaultPriceSource] = useState<PriceReference>("wholesale");
+  const [savingDefault, setSavingDefault] = useState(false);
+
+  // Load the user's global default price source (wholesale | MSRP) and seed the toggle.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("default_price_source")
+        .eq("id", user.id)
+        .maybeSingle();
+      const src = ((data as any)?.default_price_source as PriceReference) || "wholesale";
+      if (cancelled) return;
+      setDefaultPriceSource(src);
+      setPriceReference(src);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveDefaultPriceSource = async (src: PriceReference) => {
+    setSavingDefault(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingDefault(false); return; }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ default_price_source: src } as any)
+      .eq("id", user.id);
+    setSavingDefault(false);
+    if (error) {
+      toast({ title: "Couldn't save default", description: error.message, variant: "destructive" });
+      return;
+    }
+    setDefaultPriceSource(src);
+    toast({ title: `Default set to ${PRICE_REF_LABEL[src]}` });
+  };
+
+  // Copy the chosen reference price (wholesale cost or MSRP) into each size's
+  // selling `price`. This is what customers will see in the storefront.
+  const applyReferenceAsSellingPrice = (ref: PriceReference, scope: "variant" | "all") => {
+    setVariants((prev) =>
+      prev.map((v, i) => {
+        if (scope === "variant" && i !== selectedVariantIdx) return v;
+        const sizes = (v.sizes || []).map((s: any) => {
+          const sealed = sealSizeCost(s);
+          const refVal = sizeRefValue(s, ref);
+          if (refVal == null || refVal <= 0) return sealed;
+          return { ...sealed, price: Math.round(refVal * 100) / 100 };
+        });
+        return { ...v, sizes };
+      })
+    );
+    toast({
+      title: `${PRICE_REF_LABEL[ref]} applied as selling price`,
+      description: scope === "all" ? "All colors updated." : "Current color updated.",
+    });
+  };
 
   useEffect(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
@@ -1070,20 +1129,57 @@ function ProductForm({
                             <h3 className="text-base font-semibold truncate">{selectedVariant.color}</h3>
                           </div>
                           <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
                               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
-                              <ToggleGroup
-                                type="single"
-                                size="sm"
-                                value={priceReference}
-                                onValueChange={(v) => v && setPriceReference(v as PriceReference)}
-                                className="h-6"
-                              >
-                                <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
-                                <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
-                                
-                              </ToggleGroup>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <ToggleGroup
+                                  type="single"
+                                  size="sm"
+                                  value={priceReference}
+                                  onValueChange={(v) => v && setPriceReference(v as PriceReference)}
+                                  className="h-6"
+                                >
+                                  <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
+                                  <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
+                                </ToggleGroup>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-6 px-2 text-[10px]"
+                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "variant")}
+                                  title={`Set selling price for this color to ${PRICE_REF_LABEL[priceReference]}`}
+                                >
+                                  Use as price
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 px-2 text-[10px]"
+                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "all")}
+                                  title={`Set selling price for all colors to ${PRICE_REF_LABEL[priceReference]}`}
+                                >
+                                  All colors
+                                </Button>
+                                {defaultPriceSource !== priceReference ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-[10px]"
+                                    disabled={savingDefault}
+                                    onClick={() => saveDefaultPriceSource(priceReference)}
+                                    title="Use this as the default for new products"
+                                  >
+                                    Set as default
+                                  </Button>
+                                ) : (
+                                  <span className="text-[10px] text-muted-foreground">default</span>
+                                )}
+                              </div>
                             </div>
+
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <Label className="text-[10px]">Base {PRICE_REF_LABEL[priceReference].toLowerCase()}</Label>
