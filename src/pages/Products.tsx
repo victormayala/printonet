@@ -507,11 +507,13 @@ function ProductForm({
   });
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [showAddVariant, setShowAddVariant] = useState(false);
-  const [priceReference, setPriceReference] = useState<PriceReference>("wholesale");
+  const [priceReference, setPriceReference] = useState<PriceReference>(
+    ((product as any)?.price_source as PriceReference) || "wholesale"
+  );
   const [defaultPriceSource, setDefaultPriceSource] = useState<PriceReference>("wholesale");
   const [savingDefault, setSavingDefault] = useState(false);
 
-  // Load the user's global default price source (wholesale | MSRP) and seed the toggle.
+  // Load the user's global default price source (wholesale | MSRP).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -525,10 +527,12 @@ function ProductForm({
       const src = ((data as any)?.default_price_source as PriceReference) || "wholesale";
       if (cancelled) return;
       setDefaultPriceSource(src);
-      setPriceReference(src);
+      // New products inherit the global default; existing products keep their saved source.
+      if (!product) setPriceReference(src);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [product?.id]);
+
 
   const saveDefaultPriceSource = async (src: PriceReference) => {
     setSavingDefault(true);
@@ -562,11 +566,19 @@ function ProductForm({
         return { ...v, sizes };
       })
     );
+  };
+
+  // Switching the storefront price source: persist the choice and rewrite
+  // every size's `price` to the chosen reference across ALL colors.
+  const changePriceSource = (next: PriceReference) => {
+    setPriceReference(next);
+    applyReferenceAsSellingPrice(next, "all");
     toast({
-      title: `${PRICE_REF_LABEL[ref]} applied as selling price`,
-      description: scope === "all" ? "All colors updated." : "Current color updated.",
+      title: `Storefront price → ${PRICE_REF_LABEL[next]}`,
+      description: "All sizes updated. Save the product to apply.",
     });
   };
+
 
   useEffect(() => {
     const initial = Array.isArray(product?.variants) ? (product!.variants as any[]) : [];
@@ -817,6 +829,7 @@ function ProductForm({
       },
       print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
       decoration_methods: decorationMethods,
+      price_source: priceReference,
       ...(productType === "variable" ? {
         variants: variants.map((v) => ({
           ...v,
@@ -1130,44 +1143,27 @@ function ProductForm({
                           </div>
                           <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
                             <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">Storefront price comes from the selected source.</p>
+                              </div>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <ToggleGroup
                                   type="single"
                                   size="sm"
                                   value={priceReference}
-                                  onValueChange={(v) => v && setPriceReference(v as PriceReference)}
-                                  className="h-6"
+                                  onValueChange={(v) => v && changePriceSource(v as PriceReference)}
+                                  className="h-7"
                                 >
-                                  <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
-                                  <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
+                                  <ToggleGroupItem value="wholesale" className="h-7 px-3 text-[11px]">Wholesale</ToggleGroupItem>
+                                  <ToggleGroupItem value="msrp" className="h-7 px-3 text-[11px]">MSRP</ToggleGroupItem>
                                 </ToggleGroup>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-6 px-2 text-[10px]"
-                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "variant")}
-                                  title={`Set selling price for this color to ${PRICE_REF_LABEL[priceReference]}`}
-                                >
-                                  Use as price
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 px-2 text-[10px]"
-                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "all")}
-                                  title={`Set selling price for all colors to ${PRICE_REF_LABEL[priceReference]}`}
-                                >
-                                  All colors
-                                </Button>
                                 {defaultPriceSource !== priceReference ? (
                                   <Button
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    className="h-6 px-2 text-[10px]"
+                                    className="h-7 px-2 text-[10px]"
                                     disabled={savingDefault}
                                     onClick={() => saveDefaultPriceSource(priceReference)}
                                     title="Use this as the default for new products"
@@ -1189,6 +1185,7 @@ function ProductForm({
                                   return <Input type="text" value={display} readOnly className="h-8 mt-1 bg-muted text-xs" />;
                                 })()}
                               </div>
+
 
                               <div>
                                 <Label className="text-[10px]">Profit margin ($)</Label>
@@ -1241,19 +1238,15 @@ function ProductForm({
                         <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sizes</Label>
                         <div className="rounded-lg border overflow-hidden">
                           {(() => {
-                            const showRef = priceReference !== "wholesale";
-                            const gridCls = showRef
-                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center"
-                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center";
-                            const headerCls = showRef
-                              ? "grid grid-cols-[1fr,2fr,1fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b"
-                              : "grid grid-cols-[1fr,2fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b";
+                            const gridCls = "grid grid-cols-[1fr,2fr,1fr,1fr,1fr] gap-3 px-3 py-1.5 border-b last:border-b-0 items-center";
+                            const headerCls = "grid grid-cols-[1fr,2fr,1fr,1fr,1fr] gap-3 px-3 py-1.5 bg-muted/40 text-[10px] font-medium text-muted-foreground border-b";
                             return (
                               <>
                                 <div className={headerCls}>
                                   <span>Size</span>
                                   <span>SKU</span>
-                                  {showRef && <span className="text-right">{PRICE_REF_LABEL[priceReference]} ($)</span>}
+                                  <span className={`text-right ${priceReference === "wholesale" ? "text-foreground font-semibold" : ""}`}>Wholesale ($)</span>
+                                  <span className={`text-right ${priceReference === "msrp" ? "text-foreground font-semibold" : ""}`}>MSRP ($)</span>
                                   <span className="text-right">Price ($)</span>
                                 </div>
                                 {selectedVariant.sizes?.length ? (
@@ -1270,7 +1263,8 @@ function ProductForm({
                                       return ai - bi;
                                     })
                                     .map(({ s, originalIdx: sIdx }) => {
-                                      const refVal = sizeRefValue(s, priceReference);
+                                      const wholesaleVal = sizeRefValue(s, "wholesale");
+                                      const msrpVal = sizeRefValue(s, "msrp");
                                       return (
                                         <div key={sIdx} className={gridCls}>
                                           <span className="text-xs font-medium">{s.size || "—"}</span>
@@ -1280,11 +1274,12 @@ function ProductForm({
                                             className="h-7 text-xs"
                                             placeholder="SKU"
                                           />
-                                          {showRef && (
-                                            <span className="text-xs text-right text-muted-foreground">
-                                              {refVal !== null ? `$${refVal.toFixed(2)}` : "—"}
-                                            </span>
-                                          )}
+                                          <span className={`text-xs text-right ${priceReference === "wholesale" ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                                            {wholesaleVal !== null ? `$${wholesaleVal.toFixed(2)}` : "—"}
+                                          </span>
+                                          <span className={`text-xs text-right ${priceReference === "msrp" ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                                            {msrpVal !== null ? `$${msrpVal.toFixed(2)}` : "—"}
+                                          </span>
                                           <Input
                                             type="number" step="0.01" min="0"
                                             value={s.price !== undefined && s.price !== "" && s.price !== null ? Number(Number(s.price).toFixed(2)) : ""}
@@ -3683,6 +3678,76 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   const [loadingStores] = useState(false);
   const [syncingStoreId] = useState<string | null>(null);
   const [storeSyncResults] = useState<Record<string, { ok: boolean; message: string; count?: number }>>({});
+
+  // Global storefront price source — applies to ALL products in the store.
+  const [globalPriceSource, setGlobalPriceSource] = useState<PriceReference>("wholesale");
+  const [applyingGlobalSource, setApplyingGlobalSource] = useState(false);
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("default_price_source")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const src = ((data as any)?.default_price_source as PriceReference) || "wholesale";
+      setGlobalPriceSource(src);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  const refValueFor = (s: any, ref: PriceReference): number | null => {
+    if (ref === "wholesale") {
+      const c = Number(s?.cost);
+      if (c > 0) return c;
+      const p = Number(s?.price);
+      return p > 0 ? p : null;
+    }
+    const m = Number(s?.msrp);
+    return m > 0 ? m : null;
+  };
+
+  const applyGlobalPriceSource = async (next: PriceReference) => {
+    if (!user?.id) return;
+    setApplyingGlobalSource(true);
+    setGlobalPriceSource(next);
+    try {
+      // 1) Save as the user's default.
+      await supabase
+        .from("profiles")
+        .update({ default_price_source: next } as any)
+        .eq("id", user.id);
+
+      // 2) Rewrite every product's variants/sizes to the chosen source.
+      const updates = products.map(async (p: any) => {
+        const variants = Array.isArray(p.variants) ? p.variants : [];
+        const nextVariants = variants.map((v: any) => {
+          const sizes = (v.sizes || []).map((s: any) => {
+            const refVal = refValueFor(s, next);
+            if (refVal == null || refVal <= 0) return s;
+            return { ...s, price: Math.round(refVal * 100) / 100 };
+          });
+          return { ...v, sizes };
+        });
+        return supabase
+          .from("inventory_products")
+          .update({ variants: nextVariants, price_source: next } as any)
+          .eq("id", p.id);
+      });
+      await Promise.all(updates);
+      toast({
+        title: `Storefront price source → ${next === "wholesale" ? "Wholesale" : "MSRP"}`,
+        description: `Applied to ${products.length} product${products.length === 1 ? "" : "s"}.`,
+      });
+      fetchProducts();
+    } catch (e: any) {
+      toast({ title: "Couldn't apply globally", description: e?.message, variant: "destructive" });
+    } finally {
+      setApplyingGlobalSource(false);
+    }
+  };
   void tenantSyncOpen; void setTenantSyncOpen;
   void corporateStores; void setCorporateStores;
   void loadingStores; void syncingStoreId; void storeSyncResults;
@@ -4056,6 +4121,24 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                       <p className="text-sm text-muted-foreground">{filteredAndSortedProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
                     </div>
                   <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                    {/* Global storefront price source */}
+                    <div className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 h-9" title="Sets the storefront price for all products">
+                      <span className="text-[11px] font-medium text-muted-foreground">Show:</span>
+                      <ToggleGroup
+                        type="single"
+                        size="sm"
+                        value={globalPriceSource}
+                        onValueChange={(v) => v && v !== globalPriceSource && applyGlobalPriceSource(v as PriceReference)}
+                        disabled={applyingGlobalSource}
+                        className="h-7"
+                      >
+                        <ToggleGroupItem value="wholesale" className="h-7 px-2.5 text-[11px]">Wholesale</ToggleGroupItem>
+                        <ToggleGroupItem value="msrp" className="h-7 px-2.5 text-[11px]">MSRP</ToggleGroupItem>
+                      </ToggleGroup>
+                      {applyingGlobalSource && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                    </div>
+
+
                     {/* Category filter */}
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
                       <SelectTrigger className="w-[160px] h-9 text-xs gap-2 whitespace-nowrap">
