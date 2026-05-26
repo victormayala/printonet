@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CorporateStore } from "@/types/corporateStore";
 import { applyBrandCSS, type BrandConfig, DEFAULT_BRAND_CONFIG } from "@/lib/brand-config";
+import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 
 type ProductLite = {
   id: string;
@@ -14,6 +15,7 @@ type ProductLite = {
   base_price: number;
   image_front: string | null;
   customizable?: boolean;
+  front_logo?: LogoOverlay | null;
 };
 
 export default function StoreShop({ customDomainHost }: { customDomainHost?: string }) {
