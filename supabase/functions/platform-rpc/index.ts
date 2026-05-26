@@ -293,7 +293,8 @@ Deno.serve(async (req) => {
         if (error) throw error;
         if (!data) return json(404, { error: "store_not_found" });
         const zones = await fetchShippingZones(data.id);
-        return json(200, { store: { ...data, shipping_zones: zones } });
+        const volume_discounts = await fetchVolumeDiscounts(data.id);
+        return json(200, { store: { ...data, shipping_zones: zones, volume_discounts } });
       }
 
       case "list_store_products": {
