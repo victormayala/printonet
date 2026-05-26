@@ -301,13 +301,20 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (linkErr) throw linkErr;
         if (!link) return json(404, { error: "product_not_found" });
+        const { data: storeRow, error: storeErr } = await supabase
+          .from("corporate_stores")
+          .select("default_price_source")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (storeErr) throw storeErr;
+        const priceSource = storeRow?.default_price_source === "msrp" ? "msrp" : "wholesale";
         const { data: prod, error: prodErr } = await supabase
           .from("inventory_products")
           .select("*")
           .eq("id", productId)
           .maybeSingle();
         if (prodErr) throw prodErr;
-        return json(200, { product: { ...link, inventory_products: normalizeUnlimitedStockProduct(prod) } });
+        return json(200, { product: { ...link, inventory_products: normalizeStorefrontProduct(prod, priceSource) } });
       }
 
       case "create_order": {
