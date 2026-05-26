@@ -3751,6 +3751,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
   void tenantSyncOpen; void setTenantSyncOpen;
   void corporateStores; void setCorporateStores;
   void loadingStores; void syncingStoreId; void storeSyncResults;
+  void globalPriceSource; void applyingGlobalSource; void applyGlobalPriceSource;
 
 
   const toggleProductSelect = (id: string) => {
