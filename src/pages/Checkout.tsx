@@ -1,5 +1,5 @@
 import { useParams, useSearchParams, Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,15 @@ import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+
+type CustomizerSessionRow = {
+  store_id?: string | null;
+  product_data?: { name?: string; base_price?: number } | null;
+  design_output?: { sides?: { previewPNG?: string; designPNG?: string }[] } | null;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export default function Checkout() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -18,8 +27,10 @@ export default function Checkout() {
   const [previews, setPreviews] = useState<{ name: string; image: string | null; qty: number; price: number }[]>([]);
   // Store id resolved from any cart item or fallback session — drives Connect routing.
   const [storeId, setStoreId] = useState<string | null>(null);
-  // Stripe.js promise for the Connect path (loaded with platform pk + stripeAccount).
-  const [connectStripe, setConnectStripe] = useState<Promise<Stripe | null> | null>(null);
+  const [checkoutSession, setCheckoutSession] = useState<{
+    clientSecret: string;
+    stripePromise: Promise<Stripe | null>;
+  } | null>(null);
 
   const priceOverride = searchParams.get("price");
 
@@ -33,16 +44,17 @@ export default function Checkout() {
       return;
     }
 
-    (supabase as any)
+    supabase
       .rpc("get_customizer_sessions", { p_ids: ids })
-      .then(({ data }: { data: any }) => {
-        const sid = data?.find((r: any) => r.store_id)?.store_id ?? null;
+      .then(({ data }) => {
+        const sessions = (data ?? []) as CustomizerSessionRow[];
+        const sid = sessions.find((r) => r.store_id)?.store_id ?? null;
         setStoreId(sid);
 
-        if (items.length === 0 && data && data[0]) {
-          const pd = data[0].product_data as any;
-          const dout = data[0].design_output as any;
-          const side = dout?.sides?.find((s: any) => s.previewPNG || s.designPNG);
+        if (items.length === 0 && sessions[0]) {
+          const pd = sessions[0].product_data;
+          const dout = sessions[0].design_output;
+          const side = dout?.sides?.find((s) => s.previewPNG || s.designPNG);
           const qty = parseInt(searchParams.get("qty") || "1", 10);
           const price = priceOverride
             ? parseInt(priceOverride, 10)
@@ -71,7 +83,7 @@ export default function Checkout() {
         })),
       );
     }
-  }, [sessionId, items.length]);
+  }, [sessionId, items, searchParams, priceOverride]);
 
   const totalCents = useMemo(
     () => previews.reduce((sum, p) => sum + p.price * p.qty, 0),
@@ -90,6 +102,68 @@ export default function Checkout() {
     [items, sessionId],
   );
 
+  useEffect(() => {
+    if (loading || error || previews.length === 0 || checkoutSession) return;
+
+    let cancelled = false;
+    const createSession = async () => {
+      try {
+        if (storeId) {
+          const { data, error: fnError } = await supabase.functions.invoke("stripe-connect-checkout", {
+            body: {
+              storeId,
+              amountInCents: totalCents,
+              quantity: 1,
+              productName,
+              sessionId: cartSessionIds,
+              returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+            },
+          });
+          if (fnError || !data?.clientSecret || !data?.publishableKey || !data?.accountId) {
+            throw new Error(fnError?.message || data?.error || "Failed to create checkout session");
+          }
+          if (!cancelled) {
+            setCheckoutSession({
+              clientSecret: data.clientSecret,
+              stripePromise: loadStripe(data.publishableKey, { stripeAccount: data.accountId }),
+            });
+          }
+        } else {
+          const { data, error: fnError } = await supabase.functions.invoke("create-checkout", {
+            body: {
+              amountInCents: totalCents,
+              quantity: 1,
+              productName,
+              sessionId: cartSessionIds,
+              returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+              environment: getStripeEnvironment(),
+            },
+          });
+          if (fnError || !data?.clientSecret) {
+            throw new Error(fnError?.message || data?.error || "Failed to create checkout session");
+          }
+          if (!cancelled) {
+            setCheckoutSession({ clientSecret: data.clientSecret, stripePromise: getStripe() });
+          }
+        }
+        if (!cancelled && items.length > 0) clearCart();
+      } catch (e: unknown) {
+        if (!cancelled) setError(getErrorMessage(e, "Unable to start checkout."));
+      }
+    };
+
+    createSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, error, previews.length, checkoutSession, storeId, totalCents, productName, cartSessionIds, items.length, clearCart]);
+
+  const fetchClientSecret = useCallback(async (): Promise<string> => {
+    if (!checkoutSession?.clientSecret) throw new Error("Checkout session is not ready");
+    return checkoutSession.clientSecret;
+  }, [checkoutSession?.clientSecret]);
+  const checkoutOptions = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -105,51 +179,6 @@ export default function Checkout() {
       </div>
     );
   }
-
-  // CONNECT PATH — funds settle directly on the shop owner's Stripe account.
-  const fetchConnectClientSecret = async (): Promise<string> => {
-    const { data, error } = await supabase.functions.invoke("stripe-connect-checkout", {
-      body: {
-        storeId,
-        amountInCents: totalCents,
-        quantity: 1,
-        productName,
-        sessionId: cartSessionIds,
-        returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-      },
-    });
-    if (error || !data?.clientSecret) {
-      throw new Error(error?.message || "Failed to create checkout session");
-    }
-    if (data.publishableKey && data.accountId && !connectStripe) {
-      setConnectStripe(loadStripe(data.publishableKey, { stripeAccount: data.accountId }));
-    }
-    if (items.length > 0) clearCart();
-    return data.clientSecret;
-  };
-
-  // PLATFORM (LOVABLE) PATH — used when a session has no corporate store.
-  const fetchPlatformClientSecret = async (): Promise<string> => {
-    const { data, error } = await supabase.functions.invoke("create-checkout", {
-      body: {
-        amountInCents: totalCents,
-        quantity: 1,
-        productName,
-        sessionId: cartSessionIds,
-        returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-        environment: getStripeEnvironment(),
-      },
-    });
-    if (error || !data?.clientSecret) {
-      throw new Error(error?.message || "Failed to create checkout session");
-    }
-    if (items.length > 0) clearCart();
-    return data.clientSecret;
-  };
-
-  const useConnect = !!storeId;
-  const stripePromise = useConnect ? connectStripe ?? getStripe() : getStripe();
-  const fetchClientSecret = useConnect ? fetchConnectClientSecret : fetchPlatformClientSecret;
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,11 +219,17 @@ export default function Checkout() {
 
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">Payment</h2>
-            <div className="rounded-xl border border-border overflow-hidden">
-              <EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret }}>
-                <EmbeddedCheckout />
-              </EmbeddedCheckoutProvider>
-            </div>
+            {checkoutSession ? (
+              <div className="rounded-xl border border-border overflow-hidden">
+                <EmbeddedCheckoutProvider stripe={checkoutSession.stripePromise} options={checkoutOptions}>
+                  <EmbeddedCheckout />
+                </EmbeddedCheckoutProvider>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border min-h-[320px] flex items-center justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            )}
           </div>
         </div>
       </div>
