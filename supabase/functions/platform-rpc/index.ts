@@ -75,6 +75,33 @@ function normalizeUnlimitedStockProduct(product: Record<string, unknown> | null)
   };
 }
 
+type StorefrontPriceSource = "wholesale" | "msrp";
+
+function normalizeStorefrontProduct(product: Record<string, unknown> | null, priceSource: StorefrontPriceSource) {
+  const normalized = normalizeUnlimitedStockProduct(product);
+  if (!normalized) return null;
+  const prices: number[] = [];
+  const variants = Array.isArray(normalized.variants) ? normalized.variants : [];
+  for (const variant of variants) {
+    const sizes = variant && typeof variant === "object" && Array.isArray((variant as { sizes?: unknown }).sizes)
+      ? (variant as { sizes: Record<string, unknown>[] }).sizes
+      : [];
+    for (const size of sizes) {
+      const value = priceSource === "msrp"
+        ? Number(size.msrp)
+        : Number(size.cost) > 0
+          ? Number(size.cost)
+          : Number(size.price);
+      if (value > 0) prices.push(value);
+    }
+  }
+  return {
+    ...normalized,
+    price_source: priceSource,
+    ...(prices.length > 0 ? { base_price: Math.min(...prices) } : {}),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
