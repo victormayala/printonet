@@ -532,11 +532,10 @@ export function StoreShippingTax({ store }: { store: CorporateStore }) {
       {/* Shipping zones */}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-          <div>
+          <div className="space-y-1.5 max-w-2xl">
             <CardTitle>Shipping zones</CardTitle>
             <CardDescription>
-              Per-country rates. The lowest <code>sort_order</code> matching the buyer wins;
-              otherwise the default shipping above is used.
+              Per-country rates. The first matching zone wins, otherwise the default shipping is used.
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={addZone}>
