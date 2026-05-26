@@ -4405,7 +4405,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             ) : integrations.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <Store className="h-10 w-10 mx-auto text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No stores connected. Connect a Shopify or WooCommerce store first.</p>
+                <p className="text-sm text-muted-foreground">No stores available. Create a hosted store or connect a Shopify / WooCommerce store first.</p>
               </div>
             ) : pushResults ? (
               <div className="space-y-3">
@@ -4428,27 +4428,35 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
               </div>
             ) : (
               <div className="space-y-3">
-                {integrations.map((integ) => (
-                  <Button
-                    key={integ.id}
-                    variant="outline"
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    disabled={pushingIntegrationId !== null}
-                    onClick={() => handlePushToStore(integ)}
-                  >
-                    {pushingIntegrationId === integ.id ? (
-                      <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                    ) : integ.platform === "shopify" ? (
-                      <ShoppingBag className="h-5 w-5 shrink-0" />
-                    ) : (
-                      <Globe className="h-5 w-5 shrink-0" />
-                    )}
-                    <div className="text-left">
-                      <p className="font-medium text-sm capitalize">{integ.platform}</p>
-                      <p className="text-xs text-muted-foreground">{integ.store_url}</p>
-                    </div>
-                  </Button>
-                ))}
+                {integrations.map((integ) => {
+                  const isHosted = integ.kind === "hosted";
+                  const label = isHosted
+                    ? integ.name
+                    : integ.platform;
+                  return (
+                    <Button
+                      key={integ.id}
+                      variant="outline"
+                      className="w-full justify-start gap-3 h-auto py-3"
+                      disabled={pushingIntegrationId !== null}
+                      onClick={() => handlePushToStore(integ)}
+                    >
+                      {pushingIntegrationId === integ.id ? (
+                        <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                      ) : isHosted ? (
+                        <Store className="h-5 w-5 shrink-0" />
+                      ) : integ.platform === "shopify" ? (
+                        <ShoppingBag className="h-5 w-5 shrink-0" />
+                      ) : (
+                        <Globe className="h-5 w-5 shrink-0" />
+                      )}
+                      <div className="text-left">
+                        <p className="font-medium text-sm capitalize">{label}</p>
+                        <p className="text-xs text-muted-foreground">{integ.store_url}</p>
+                      </div>
+                    </Button>
+                  );
+                })}
               </div>
             )}
           </DialogContent>
