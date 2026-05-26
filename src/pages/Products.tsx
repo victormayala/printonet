@@ -1143,44 +1143,27 @@ function ProductForm({
                           </div>
                           <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
                             <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">Storefront price comes from the selected source.</p>
+                              </div>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <ToggleGroup
                                   type="single"
                                   size="sm"
                                   value={priceReference}
-                                  onValueChange={(v) => v && setPriceReference(v as PriceReference)}
-                                  className="h-6"
+                                  onValueChange={(v) => v && changePriceSource(v as PriceReference)}
+                                  className="h-7"
                                 >
-                                  <ToggleGroupItem value="wholesale" className="h-6 px-2 text-[10px]">Wholesale</ToggleGroupItem>
-                                  <ToggleGroupItem value="msrp" className="h-6 px-2 text-[10px]">MSRP</ToggleGroupItem>
+                                  <ToggleGroupItem value="wholesale" className="h-7 px-3 text-[11px]">Wholesale</ToggleGroupItem>
+                                  <ToggleGroupItem value="msrp" className="h-7 px-3 text-[11px]">MSRP</ToggleGroupItem>
                                 </ToggleGroup>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-6 px-2 text-[10px]"
-                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "variant")}
-                                  title={`Set selling price for this color to ${PRICE_REF_LABEL[priceReference]}`}
-                                >
-                                  Use as price
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 px-2 text-[10px]"
-                                  onClick={() => applyReferenceAsSellingPrice(priceReference, "all")}
-                                  title={`Set selling price for all colors to ${PRICE_REF_LABEL[priceReference]}`}
-                                >
-                                  All colors
-                                </Button>
                                 {defaultPriceSource !== priceReference ? (
                                   <Button
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    className="h-6 px-2 text-[10px]"
+                                    className="h-7 px-2 text-[10px]"
                                     disabled={savingDefault}
                                     onClick={() => saveDefaultPriceSource(priceReference)}
                                     title="Use this as the default for new products"
@@ -1202,6 +1185,7 @@ function ProductForm({
                                   return <Input type="text" value={display} readOnly className="h-8 mt-1 bg-muted text-xs" />;
                                 })()}
                               </div>
+
 
                               <div>
                                 <Label className="text-[10px]">Profit margin ($)</Label>
