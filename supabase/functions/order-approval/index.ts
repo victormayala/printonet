@@ -20,7 +20,7 @@ async function loadByToken(token: string) {
   const { data: approval, error } = await supabase
     .from("order_approvals")
     .select(
-      "id, order_id, store_id, customer_email, status, customer_comment, decided_at, expires_at, sent_at",
+      "id, order_id, store_id, customer_email, status, customer_comment, decided_at, expires_at, sent_at, proof_image_url",
     )
     .eq("token", token)
     .maybeSingle();
@@ -79,6 +79,11 @@ Deno.serve(async (req) => {
             })
             .filter((v): v is string => !!v);
         }
+      }
+      if (approval.proof_image_url) {
+        // Show the uploaded proof first; it's the explicit thing the
+        // store owner wants the customer to approve.
+        designImages = [approval.proof_image_url, ...designImages];
       }
 
       const isExpired =
