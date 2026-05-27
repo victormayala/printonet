@@ -1,0 +1,1 @@
+ALTER TABLE public.order_approvals ADD COLUMN IF NOT EXISTS proof_image_url text;

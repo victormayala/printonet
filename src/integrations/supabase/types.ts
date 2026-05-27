@@ -768,6 +768,7 @@ export type Database = {
           expires_at: string
           id: string
           order_id: string
+          proof_image_url: string | null
           sender_domain: string | null
           sent_at: string
           sent_by: string | null
@@ -784,6 +785,7 @@ export type Database = {
           expires_at?: string
           id?: string
           order_id: string
+          proof_image_url?: string | null
           sender_domain?: string | null
           sent_at?: string
           sent_by?: string | null
@@ -800,6 +802,7 @@ export type Database = {
           expires_at?: string
           id?: string
           order_id?: string
+          proof_image_url?: string | null
           sender_domain?: string | null
           sent_at?: string
           sent_by?: string | null
