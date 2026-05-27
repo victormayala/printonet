@@ -43,9 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Validate the persisted session against the server. If the session id was
+    // revoked server-side (session_not_found), localStorage still holds a JWT
+    // that will fail every API/edge-function call with a non-2xx. Detect that
+    // and force a clean sign-out so the user is redirected to /auth instead of
+    // silently hitting "Edge Function returned a non-2xx status code" toasts.
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       applySession(session, true);
-    });
+      if (session) {
+        const { error } = await supabase.auth.getUser();
+        if (error && /session/i.test(error.message)) {
+          await supabase.auth.signOut();
+        }
+      }
+    })();
 
     return () => subscription.unsubscribe();
   }, []);
