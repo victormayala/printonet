@@ -330,7 +330,7 @@ export default function Orders() {
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="font-mono text-xs">
-                      {row.id.slice(0, 8)}…
+                      {friendlyOrderNumber(row.id, row.created_at)}
                     </TableCell>
                     <TableCell className="text-sm">
                       {row.store?.name || row.store?.tenant_slug || "—"}
