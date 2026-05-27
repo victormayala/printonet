@@ -69,3 +69,6 @@ verify_jwt = false
 [functions.get-stripe-publishable-key]
 verify_jwt = false
 
+
+[functions.order-approval]
+verify_jwt = false

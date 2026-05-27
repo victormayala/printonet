@@ -672,6 +672,57 @@ export type Database = {
         }
         Relationships: []
       }
+      order_approvals: {
+        Row: {
+          created_at: string
+          customer_comment: string | null
+          customer_email: string
+          decided_at: string | null
+          expires_at: string
+          id: string
+          order_id: string
+          sender_domain: string | null
+          sent_at: string
+          sent_by: string | null
+          status: string
+          store_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_comment?: string | null
+          customer_email: string
+          decided_at?: string | null
+          expires_at?: string
+          id?: string
+          order_id: string
+          sender_domain?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          store_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_comment?: string | null
+          customer_email?: string
+          decided_at?: string | null
+          expires_at?: string
+          id?: string
+          order_id?: string
+          sender_domain?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          store_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
