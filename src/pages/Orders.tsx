@@ -862,6 +862,20 @@ function ApprovalSection({
         )}
       </div>
 
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-foreground">
+          Message to customer <span className="text-muted-foreground font-normal">(optional)</span>
+        </label>
+        <Textarea
+          value={customMessage}
+          onChange={(e) => setCustomMessage(e.target.value.slice(0, 1000))}
+          placeholder="Add a personal note — e.g. 'Here's the proof for your order. Let me know if anything needs to change before we print.'"
+          rows={3}
+          className="text-sm"
+        />
+        <div className="text-[10px] text-muted-foreground text-right">{customMessage.length}/1000</div>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-2">
         <Input
           type="email"
