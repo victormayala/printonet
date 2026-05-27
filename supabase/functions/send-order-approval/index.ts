@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const orderId = String(body.orderId || "");
     const recipientOverride = body.recipientEmail ? String(body.recipientEmail) : null;
+    const proofImageUrl = body.proofImageUrl ? String(body.proofImageUrl) : null;
     if (!orderId) {
       return new Response(JSON.stringify({ error: "orderId is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -94,6 +95,7 @@ Deno.serve(async (req) => {
         token,
         sender_domain: senderDomain,
         sent_by: userId,
+        proof_image_url: proofImageUrl,
       })
       .select("id, token")
       .single();
@@ -115,9 +117,12 @@ Deno.serve(async (req) => {
     let emailDispatched = false;
     let emailError: string | null = null;
     try {
+      // Forward the caller's JWT so the protected send-transactional-email
+      // function accepts the request (verify_jwt = true).
       const { error: sendErr } = await supabase.functions.invoke(
         "send-transactional-email",
         {
+          headers: { Authorization: `Bearer ${jwt}` },
           body: {
             templateName: "order-approval-request",
             recipientEmail: recipient,
@@ -126,8 +131,8 @@ Deno.serve(async (req) => {
               storeName: store.name,
               approvalUrl,
               orderShortCode: orderId.slice(0, 8).toUpperCase(),
+              proofImageUrl,
             },
-            // Hint to the transactional function which domain to send from
             senderDomain,
           },
         },
