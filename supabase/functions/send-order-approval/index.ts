@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     const orderId = String(body.orderId || "");
     const recipientOverride = body.recipientEmail ? String(body.recipientEmail) : null;
     const proofImageUrl = body.proofImageUrl ? String(body.proofImageUrl) : null;
+    const customMessage = body.customMessage ? String(body.customMessage).slice(0, 1000) : null;
     if (!orderId) {
       return new Response(JSON.stringify({ error: "orderId is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -132,6 +133,7 @@ Deno.serve(async (req) => {
               approvalUrl,
               orderShortCode: orderId.slice(0, 8).toUpperCase(),
               proofImageUrl,
+              customMessage,
             },
             senderDomain,
           },

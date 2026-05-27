@@ -19,6 +19,7 @@ interface OrderApprovalRequestProps {
   approvalUrl?: string
   orderShortCode?: string
   proofImageUrl?: string
+  customMessage?: string
 }
 
 const OrderApprovalRequestEmail = ({
@@ -26,6 +27,7 @@ const OrderApprovalRequestEmail = ({
   approvalUrl,
   orderShortCode,
   proofImageUrl,
+  customMessage,
 }: OrderApprovalRequestProps) => {
   const brand = storeName || 'Your print shop'
   const url = approvalUrl || 'https://example.com/approval/sample-token'
@@ -43,6 +45,13 @@ const OrderApprovalRequestEmail = ({
             <strong style={mono}>#{code}</strong>. Please take a moment to review
             the design before we send it to production.
           </Text>
+          {customMessage ? (
+            <Section style={messageWrap}>
+              {customMessage.split('\n').map((line, i) => (
+                <Text key={i} style={messageText}>{line || '\u00A0'}</Text>
+              ))}
+            </Section>
+          ) : null}
           {proofImageUrl ? (
             <Section style={imageWrap}>
               <Img
@@ -121,6 +130,20 @@ const mono = {
   color: '#0f0f10',
 }
 const imageWrap = { textAlign: 'center' as const, margin: '8px 0 24px' }
+const messageWrap = {
+  margin: '0 0 20px',
+  padding: '14px 16px',
+  backgroundColor: '#ffffff',
+  borderLeft: '3px solid #292929',
+  borderRadius: '6px',
+}
+const messageText = {
+  fontSize: '14px',
+  color: '#3f3f46',
+  lineHeight: '1.55',
+  margin: '0 0 4px',
+  whiteSpace: 'pre-wrap' as const,
+}
 const proofImg = {
   width: '100%',
   maxWidth: '504px',
