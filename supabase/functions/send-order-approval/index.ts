@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
               approvalUrl,
               orderShortCode: orderId.slice(0, 8).toUpperCase(),
               proofImageUrl,
+              customMessage,
             },
             senderDomain,
           },
