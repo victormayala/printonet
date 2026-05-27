@@ -1,7 +1,11 @@
-// Creates an order_approvals row with a unique token, then attempts to
-// dispatch a transactional email. If transactional email isn't set up yet,
-// returns the approval URL so the store owner can send it manually.
-import { createClient } from "npm:@supabase/supabase-js@2";
+// Creates an order_approvals row with a unique token, then sends the
+// approval email DIRECTLY via Resend (through the Lovable connector gateway).
+// We bypass the Lovable email queue because branded subdomains delegated to
+// Lovable's nameservers have been unreliable for this project.
+import * as React from 'npm:react@18.3.1'
+import { renderAsync } from 'npm:@react-email/components@0.0.22'
+import { createClient } from "npm:@supabase/supabase-js@2"
+import { template as orderApprovalTemplate } from '../_shared/transactional-email-templates/order-approval-request.tsx'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +19,14 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+const RESEND_GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend';
+// FROM address used when the store does not have its own configured.
+// Defaults to Resend's shared sandbox sender, which works without a
+// verified domain. Override by setting RESEND_FROM_EMAIL to e.g.
+// "Printonet <noreply@yourdomain.com>" once that domain is verified
+// inside the Resend dashboard.
+const DEFAULT_FROM = Deno.env.get('RESEND_FROM_EMAIL') || 'Printonet <onboarding@resend.dev>';
+
 function randomToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
@@ -27,7 +39,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate the caller (must be the order's store owner)
     const authHeader = req.headers.get("Authorization") || "";
     const jwt = authHeader.replace(/^Bearer\s+/i, "");
     if (!jwt) {
@@ -54,7 +65,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Load order + store, verify ownership
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .select("id, store_id, customer_email")
@@ -83,8 +93,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Sender: store's verified custom domain if present, else Printonet default
-    const senderDomain = store.custom_domain || "notify.stores.printonet.com";
+    const senderDomain = store.custom_domain || "resend";
 
     const token = randomToken();
     const { data: approval, error: insertErr } = await supabase
@@ -111,41 +120,77 @@ Deno.serve(async (req) => {
       Deno.env.get("PRINTONET_STOREFRONT_PUBLIC_URL") ||
       "https://printonet.lovable.app";
     const approvalUrl = `${origin.replace(/\/$/, "")}/approval/${approval.token}`;
+    const orderShortCode = orderId.slice(0, 8).toUpperCase();
+    const storeName = store.name || 'Printonet';
 
-    // Try to dispatch via the transactional email function. If it isn't
-    // deployed yet, we still succeed and return the link so the owner can
-    // copy/paste it into their own email.
+    // Render the same React Email template used previously
+    const html = await renderAsync(
+      React.createElement(orderApprovalTemplate.component, {
+        storeName,
+        approvalUrl,
+        orderShortCode,
+        proofImageUrl,
+        customMessage,
+      }),
+    );
+    const text = await renderAsync(
+      React.createElement(orderApprovalTemplate.component, {
+        storeName,
+        approvalUrl,
+        orderShortCode,
+        proofImageUrl,
+        customMessage,
+      }),
+      { plainText: true },
+    );
+
+    const subject =
+      typeof orderApprovalTemplate.subject === 'function'
+        ? orderApprovalTemplate.subject({ orderShortCode })
+        : orderApprovalTemplate.subject;
+
+    // Send via Resend through Lovable connector gateway
     let emailDispatched = false;
     let emailError: string | null = null;
-    try {
-      // Forward the caller's JWT so the protected send-transactional-email
-      // function accepts the request (verify_jwt = true).
-      const { error: sendErr } = await supabase.functions.invoke(
-        "send-transactional-email",
-        {
-          headers: { Authorization: `Bearer ${jwt}` },
-          body: {
-            templateName: "order-approval-request",
-            recipientEmail: recipient,
-            idempotencyKey: `order-approval-${approval.id}`,
-            templateData: {
-              storeName: store.name,
-              approvalUrl,
-              orderShortCode: orderId.slice(0, 8).toUpperCase(),
-              proofImageUrl,
-              customMessage,
-            },
-            senderDomain,
+
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+
+    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
+      emailError = 'Resend connector is not configured (missing keys).';
+    } else {
+      try {
+        const resp = await fetch(`${RESEND_GATEWAY_URL}/emails`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'X-Connection-Api-Key': RESEND_API_KEY,
           },
-        },
-      );
-      if (sendErr) {
-        emailError = sendErr.message || String(sendErr);
-      } else {
-        emailDispatched = true;
+          body: JSON.stringify({
+            from: DEFAULT_FROM,
+            to: [recipient],
+            subject,
+            html,
+            text,
+            reply_to: store.contact_email || undefined,
+            headers: {
+              'X-Entity-Ref-ID': `order-approval-${approval.id}`,
+            },
+          }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          emailError = `Resend ${resp.status}: ${JSON.stringify(data)}`;
+          console.error('[send-order-approval] Resend error', emailError);
+        } else {
+          emailDispatched = true;
+          console.log('[send-order-approval] Resend dispatched', { id: (data as any)?.id, recipient });
+        }
+      } catch (e) {
+        emailError = (e as Error).message;
+        console.error('[send-order-approval] Resend exception', emailError);
       }
-    } catch (e) {
-      emailError = (e as Error).message;
     }
 
     return new Response(
