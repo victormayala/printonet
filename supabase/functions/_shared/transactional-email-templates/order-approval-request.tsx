@@ -7,6 +7,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
@@ -17,12 +18,14 @@ interface OrderApprovalRequestProps {
   storeName?: string
   approvalUrl?: string
   orderShortCode?: string
+  proofImageUrl?: string
 }
 
 const OrderApprovalRequestEmail = ({
   storeName,
   approvalUrl,
   orderShortCode,
+  proofImageUrl,
 }: OrderApprovalRequestProps) => {
   const brand = storeName || 'Your print shop'
   const url = approvalUrl || 'https://example.com/approval/sample-token'
@@ -40,6 +43,15 @@ const OrderApprovalRequestEmail = ({
             <strong style={mono}>#{code}</strong>. Please take a moment to review
             the design before we send it to production.
           </Text>
+          {proofImageUrl ? (
+            <Section style={imageWrap}>
+              <Img
+                src={proofImageUrl}
+                alt={`Print proof for order ${code}`}
+                style={proofImg}
+              />
+            </Section>
+          ) : null}
           <Text style={text}>
             You can approve the proof, or request changes with a comment, from
             the secure link below.
