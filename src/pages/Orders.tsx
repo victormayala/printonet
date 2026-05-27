@@ -430,16 +430,6 @@ export default function Orders() {
                         PI: {selectedOrder.stripe_payment_intent}
                       </div>
                     )}
-                    {selectedOrder.stripe_checkout_id && (
-                      <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
-                        CS: {selectedOrder.stripe_checkout_id}
-                      </div>
-                    )}
-                    {selectedOrder.stripe_account_id && (
-                      <div className="col-span-2 font-mono text-[10px] text-muted-foreground break-all">
-                        Connected acct: {selectedOrder.stripe_account_id}
-                      </div>
-                    )}
                   </div>
                 </div>
 
