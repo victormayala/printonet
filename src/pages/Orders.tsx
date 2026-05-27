@@ -85,6 +85,21 @@ function formatMoney(cents: number | null | undefined, currency: string | null |
   return `${(cents / 100).toFixed(2)} ${cur}`;
 }
 
+/**
+ * Build a short, friendly order number from the order's UUID + creation date.
+ * Example: "#PN-26K3-A1B2" — stable, readable, and unique per order.
+ */
+function friendlyOrderNumber(id: string, createdAt: string | Date) {
+  const d = new Date(createdAt);
+  const yy = String(d.getFullYear()).slice(-2);
+  // base36-encoded day-of-year keeps it short (max 2 chars)
+  const start = new Date(d.getFullYear(), 0, 0);
+  const doy = Math.floor((d.getTime() - start.getTime()) / 86400000);
+  const datePart = `${yy}${doy.toString(36).toUpperCase().padStart(2, "0")}`;
+  const idPart = id.replace(/-/g, "").slice(0, 4).toUpperCase();
+  return `#PN-${datePart}-${idPart}`;
+}
+
 export default function Orders() {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
