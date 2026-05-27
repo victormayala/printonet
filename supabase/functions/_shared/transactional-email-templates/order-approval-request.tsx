@@ -130,6 +130,20 @@ const mono = {
   color: '#0f0f10',
 }
 const imageWrap = { textAlign: 'center' as const, margin: '8px 0 24px' }
+const messageWrap = {
+  margin: '0 0 20px',
+  padding: '14px 16px',
+  backgroundColor: '#ffffff',
+  borderLeft: '3px solid #292929',
+  borderRadius: '6px',
+}
+const messageText = {
+  fontSize: '14px',
+  color: '#3f3f46',
+  lineHeight: '1.55',
+  margin: '0 0 4px',
+  whiteSpace: 'pre-wrap' as const,
+}
 const proofImg = {
   width: '100%',
   maxWidth: '504px',
