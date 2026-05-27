@@ -378,7 +378,7 @@ export default function Orders() {
             <DialogTitle>
               Order{" "}
               <span className="font-mono text-base">
-                {selectedOrder?.id.slice(0, 8)}…
+                {selectedOrder ? friendlyOrderNumber(selectedOrder.id, selectedOrder.created_at) : ""}
               </span>{" "}
               <span className="text-muted-foreground font-normal text-base">
                 ({selectedOrder?.store?.name || selectedOrder?.store?.tenant_slug || "store"})
