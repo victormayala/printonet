@@ -120,6 +120,16 @@ const mono = {
   fontSize: '14px',
   color: '#0f0f10',
 }
+const imageWrap = { textAlign: 'center' as const, margin: '8px 0 24px' }
+const proofImg = {
+  width: '100%',
+  maxWidth: '504px',
+  height: 'auto',
+  borderRadius: '8px',
+  border: '1px solid #ececec',
+  display: 'block',
+  margin: '0 auto',
+}
 const buttonWrap = { textAlign: 'center' as const, margin: '28px 0 20px' }
 const button = {
   backgroundColor: '#292929',
