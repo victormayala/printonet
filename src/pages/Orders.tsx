@@ -21,7 +21,7 @@ import {
   Search, Package, Calendar,
   Filter, ExternalLink, Palette, Copy, Printer, CreditCard, Mail,
   Download, ChevronDown, ChevronRight, Send, CheckCircle2, XCircle,
-  Clock, Loader2,
+  Clock, Loader2, Upload, X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -704,6 +704,9 @@ function ApprovalSection({
 }) {
   const [recipient, setRecipient] = useState(order.customer_email || "");
   const [sending, setSending] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofName, setProofName] = useState<string | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
   const [lastResult, setLastResult] = useState<{
     approvalUrl: string;
     emailDispatched: boolean;
@@ -713,6 +716,33 @@ function ApprovalSection({
 
   const latest = approvals[0];
 
+  const handleProofUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Image required", description: "Please upload a PNG or JPG.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Image too large", description: "Maximum size is 10 MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingProof(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `proofs/${order.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("design-exports")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("design-exports").getPublicUrl(path);
+      setProofUrl(pub.publicUrl);
+      setProofName(file.name);
+    } catch (e) {
+      toast({ title: "Upload failed", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
   const send = async () => {
     if (!recipient || !/^\S+@\S+\.\S+$/.test(recipient)) {
       toast({ title: "Invalid email", description: "Enter a valid recipient address.", variant: "destructive" });
@@ -721,7 +751,7 @@ function ApprovalSection({
     setSending(true);
     try {
       const { data: result, error } = await supabase.functions.invoke("send-order-approval", {
-        body: { orderId: order.id, recipientEmail: recipient },
+        body: { orderId: order.id, recipientEmail: recipient, proofImageUrl: proofUrl },
       });
       if (error) throw error;
       setLastResult(result);
