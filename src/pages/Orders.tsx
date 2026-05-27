@@ -755,7 +755,12 @@ function ApprovalSection({
     setSending(true);
     try {
       const { data: result, error } = await supabase.functions.invoke("send-order-approval", {
-        body: { orderId: order.id, recipientEmail: recipient, proofImageUrl: proofUrl },
+        body: {
+          orderId: order.id,
+          recipientEmail: recipient,
+          proofImageUrl: proofUrl,
+          customMessage: customMessage.trim() || null,
+        },
       });
       if (error) throw error;
       setLastResult(result);
