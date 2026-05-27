@@ -785,130 +785,190 @@ function ApprovalSection({
     }
   };
 
+  const [open, setOpen] = useState(false);
+
+  const summaryLabel = !latest
+    ? "Send approval email"
+    : latest.status === "pending"
+    ? "Manage pending approval"
+    : latest.status === "approved"
+    ? "View approval"
+    : latest.status === "rejected"
+    ? "View change request"
+    : "View approval";
+
   return (
-    <div className="rounded-md border bg-background p-3 space-y-3">
+    <div className="rounded-md border bg-background p-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <div className="font-medium text-foreground flex items-center gap-2">
             <Send className="h-4 w-4" />
             Customer approval
+            {latest && <ApprovalChip status={latest.status} />}
           </div>
-          <p className="text-xs text-muted-foreground max-w-xl">
-            Optional. Email the customer a private link to review the design and approve it before you start printing.
-          </p>
-        </div>
-        {latest && <ApprovalChip status={latest.status} />}
-      </div>
-
-      {latest?.status === "approved" || latest?.status === "rejected" ? (
-        <div className="rounded border bg-muted/30 p-3 text-xs space-y-1">
-          <div className="flex items-center gap-2">
-            {latest.status === "approved" ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-            ) : (
-              <XCircle className="h-3.5 w-3.5 text-destructive" />
-            )}
-            <span className="font-medium">
-              {latest.customer_email} {latest.status === "approved" ? "approved" : "requested changes"}
-            </span>
-            {latest.decided_at && (
-              <span className="text-muted-foreground">
-                · {format(new Date(latest.decided_at), "MMM d, yyyy h:mm a")}
+          {latest?.status === "approved" || latest?.status === "rejected" ? (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              {latest.status === "approved" ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-destructive" />
+              )}
+              <span className="truncate">
+                {latest.customer_email}{" "}
+                {latest.status === "approved" ? "approved" : "requested changes"}
               </span>
-            )}
-          </div>
-          {latest.customer_comment && (
-            <p className="italic text-muted-foreground pt-1">
-              "{latest.customer_comment}"
+              {latest.decided_at && (
+                <span className="text-muted-foreground/70 hidden sm:inline">
+                  · {format(new Date(latest.decided_at), "MMM d, yyyy")}
+                </span>
+              )}
+            </p>
+          ) : latest?.status === "pending" ? (
+            <p className="text-xs text-muted-foreground">
+              Waiting on {latest.customer_email}…
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground max-w-xl">
+              Optional. Email the customer a private link to review the design before printing.
             </p>
           )}
         </div>
-      ) : null}
-
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-foreground">
-          Proof image <span className="text-muted-foreground font-normal">(optional)</span>
-        </label>
-        {proofUrl ? (
-          <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-2">
-            <img src={proofUrl} alt="Proof" className="h-12 w-12 rounded object-cover border" />
-            <div className="flex-1 text-xs truncate text-muted-foreground">{proofName}</div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => { setProofUrl(null); setProofName(null); }}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <label className="flex items-center gap-2 rounded-md border border-dashed bg-background px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors text-xs text-muted-foreground">
-            {uploadingProof ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            <span>{uploadingProof ? "Uploading…" : "Upload a proof image to include in the email"}</span>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={uploadingProof}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleProofUpload(f);
-                e.target.value = "";
-              }}
-            />
-          </label>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-foreground">
-          Message to customer <span className="text-muted-foreground font-normal">(optional)</span>
-        </label>
-        <Textarea
-          value={customMessage}
-          onChange={(e) => setCustomMessage(e.target.value.slice(0, 1000))}
-          placeholder="Add a personal note — e.g. 'Here's the proof for your order. Let me know if anything needs to change before we print.'"
-          rows={3}
-          className="text-sm"
-        />
-        <div className="text-[10px] text-muted-foreground text-right">{customMessage.length}/1000</div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Input
-          type="email"
-          value={recipient}
-          onChange={(e) => setRecipient(e.target.value)}
-          placeholder="customer@example.com"
-          className="flex-1"
-        />
-        <Button onClick={send} disabled={sending || uploadingProof}>
-          {sending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4 mr-2" />
-          )}
-          {latest?.status === "pending" ? "Resend approval email" : "Send approval email"}
+        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <Mail className="h-3.5 w-3.5 mr-1.5" />
+          {summaryLabel}
         </Button>
       </div>
 
-      {lastResult && (
-        <div className="rounded border bg-muted/30 p-2 flex flex-wrap items-center gap-2">
-          <code className="flex-1 text-xs font-mono break-all">{lastResult.approvalUrl}</code>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => copyToClipboard(lastResult.approvalUrl, "Approval link")}
-          >
-            <Copy className="h-3 w-3 mr-1" /> Copy link
-          </Button>
-        </div>
-      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-4 w-4" />
+              Customer approval
+              {latest && <ApprovalChip status={latest.status} />}
+            </DialogTitle>
+            <DialogDescription>
+              Email the customer a private link to review the design and approve it before you start printing.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {latest?.status === "approved" || latest?.status === "rejected" ? (
+              <div className="rounded border bg-muted/30 p-3 text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  {latest.status === "approved" ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 text-destructive" />
+                  )}
+                  <span className="font-medium">
+                    {latest.customer_email} {latest.status === "approved" ? "approved" : "requested changes"}
+                  </span>
+                  {latest.decided_at && (
+                    <span className="text-muted-foreground">
+                      · {format(new Date(latest.decided_at), "MMM d, yyyy h:mm a")}
+                    </span>
+                  )}
+                </div>
+                {latest.customer_comment && (
+                  <p className="italic text-muted-foreground pt-1">
+                    "{latest.customer_comment}"
+                  </p>
+                )}
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-foreground">
+                Proof image <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              {proofUrl ? (
+                <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-2">
+                  <img src={proofUrl} alt="Proof" className="h-12 w-12 rounded object-cover border" />
+                  <div className="flex-1 text-xs truncate text-muted-foreground">{proofName}</div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setProofUrl(null); setProofName(null); }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 rounded-md border border-dashed bg-background px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors text-xs text-muted-foreground">
+                  {uploadingProof ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  <span>{uploadingProof ? "Uploading…" : "Upload a proof image to include in the email"}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingProof}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleProofUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-foreground">
+                Message to customer <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <Textarea
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value.slice(0, 1000))}
+                placeholder="Add a personal note — e.g. 'Here's the proof for your order. Let me know if anything needs to change before we print.'"
+                rows={3}
+                className="text-sm"
+              />
+              <div className="text-[10px] text-muted-foreground text-right">{customMessage.length}/1000</div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-foreground">Recipient email</label>
+              <Input
+                type="email"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                placeholder="customer@example.com"
+              />
+            </div>
+
+            {lastResult && (
+              <div className="rounded border bg-muted/30 p-2 flex flex-wrap items-center gap-2">
+                <code className="flex-1 text-xs font-mono break-all">{lastResult.approvalUrl}</code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(lastResult.approvalUrl, "Approval link")}
+                >
+                  <Copy className="h-3 w-3 mr-1" /> Copy link
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+            <Button onClick={send} disabled={sending || uploadingProof}>
+              {sending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {latest?.status === "pending" ? "Resend approval email" : "Send approval email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
