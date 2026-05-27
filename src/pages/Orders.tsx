@@ -813,6 +813,46 @@ function ApprovalSection({
         </div>
       ) : null}
 
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-foreground">
+          Proof image <span className="text-muted-foreground font-normal">(optional)</span>
+        </label>
+        {proofUrl ? (
+          <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-2">
+            <img src={proofUrl} alt="Proof" className="h-12 w-12 rounded object-cover border" />
+            <div className="flex-1 text-xs truncate text-muted-foreground">{proofName}</div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => { setProofUrl(null); setProofName(null); }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <label className="flex items-center gap-2 rounded-md border border-dashed bg-background px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors text-xs text-muted-foreground">
+            {uploadingProof ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            <span>{uploadingProof ? "Uploading…" : "Upload a proof image to include in the email"}</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploadingProof}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleProofUpload(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-2">
         <Input
           type="email"
@@ -821,7 +861,7 @@ function ApprovalSection({
           placeholder="customer@example.com"
           className="flex-1"
         />
-        <Button onClick={send} disabled={sending}>
+        <Button onClick={send} disabled={sending || uploadingProof}>
           {sending ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : (
