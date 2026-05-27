@@ -27,6 +27,7 @@ import StoreCustomize from "./pages/StoreCustomize";
 import NotFound from "./pages/NotFound";
 import LayersPreview from "./pages/LayersPreview";
 import OrderApproval from "./pages/OrderApproval";
+import Unsubscribe from "./pages/Unsubscribe";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import BillingReturn from "./pages/BillingReturn";
@@ -119,6 +120,7 @@ const App = () => (
             <Route path="/customize/:productId" element={isPotentialStoreHost ? <StoreCustomize customDomainHost={currentHost} /> : <NotFound />} />
             <Route path="/layers-preview" element={<LayersPreview />} />
             <Route path="/approval/:token" element={<OrderApproval />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
 
             {/* Dashboard */}
             <Route path="/pricing" element={<Pricing />} />
