@@ -707,6 +707,7 @@ function ApprovalSection({
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofName, setProofName] = useState<string | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [customMessage, setCustomMessage] = useState("");
   const [lastResult, setLastResult] = useState<{
     approvalUrl: string;
     emailDispatched: boolean;
@@ -727,8 +728,11 @@ function ApprovalSection({
     }
     setUploadingProof(true);
     try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) throw new Error("You must be signed in to upload.");
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-      const path = `proofs/${order.id}/${Date.now()}.${ext}`;
+      // RLS requires the first folder segment to be the auth uid.
+      const path = `${userData.user.id}/proofs/${order.id}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("design-exports")
         .upload(path, file, { contentType: file.type, upsert: false });
