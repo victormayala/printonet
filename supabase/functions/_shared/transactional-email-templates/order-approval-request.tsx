@@ -19,6 +19,7 @@ interface OrderApprovalRequestProps {
   approvalUrl?: string
   orderShortCode?: string
   proofImageUrl?: string
+  customMessage?: string
 }
 
 const OrderApprovalRequestEmail = ({
@@ -26,6 +27,7 @@ const OrderApprovalRequestEmail = ({
   approvalUrl,
   orderShortCode,
   proofImageUrl,
+  customMessage,
 }: OrderApprovalRequestProps) => {
   const brand = storeName || 'Your print shop'
   const url = approvalUrl || 'https://example.com/approval/sample-token'
@@ -43,6 +45,13 @@ const OrderApprovalRequestEmail = ({
             <strong style={mono}>#{code}</strong>. Please take a moment to review
             the design before we send it to production.
           </Text>
+          {customMessage ? (
+            <Section style={messageWrap}>
+              {customMessage.split('\n').map((line, i) => (
+                <Text key={i} style={messageText}>{line || '\u00A0'}</Text>
+              ))}
+            </Section>
+          ) : null}
           {proofImageUrl ? (
             <Section style={imageWrap}>
               <Img
