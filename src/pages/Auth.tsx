@@ -85,6 +85,7 @@ export default function Auth() {
               </li>
             ))}
           </ul>
+          </div>
         </div>
 
         <div className="relative z-10 text-xs text-white/40">
