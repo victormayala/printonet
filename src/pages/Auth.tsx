@@ -57,7 +57,7 @@ export default function Auth() {
           <img src={logoInverted} alt="Printonet" className="h-8" />
         </div>
 
-        <div className="relative z-10 flex-1 flex items-center">
+        <div className="relative z-10 flex-1 flex items-center justify-center">
           <div className="space-y-8 max-w-md">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-[hsl(51_100%_50%)] animate-pulse" />
