@@ -380,7 +380,7 @@ export function PushProductsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-col gap-4 overflow-hidden px-6 py-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-6 py-4">
           <div className="relative shrink-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
