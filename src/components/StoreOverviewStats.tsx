@@ -42,7 +42,8 @@ export function StoreOverviewStats({ store }: { store: CorporateStore }) {
         supabase
           .from("orders")
           .select("amount_total, status")
-          .eq("store_id", store.id),
+          .eq("store_id", store.id)
+          .not("status", "in", "(pending,failed)"),
       ]);
 
       const orders = ordersRes.data ?? [];
