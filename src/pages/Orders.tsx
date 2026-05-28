@@ -141,6 +141,7 @@ export default function Orders() {
         .from("orders")
         .select("*")
         .in("store_id", storeIds)
+        .not("status", "in", "(pending,failed)")
         .order("created_at", { ascending: false });
 
       if (ordersErr) {
