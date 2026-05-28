@@ -911,7 +911,6 @@ function ProductForm({
         <div className="space-y-2">
           <Label>Brand</Label>
           <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gildan, Nike, Bella+Canvas" />
-          <p className="text-[11px] text-muted-foreground">Shown on the storefront product page. Auto-filled when importing from suppliers.</p>
         </div>
         <div className="space-y-2">
           <Label>Product Type</Label>
