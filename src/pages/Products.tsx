@@ -1182,7 +1182,7 @@ function ProductForm({
 
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-[10px]">Base {PRICE_REF_LABEL[priceReference].toLowerCase()}</Label>
+                                <Label className="text-[10px]">Base {PRICE_REF_LABEL[priceReference]}</Label>
                                 {(() => {
                                   const ref = variantRefMin(selectedVariant, priceReference);
                                   const display = ref !== null ? `$${ref.toFixed(2)}` : "—";
