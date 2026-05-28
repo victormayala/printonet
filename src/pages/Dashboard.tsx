@@ -150,6 +150,7 @@ export default function Dashboard() {
             .from("orders")
             .select("id,store_id,amount_total,currency,status,customer_email,created_at")
             .in("store_id", storeIds)
+            .not("status", "in", "(pending,failed)")
             .gte("created_at", subDays(new Date(), 90).toISOString())
             .order("created_at", { ascending: false }),
           supabase
