@@ -1449,6 +1449,12 @@ function ProductForm({
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {product ? "Update Product" : "Add Product"}
         </Button>
+        {product && onPushToStore && (
+          <Button variant="secondary" onClick={onPushToStore} className="gap-2">
+            <CloudUpload className="h-4 w-4" />
+            Push Changes to Store
+          </Button>
+        )}
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
       </div>
     </div>
