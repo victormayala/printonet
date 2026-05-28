@@ -450,12 +450,14 @@ function ProductForm({
   onCancel,
   knownCategories = [],
   onCategoryRenamed,
+  onPushToStore,
 }: {
   product?: Product | null;
   onSave: () => void;
   onCancel: () => void;
   knownCategories?: string[];
   onCategoryRenamed?: (oldName: string, newName: string) => void;
+  onPushToStore?: () => void;
 }) {
   const [name, setName] = useState(product?.name || "");
   const [category, setCategory] = useState(product?.category || "T-Shirts");
