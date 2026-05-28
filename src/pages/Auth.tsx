@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/printonet-logo.svg";
+import logoInverted from "@/assets/printonet-logo-inverted.svg";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-background grid lg:grid-cols-2">
       {/* Brand panel */}
-      <aside className="relative hidden lg:flex flex-col justify-between p-12 overflow-hidden bg-[hsl(0_0%_7%)] text-white">
+      <aside className="relative hidden lg:flex flex-col p-12 overflow-hidden bg-[hsl(0_0%_7%)] text-white">
         <div
           aria-hidden
           className="absolute inset-0 opacity-[0.07]"
@@ -53,10 +54,11 @@ export default function Auth() {
         />
 
         <div className="relative z-10 flex items-center gap-2">
-          <img src={logo} alt="Printonet" className="h-8 invert brightness-0" style={{ filter: "invert(1)" }} />
+          <img src={logoInverted} alt="Printonet" className="h-8" />
         </div>
 
-        <div className="relative z-10 space-y-8 max-w-md">
+        <div className="relative z-10 flex-1 flex items-center">
+          <div className="space-y-8 max-w-md">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-[hsl(51_100%_50%)] animate-pulse" />
             Built for modern print shops
@@ -83,6 +85,7 @@ export default function Auth() {
               </li>
             ))}
           </ul>
+          </div>
         </div>
 
         <div className="relative z-10 text-xs text-white/40">
