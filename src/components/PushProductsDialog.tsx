@@ -596,7 +596,7 @@ export function PushProductsDialog({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t px-6 py-4">
+        <DialogFooter className="border-t px-6 py-4 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pushing}>
             Cancel
           </Button>
