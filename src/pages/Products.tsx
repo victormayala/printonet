@@ -903,7 +903,7 @@ function ProductForm({
           )}
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
@@ -913,7 +913,7 @@ function ProductForm({
           <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gildan, Nike, Bella+Canvas" />
           <p className="text-[11px] text-muted-foreground">Shown on the storefront product page. Auto-filled when importing from suppliers.</p>
         </div>
-        <div className="space-y-2 col-span-2">
+        <div className="space-y-2">
           <Label>Product Type</Label>
           <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
             <SelectTrigger>
