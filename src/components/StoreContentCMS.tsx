@@ -52,6 +52,75 @@ type Block = {
   updated_at: string;
 };
 
+const DEFAULT_BLOCK_DRAFTS: Record<string, any> = {
+  hero: {
+    eyebrow: "",
+    headline: "New hero section",
+    subhead: "",
+    image_url: "",
+    cta_label: "Shop now",
+    cta_href: "/products",
+    secondary_cta_label: "",
+    secondary_cta_href: "",
+    alignment: "left",
+  },
+  value_props: {
+    heading: "Why shop with us",
+    items: [{ icon: "sparkles", title: "New benefit", body: "Describe this benefit." }],
+  },
+  featured_categories: {
+    heading: "Featured categories",
+    subheading: "",
+    category_slugs: ["featured"],
+  },
+  featured_products: {
+    heading: "Featured products",
+    subheading: "",
+    store_product_ids: ["replace-with-product-id"],
+  },
+  testimonials: {
+    heading: "Testimonials",
+    items: [{ quote: "Share a customer quote.", author: "Customer name", role: "", avatar_url: "" }],
+  },
+  cta_banner: {
+    headline: "New call to action",
+    body: "",
+    cta_label: "Shop now",
+    cta_href: "/products",
+    background_image_url: "",
+  },
+  rich_text: {
+    markdown: "Add your content here.",
+  },
+  category_bento: {
+    eyebrow: "",
+    heading: "Featured categories",
+    items: [{ image_url: "", label: "Category", sublabel: "", href: "/products" }],
+  },
+  two_column_banners: {
+    items: [
+      { image_url: "", eyebrow: "", title: "First promotion", body: "", cta_label: "", cta_href: "" },
+      { image_url: "", eyebrow: "", title: "Second promotion", body: "", cta_label: "", cta_href: "" },
+    ],
+  },
+  three_column_banners: {
+    items: [
+      { image_url: "", eyebrow: "", title: "First feature", body: "" },
+      { image_url: "", eyebrow: "", title: "Second feature", body: "" },
+      { image_url: "", eyebrow: "", title: "Third feature", body: "" },
+    ],
+  },
+  benefits_grid: {
+    eyebrow: "",
+    heading: "Why shop with us",
+    items: [{ eyebrow: "01", title: "New benefit", body: "Describe this benefit.", accent_color: "" }],
+  },
+};
+
+function defaultDraftFor(type: string) {
+  return JSON.parse(JSON.stringify(DEFAULT_BLOCK_DRAFTS[type] ?? { markdown: "Add your content here." }));
+}
+
 type NavItem = { label: string; href: string };
 
 type ContentPage = {
@@ -163,6 +232,7 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
         id: b.id,
         block_type: b.block_type,
         enabled: b.enabled,
+        sort_order: b.sort_order,
         draft_data: drafts[b.id] ?? b.draft_data,
       });
       toast({ title: "Draft saved" });
@@ -222,12 +292,13 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
       const before = new Set((blocks ?? []).map((b) => b.id));
       const nextSort =
         (blocks ?? []).reduce((m, b) => Math.max(m, b.sort_order ?? 0), -1) + 1;
+      const blockType = newType.trim();
       await cms(store.id, "upsert-block", {
         id: (crypto as any).randomUUID(),
-        block_type: newType.trim(),
+        block_type: blockType,
         enabled: true,
         sort_order: nextSort,
-        draft_data: {},
+        draft_data: defaultDraftFor(blockType),
       });
       toast({ title: "Block created" });
       const res = await cms<{ blocks: Block[] }>(store.id, "list-blocks");
