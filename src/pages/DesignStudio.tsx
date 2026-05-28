@@ -1760,10 +1760,27 @@ export default function DesignStudio({
     saveState();
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
+    const hashBuf = await crypto.subtle.digest("SHA-256", buffer);
+    return Array.from(new Uint8Array(hashBuf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const canvas = fabricRef.current;
     const file = e.target.files?.[0];
     if (!canvas || !file) return;
+
+    // Compute sha256 of raw file bytes for digitizing-fee waiver matching.
+    let uploadHash = "";
+    try {
+      const bytes = await file.arrayBuffer();
+      uploadHash = await sha256Hex(bytes);
+    } catch (hashErr) {
+      console.warn("sha256 hash failed for upload:", hashErr);
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const imgEl = new Image();
@@ -1776,6 +1793,8 @@ export default function DesignStudio({
           scaleY: scale,
         });
         (img as any).customName = file.name.slice(0, 20);
+        (img as any)._isUserUpload = true;
+        (img as any)._uploadHash = uploadHash;
         canvas.add(img);
         canvas.setActiveObject(img);
         saveState();
@@ -2544,16 +2563,40 @@ export default function DesignStudio({
         exportCanvas.dispose();
       }
 
+      // Collect deduped sha256 hashes of user-uploaded artwork across all sides.
+      // Uploads only — AI-generated, clipart, text, and shapes are excluded by design.
+      const artworkHashSet = new Set<string>();
+      for (const view of availableViews) {
+        const stateJson = viewStatesRef.current[view];
+        if (!stateJson) continue;
+        try {
+          const parsed = JSON.parse(stateJson);
+          const objects = Array.isArray(parsed?.objects) ? parsed.objects : [];
+          for (const obj of objects) {
+            if (obj && obj._isUserUpload && typeof obj._uploadHash === "string" && obj._uploadHash.length > 0) {
+              artworkHashSet.add(obj._uploadHash);
+            }
+          }
+        } catch (_) {
+          // ignore malformed view state
+        }
+      }
+      const artworkHashes = Array.from(artworkHashSet);
+
       const result: {
         sessionId: string | undefined;
         sides: typeof sides;
         variant: ProductVariant | null;
         designLayersUrl?: string;
         printFileUrl?: string;
+        hasUploadedArtwork: boolean;
+        artworkHashes: string[];
       } = {
         sessionId,
         sides,
         variant: selectedVariantRef.current || null,
+        hasUploadedArtwork: artworkHashes.length > 0,
+        artworkHashes,
       };
 
       const layersJson = buildLayersExportJson(sessionId, sides);
