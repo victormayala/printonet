@@ -2563,16 +2563,40 @@ export default function DesignStudio({
         exportCanvas.dispose();
       }
 
+      // Collect deduped sha256 hashes of user-uploaded artwork across all sides.
+      // Uploads only — AI-generated, clipart, text, and shapes are excluded by design.
+      const artworkHashSet = new Set<string>();
+      for (const view of availableViews) {
+        const stateJson = viewStatesRef.current[view];
+        if (!stateJson) continue;
+        try {
+          const parsed = JSON.parse(stateJson);
+          const objects = Array.isArray(parsed?.objects) ? parsed.objects : [];
+          for (const obj of objects) {
+            if (obj && obj._isUserUpload && typeof obj._uploadHash === "string" && obj._uploadHash.length > 0) {
+              artworkHashSet.add(obj._uploadHash);
+            }
+          }
+        } catch (_) {
+          // ignore malformed view state
+        }
+      }
+      const artworkHashes = Array.from(artworkHashSet);
+
       const result: {
         sessionId: string | undefined;
         sides: typeof sides;
         variant: ProductVariant | null;
         designLayersUrl?: string;
         printFileUrl?: string;
+        hasUploadedArtwork: boolean;
+        artworkHashes: string[];
       } = {
         sessionId,
         sides,
         variant: selectedVariantRef.current || null,
+        hasUploadedArtwork: artworkHashes.length > 0,
+        artworkHashes,
       };
 
       const layersJson = buildLayersExportJson(sessionId, sides);
