@@ -4091,6 +4091,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                       }
                     }}
                     onCancel={() => { setShowAddForm(false); setEditingProduct(undefined); }}
+                    onPushToStore={editingProduct ? () => handlePushSingleProduct(editingProduct.id) : undefined}
                   />
                 </CardContent>
               </Card>
