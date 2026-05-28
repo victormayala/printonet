@@ -2772,6 +2772,7 @@ function SanMarImport({ onDone }: { onDone: () => void }) {
           const payload = {
             name: `${brandName} ${styleId}`.trim(),
             category: category.toLowerCase() || "apparel",
+            brand: brandName || null,
             description: productTitle || description || null,
             base_price: parseFloat(getVal(firstRow, iPiecePrice) || "0"),
             image_front: imageFront,
