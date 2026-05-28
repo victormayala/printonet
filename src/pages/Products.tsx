@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
 import PrintAreaOverlay from "@/components/PrintAreaOverlay";
@@ -879,18 +880,24 @@ function ProductForm({
 
   return (
     <div className="space-y-5">
-      {product && onPushToStore && (
-        <div className="flex justify-end">
-          <Button
-            variant="secondary"
-            onClick={onPushToStore}
-            disabled={!savedOnce}
-            className="gap-2"
-            title={savedOnce ? "Push changes to your connected store" : "Update the product first to enable pushing changes"}
-          >
-            <CloudUpload className="h-4 w-4" />
-            Push Changes to Store
+      {product && (
+        <div className="flex justify-end gap-2">
+          <Button onClick={handleSave} disabled={saving} className="gap-2" data-product-form-save>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Update Product
           </Button>
+          {onPushToStore && (
+            <Button
+              variant="secondary"
+              onClick={onPushToStore}
+              disabled={!savedOnce}
+              className={cn("gap-2", savedOnce && "bg-accent text-accent-foreground hover:bg-accent/90")}
+              title={savedOnce ? "Push changes to your connected store" : "Update the product first to enable pushing changes"}
+            >
+              <CloudUpload className="h-4 w-4" />
+              Push Changes to Store
+            </Button>
+          )}
         </div>
       )}
       <div className="grid grid-cols-2 gap-4">
@@ -1472,7 +1479,7 @@ function ProductForm({
             variant="secondary"
             onClick={onPushToStore}
             disabled={!savedOnce}
-            className="gap-2"
+            className={cn("gap-2", savedOnce && "bg-accent text-accent-foreground hover:bg-accent/90")}
             title={savedOnce ? "Push changes to your connected store" : "Update the product first to enable pushing changes"}
           >
             <CloudUpload className="h-4 w-4" />
