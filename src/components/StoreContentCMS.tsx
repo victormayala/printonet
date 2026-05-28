@@ -220,9 +220,12 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
     setBusy("__new");
     try {
       const before = new Set((blocks ?? []).map((b) => b.id));
+      const nextSort =
+        (blocks ?? []).reduce((m, b) => Math.max(m, b.sort_order ?? 0), -1) + 1;
       await cms(store.id, "upsert-block", {
         block_type: newType.trim(),
         enabled: true,
+        sort_order: nextSort,
         draft_data: {},
       });
       toast({ title: "Block created" });
