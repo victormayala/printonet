@@ -319,7 +319,7 @@ Deno.serve(async (req) => {
         const { data: prods, error: prodsErr } = await supabase
           .from("inventory_products")
           .select(
-            "id, name, description, category, base_price, sale_price, " +
+            "id, name, brand, description, category, base_price, sale_price, " +
               "image_front, image_back, image_side1, image_side2, variants, decoration_methods, " +
               "product_type, inventory, status, weight, weight_unit, length, width, height, dimension_unit",
           )
@@ -1029,7 +1029,7 @@ Deno.serve(async (req) => {
           const { data: prods, error: prodsErr } = await supabase
             .from("inventory_products")
             .select(
-              "id, name, description, category, base_price, sale_price, " +
+              "id, name, brand, description, category, base_price, sale_price, " +
                 "image_front, image_back, image_side1, image_side2, variants, decoration_methods, " +
                 "product_type, inventory, status, weight, weight_unit, length, width, height, dimension_unit",
             )
