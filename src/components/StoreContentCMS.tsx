@@ -223,6 +223,7 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
       const nextSort =
         (blocks ?? []).reduce((m, b) => Math.max(m, b.sort_order ?? 0), -1) + 1;
       await cms(store.id, "upsert-block", {
+        id: (crypto as any).randomUUID(),
         block_type: newType.trim(),
         enabled: true,
         sort_order: nextSort,
