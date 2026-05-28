@@ -818,6 +818,7 @@ function ProductForm({
       category_id: categoryId,
       subcategory_id: subcategoryId,
       description: description.trim() || null,
+      brand: brand.trim() || null,
       base_price: parseFloat(basePrice) || 0,
       sale_price: salePrice.trim() === "" ? null : (parseFloat(salePrice) || null),
       image_front: imageFront || null,
