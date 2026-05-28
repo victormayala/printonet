@@ -370,7 +370,7 @@ export function PushProductsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85dvh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl h-[85dvh] p-0 gap-0 overflow-hidden flex flex-col">
         <DialogHeader className="border-b px-6 py-5 pr-16">
           <DialogTitle>Push products to {store.name}</DialogTitle>
           <DialogDescription>
@@ -380,7 +380,7 @@ export function PushProductsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-col gap-4 overflow-hidden px-6 py-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-6 py-4">
           <div className="relative shrink-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -596,7 +596,7 @@ export function PushProductsDialog({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t px-6 py-4">
+        <DialogFooter className="border-t px-6 py-4 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pushing}>
             Cancel
           </Button>
