@@ -909,6 +909,11 @@ function ProductForm({
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Classic T-Shirt" />
         </div>
         <div className="space-y-2">
+          <Label>Brand</Label>
+          <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gildan, Nike, Bella+Canvas" />
+          <p className="text-[11px] text-muted-foreground">Shown on the storefront product page. Auto-filled when importing from suppliers.</p>
+        </div>
+        <div className="space-y-2">
           <Label>Product Type</Label>
           <Select value={productType} onValueChange={(v) => setProductType(v as "single" | "variable")}>
             <SelectTrigger>
@@ -919,12 +924,7 @@ function ProductForm({
               <SelectItem value="variable">Variable Product</SelectItem>
             </SelectContent>
           </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Brand</Label>
-        <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gildan, Nike, Bella+Canvas" />
-        <p className="text-[11px] text-muted-foreground">Shown on the storefront product page. Auto-filled when importing from suppliers.</p>
-      </div>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
