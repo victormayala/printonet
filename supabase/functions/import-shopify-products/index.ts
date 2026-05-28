@@ -16,6 +16,7 @@ const PRODUCTS_QUERY = `
           title
           descriptionHtml
           productType
+          vendor
           status
           images(first: 10) {
             edges {
