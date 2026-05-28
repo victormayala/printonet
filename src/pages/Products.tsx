@@ -919,7 +919,12 @@ function ProductForm({
               <SelectItem value="variable">Variable Product</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Brand</Label>
+        <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gildan, Nike, Bella+Canvas" />
+        <p className="text-[11px] text-muted-foreground">Shown on the storefront product page. Auto-filled when importing from suppliers.</p>
+      </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
