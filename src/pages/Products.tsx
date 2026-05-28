@@ -22,7 +22,7 @@ import {
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List, Eye,
   ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles,
-  Truck, Search, Download, Send, MoreVertical, CircleDot
+  Truck, Search, Download, Send, MoreVertical, CircleDot, CloudUpload
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -450,12 +450,14 @@ function ProductForm({
   onCancel,
   knownCategories = [],
   onCategoryRenamed,
+  onPushToStore,
 }: {
   product?: Product | null;
   onSave: () => void;
   onCancel: () => void;
   knownCategories?: string[];
   onCategoryRenamed?: (oldName: string, newName: string) => void;
+  onPushToStore?: () => void;
 }) {
   const [name, setName] = useState(product?.name || "");
   const [category, setCategory] = useState(product?.category || "T-Shirts");
@@ -659,7 +661,9 @@ function ProductForm({
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.embroidery_setup_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0) + (Number(p.screen_printing_fee) || 0) + (Number(p.sublimation_fee) || 0);
+    // Final price = base cost (wholesale/MSRP) + profit margin only.
+    // Decoration fees are tracked separately and NOT added to the product price.
+    return cost + (Number(p.margin) || 0);
   };
 
   // Snapshot cost from current price the first time we overwrite price,
@@ -1445,6 +1449,12 @@ function ProductForm({
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {product ? "Update Product" : "Add Product"}
         </Button>
+        {product && onPushToStore && (
+          <Button variant="secondary" onClick={onPushToStore} className="gap-2">
+            <CloudUpload className="h-4 w-4" />
+            Push Changes to Store
+          </Button>
+        )}
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
       </div>
     </div>
@@ -4081,6 +4091,7 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
                       }
                     }}
                     onCancel={() => { setShowAddForm(false); setEditingProduct(undefined); }}
+                    onPushToStore={editingProduct ? () => handlePushSingleProduct(editingProduct.id) : undefined}
                   />
                 </CardContent>
               </Card>
