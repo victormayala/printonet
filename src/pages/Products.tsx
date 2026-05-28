@@ -659,7 +659,9 @@ function ProductForm({
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
     const cost = variantBaseCost(v);
-    return cost + (Number(p.margin) || 0) + (Number(p.embroidery_fee) || 0) + (Number(p.embroidery_setup_fee) || 0) + (Number(p.dtg_fee) || 0) + (Number(p.dtf_fee) || 0) + (Number(p.screen_printing_fee) || 0) + (Number(p.sublimation_fee) || 0);
+    // Final price = base cost (wholesale/MSRP) + profit margin only.
+    // Decoration fees are tracked separately and NOT added to the product price.
+    return cost + (Number(p.margin) || 0);
   };
 
   // Snapshot cost from current price the first time we overwrite price,
