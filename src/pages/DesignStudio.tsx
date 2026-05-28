@@ -1760,10 +1760,27 @@ export default function DesignStudio({
     saveState();
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
+    const hashBuf = await crypto.subtle.digest("SHA-256", buffer);
+    return Array.from(new Uint8Array(hashBuf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const canvas = fabricRef.current;
     const file = e.target.files?.[0];
     if (!canvas || !file) return;
+
+    // Compute sha256 of raw file bytes for digitizing-fee waiver matching.
+    let uploadHash = "";
+    try {
+      const bytes = await file.arrayBuffer();
+      uploadHash = await sha256Hex(bytes);
+    } catch (hashErr) {
+      console.warn("sha256 hash failed for upload:", hashErr);
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const imgEl = new Image();
@@ -1776,6 +1793,8 @@ export default function DesignStudio({
           scaleY: scale,
         });
         (img as any).customName = file.name.slice(0, 20);
+        (img as any)._isUserUpload = true;
+        (img as any)._uploadHash = uploadHash;
         canvas.add(img);
         canvas.setActiveObject(img);
         saveState();
