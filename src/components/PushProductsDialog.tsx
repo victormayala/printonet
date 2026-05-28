@@ -370,7 +370,7 @@ export function PushProductsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85dvh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl h-[85dvh] p-0 gap-0 overflow-hidden flex flex-col">
         <DialogHeader className="border-b px-6 py-5 pr-16">
           <DialogTitle>Push products to {store.name}</DialogTitle>
           <DialogDescription>
