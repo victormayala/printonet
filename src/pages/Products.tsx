@@ -98,6 +98,7 @@ type Product = {
   subcategory_id?: string | null;
   inventory?: { unlimited_stock?: boolean; stock?: number | null } | null;
   decoration_methods?: string[] | null;
+  brand?: string | null;
 };
 
 type DecorationMethod = "dtg" | "dtf" | "embroidery" | "screen_printing" | "sublimation";
