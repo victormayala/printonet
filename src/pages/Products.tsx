@@ -660,8 +660,10 @@ function ProductForm({
 
   const computeVariantFinalPrice = (v: any) => {
     const p = v?.pricing || {};
-    const cost = variantBaseCost(v);
-    // Final price = base cost (wholesale/MSRP) + profit margin only.
+    // Base = the selected price reference (Wholesale or MSRP). Falls back to wholesale cost.
+    const refBase = variantRefMin(v, priceReference);
+    const cost = refBase != null && refBase > 0 ? refBase : variantBaseCost(v);
+    // Final price = base (wholesale/MSRP) + profit margin only.
     // Decoration fees are tracked separately and NOT added to the product price.
     return cost + (Number(p.margin) || 0);
   };
