@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { GripVertical, Loader2, Package, Search, X } from "lucide-react";
+import { Loader2, Package, Search, X } from "lucide-react";
 import { BLOCK_TYPES, type BlockType } from "@/lib/cms.types";
 import { TextField, TextareaField, AssetField, SelectField, ArrayField, ColorField } from "./fields";
 import { supabase } from "@/integrations/supabase/client";
