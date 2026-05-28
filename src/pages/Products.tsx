@@ -1164,7 +1164,7 @@ function ProductForm({
                                   <ToggleGroupItem value="wholesale" className="h-7 px-3 text-[11px]">Wholesale</ToggleGroupItem>
                                   <ToggleGroupItem value="msrp" className="h-7 px-3 text-[11px]">MSRP</ToggleGroupItem>
                                 </ToggleGroup>
-                                {defaultPriceSource !== priceReference ? (
+                                {defaultPriceSource !== priceReference && (
                                   <Button
                                     type="button"
                                     size="sm"
@@ -1176,8 +1176,6 @@ function ProductForm({
                                   >
                                     Set as default
                                   </Button>
-                                ) : (
-                                  <span className="text-[10px] text-muted-foreground">default</span>
                                 )}
                               </div>
                             </div>
