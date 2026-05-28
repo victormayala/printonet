@@ -846,6 +846,8 @@ function ProductForm({
             embroidery_setup_fee: Number(v.pricing?.embroidery_setup_fee) || 0,
             dtg_fee: Number(v.pricing?.dtg_fee) || 0,
             dtf_fee: Number(v.pricing?.dtf_fee) || 0,
+            screen_printing_fee: Number(v.pricing?.screen_printing_fee) || 0,
+            sublimation_fee: Number(v.pricing?.sublimation_fee) || 0,
           },
           sizes: (v.sizes || []).map((s: any) => ({ ...s, price: Number(s.price) || 0 })),
         })),
