@@ -245,6 +245,7 @@ Deno.serve(async (req) => {
         const payload = {
           name: productName,
           category: style.baseCategory || 'apparel',
+          brand: style.brandName || null,
           description: style.title || style.description || null,
           base_price: computedBasePrice,
           image_front: imageFront,

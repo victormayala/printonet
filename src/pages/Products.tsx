@@ -98,6 +98,7 @@ type Product = {
   subcategory_id?: string | null;
   inventory?: { unlimited_stock?: boolean; stock?: number | null } | null;
   decoration_methods?: string[] | null;
+  brand?: string | null;
 };
 
 type DecorationMethod = "dtg" | "dtf" | "embroidery" | "screen_printing" | "sublimation";
@@ -469,6 +470,7 @@ function ProductForm({
   const categoryTree = buildCategoryTree(categoryRows ?? [], categoryLinks ?? []);
   const selectedRoot = categoryTree.find((c) => c.id === categoryId);
   const [description, setDescription] = useState(product?.description || "");
+  const [brand, setBrand] = useState(product?.brand || "");
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
   const [salePrice, setSalePrice] = useState(product?.sale_price != null ? String(product.sale_price) : "");
   const [imageFront, setImageFront] = useState(product?.image_front || "");
@@ -816,6 +818,7 @@ function ProductForm({
       category_id: categoryId,
       subcategory_id: subcategoryId,
       description: description.trim() || null,
+      brand: brand.trim() || null,
       base_price: parseFloat(basePrice) || 0,
       sale_price: salePrice.trim() === "" ? null : (parseFloat(salePrice) || null),
       image_front: imageFront || null,
@@ -916,7 +919,12 @@ function ProductForm({
               <SelectItem value="variable">Variable Product</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Brand</Label>
+        <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gildan, Nike, Bella+Canvas" />
+        <p className="text-[11px] text-muted-foreground">Shown on the storefront product page. Auto-filled when importing from suppliers.</p>
+      </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">

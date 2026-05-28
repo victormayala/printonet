@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
       const row = {
         name: product.name,
         category: product.categories?.[0]?.name || "Other",
+        brand: product.brands?.[0]?.name || (product.meta_data?.find((m: any) => m.key === '_brand' || m.key === 'brand')?.value) || null,
         description: product.short_description?.replace(/<[^>]*>/g, "") || product.description?.replace(/<[^>]*>/g, "") || null,
         base_price: parseFloat(product.price) || parseFloat(product.regular_price) || 0,
         image_front: images[0]?.src || null,

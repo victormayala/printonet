@@ -612,6 +612,7 @@ export type Database = {
       inventory_products: {
         Row: {
           base_price: number
+          brand: string | null
           category: string
           category_id: string | null
           created_at: string
@@ -644,6 +645,7 @@ export type Database = {
         }
         Insert: {
           base_price?: number
+          brand?: string | null
           category?: string
           category_id?: string | null
           created_at?: string
@@ -676,6 +678,7 @@ export type Database = {
         }
         Update: {
           base_price?: number
+          brand?: string | null
           category?: string
           category_id?: string | null
           created_at?: string

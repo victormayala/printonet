@@ -16,6 +16,7 @@ const PRODUCTS_QUERY = `
           title
           descriptionHtml
           productType
+          vendor
           status
           images(first: 10) {
             edges {
@@ -148,6 +149,7 @@ Deno.serve(async (req) => {
       const row = {
         name: product.title,
         category: product.productType || "Other",
+        brand: product.vendor || null,
         description: product.descriptionHtml?.replace(/<[^>]*>/g, "") || null,
         base_price: parseFloat(product.variants?.edges?.[0]?.node?.price) || 0,
         image_front: images[0] || null,

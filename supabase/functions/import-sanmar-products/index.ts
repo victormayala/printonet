@@ -590,6 +590,7 @@ Deno.serve(async (req) => {
           const payload = {
             name: `${enriched.brand} ${sid}`.trim(),
             category: enriched.category?.toLowerCase() || 'apparel',
+            brand: enriched.brand || null,
             description: enriched.description || null,
             base_price: computedBasePrice,
             image_front: firstPart?.frontImage || null,
