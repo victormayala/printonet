@@ -470,6 +470,7 @@ function ProductForm({
   const categoryTree = buildCategoryTree(categoryRows ?? [], categoryLinks ?? []);
   const selectedRoot = categoryTree.find((c) => c.id === categoryId);
   const [description, setDescription] = useState(product?.description || "");
+  const [brand, setBrand] = useState(product?.brand || "");
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "0");
   const [salePrice, setSalePrice] = useState(product?.sale_price != null ? String(product.sale_price) : "");
   const [imageFront, setImageFront] = useState(product?.image_front || "");
