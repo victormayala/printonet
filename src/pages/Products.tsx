@@ -488,6 +488,7 @@ function ProductForm({
     product?.inventory?.stock != null ? String(product.inventory.stock) : ""
   );
   const [saving, setSaving] = useState(false);
+  const [savedOnce, setSavedOnce] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
     (product?.print_areas as any) || {}
@@ -869,12 +870,27 @@ function ProductForm({
       toast({ title: "Save failed", description: error.message, variant: "destructive" });
     } else {
       toast({ title: product ? "Product updated" : "Product added" });
+      if (product) setSavedOnce(true);
       onSave();
     }
   };
 
   return (
     <div className="space-y-5">
+      {product && onPushToStore && (
+        <div className="flex justify-end">
+          <Button
+            variant="secondary"
+            onClick={onPushToStore}
+            disabled={!savedOnce}
+            className="gap-2"
+            title={savedOnce ? "Push changes to your connected store" : "Update the product first to enable pushing changes"}
+          >
+            <CloudUpload className="h-4 w-4" />
+            Push Changes to Store
+          </Button>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Name</Label>
@@ -1450,7 +1466,13 @@ function ProductForm({
           {product ? "Update Product" : "Add Product"}
         </Button>
         {product && onPushToStore && (
-          <Button variant="secondary" onClick={onPushToStore} className="gap-2">
+          <Button
+            variant="secondary"
+            onClick={onPushToStore}
+            disabled={!savedOnce}
+            className="gap-2"
+            title={savedOnce ? "Push changes to your connected store" : "Update the product first to enable pushing changes"}
+          >
             <CloudUpload className="h-4 w-4" />
             Push Changes to Store
           </Button>
