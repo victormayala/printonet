@@ -32,6 +32,52 @@ export function MediaLibraryDialog({
 }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const safeName = file.name
+        .replace(/[^a-zA-Z0-9_.-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      const path = `homepage/${Date.now()}-${safeName || "upload"}`;
+      const signed = await cms<{ signedUrl: string; publicUrl: string }>(
+        storeId,
+        "create-asset-upload-url",
+        { path },
+      );
+      const putRes = await fetch(signed.signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("cms_media").upsert(
+          {
+            store_id: storeId,
+            user_id: user.id,
+            url: signed.publicUrl,
+            filename: file.name,
+            content_type: file.type || null,
+            size_bytes: file.size,
+          },
+          { onConflict: "store_id,url", ignoreDuplicates: true },
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["cms_media", storeId] });
+      onSelect(signed.publicUrl);
+      onOpenChange(false);
+      toast({ title: "Image uploaded" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const { data: items = [], isLoading } = useQuery<MediaItem[]>({
     queryKey: ["cms_media", storeId],
