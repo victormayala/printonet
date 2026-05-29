@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, Copy, Check, Eye, EyeOff, Building2, ShoppingBag, Globe, ChevronDown } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Upload, X, RefreshCw, AlertCircle, CheckCircle2, Clock, MoreVertical, Pause, Play, Trash2, PauseCircle, Pencil, Package, Search, Copy, Check, Eye, EyeOff, Building2, ShoppingBag, Globe, ChevronDown, FolderOpen } from "lucide-react";
+import { MediaLibraryDialog } from "@/components/cms/MediaLibraryDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -320,6 +321,8 @@ function LogoField({
   existingUrl,
   onChange,
   onClearExisting,
+  onPickUrl,
+  storeId,
   hint,
 }: {
   label: string;
@@ -327,9 +330,12 @@ function LogoField({
   existingUrl?: string | null;
   onChange: (f: File | null) => void;
   onClearExisting?: () => void;
+  onPickUrl?: (url: string) => void;
+  storeId?: string;
   hint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [libOpen, setLibOpen] = useState(false);
   const previewUrl = value ? URL.createObjectURL(value) : existingUrl || null;
 
   return (
@@ -363,10 +369,17 @@ function LogoField({
               onChange(file);
             }}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+              <Upload className="h-3 w-3" />
               {value || existingUrl ? "Replace" : "Upload"}
             </Button>
+            {onPickUrl && storeId && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setLibOpen(true)}>
+                <FolderOpen className="h-3 w-3" />
+                Library
+              </Button>
+            )}
             {(value || existingUrl) && (
               <Button
                 type="button"
@@ -385,6 +398,18 @@ function LogoField({
           {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
         </div>
       </div>
+      {onPickUrl && storeId && (
+        <MediaLibraryDialog
+          open={libOpen}
+          onOpenChange={setLibOpen}
+          storeId={storeId}
+          currentUrl={existingUrl ?? undefined}
+          onSelect={(url) => {
+            onChange(null);
+            onPickUrl(url);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -901,6 +926,8 @@ function StoreFormFields({
   setFooterLogo,
   existing,
   onClearExisting,
+  onPickAssetUrl,
+  storeId,
   hideCustomDomain,
   compact,
   section = "all",
@@ -920,6 +947,8 @@ function StoreFormFields({
     secondary_logo_url?: string | null;
   };
   onClearExisting?: (kind: "logo" | "favicon" | "footer") => void;
+  onPickAssetUrl?: (kind: "logo" | "favicon" | "footer", url: string) => void;
+  storeId?: string;
   hideCustomDomain?: boolean;
   /** When true, hides branding sections behind a collapsible "Branding (optional)" toggle. */
   compact?: boolean;
@@ -978,6 +1007,8 @@ function StoreFormFields({
             existingUrl={existing?.logo_url}
             onChange={setLogo}
             onClearExisting={onClearExisting ? () => onClearExisting("logo") : undefined}
+            onPickUrl={onPickAssetUrl ? (url) => onPickAssetUrl("logo", url) : undefined}
+            storeId={storeId}
             hint="PNG/SVG, light background"
           />
           <LogoField
@@ -986,6 +1017,8 @@ function StoreFormFields({
             existingUrl={existing?.favicon_url}
             onChange={setFavicon}
             onClearExisting={onClearExisting ? () => onClearExisting("favicon") : undefined}
+            onPickUrl={onPickAssetUrl ? (url) => onPickAssetUrl("favicon", url) : undefined}
+            storeId={storeId}
             hint="32×32 or 64×64 px, .ico/.png"
           />
           {setFooterLogo && (
@@ -995,6 +1028,8 @@ function StoreFormFields({
               existingUrl={existing?.secondary_logo_url ?? null}
               onChange={setFooterLogo}
               onClearExisting={onClearExisting ? () => onClearExisting("footer") : undefined}
+              onPickUrl={onPickAssetUrl ? (url) => onPickAssetUrl("footer", url) : undefined}
+              storeId={storeId}
               hint="Defaults to the main logo if left empty"
             />
           )}
@@ -1853,6 +1888,18 @@ export function EditStoreDialog({
     }));
   };
 
+  const onPickAssetUrl = (kind: "logo" | "favicon" | "footer", url: string) => {
+    if (kind === "logo") setLogo(null);
+    if (kind === "favicon") setFavicon(null);
+    if (kind === "footer") setFooterLogo(null);
+    setExisting((p) => ({
+      ...p,
+      logo_url: kind === "logo" ? url : p.logo_url,
+      favicon_url: kind === "favicon" ? url : p.favicon_url,
+      secondary_logo_url: kind === "footer" ? url : p.secondary_logo_url,
+    }));
+  };
+
   const save = useMutation({
     mutationFn: async () => {
       const parsed = formSchema.safeParse(values);
@@ -1922,6 +1969,8 @@ export function EditStoreDialog({
         setFooterLogo={setFooterLogo}
         existing={existing}
         onClearExisting={onClearExisting}
+        onPickAssetUrl={onPickAssetUrl}
+        storeId={store.id}
       />
 
       <DialogFooter>
