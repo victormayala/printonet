@@ -98,8 +98,8 @@ export function StoreThemePicker({
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {data.templates.map((t) => {
         const isSelected = effectiveSelected === t.id;
-        const isClassic = /classic/i.test(t.name) || /classic/i.test(t.id);
-        const img = isClassic ? classicThemeThumb : resolveImage(t.preview_image_url);
+        const localThumb = localThumbFor(t);
+        const img = localThumb ?? resolveImage(t.preview_image_url);
         return (
           <button
             key={t.id}
