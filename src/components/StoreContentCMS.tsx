@@ -244,6 +244,47 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
     }
   };
 
+  // Autosave drafts (debounced). Persists changes such as uploaded image URLs
+  // immediately so they survive a page refresh even if the user forgets to
+  // click "Save draft".
+  const lastSavedRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    if (!blocks) return;
+    // Seed baseline with what's currently on the server so we don't re-save
+    // on first load.
+    for (const b of blocks) {
+      if (lastSavedRef.current[b.id] === undefined) {
+        lastSavedRef.current[b.id] = JSON.stringify(b.draft_data ?? {});
+      }
+    }
+    const timers: number[] = [];
+    for (const b of blocks) {
+      const current = JSON.stringify(drafts[b.id] ?? {});
+      if (current === lastSavedRef.current[b.id]) continue;
+      const id = window.setTimeout(async () => {
+        try {
+          await cms(store.id, "upsert-block", {
+            id: b.id,
+            block_type: b.block_type,
+            enabled: b.enabled,
+            sort_order: b.sort_order,
+            draft_data: drafts[b.id] ?? b.draft_data,
+          });
+          lastSavedRef.current[b.id] = current;
+          setBlocks((bs) =>
+            bs?.map((x) => (x.id === b.id ? { ...x, draft_data: drafts[b.id] ?? x.draft_data } : x)) ?? null,
+          );
+        } catch {
+          // Silent — user can still click "Save draft" to see the error.
+        }
+      }, 800);
+      timers.push(id);
+    }
+    return () => {
+      for (const t of timers) window.clearTimeout(t);
+    };
+  }, [drafts, blocks, store.id]);
+
   const publish = async (id: string) => {
     setBusy(id);
     try {
