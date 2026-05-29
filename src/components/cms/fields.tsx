@@ -173,56 +173,7 @@ export function AssetField({
   onChange,
   help,
 }: Base & { storeId: string; value: string; onChange: (v: string) => void }) {
-  const [busy, setBusy] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const qc = useQueryClient();
-
-  const upload = async (file: File) => {
-    setBusy(true);
-    try {
-      const safeName = file.name
-        .replace(/[^a-zA-Z0-9_.-]+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-      const path = `homepage/${Date.now()}-${safeName || "upload"}`;
-
-      const signed = await cms<{ signedUrl: string; publicUrl: string }>(
-        storeId,
-        "create-asset-upload-url",
-        { path },
-      );
-      const putRes = await fetch(signed.signedUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
-      if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
-      onChange(signed.publicUrl);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("cms_media").upsert(
-          {
-            store_id: storeId,
-            user_id: user.id,
-            url: signed.publicUrl,
-            filename: file.name,
-            content_type: file.type || null,
-            size_bytes: file.size,
-          },
-          { onConflict: "store_id,url", ignoreDuplicates: true },
-        );
-        qc.invalidateQueries({ queryKey: ["cms_media", storeId] });
-      }
-
-      toast({ title: "Image uploaded" });
-    } catch (e: any) {
-      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <div className="space-y-1">
@@ -231,38 +182,17 @@ export function AssetField({
         <Input
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="https://… or upload"
+          placeholder="https://… or pick from library"
           className="flex-1"
         />
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) upload(f);
-            e.target.value = "";
-          }}
-        />
         <Button
           type="button"
           variant="outline"
-          size="icon"
           onClick={() => setLibraryOpen(true)}
-          title="Pick from media library"
+          title="Choose or upload image"
         >
-          <FolderOpen className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-          title="Upload image"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          <ImageIcon className="h-4 w-4" />
+          Choose image
         </Button>
         {value && (
           <Button
