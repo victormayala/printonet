@@ -3,7 +3,30 @@ import { Loader2, ExternalLink, Check } from "lucide-react";
 import { cms } from "@/lib/cmsClient";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import classicThemeThumb from "@/assets/classic-theme.svg";
+import classicThemeThumb from "@/assets/themes/classic-theme.png";
+import editorialRefinedThumb from "@/assets/themes/editorial-refined.png";
+import midnightTechThumb from "@/assets/themes/midnight-tech.png";
+import stadiumWhiteThumb from "@/assets/themes/stadium-white.png";
+import velocitySportThumb from "@/assets/themes/velocity-sport.png";
+import corporateTrustThumb from "@/assets/themes/corporate-trust.png";
+import playfulToysThumb from "@/assets/themes/playful-toys.png";
+import boldBrutalistThumb from "@/assets/themes/bold-brutalist.png";
+
+const LOCAL_THUMBS: { match: RegExp; src: string }[] = [
+  { match: /editorial.*refined|refined.*editorial/i, src: editorialRefinedThumb },
+  { match: /midnight.*tech/i, src: midnightTechThumb },
+  { match: /stadium.*white/i, src: stadiumWhiteThumb },
+  { match: /velocity.*sport/i, src: velocitySportThumb },
+  { match: /corporate.*trust/i, src: corporateTrustThumb },
+  { match: /playful.*toys/i, src: playfulToysThumb },
+  { match: /bold.*brutalist/i, src: boldBrutalistThumb },
+  { match: /classic/i, src: classicThemeThumb },
+];
+
+function localThumbFor(t: { name?: string; id?: string }) {
+  const haystack = `${t.name ?? ""} ${t.id ?? ""}`;
+  return LOCAL_THUMBS.find((m) => m.match.test(haystack))?.src ?? null;
+}
 
 const STOREFRONT_PUBLIC_BASE = "https://stores.printonet.com";
 
