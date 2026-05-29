@@ -1,14 +1,10 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Trash2, Upload, ArrowUp, ArrowDown, ImageIcon, FolderOpen } from "lucide-react";
-import { cms } from "@/lib/cmsClient";
-import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2, ArrowUp, ArrowDown, ImageIcon } from "lucide-react";
 import { MediaLibraryDialog } from "./MediaLibraryDialog";
 
 type Base = { label: string; help?: string };
