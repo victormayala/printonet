@@ -4,9 +4,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Trash2, Upload, ArrowUp, ArrowDown, ImageIcon } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, ArrowUp, ArrowDown, ImageIcon, FolderOpen } from "lucide-react";
 import { cms } from "@/lib/cmsClient";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { MediaLibraryDialog } from "./MediaLibraryDialog";
 
 type Base = { label: string; help?: string };
 
@@ -171,13 +174,13 @@ export function AssetField({
   help,
 }: Base & { storeId: string; value: string; onChange: (v: string) => void }) {
   const [busy, setBusy] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
 
   const upload = async (file: File) => {
     setBusy(true);
     try {
-      // Build a tenant-relative path. Server auto-prefixes the tenant slug.
-      // Allowed chars: [a-zA-Z0-9_\-./]
       const safeName = file.name
         .replace(/[^a-zA-Z0-9_.-]+/g, "-")
         .replace(/-+/g, "-")
@@ -196,6 +199,23 @@ export function AssetField({
       });
       if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
       onChange(signed.publicUrl);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("cms_media").upsert(
+          {
+            store_id: storeId,
+            user_id: user.id,
+            url: signed.publicUrl,
+            filename: file.name,
+            content_type: file.type || null,
+            size_bytes: file.size,
+          },
+          { onConflict: "store_id,url", ignoreDuplicates: true },
+        );
+        qc.invalidateQueries({ queryKey: ["cms_media", storeId] });
+      }
+
       toast({ title: "Image uploaded" });
     } catch (e: any) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });
@@ -225,6 +245,15 @@ export function AssetField({
             e.target.value = "";
           }}
         />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => setLibraryOpen(true)}
+          title="Pick from media library"
+        >
+          <FolderOpen className="h-4 w-4" />
+        </Button>
         <Button
           type="button"
           variant="outline"
@@ -259,6 +288,14 @@ export function AssetField({
         </div>
       ) : null}
       {help && <p className="text-[11px] text-muted-foreground">{help}</p>}
+
+      <MediaLibraryDialog
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        storeId={storeId}
+        currentUrl={value}
+        onSelect={(url) => onChange(url)}
+      />
     </div>
   );
 }
