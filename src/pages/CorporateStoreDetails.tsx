@@ -69,7 +69,7 @@ function DnsPreview({ domainDraft }: { domainDraft: string }) {
     </div>
   );
 }
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -219,6 +219,7 @@ export default function CorporateStoreDetails() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -228,6 +229,13 @@ export default function CorporateStoreDetails() {
   const [domainDraft, setDomainDraft] = useState("");
   const [savingDomain, setSavingDomain] = useState(false);
   const [editBrandingOpen, setEditBrandingOpen] = useState(false);
+  const currentTab = searchParams.get("tab") ?? "overview";
+  const setCurrentTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === "overview") next.delete("tab");
+    else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+  };
 
   const openEditDomain = () => {
     setDomainDraft(store?.custom_domain ?? "");
@@ -468,7 +476,7 @@ export default function CorporateStoreDetails() {
         </Card>
       )}
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
         <TabsList className="bg-muted/60 border h-auto flex-wrap gap-1 p-1.5">
           <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <LayoutDashboard className="h-4 w-4" /> Overview
