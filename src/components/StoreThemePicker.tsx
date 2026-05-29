@@ -18,7 +18,7 @@ const LOCAL_THUMBS: { match: RegExp; src: string }[] = [
   { match: /stadium.*white/i, src: stadiumWhiteThumb },
   { match: /velocity.*sport/i, src: velocitySportThumb },
   { match: /corporate.*trust/i, src: corporateTrustThumb },
-  { match: /playful.*toys/i, src: playfulToysThumb },
+  { match: /playful|toys?|kids?|fun/i, src: playfulToysThumb },
   { match: /bold.*brutalist/i, src: boldBrutalistThumb },
   { match: /classic/i, src: classicThemeThumb },
 ];
