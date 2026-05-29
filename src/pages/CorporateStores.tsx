@@ -1007,6 +1007,8 @@ function StoreFormFields({
             existingUrl={existing?.logo_url}
             onChange={setLogo}
             onClearExisting={onClearExisting ? () => onClearExisting("logo") : undefined}
+            onPickUrl={onPickAssetUrl ? (url) => onPickAssetUrl("logo", url) : undefined}
+            storeId={storeId}
             hint="PNG/SVG, light background"
           />
           <LogoField
@@ -1015,6 +1017,8 @@ function StoreFormFields({
             existingUrl={existing?.favicon_url}
             onChange={setFavicon}
             onClearExisting={onClearExisting ? () => onClearExisting("favicon") : undefined}
+            onPickUrl={onPickAssetUrl ? (url) => onPickAssetUrl("favicon", url) : undefined}
+            storeId={storeId}
             hint="32×32 or 64×64 px, .ico/.png"
           />
           {setFooterLogo && (
@@ -1024,6 +1028,8 @@ function StoreFormFields({
               existingUrl={existing?.secondary_logo_url ?? null}
               onChange={setFooterLogo}
               onClearExisting={onClearExisting ? () => onClearExisting("footer") : undefined}
+              onPickUrl={onPickAssetUrl ? (url) => onPickAssetUrl("footer", url) : undefined}
+              storeId={storeId}
               hint="Defaults to the main logo if left empty"
             />
           )}
