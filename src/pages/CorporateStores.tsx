@@ -926,6 +926,8 @@ function StoreFormFields({
   setFooterLogo,
   existing,
   onClearExisting,
+  onPickAssetUrl,
+  storeId,
   hideCustomDomain,
   compact,
   section = "all",
