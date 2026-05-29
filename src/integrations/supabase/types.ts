@@ -74,6 +74,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cms_media: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          filename: string | null
+          height: number | null
+          id: string
+          size_bytes: number | null
+          store_id: string
+          url: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          filename?: string | null
+          height?: number | null
+          id?: string
+          size_bytes?: number | null
+          store_id: string
+          url: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          filename?: string | null
+          height?: number | null
+          id?: string
+          size_bytes?: number | null
+          store_id?: string
+          url?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
       corporate_store_product_logos: {
         Row: {
           created_at: string
