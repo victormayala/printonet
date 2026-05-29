@@ -1969,6 +1969,8 @@ export function EditStoreDialog({
         setFooterLogo={setFooterLogo}
         existing={existing}
         onClearExisting={onClearExisting}
+        onPickAssetUrl={onPickAssetUrl}
+        storeId={store.id}
       />
 
       <DialogFooter>
