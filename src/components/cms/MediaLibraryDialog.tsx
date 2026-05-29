@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Trash2, ImageIcon, Check } from "lucide-react";
+import { Loader2, Search, Trash2, ImageIcon, Check, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { cms } from "@/lib/cmsClient";
 
 type MediaItem = {
   id: string;
@@ -31,6 +32,52 @@ export function MediaLibraryDialog({
 }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const safeName = file.name
+        .replace(/[^a-zA-Z0-9_.-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      const path = `homepage/${Date.now()}-${safeName || "upload"}`;
+      const signed = await cms<{ signedUrl: string; publicUrl: string }>(
+        storeId,
+        "create-asset-upload-url",
+        { path },
+      );
+      const putRes = await fetch(signed.signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("cms_media").upsert(
+          {
+            store_id: storeId,
+            user_id: user.id,
+            url: signed.publicUrl,
+            filename: file.name,
+            content_type: file.type || null,
+            size_bytes: file.size,
+          },
+          { onConflict: "store_id,url", ignoreDuplicates: true },
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["cms_media", storeId] });
+      onSelect(signed.publicUrl);
+      onOpenChange(false);
+      toast({ title: "Image uploaded" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const { data: items = [], isLoading } = useQuery<MediaItem[]>({
     queryKey: ["cms_media", storeId],
@@ -69,14 +116,35 @@ export function MediaLibraryDialog({
         <DialogHeader>
           <DialogTitle>Media library</DialogTitle>
         </DialogHeader>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search filename or URL…"
-            className="pl-9"
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search filename or URL…"
+              className="pl-9"
+            />
+          </div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleUpload(f);
+              e.target.value = "";
+            }}
           />
+          <Button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Upload new
+          </Button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto">
           {isLoading ? (
