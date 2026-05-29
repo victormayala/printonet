@@ -321,6 +321,8 @@ function LogoField({
   existingUrl,
   onChange,
   onClearExisting,
+  onPickUrl,
+  storeId,
   hint,
 }: {
   label: string;
@@ -328,9 +330,12 @@ function LogoField({
   existingUrl?: string | null;
   onChange: (f: File | null) => void;
   onClearExisting?: () => void;
+  onPickUrl?: (url: string) => void;
+  storeId?: string;
   hint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [libOpen, setLibOpen] = useState(false);
   const previewUrl = value ? URL.createObjectURL(value) : existingUrl || null;
 
   return (
@@ -364,10 +369,17 @@ function LogoField({
               onChange(file);
             }}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+              <Upload className="h-3 w-3" />
               {value || existingUrl ? "Replace" : "Upload"}
             </Button>
+            {onPickUrl && storeId && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setLibOpen(true)}>
+                <FolderOpen className="h-3 w-3" />
+                Library
+              </Button>
+            )}
             {(value || existingUrl) && (
               <Button
                 type="button"
@@ -386,6 +398,18 @@ function LogoField({
           {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
         </div>
       </div>
+      {onPickUrl && storeId && (
+        <MediaLibraryDialog
+          open={libOpen}
+          onOpenChange={setLibOpen}
+          storeId={storeId}
+          currentUrl={existingUrl ?? undefined}
+          onSelect={(url) => {
+            onChange(null);
+            onPickUrl(url);
+          }}
+        />
+      )}
     </div>
   );
 }
