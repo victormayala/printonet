@@ -12,7 +12,7 @@ export function StoreThemeTab({ store }: { store: CorporateStore }) {
   const qc = useQueryClient();
   const { data } = useStoreTemplates(store.id);
 
-  const { data: currentSettings } = useQuery({
+  const { data: currentSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ["cms-site-settings", store.id],
     queryFn: async () => {
       return await cms<{ settings: { published_data?: any; draft_data?: any } }>(
@@ -20,6 +20,8 @@ export function StoreThemeTab({ store }: { store: CorporateStore }) {
         "get-site-settings",
       );
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const currentTemplateId =
@@ -28,18 +30,28 @@ export function StoreThemeTab({ store }: { store: CorporateStore }) {
     null;
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectionTouched, setSelectionTouched] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Initialize selection from the actual current template, falling back to the
-  // storefront default only if no template has ever been applied.
+  // Sync the picker from the actual current template. Do not fall back to the
+  // default until the current settings query has resolved, otherwise the first
+  // template briefly wins the race and can stay selected.
   useEffect(() => {
-    if (selected) return;
+    if (selectionTouched) {
+      if (currentTemplateId && selected === currentTemplateId) setSelectionTouched(false);
+      return;
+    }
     if (currentTemplateId) {
-      setSelected(currentTemplateId);
-    } else if (data?.default_template_id) {
+      if (selected !== currentTemplateId) setSelected(currentTemplateId);
+    } else if (!settingsLoading && data?.default_template_id && selected !== data.default_template_id) {
       setSelected(data.default_template_id);
     }
-  }, [currentTemplateId, data?.default_template_id, selected]);
+  }, [currentTemplateId, data?.default_template_id, selected, selectionTouched, settingsLoading]);
+
+  const selectTheme = (templateId: string) => {
+    setSelectionTouched(true);
+    setSelected(templateId);
+  };
 
   const apply = async () => {
     if (!selected) return;
@@ -74,7 +86,7 @@ export function StoreThemeTab({ store }: { store: CorporateStore }) {
         <StoreThemePicker
           storeId={store.id}
           selectedId={selected}
-          onSelect={setSelected}
+          onSelect={selectTheme}
         />
         <div className="flex justify-end">
           <Button onClick={apply} disabled={!selected || saving || selected === currentTemplateId}>
