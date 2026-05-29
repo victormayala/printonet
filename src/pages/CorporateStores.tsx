@@ -1888,6 +1888,18 @@ export function EditStoreDialog({
     }));
   };
 
+  const onPickAssetUrl = (kind: "logo" | "favicon" | "footer", url: string) => {
+    if (kind === "logo") setLogo(null);
+    if (kind === "favicon") setFavicon(null);
+    if (kind === "footer") setFooterLogo(null);
+    setExisting((p) => ({
+      ...p,
+      logo_url: kind === "logo" ? url : p.logo_url,
+      favicon_url: kind === "favicon" ? url : p.favicon_url,
+      secondary_logo_url: kind === "footer" ? url : p.secondary_logo_url,
+    }));
+  };
+
   const save = useMutation({
     mutationFn: async () => {
       const parsed = formSchema.safeParse(values);
