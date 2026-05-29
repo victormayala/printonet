@@ -945,6 +945,8 @@ function StoreFormFields({
     secondary_logo_url?: string | null;
   };
   onClearExisting?: (kind: "logo" | "favicon" | "footer") => void;
+  onPickAssetUrl?: (kind: "logo" | "favicon" | "footer", url: string) => void;
+  storeId?: string;
   hideCustomDomain?: boolean;
   /** When true, hides branding sections behind a collapsible "Branding (optional)" toggle. */
   compact?: boolean;
