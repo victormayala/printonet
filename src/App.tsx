@@ -27,6 +27,7 @@ import StoreCustomize from "./pages/StoreCustomize";
 import NotFound from "./pages/NotFound";
 import LayersPreview from "./pages/LayersPreview";
 import OrderApproval from "./pages/OrderApproval";
+import DebugEnv from "./pages/DebugEnv";
 import Unsubscribe from "./pages/Unsubscribe";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
