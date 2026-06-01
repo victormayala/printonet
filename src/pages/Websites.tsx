@@ -398,8 +398,11 @@ function NewWebsiteDialog({ onCreated }: { onCreated: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Subdomain</Label>
+          <Label>Slug</Label>
           <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              platform.printonet.com/sites/
+            </span>
             <Input
               value={values.tenant_slug}
               onChange={(e) =>
@@ -407,10 +410,8 @@ function NewWebsiteDialog({ onCreated }: { onCreated: () => void }) {
               }
               placeholder="acme-studio"
             />
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              .sites.printonet.com
-            </span>
           </div>
+
           {errors.tenant_slug && <p className="text-xs text-destructive">{errors.tenant_slug}</p>}
         </div>
 
