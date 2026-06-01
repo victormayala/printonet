@@ -71,7 +71,7 @@ const formSchema = z.object({
   custom_domain: z.string().trim().max(255).optional().or(z.literal("")),
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be hex like #7c3aed"),
   font_family: z.string().min(1),
-  store_type: z.enum(["corporate", "retail"]).default("retail"),
+  store_type: z.enum(["corporate", "retail", "website"]).default("retail"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -440,7 +440,7 @@ export default function CorporateStores() {
         .from("corporate_stores")
         .select("*")
         .eq("user_id", user!.id)
-        .in("store_type", ["corporate", "retail"])
+        .in("store_type", ["corporate", "retail", "website"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CorporateStore[];
@@ -1051,7 +1051,7 @@ function StoreFormFields({
           <Label>Account type</Label>
           <Select
             value={values.store_type}
-            onValueChange={(v) => setField("store_type", v as "corporate" | "retail")}
+            onValueChange={(v) => setField("store_type", v as "corporate" | "retail" | "website")}
           >
             <SelectTrigger>
               <SelectValue />
@@ -1059,10 +1059,12 @@ function StoreFormFields({
             <SelectContent>
               <SelectItem value="retail">Retail Shop — sells to general public</SelectItem>
               <SelectItem value="corporate">Corporate Store — branded merch for one company</SelectItem>
+              <SelectItem value="website">Website — informational site (pages, blog, no checkout)</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
             Corporate stores can have a per-product company logo automatically baked into mockups when pushed.
+            Websites publish pages, navigation, and a blog without commerce.
           </p>
         </div>
         <div className="space-y-2">
@@ -1865,7 +1867,7 @@ export function EditStoreDialog({
     custom_domain: store.custom_domain ?? "",
     primary_color: store.primary_color,
     font_family: store.font_family,
-    store_type: store.store_type === "website" ? "retail" : (store.store_type ?? "retail"),
+    store_type: (store.store_type ?? "retail") as "corporate" | "retail" | "website",
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
