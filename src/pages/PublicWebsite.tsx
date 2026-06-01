@@ -216,7 +216,7 @@ function SiteShell({
     meta.content = seoDescription;
   }, [seoDescription]);
 
-  const headerItems = navigation.header?.length
+  const headerItems: NavItem[] = navigation.header?.length
     ? navigation.header
     : pages.map((p) => ({ label: p.title, href: `${base}/${p.slug}` }));
 
