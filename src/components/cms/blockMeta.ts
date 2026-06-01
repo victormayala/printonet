@@ -13,12 +13,22 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+export type BlockContext = "store" | "website";
+
 export type BlockMeta = {
   label: string;
   description: string;
   icon: LucideIcon;
   summary?: (data: any) => string | undefined;
+  /** Which editor contexts this block is available in. Defaults to both. */
+  contexts?: BlockContext[];
 };
+
+export function blockAvailableIn(type: string, ctx: BlockContext): boolean {
+  const contexts = BLOCK_META[type]?.contexts;
+  if (!contexts) return true;
+  return contexts.includes(ctx);
+}
 
 const firstText = (...vals: any[]) =>
   vals.find((v) => typeof v === "string" && v.trim().length > 0) as string | undefined;
