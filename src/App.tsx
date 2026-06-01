@@ -71,10 +71,8 @@ const queryClient = new QueryClient({
 });
 
 const currentHost = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
-const isSitesHost = currentHost === "sites.printonet.com";
 const isPotentialStoreHost =
   !!currentHost &&
-  !isSitesHost &&
   !["localhost", "127.0.0.1", "platform.printonet.com", "printonet.lovable.app", "customizerstudio.com"].includes(currentHost) &&
   !currentHost.endsWith(".lovable.app") &&
   !currentHost.endsWith(".lovableproject.com");
@@ -87,16 +85,6 @@ function DashboardRoute() {
   );
 }
 
-const SitesRoutes = () => (
-  <Routes>
-    <Route path="/" element={<NotFound />} />
-    <Route path="/:storeSlug" element={<PublicWebsiteHome />} />
-    <Route path="/:storeSlug/blog" element={<PublicWebsiteBlogIndex />} />
-    <Route path="/:storeSlug/blog/:postSlug" element={<PublicWebsiteBlogPost />} />
-    <Route path="/:storeSlug/:pageSlug" element={<PublicWebsitePage />} />
-    <Route path="*" element={<NotFound />} />
-  </Routes>
-);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
