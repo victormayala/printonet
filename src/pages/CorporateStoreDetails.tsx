@@ -69,7 +69,7 @@ function DnsPreview({ domainDraft }: { domainDraft: string }) {
     </div>
   );
 }
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -354,6 +354,10 @@ export default function CorporateStoreDetails() {
         </Card>
       </div>
     );
+  }
+
+  if (store.store_type === "website") {
+    return <Navigate to={`/websites/${store.id}`} replace />;
   }
 
 

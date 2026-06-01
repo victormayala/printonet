@@ -835,7 +835,9 @@ function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResum
         </Button>
       )}
       <Button asChild variant="outline" size="sm">
-        <Link to={`/corporate-stores/${store.id}`}>See details</Link>
+        <Link to={store.store_type === "website" ? `/websites/${store.id}` : `/corporate-stores/${store.id}`}>
+          See details
+        </Link>
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
