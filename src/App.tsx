@@ -22,7 +22,7 @@ import CheckoutReturn from "./pages/CheckoutReturn";
 import Cart from "./pages/Cart";
 import CorporateStores from "./pages/CorporateStores";
 import CorporateStoreDetails from "./pages/CorporateStoreDetails";
-import Websites from "./pages/Websites";
+
 import WebsiteDetails from "./pages/WebsiteDetails";
 import StoreShop from "./pages/StoreShop";
 import StoreCustomize from "./pages/StoreCustomize";
@@ -103,7 +103,7 @@ const App = () => (
               <Route path="/storefront" element={<Navigate to="/corporate-stores?tab=shopify" replace />} />
               <Route path="/corporate-stores" element={<CorporateStores />} />
               <Route path="/corporate-stores/:id" element={<CorporateStoreDetails />} />
-              <Route path="/websites" element={<Websites />} />
+              <Route path="/websites" element={<Navigate to="/corporate-stores" replace />} />
               <Route path="/websites/:id" element={<WebsiteDetails />} />
               <Route path="/suppliers" element={<Products initialTab="suppliers" />} />
               <Route path="/orders" element={<Orders />} />
