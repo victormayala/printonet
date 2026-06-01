@@ -195,12 +195,21 @@ function PanelHeader({
   );
 }
 
-function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; canPublish: boolean }) {
+function HomepageBlocksPanel({
+  store,
+  canPublish,
+  variant = "store",
+}: {
+  store: CorporateStore;
+  canPublish: boolean;
+  variant?: BlockContext;
+}) {
+  const availableTypes = BLOCK_TYPES.filter((t) => blockAvailableIn(t, variant));
   const [blocks, setBlocks] = useState<Block[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
-  const [newType, setNewType] = useState("hero");
+  const [newType, setNewType] = useState(availableTypes[0] ?? "hero");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rawMode, setRawMode] = useState(false);
 
