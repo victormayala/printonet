@@ -178,8 +178,9 @@ function OverviewPanel({ site }: { site: CorporateStore }) {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
-    ? `https://sites.printonet.com/${site.tenant_slug}`
+    ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
+
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
