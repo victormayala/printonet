@@ -217,6 +217,9 @@ function SiteRow({ site }: { site: CorporateStore }) {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
+    ? `https://stores.printonet.com/sites/${site.tenant_slug}`
+    : null;
+  const previewUrl = site.tenant_slug
     ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
 
@@ -401,7 +404,7 @@ function NewWebsiteDialog({ onCreated }: { onCreated: () => void }) {
           <Label>Slug</Label>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground whitespace-nowrap">
-              platform.printonet.com/sites/
+              stores.printonet.com/sites/
             </span>
             <Input
               value={values.tenant_slug}

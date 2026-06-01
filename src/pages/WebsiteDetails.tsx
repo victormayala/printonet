@@ -84,7 +84,7 @@ export default function WebsiteDetails() {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
-    ? `https://platform.printonet.com/sites/${site.tenant_slug}`
+    ? `https://stores.printonet.com/sites/${site.tenant_slug}`
     : null;
 
 
@@ -178,6 +178,9 @@ function OverviewPanel({ site }: { site: CorporateStore }) {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
+    ? `https://stores.printonet.com/sites/${site.tenant_slug}`
+    : null;
+  const previewUrl = site.tenant_slug
     ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
 
