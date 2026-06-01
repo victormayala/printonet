@@ -440,6 +440,7 @@ export default function CorporateStores() {
         .from("corporate_stores")
         .select("*")
         .eq("user_id", user!.id)
+        .in("store_type", ["corporate", "retail"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CorporateStore[];
