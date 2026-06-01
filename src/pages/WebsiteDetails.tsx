@@ -204,6 +204,20 @@ function OverviewPanel({ site }: { site: CorporateStore }) {
           ) : (
             <p className="text-sm text-muted-foreground">No URL configured yet.</p>
           )}
+          {previewUrl && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Public renderer ships on stores.printonet.com.{" "}
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-foreground"
+              >
+                Preview on platform
+              </a>
+              {" "}while it's being built.
+            </p>
+          )}
           <p className="text-xs text-muted-foreground mt-2">
             Set a custom domain in Settings to point your own URL at this site.
           </p>
