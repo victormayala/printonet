@@ -52,7 +52,6 @@ Deno.serve(async (req) => {
 
   const SECRET = Deno.env.get("PRINTONET_PLATFORM_HMAC_SECRET");
   const BASE = Deno.env.get("PRINTONET_STOREFRONT_URL");
-  const SITES_BASE = Deno.env.get("PRINTONET_SITES_URL") ?? BASE;
   if (!SECRET || !BASE) {
     return json(500, { ok: false, error: "server_misconfigured" });
   }
@@ -118,8 +117,7 @@ Deno.serve(async (req) => {
   // The storefront 405s a GET on every action except `schema-version`, so
   // we must guarantee POST reaches the origin (no http→https or trailing
   // slash redirect, which would downgrade POST → GET).
-  const baseForStore = store.store_type === "website" ? SITES_BASE : BASE;
-  const baseNorm = baseForStore.replace(/\/+$/, "").replace(/^http:\/\//i, "https://");
+  const baseNorm = BASE.replace(/\/+$/, "").replace(/^http:\/\//i, "https://");
   const url = `${baseNorm}/api/public/cms/${action}`;
 
   const raw = JSON.stringify(body ?? {});
