@@ -52,6 +52,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     label: "Featured categories",
     description: "Grid of curated storefront categories.",
     icon: LayoutGrid,
+    contexts: ["store"],
     summary: (d) =>
       firstText(d?.heading) ??
       (Array.isArray(d?.category_slugs)
@@ -62,6 +63,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     label: "Featured products",
     description: "Hand-picked products from this store.",
     icon: ShoppingBag,
+    contexts: ["store"],
     summary: (d) =>
       firstText(d?.heading) ??
       (Array.isArray(d?.store_product_ids)
