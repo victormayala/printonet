@@ -29,6 +29,156 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_authors: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          id: string
+          name: string
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      blog_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      blog_post_categories: {
+        Row: {
+          category_id: string
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      blog_posts: {
+        Row: {
+          author_id: string | null
+          body_md: string
+          created_at: string
+          excerpt: string | null
+          hero_image_url: string | null
+          id: string
+          og_image_url: string | null
+          publish_at: string | null
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          status: string
+          store_id: string
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body_md?: string
+          created_at?: string
+          excerpt?: string | null
+          hero_image_url?: string | null
+          id?: string
+          og_image_url?: string | null
+          publish_at?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string
+          store_id: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body_md?: string
+          created_at?: string
+          excerpt?: string | null
+          hero_image_url?: string | null
+          id?: string
+          og_image_url?: string | null
+          publish_at?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          store_id?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       brand_configs: {
         Row: {
           accent_color: string
@@ -1108,6 +1258,90 @@ export type Database = {
           id?: string
           store_name?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      site_navigation: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          location: string
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          location: string
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          location?: string
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      site_pages: {
+        Row: {
+          created_at: string
+          draft_data: Json
+          enabled: boolean
+          id: string
+          og_image_url: string | null
+          published_at: string | null
+          published_data: Json | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          sort_order: number
+          store_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_data?: Json
+          enabled?: boolean
+          id?: string
+          og_image_url?: string | null
+          published_at?: string | null
+          published_data?: Json | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          sort_order?: number
+          store_id: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_data?: Json
+          enabled?: boolean
+          id?: string
+          og_image_url?: string | null
+          published_at?: string | null
+          published_data?: Json | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          sort_order?: number
+          store_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
