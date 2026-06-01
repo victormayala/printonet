@@ -162,11 +162,11 @@ const App = () => (
 
             <Route path="*" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <NotFound />} />
           </Routes>
-          )}
         </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>
   </QueryClientProvider>
 );
+
 
 export default App;
