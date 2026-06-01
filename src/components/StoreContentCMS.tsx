@@ -33,7 +33,7 @@ import type { CorporateStore } from "@/types/corporateStore";
 import { cms } from "@/lib/cmsClient";
 import { BlockEditor, BLOCK_TYPES } from "@/components/cms/BlockEditor";
 import { SiteSettingsEditor, ContentPageEditor } from "@/components/cms/SiteSettingsEditor";
-import { metaFor } from "@/components/cms/blockMeta";
+import { metaFor, blockAvailableIn, type BlockContext } from "@/components/cms/blockMeta";
 import { BlockPreview } from "@/components/cms/BlockPreview";
 import { cn } from "@/lib/utils";
 
