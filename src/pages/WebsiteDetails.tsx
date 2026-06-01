@@ -84,8 +84,9 @@ export default function WebsiteDetails() {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
-    ? `https://sites.printonet.com/${site.tenant_slug}`
+    ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
