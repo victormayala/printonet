@@ -523,7 +523,7 @@ export default function CorporateStoreDetails() {
           <StoreCustomizerSettings store={store} />
         </TabsContent>
 
-        <TabsContent forceMount value="content" className="mt-0 data-[state=inactive]:hidden">
+        <TabsContent value="content" className="mt-0">
           <StoreContentCMS store={store} />
         </TabsContent>
       </Tabs>
