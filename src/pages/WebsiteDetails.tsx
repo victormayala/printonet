@@ -14,7 +14,6 @@ import {
   ExternalLink,
   AlertCircle,
   Upload,
-  Cloud,
   X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +35,6 @@ import { CorporateStore } from "@/types/corporateStore";
 import { WebsitePagesPanel } from "@/components/WebsitePagesPanel";
 import { WebsiteNavigationEditor } from "@/components/WebsiteNavigationEditor";
 import { WebsiteBlogPanel } from "@/components/WebsiteBlogPanel";
-import { StoreContentCMS } from "@/components/StoreContentCMS";
 
 const FONT_OPTIONS = [
   "Inter",
@@ -174,9 +172,6 @@ export default function WebsiteDetails() {
           <TabsTrigger value="blog" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2">
             <BookOpen className="h-4 w-4" /> Blog
           </TabsTrigger>
-          <TabsTrigger value="storefront" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2">
-            <Cloud className="h-4 w-4" /> Storefront
-          </TabsTrigger>
           <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2">
             <Paintbrush className="h-4 w-4" /> Branding
           </TabsTrigger>
@@ -196,9 +191,6 @@ export default function WebsiteDetails() {
         </TabsContent>
         <TabsContent value="blog">
           <WebsiteBlogPanel site={site} />
-        </TabsContent>
-        <TabsContent value="storefront">
-          <StoreContentCMS store={site} variant="website" />
         </TabsContent>
         <TabsContent value="branding">
           <BrandingPanel site={site} onSaved={() => qc.invalidateQueries({ queryKey: ["website", id, user?.id] })} />
