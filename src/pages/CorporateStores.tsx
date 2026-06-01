@@ -1864,7 +1864,7 @@ export function EditStoreDialog({
     custom_domain: store.custom_domain ?? "",
     primary_color: store.primary_color,
     font_family: store.font_family,
-    store_type: store.store_type ?? "retail",
+    store_type: store.store_type === "website" ? "retail" : (store.store_type ?? "retail"),
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
