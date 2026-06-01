@@ -148,17 +148,13 @@ function usePosts(storeId: string | undefined) {
 }
 
 // ---------------------------------------------------------------------------
-// Path helpers — same components serve /w/:slug/... and sites.printonet.com/:slug/...
+// Path helpers — directory-based URLs under /sites/:slug/...
 // ---------------------------------------------------------------------------
 
-function isSitesHost(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.location.hostname.toLowerCase() === "sites.printonet.com";
+function siteBase(storeSlug: string): string {
+  return `/sites/${storeSlug}`;
 }
 
-function siteBase(storeSlug: string): string {
-  return isSitesHost() ? `/${storeSlug}` : `/w/${storeSlug}`;
-}
 
 // ---------------------------------------------------------------------------
 // Shell + theming
