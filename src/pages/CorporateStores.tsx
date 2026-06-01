@@ -566,7 +566,7 @@ export default function CorporateStores() {
                             <TableCell>
                               {displaySlug ? (
                                 <span className="text-sm font-mono text-muted-foreground inline-flex items-center gap-1">
-                                  stores.printonet.com/{displaySlug}
+                                  stores.printonet.com{s.store_type === "website" ? "/sites" : ""}/{displaySlug}
                                 </span>
                               ) : (
                                 <span className="text-xs text-muted-foreground">—</span>
