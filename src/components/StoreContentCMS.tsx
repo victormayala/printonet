@@ -405,10 +405,10 @@ function HomepageBlocksPanel({
           <Label className="text-xs">Add a new section</Label>
           <select
             value={newType}
-            onChange={(e) => setNewType(e.target.value)}
+            onChange={(e) => setNewType(e.target.value as typeof newType)}
             className="flex h-9 w-56 rounded-md border border-input bg-background px-3 py-1 text-sm"
           >
-            {BLOCK_TYPES.map((t) => (
+            {availableTypes.map((t) => (
               <option key={t} value={t}>
                 {metaFor(t).label}
               </option>
