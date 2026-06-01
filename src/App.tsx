@@ -93,10 +93,8 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          {isSitesHost ? (
-            <SitesRoutes />
-          ) : (
           <Routes>
+
             {/* Redirect root to auth */}
             <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/dashboard" replace />} />
             <Route element={<DashboardRoute />}>
