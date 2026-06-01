@@ -77,13 +77,6 @@ const navItems: NavItem[] = [
       { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
     ],
   },
-  {
-    title: "Websites",
-    url: "/websites",
-    icon: Globe,
-    iconColor: "text-teal-500",
-    matchPaths: ["/websites"],
-  },
   { title: "Orders", url: "/orders", icon: ShoppingBag, iconColor: "text-amber-500" },
 ];
 

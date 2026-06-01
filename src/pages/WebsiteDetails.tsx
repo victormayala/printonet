@@ -96,7 +96,7 @@ export default function WebsiteDetails() {
     return (
       <div className="p-4 sm:p-6 lg:p-8 space-y-4">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/websites">
+          <Link to="/corporate-stores">
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
         </Button>
@@ -119,8 +119,8 @@ export default function WebsiteDetails() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
-      <Button variant="ghost" size="sm" onClick={() => navigate("/websites")}>
-        <ArrowLeft className="h-4 w-4" /> Back to websites
+      <Button variant="ghost" size="sm" onClick={() => navigate("/corporate-stores")}>
+        <ArrowLeft className="h-4 w-4" /> Back to stores
       </Button>
 
       <header className="rounded-2xl border bg-card p-6 shadow-sm">
