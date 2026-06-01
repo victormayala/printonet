@@ -37,7 +37,7 @@ TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+  Omit<React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>, "forceMount"> & { forceMount?: boolean }
 >(({ className, forceMount, ...props }, ref) => (
   // Force-mount all tab panels so inactive tabs preserve their state
   // (queries, scroll, form input) instead of remounting on every switch.
@@ -45,7 +45,7 @@ const TabsContent = React.forwardRef<
   // as a defensive CSS fallback so layout never reserves space for them.
   <TabsPrimitive.Content
     ref={ref}
-    forceMount={forceMount ?? true}
+    forceMount={forceMount === false ? undefined : true}
     className={cn(
       "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=inactive]:hidden",
       className,
