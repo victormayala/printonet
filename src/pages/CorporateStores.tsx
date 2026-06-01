@@ -650,15 +650,20 @@ export default function CorporateStores() {
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : s.tenant_slug ? (
-                            <a
-                              href={`https://stores.printonet.com/${s.tenant_slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
-                            >
-                              stores.printonet.com/{s.tenant_slug}
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
+                            (() => {
+                              const sitePath = s.store_type === "website" ? `/sites/${s.tenant_slug}` : `/${s.tenant_slug}`;
+                              return (
+                                <a
+                                  href={`https://stores.printonet.com${sitePath}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
+                                >
+                                  stores.printonet.com{sitePath}
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              );
+                            })()
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
