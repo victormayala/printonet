@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
         const { data, error } = await supabase
           .from("corporate_stores")
           .select(
-            "id, user_id, name, tenant_slug, status, custom_domain, contact_email, " +
+            "id, user_id, name, tenant_slug, store_type, status, custom_domain, contact_email, " +
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
               "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
@@ -295,6 +295,36 @@ Deno.serve(async (req) => {
         const zones = await fetchShippingZones(data.id);
         const volume_discounts = await fetchVolumeDiscounts(data.id);
         return json(200, { store: { ...data, shipping_zones: zones, volume_discounts } });
+      }
+
+      case "resolve_tenant": {
+        // Tenant resolver for the storefront (`/sites/<slug>` + `/<store>`).
+        // Returns a slim branding record for any active corporate_store
+        // (`store_type` in {"retail","website"}). Lookup by slug or domain.
+        const slug = String(params.tenant_slug ?? "").trim().toLowerCase();
+        const rawDomain = String(params.domain ?? params.custom_domain ?? "").trim().toLowerCase();
+        const domain = rawDomain.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+        if (!slug && !domain) {
+          return json(400, { error: "tenant_slug_or_domain_required" });
+        }
+        let q = supabase
+          .from("corporate_stores")
+          .select(
+            "id, name, tenant_slug, store_type, status, custom_domain, " +
+              "logo_url, secondary_logo_url, favicon_url, primary_color, accent_color, font_family",
+          )
+          .eq("status", "active");
+        if (slug && domain) {
+          q = q.or(`tenant_slug.eq.${slug},custom_domain.ilike.${domain}`);
+        } else if (slug) {
+          q = q.ilike("tenant_slug", slug);
+        } else {
+          q = q.ilike("custom_domain", domain);
+        }
+        const { data, error } = await q.limit(1).maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: "tenant_not_found" });
+        return json(200, { tenant: data });
       }
 
       case "list_store_products": {
