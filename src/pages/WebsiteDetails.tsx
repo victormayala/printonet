@@ -197,6 +197,9 @@ export default function WebsiteDetails() {
         <TabsContent value="blog">
           <WebsiteBlogPanel site={site} />
         </TabsContent>
+        <TabsContent value="storefront">
+          <StoreContentCMS store={site} variant="website" />
+        </TabsContent>
         <TabsContent value="branding">
           <BrandingPanel site={site} onSaved={() => qc.invalidateQueries({ queryKey: ["website", id, user?.id] })} />
         </TabsContent>
