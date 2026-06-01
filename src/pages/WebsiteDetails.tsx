@@ -276,13 +276,16 @@ function OverviewPanel({ site }: { site: CorporateStore }) {
 }
 
 function BrandingPanel({ site, onSaved }: { site: CorporateStore; onSaved: () => void }) {
+  const { user } = useAuth();
   const [name, setName] = useState(site.name);
   const [primary, setPrimary] = useState(site.primary_color);
   const [accent, setAccent] = useState(site.accent_color);
   const [font, setFont] = useState(site.font_family);
   const [logo, setLogo] = useState(site.logo_url ?? "");
+  const [secondaryLogo, setSecondaryLogo] = useState(site.secondary_logo_url ?? "");
   const [favicon, setFavicon] = useState(site.favicon_url ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<null | "logo" | "secondary_logo" | "favicon">(null);
 
   useEffect(() => {
     setName(site.name);
@@ -290,8 +293,39 @@ function BrandingPanel({ site, onSaved }: { site: CorporateStore; onSaved: () =>
     setAccent(site.accent_color);
     setFont(site.font_family);
     setLogo(site.logo_url ?? "");
+    setSecondaryLogo(site.secondary_logo_url ?? "");
     setFavicon(site.favicon_url ?? "");
   }, [site.id]);
+
+  const uploadAsset = async (
+    file: File,
+    field: "logo" | "secondary_logo" | "favicon",
+  ): Promise<string | null> => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please choose an image (PNG, JPG, SVG).", variant: "destructive" });
+      return null;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 5MB.", variant: "destructive" });
+      return null;
+    }
+    setUploading(field);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${user?.id}/sites/${site.id}/${field}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("corporate-store-assets")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("corporate-store-assets").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+      return null;
+    } finally {
+      setUploading(null);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -303,6 +337,7 @@ function BrandingPanel({ site, onSaved }: { site: CorporateStore; onSaved: () =>
         accent_color: accent,
         font_family: font,
         logo_url: logo || null,
+        secondary_logo_url: secondaryLogo || null,
         favicon_url: favicon || null,
       })
       .eq("id", site.id);
@@ -315,13 +350,75 @@ function BrandingPanel({ site, onSaved }: { site: CorporateStore; onSaved: () =>
     onSaved();
   };
 
+  const renderImageField = (
+    label: string,
+    field: "logo" | "secondary_logo" | "favicon",
+    value: string,
+    setValue: (v: string) => void,
+    hint?: string,
+  ) => (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <div className="flex items-start gap-3">
+        <div className="h-16 w-16 shrink-0 rounded-md border bg-muted/40 flex items-center justify-center overflow-hidden">
+          {value ? (
+            <img src={value} alt="" className="h-full w-full object-contain" />
+          ) : (
+            <Upload className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+        <div className="flex-1 space-y-2 min-w-0">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = async () => {
+                  const f = input.files?.[0];
+                  if (!f) return;
+                  const url = await uploadAsset(f, field);
+                  if (url) setValue(url);
+                };
+                input.click();
+              }}
+              disabled={uploading === field}
+            >
+              {uploading === field ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              Upload
+            </Button>
+            {value && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setValue("")}>
+                <X className="h-4 w-4" /> Remove
+              </Button>
+            )}
+          </div>
+          <Input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="https://… or upload above"
+            className="text-xs"
+          />
+          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Branding</CardTitle>
-        <CardDescription>Visual identity for your website.</CardDescription>
+        <CardDescription>Visual identity for your website. Used by the storefront header, footer, browser tab, and social previews.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         <div className="space-y-1.5">
           <Label>Website name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -344,16 +441,29 @@ function BrandingPanel({ site, onSaved }: { site: CorporateStore; onSaved: () =>
         </div>
         <div className="space-y-1.5">
           <Label>Font family</Label>
-          <Input value={font} onChange={(e) => setFont(e.target.value)} />
+          <Select value={font} onValueChange={setFont}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pick a Google Font" />
+            </SelectTrigger>
+            <SelectContent>
+              {FONT_OPTIONS.map((f) => (
+                <SelectItem key={f} value={f}>
+                  <span style={{ fontFamily: f }}>{f}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Auto-loaded as a Google Font on the storefront.</p>
         </div>
-        <div className="space-y-1.5">
-          <Label>Logo URL</Label>
-          <Input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Favicon URL</Label>
-          <Input value={favicon} onChange={(e) => setFavicon(e.target.value)} placeholder="https://…" />
-        </div>
+        {renderImageField("Header logo", "logo", logo, setLogo, "Shown in the storefront header.")}
+        {renderImageField(
+          "Footer logo (optional)",
+          "secondary_logo",
+          secondaryLogo,
+          setSecondaryLogo,
+          "Use a light/inverted variant if your footer is dark.",
+        )}
+        {renderImageField("Favicon", "favicon", favicon, setFavicon, "Square 32×32 or 64×64 PNG/ICO.")}
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
