@@ -8,7 +8,7 @@
  * Reads are RLS-public for published pages/posts on active website stores.
  */
 import { useEffect, useMemo } from "react";
-import { Link, Outlet, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BlockPreview } from "@/components/cms/BlockPreview";
