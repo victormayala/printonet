@@ -135,11 +135,17 @@ const App = () => (
             <Route path="/approval/:token" element={<OrderApproval />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
 
-            {/* Public website preview (also served at sites.printonet.com without /w prefix) */}
+            {/* Public website renderer (directory-based, no subdomain needed) */}
+            <Route path="/sites/:storeSlug" element={<PublicWebsiteHome />} />
+            <Route path="/sites/:storeSlug/blog" element={<PublicWebsiteBlogIndex />} />
+            <Route path="/sites/:storeSlug/blog/:postSlug" element={<PublicWebsiteBlogPost />} />
+            <Route path="/sites/:storeSlug/:pageSlug" element={<PublicWebsitePage />} />
+            {/* Legacy /w/* preview routes kept as aliases */}
             <Route path="/w/:storeSlug" element={<PublicWebsiteHome />} />
             <Route path="/w/:storeSlug/blog" element={<PublicWebsiteBlogIndex />} />
             <Route path="/w/:storeSlug/blog/:postSlug" element={<PublicWebsiteBlogPost />} />
             <Route path="/w/:storeSlug/:pageSlug" element={<PublicWebsitePage />} />
+
 
             {/* Dashboard */}
             <Route path="/pricing" element={<Pricing />} />
