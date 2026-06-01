@@ -13,12 +13,22 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+export type BlockContext = "store" | "website";
+
 export type BlockMeta = {
   label: string;
   description: string;
   icon: LucideIcon;
   summary?: (data: any) => string | undefined;
+  /** Which editor contexts this block is available in. Defaults to both. */
+  contexts?: BlockContext[];
 };
+
+export function blockAvailableIn(type: string, ctx: BlockContext): boolean {
+  const contexts = BLOCK_META[type]?.contexts;
+  if (!contexts) return true;
+  return contexts.includes(ctx);
+}
 
 const firstText = (...vals: any[]) =>
   vals.find((v) => typeof v === "string" && v.trim().length > 0) as string | undefined;
@@ -42,6 +52,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     label: "Featured categories",
     description: "Grid of curated storefront categories.",
     icon: LayoutGrid,
+    contexts: ["store"],
     summary: (d) =>
       firstText(d?.heading) ??
       (Array.isArray(d?.category_slugs)
@@ -52,6 +63,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     label: "Featured products",
     description: "Hand-picked products from this store.",
     icon: ShoppingBag,
+    contexts: ["store"],
     summary: (d) =>
       firstText(d?.heading) ??
       (Array.isArray(d?.store_product_ids)

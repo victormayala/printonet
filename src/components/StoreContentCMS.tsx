@@ -33,7 +33,7 @@ import type { CorporateStore } from "@/types/corporateStore";
 import { cms } from "@/lib/cmsClient";
 import { BlockEditor, BLOCK_TYPES } from "@/components/cms/BlockEditor";
 import { SiteSettingsEditor, ContentPageEditor } from "@/components/cms/SiteSettingsEditor";
-import { metaFor } from "@/components/cms/blockMeta";
+import { metaFor, blockAvailableIn, type BlockContext } from "@/components/cms/blockMeta";
 import { BlockPreview } from "@/components/cms/BlockPreview";
 import { cn } from "@/lib/utils";
 
@@ -195,12 +195,21 @@ function PanelHeader({
   );
 }
 
-function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; canPublish: boolean }) {
+function HomepageBlocksPanel({
+  store,
+  canPublish,
+  variant = "store",
+}: {
+  store: CorporateStore;
+  canPublish: boolean;
+  variant?: BlockContext;
+}) {
+  const availableTypes = BLOCK_TYPES.filter((t) => blockAvailableIn(t, variant));
   const [blocks, setBlocks] = useState<Block[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
-  const [newType, setNewType] = useState("hero");
+  const [newType, setNewType] = useState(availableTypes[0] ?? "hero");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rawMode, setRawMode] = useState(false);
 
@@ -396,10 +405,10 @@ function HomepageBlocksPanel({ store, canPublish }: { store: CorporateStore; can
           <Label className="text-xs">Add a new section</Label>
           <select
             value={newType}
-            onChange={(e) => setNewType(e.target.value)}
+            onChange={(e) => setNewType(e.target.value as typeof newType)}
             className="flex h-9 w-56 rounded-md border border-input bg-background px-3 py-1 text-sm"
           >
-            {BLOCK_TYPES.map((t) => (
+            {availableTypes.map((t) => (
               <option key={t} value={t}>
                 {metaFor(t).label}
               </option>
@@ -1291,7 +1300,13 @@ function NavigationPanel({ store, canPublish }: { store: CorporateStore; canPubl
   );
 }
 
-export function StoreContentCMS({ store }: { store: CorporateStore }) {
+export function StoreContentCMS({
+  store,
+  variant = "store",
+}: {
+  store: CorporateStore;
+  variant?: BlockContext;
+}) {
   const [serverVersion, setServerVersion] = useState<number | null>(null);
   const [versionErr, setVersionErr] = useState<string | null>(null);
 
@@ -1380,7 +1395,7 @@ export function StoreContentCMS({ store }: { store: CorporateStore }) {
             <SiteSettingsPanel store={store} canPublish={canPublish} />
           </TabsContent>
           <TabsContent value="blocks">
-            <HomepageBlocksPanel store={store} canPublish={canPublish} />
+            <HomepageBlocksPanel store={store} canPublish={canPublish} variant={variant} />
           </TabsContent>
           <TabsContent value="pages">
             <ContentPagesPanel store={store} canPublish={canPublish} />
