@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
 
   const SECRET = Deno.env.get("PRINTONET_PLATFORM_HMAC_SECRET");
   const BASE = Deno.env.get("PRINTONET_STOREFRONT_URL");
+  const SITES_BASE = Deno.env.get("PRINTONET_SITES_URL") ?? BASE;
   if (!SECRET || !BASE) {
     return json(500, { ok: false, error: "server_misconfigured" });
   }
