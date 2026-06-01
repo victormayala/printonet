@@ -1395,7 +1395,7 @@ export function StoreContentCMS({
             <SiteSettingsPanel store={store} canPublish={canPublish} />
           </TabsContent>
           <TabsContent value="blocks">
-            <HomepageBlocksPanel store={store} canPublish={canPublish} />
+            <HomepageBlocksPanel store={store} canPublish={canPublish} variant={variant} />
           </TabsContent>
           <TabsContent value="pages">
             <ContentPagesPanel store={store} canPublish={canPublish} />
