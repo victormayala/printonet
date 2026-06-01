@@ -12,7 +12,7 @@ export type CorporateStore = {
   favicon_url: string | null;
   tenant_slug: string | null;
   requested_slug: string | null;
-  store_type: "corporate" | "retail";
+  store_type: "corporate" | "retail" | "website";
   status: "provisioning" | "active" | "failed" | "paused";
   error_message: string | null;
   stripe_account_id: string | null;
