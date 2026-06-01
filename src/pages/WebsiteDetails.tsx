@@ -84,7 +84,7 @@ export default function WebsiteDetails() {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
-    ? `https://platform.printonet.com/sites/${site.tenant_slug}`
+    ? `https://stores.printonet.com/sites/${site.tenant_slug}`
     : null;
 
 
@@ -178,6 +178,9 @@ function OverviewPanel({ site }: { site: CorporateStore }) {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
+    ? `https://stores.printonet.com/sites/${site.tenant_slug}`
+    : null;
+  const previewUrl = site.tenant_slug
     ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
 
@@ -200,6 +203,20 @@ function OverviewPanel({ site }: { site: CorporateStore }) {
             </a>
           ) : (
             <p className="text-sm text-muted-foreground">No URL configured yet.</p>
+          )}
+          {previewUrl && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Public renderer ships on stores.printonet.com.{" "}
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-foreground"
+              >
+                Preview on platform
+              </a>
+              {" "}while it's being built.
+            </p>
           )}
           <p className="text-xs text-muted-foreground mt-2">
             Set a custom domain in Settings to point your own URL at this site.

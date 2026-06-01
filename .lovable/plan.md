@@ -1,102 +1,72 @@
 ## Goal
 
-Let users create **informational websites** (no products, cart, checkout, Stripe, shipping, tax) using the same dashboard/CMS authoring experience as storefronts. Add a **blog** on top, and serve sites from a **separate hosted target** (e.g. `sites.printonet.com`) instead of the storefront engine.
+Move the public website rendering from this Vite SPA to the SSR storefront app at `stores.printonet.com`, so sites get real SEO, working social previews, and AI search visibility. This Lovable project remains the **admin/CMS** for sites; the storefront becomes the public renderer.
 
-## High-level approach
+## Split of responsibilities
 
-1. Introduce `store_type = 'website'` on the existing `corporate_stores` table. Reuse stores, CMS proxy, themes, media library, custom domain, white-labeling — but hide every commerce surface when `store_type = 'website'`.
-2. Add a **multi-page builder** plus a **navigation menu editor** so a website can have About / Services / Contact / custom pages with their own block lists and SEO.
-3. Add a **blog**: posts, categories, authors, tags, per-post SEO, hero image, scheduled publish.
-4. New top-level **"Websites"** section in the dashboard, parallel to **Corporate Stores**, backed by the same `corporate_stores` row filtered by `store_type='website'`.
-5. New hosted target on the upstream service (`sites.printonet.com`) that renders websites without any commerce chrome. The dashboard publishes via the existing `cms-proxy` edge function with a new action namespace.
+```text
+┌─────────────────────────────────────┐        ┌───────────────────────────────────────┐
+│  platform.printonet.com (THIS app)  │        │  stores.printonet.com (storefront)    │
+│  ────────────────────────────────   │        │  ──────────────────────────────────   │
+│  • Dashboard: Websites list         │        │  • Public SSR renderer for sites      │
+│  • Editors: pages / blog / nav /    │        │  • /sites/:slug, /sites/:slug/blog…   │
+│    theme / SEO                      │  Supa  │  • <title>, meta, og:*, JSON-LD       │
+│  • Media upload (cms_media)         │ ─────▶ │  • sitemap.xml, robots.txt            │
+│  • Temporary /sites/:slug preview   │  RLS   │  • Theme application                  │
+│  • Write data to Supabase           │  read  │  • Block renderer (parity w/ admin)   │
+└─────────────────────────────────────┘        └───────────────────────────────────────┘
+```
 
-## Dashboard surface
+The storefront reads **directly from Supabase** with the anon key. Public-read RLS policies already exist on `corporate_stores`, `site_pages`, `site_navigation`, `blog_posts`, `blog_authors`, `blog_categories`. No proxy or HMAC needed for site reads.
 
-### New routes
-- `/websites` — list (mirrors `/corporate-stores`, queries `corporate_stores` where `store_type='website'`)
-- `/websites/:id` — detail page with tabs:
-  - **Overview** — domain, status, "View site" link
-  - **Pages** — multi-page builder. Each page = block list reusing existing `BlockEditor`. Per-page SEO.
-  - **Navigation** — header/footer menu editor (label + href + open-in-new-tab)
-  - **Blog** — posts list, create/edit post (title, slug, excerpt, hero image, markdown body, categories, tags, author, status: draft/scheduled/published, publish_at, SEO)
-  - **Branding** — reuse `StoreIdentityTab` + `StoreBrandingTab` + `StoreThemeTab` (no Customizer tab, no Developers tab)
-  - **Settings** — contact info, social links, footer, announcement bar (reuse `SiteSettingsEditor`)
-  - **Domain** — custom domain setup (reuse existing flow, pointed at the new hosted target)
-- Hidden for websites: Customizable Products, Shipping & Tax, Customers, Orders, Stripe Connect, Push to Store.
+## Changes I will make in this Lovable project
 
-### New "New Website" dialog
-- Fork of `NewStoreDialog`: name, contact email, slug, primary color, font. Sets `store_type='website'`. No `default_price_source`, no Stripe onboarding. Status goes straight to `active`.
+1. **Leave `src/pages/PublicWebsite.tsx` and its routes in place** — keeps the in-app `/sites/:slug` preview live so existing links don't break while the storefront-side renderer is being built.
+2. **Update the "Public URL" shown in the dashboard** (`src/pages/Websites.tsx` and `src/pages/WebsiteDetails.tsx`) to point at the final URL `https://stores.printonet.com/sites/<slug>` instead of `https://platform.printonet.com/sites/<slug>`. Add a small "preview on platform" secondary link that opens the in-app renderer.
+3. **Write the handoff spec** to `docs/websites-storefront-handoff.md`. This is the deliverable you'll hand to whoever builds the storefront side.
 
-### Sidebar
-- Add **"Websites"** entry in `DashboardSidebar` alongside "Corporate Stores" with `Globe` icon.
+No DB migrations. No edge function changes. No removal of in-app renderer yet.
 
-### Component reuse
-- Reused unchanged: `BlockEditor`, `SiteSettingsEditor`, `MediaLibraryDialog`, `StoreThemePicker`, `StoreBrandingTab`, `StoreIdentityTab`, `StoreThemeTab`.
-- New: `WebsitePagesPanel`, `WebsiteNavigationEditor`, `WebsiteBlogPanel`, `BlogPostEditor`, `NewWebsiteDialog`.
+## What the handoff spec will contain
 
-## Backend / data
+- **Routes to add on the storefront**
+  - `GET /sites/:slug` — home (renders the page with slug `home`, or the first published page)
+  - `GET /sites/:slug/:pageSlug` — content page
+  - `GET /sites/:slug/blog` — blog index
+  - `GET /sites/:slug/blog/:postSlug` — blog post
+  - `GET /sites/:slug/sitemap.xml` — sitemap per site
+  - `GET /sites/:slug/robots.txt` — per-site robots (mostly `Allow: /`)
+- **Reserved slug list** — must not collide with `RESERVED_PAGE_SLUGS` in `src/lib/cms.types.ts` (admin, account, cart, checkout, etc.)
+- **Data fetching contract** — exact Supabase queries to use, copied from `src/pages/PublicWebsite.tsx`:
+  - Site: `corporate_stores` where `tenant_slug = :slug AND store_type = 'website' AND status = 'active'`
+  - Pages: `site_pages` where `store_id = ... AND enabled = true AND published_at IS NOT NULL`
+  - Navigation: `site_navigation` rows (header/footer)
+  - Posts: `blog_posts` where `status='published' AND published_at <= now()`
+- **Block renderer contract** — list of block types and data shapes from `src/lib/cms.types.ts` (`hero`, `value_props`, `featured_categories`, `featured_products`, `testimonials`, `cta_banner`, `rich_text`, `category_bento`, `two_column_banners`, `three_column_banners`, `benefits_grid`). The storefront must render each type. Initial visual parity reference: `src/components/cms/BlockPreview.tsx`.
+- **Theme application** — apply `primary_color`, `accent_color`, `font_family` as CSS variables (`--site-primary`, `--site-accent`). Use `favicon_url`, `logo_url`, `secondary_logo_url`.
+- **SEO requirements per route** (the whole point of the move)
+  - Per-page `<title>` = `{page.seo_title || page.title} · {site.name}`
+  - Per-page `<meta name="description">` from `seo_description`
+  - `<link rel="canonical">` = `https://stores.printonet.com/sites/<slug>/<path>`
+  - Open Graph: `og:title`, `og:description`, `og:url`, `og:image` (from `og_image_url`)
+  - Twitter card tags
+  - JSON-LD: `Article` on blog posts, `BreadcrumbList` on nested routes, `Organization` from site name/logo
+  - 404s return real HTTP 404 status
+- **sitemap.xml shape** — one entry per published page + blog post, with `lastmod` from `published_at`
+- **Anon-key Supabase config** — env vars to add on the storefront (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` equivalents)
+- **Caching guidance** — ISR/revalidate strategy; invalidate on publish via a webhook from this app (out of scope for v1, called out)
+- **Open questions** flagged at the bottom for the storefront team
+- **Reference implementation** — pointer to `src/pages/PublicWebsite.tsx` as the working v1 reference
 
-### Migration
-- Widen `corporate_stores.store_type` to allow `'website'` (currently `'corporate' | 'retail'`).
-- New tables (all owner-scoped RLS via `auth.uid() = user_id`, public read for published rows for the renderer):
-  - `site_pages` (store_id, slug, title, sort_order, enabled, draft_data, published_data, published_at, seo_title, seo_description, og_image_url)
-  - `site_navigation` (store_id, location: 'header'|'footer', items jsonb)
-  - `blog_posts` (store_id, slug, title, excerpt, body_md, hero_image_url, status, publish_at, seo_*, author_id, draft + published copies)
-  - `blog_categories` (store_id, slug, name)
-  - `blog_post_categories` (post_id, category_id)
-  - `blog_authors` (store_id, name, avatar_url, bio)
-- Each `CREATE TABLE` followed by GRANTs and RLS policies per project rules.
+## Out of scope (called out explicitly in the spec)
 
-### Edge function
-- Extend `cms-proxy` with new actions: `list-pages`, `upsert-page`, `publish-page`, `delete-page`, `reorder-pages`, `get-navigation`, `set-navigation`, `list-posts`, `upsert-post`, `publish-post`, `delete-post`, `list-blog-categories`, …
-- Route to the new hosted target when the target store has `store_type='website'`. New env var `PRINTONET_SITES_URL` on the edge function. Existing storefront actions unchanged.
+- Custom domains per site (e.g. `acme.com → /sites/acme`) — future
+- Publish webhooks for cache invalidation — future
+- Form submissions / contact forms — future
+- Removing the in-app preview renderer — happens after storefront side ships
 
-### Skipped for websites
-- Stripe Connect, `corporate_store_shipping_zones`, `corporate_store_volume_discounts`, `corporate_store_products`, orders, checkout.
+## Files touched in this project
 
-## Hosted renderer (sites.printonet.com)
-
-Owned by the upstream service. This plan only covers what the Printonet dashboard sends. Contract:
-- `GET /api/public/cms/:slug/site` → settings, theme, navigation
-- `GET /api/public/cms/:slug/page/:pageSlug` → published page blocks
-- `GET /api/public/cms/:slug/blog` → published posts (paginated)
-- `GET /api/public/cms/:slug/blog/:postSlug` → single post
-
-Follow-up task on the upstream repo. The dashboard surfaces the public URL once `PRINTONET_SITES_URL` is configured.
-
-## Technical details
-
-### Files added
-- `src/pages/Websites.tsx`
-- `src/pages/WebsiteDetails.tsx`
-- `src/components/WebsitePagesPanel.tsx`
-- `src/components/WebsiteNavigationEditor.tsx`
-- `src/components/WebsiteBlogPanel.tsx`
-- `src/components/BlogPostEditor.tsx`
-- `src/components/NewWebsiteDialog.tsx`
-
-### Files modified
-- `src/App.tsx` — register `/websites`, `/websites/:id`
-- `src/components/DashboardSidebar.tsx` — add nav entry
-- `src/types/corporateStore.ts` — widen `store_type` union to include `'website'`
-- `src/pages/CorporateStores.tsx` — exclude website rows from the store list
-- `supabase/functions/cms-proxy/index.ts` — route by store_type, add page/nav/blog actions
-
-### Migrations
-- One migration: widen `store_type`, create the 5 new tables with GRANTs + RLS.
-
-### Out of scope
-- Upstream `sites.printonet.com` renderer (separate codebase/deploy)
-- DNS automation for `sites.printonet.com` subdomains
-- Migrating existing retail/corporate stores into website type
-
-## Rollout order
-
-1. Migration (new tables + `store_type` widen).
-2. Sidebar entry + `/websites` list + `New Website` dialog.
-3. `/websites/:id` shell with Branding / Settings / Domain tabs (reused).
-4. Pages tab (multi-page block builder).
-5. Navigation editor.
-6. Blog (posts → categories → authors).
-7. `cms-proxy` routing + new actions.
-8. Document upstream API contract for the renderer team.
+- `src/pages/Websites.tsx` — update Public URL display
+- `src/pages/WebsiteDetails.tsx` — update Public URL display
+- `docs/websites-storefront-handoff.md` — new file (the spec)

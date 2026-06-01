@@ -217,6 +217,9 @@ function SiteRow({ site }: { site: CorporateStore }) {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
+    ? `https://stores.printonet.com/sites/${site.tenant_slug}`
+    : null;
+  const previewUrl = site.tenant_slug
     ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
 
@@ -254,15 +257,28 @@ function SiteRow({ site }: { site: CorporateStore }) {
       </TableCell>
       <TableCell>
         {publicUrl ? (
-          <a
-            href={publicUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
-          >
-            {publicUrl.replace(/^https?:\/\//, "")}
-            <ExternalLink className="h-3 w-3" />
-          </a>
+          <div className="flex flex-col gap-0.5">
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
+            >
+              {publicUrl.replace(/^https?:\/\//, "")}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+            {previewUrl && (
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              >
+                Preview on platform
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            )}
+          </div>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         )}
@@ -401,7 +417,7 @@ function NewWebsiteDialog({ onCreated }: { onCreated: () => void }) {
           <Label>Slug</Label>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground whitespace-nowrap">
-              platform.printonet.com/sites/
+              stores.printonet.com/sites/
             </span>
             <Input
               value={values.tenant_slug}
