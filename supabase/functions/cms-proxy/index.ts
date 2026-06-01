@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
   // Authorize: caller must own the store (or be super_admin).
   const { data: store, error: storeErr } = await supabase
     .from("corporate_stores")
-    .select("id, user_id, tenant_slug")
+    .select("id, user_id, tenant_slug, store_type")
     .eq("id", store_id)
     .maybeSingle();
 
