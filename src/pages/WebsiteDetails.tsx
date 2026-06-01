@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,6 +13,9 @@ import {
   Settings as SettingsIcon,
   ExternalLink,
   AlertCircle,
+  Upload,
+  Cloud,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,11 +24,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
 import { WebsitePagesPanel } from "@/components/WebsitePagesPanel";
 import { WebsiteNavigationEditor } from "@/components/WebsiteNavigationEditor";
 import { WebsiteBlogPanel } from "@/components/WebsiteBlogPanel";
+import { StoreContentCMS } from "@/components/StoreContentCMS";
+
+const FONT_OPTIONS = [
+  "Inter",
+  "Space Grotesk",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Montserrat",
+  "Poppins",
+  "Nunito",
+  "Raleway",
+  "Source Sans 3",
+  "DM Sans",
+  "IBM Plex Sans",
+  "Work Sans",
+  "Outfit",
+  "Plus Jakarta Sans",
+  "Playfair Display",
+  "Lora",
+];
 
 export default function WebsiteDetails() {
   const { id } = useParams<{ id: string }>();
