@@ -1300,7 +1300,13 @@ function NavigationPanel({ store, canPublish }: { store: CorporateStore; canPubl
   );
 }
 
-export function StoreContentCMS({ store }: { store: CorporateStore }) {
+export function StoreContentCMS({
+  store,
+  variant = "store",
+}: {
+  store: CorporateStore;
+  variant?: BlockContext;
+}) {
   const [serverVersion, setServerVersion] = useState<number | null>(null);
   const [versionErr, setVersionErr] = useState<string | null>(null);
 
