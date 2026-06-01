@@ -117,8 +117,7 @@ Deno.serve(async (req) => {
   // The storefront 405s a GET on every action except `schema-version`, so
   // we must guarantee POST reaches the origin (no http→https or trailing
   // slash redirect, which would downgrade POST → GET).
-  const baseForStore = store.store_type === "website" ? SITES_BASE : BASE;
-  const baseNorm = baseForStore.replace(/\/+$/, "").replace(/^http:\/\//i, "https://");
+  const baseNorm = BASE.replace(/\/+$/, "").replace(/^http:\/\//i, "https://");
   const url = `${baseNorm}/api/public/cms/${action}`;
 
   const raw = JSON.stringify(body ?? {});
