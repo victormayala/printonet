@@ -29,6 +29,12 @@ import StoreCustomize from "./pages/StoreCustomize";
 import NotFound from "./pages/NotFound";
 import LayersPreview from "./pages/LayersPreview";
 import OrderApproval from "./pages/OrderApproval";
+import {
+  PublicWebsiteHome,
+  PublicWebsitePage,
+  PublicWebsiteBlogIndex,
+  PublicWebsiteBlogPost,
+} from "./pages/PublicWebsite";
 
 import Unsubscribe from "./pages/Unsubscribe";
 import Pricing from "./pages/Pricing";
@@ -65,8 +71,10 @@ const queryClient = new QueryClient({
 });
 
 const currentHost = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+const isSitesHost = currentHost === "sites.printonet.com";
 const isPotentialStoreHost =
   !!currentHost &&
+  !isSitesHost &&
   !["localhost", "127.0.0.1", "platform.printonet.com", "printonet.lovable.app", "customizerstudio.com"].includes(currentHost) &&
   !currentHost.endsWith(".lovable.app") &&
   !currentHost.endsWith(".lovableproject.com");
@@ -79,6 +87,17 @@ function DashboardRoute() {
   );
 }
 
+const SitesRoutes = () => (
+  <Routes>
+    <Route path="/" element={<NotFound />} />
+    <Route path="/:storeSlug" element={<PublicWebsiteHome />} />
+    <Route path="/:storeSlug/blog" element={<PublicWebsiteBlogIndex />} />
+    <Route path="/:storeSlug/blog/:postSlug" element={<PublicWebsiteBlogPost />} />
+    <Route path="/:storeSlug/:pageSlug" element={<PublicWebsitePage />} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
@@ -86,6 +105,9 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          {isSitesHost ? (
+            <SitesRoutes />
+          ) : (
           <Routes>
             {/* Redirect root to auth */}
             <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/dashboard" replace />} />
@@ -126,7 +148,12 @@ const App = () => (
             <Route path="/layers-preview" element={<LayersPreview />} />
             <Route path="/approval/:token" element={<OrderApproval />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
-            
+
+            {/* Public website preview (also served at sites.printonet.com without /w prefix) */}
+            <Route path="/w/:storeSlug" element={<PublicWebsiteHome />} />
+            <Route path="/w/:storeSlug/blog" element={<PublicWebsiteBlogIndex />} />
+            <Route path="/w/:storeSlug/blog/:postSlug" element={<PublicWebsiteBlogPost />} />
+            <Route path="/w/:storeSlug/:pageSlug" element={<PublicWebsitePage />} />
 
             {/* Dashboard */}
             <Route path="/pricing" element={<Pricing />} />
@@ -143,6 +170,7 @@ const App = () => (
 
             <Route path="*" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <NotFound />} />
           </Routes>
+          )}
         </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>
