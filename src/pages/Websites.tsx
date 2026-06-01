@@ -217,8 +217,9 @@ function SiteRow({ site }: { site: CorporateStore }) {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
-    ? `https://sites.printonet.com/${site.tenant_slug}`
+    ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
+
 
   const remove = async () => {
     setBusy(true);
@@ -397,8 +398,11 @@ function NewWebsiteDialog({ onCreated }: { onCreated: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Subdomain</Label>
+          <Label>Slug</Label>
           <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              platform.printonet.com/sites/
+            </span>
             <Input
               value={values.tenant_slug}
               onChange={(e) =>
@@ -406,10 +410,8 @@ function NewWebsiteDialog({ onCreated }: { onCreated: () => void }) {
               }
               placeholder="acme-studio"
             />
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              .sites.printonet.com
-            </span>
           </div>
+
           {errors.tenant_slug && <p className="text-xs text-destructive">{errors.tenant_slug}</p>}
         </div>
 

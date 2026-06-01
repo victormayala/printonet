@@ -1,12 +1,12 @@
 /**
  * Public renderer for websites (store_type='website').
  *
- * Hosts:
- *  - On platform.printonet.com (and previews): mounted under /w/:storeSlug/*
- *  - On sites.printonet.com: mounted at root with first segment = :storeSlug
+ * Mounted under /sites/:storeSlug/* on the platform domain.
+ * Legacy /w/:storeSlug/* preview routes are also supported.
  *
  * Reads are RLS-public for published pages/posts on active website stores.
  */
+
 import { useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -148,17 +148,13 @@ function usePosts(storeId: string | undefined) {
 }
 
 // ---------------------------------------------------------------------------
-// Path helpers — same components serve /w/:slug/... and sites.printonet.com/:slug/...
+// Path helpers — directory-based URLs under /sites/:slug/...
 // ---------------------------------------------------------------------------
 
-function isSitesHost(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.location.hostname.toLowerCase() === "sites.printonet.com";
+function siteBase(storeSlug: string): string {
+  return `/sites/${storeSlug}`;
 }
 
-function siteBase(storeSlug: string): string {
-  return isSitesHost() ? `/${storeSlug}` : `/w/${storeSlug}`;
-}
 
 // ---------------------------------------------------------------------------
 // Shell + theming
