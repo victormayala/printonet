@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
         const { data, error } = await supabase
           .from("corporate_stores")
           .select(
-            "id, user_id, name, tenant_slug, status, custom_domain, contact_email, " +
+            "id, user_id, name, tenant_slug, store_type, status, custom_domain, contact_email, " +
               "primary_color, accent_color, font_family, logo_url, secondary_logo_url, favicon_url, " +
               "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, " +
               "platform_fee_bps, tax_enabled, shipping_label, shipping_flat_amount, free_shipping_threshold, " +
