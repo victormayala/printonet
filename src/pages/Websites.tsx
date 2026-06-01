@@ -217,8 +217,9 @@ function SiteRow({ site }: { site: CorporateStore }) {
   const publicUrl = site.custom_domain
     ? `https://${site.custom_domain}`
     : site.tenant_slug
-    ? `https://sites.printonet.com/${site.tenant_slug}`
+    ? `https://platform.printonet.com/sites/${site.tenant_slug}`
     : null;
+
 
   const remove = async () => {
     setBusy(true);
