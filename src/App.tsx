@@ -27,7 +27,7 @@ import StoreCustomize from "./pages/StoreCustomize";
 import NotFound from "./pages/NotFound";
 import LayersPreview from "./pages/LayersPreview";
 import OrderApproval from "./pages/OrderApproval";
-import DebugEnv from "./pages/DebugEnv";
+
 import Unsubscribe from "./pages/Unsubscribe";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
@@ -122,7 +122,7 @@ const App = () => (
             <Route path="/layers-preview" element={<LayersPreview />} />
             <Route path="/approval/:token" element={<OrderApproval />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
-            <Route path="/debug-env-40779174228f353a03b2a7eb0a7bfa83440b79b3d28b62f5" element={<DebugEnv />} />
+            
 
             {/* Dashboard */}
             <Route path="/pricing" element={<Pricing />} />
