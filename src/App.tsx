@@ -29,6 +29,12 @@ import StoreCustomize from "./pages/StoreCustomize";
 import NotFound from "./pages/NotFound";
 import LayersPreview from "./pages/LayersPreview";
 import OrderApproval from "./pages/OrderApproval";
+import {
+  PublicWebsiteHome,
+  PublicWebsitePage,
+  PublicWebsiteBlogIndex,
+  PublicWebsiteBlogPost,
+} from "./pages/PublicWebsite";
 
 import Unsubscribe from "./pages/Unsubscribe";
 import Pricing from "./pages/Pricing";
