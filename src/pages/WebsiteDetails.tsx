@@ -174,6 +174,9 @@ export default function WebsiteDetails() {
           <TabsTrigger value="blog" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2">
             <BookOpen className="h-4 w-4" /> Blog
           </TabsTrigger>
+          <TabsTrigger value="storefront" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2">
+            <Cloud className="h-4 w-4" /> Storefront
+          </TabsTrigger>
           <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2">
             <Paintbrush className="h-4 w-4" /> Branding
           </TabsTrigger>
