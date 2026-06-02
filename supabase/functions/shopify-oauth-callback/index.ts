@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ensureSyncStore } from "../_shared/sync-store.ts";
 
 /**
  * Shopify OAuth Step 2: Handle the callback from Shopify.
@@ -183,6 +184,17 @@ Deno.serve(async (req) => {
           .from("store_integrations")
           .insert(integrationRow);
       }
+    }
+
+    try {
+      await ensureSyncStore(supabase, {
+        user_id: userId,
+        platform: "shopify",
+        store_url: storeUrl,
+      });
+    } catch (storeErr) {
+      console.error("Failed to ensure Shopify dashboard store:", storeErr);
+      return new Response("Shopify connected, but dashboard store creation failed. Please sync products and try again.", { status: 500 });
     }
 
     // Redirect user back to the app via a proper 302 + meta-refresh fallback.
