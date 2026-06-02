@@ -563,7 +563,7 @@
     return base + '/r/' + encodeURIComponent(String(sessionId || ''));
   }
 
-  function _shopifyCartSectionsToRender() {
+  function _shopifyCartSectionIds() {
     var ids = [];
     function add(id) {
       id = String(id || '').replace(/^shopify-section-/, '');
@@ -574,17 +574,27 @@
         var wrap = el.closest('[id^="shopify-section-"]');
         if (wrap) add(wrap.id);
       });
-      document.querySelectorAll('[id^="shopify-section-"]').forEach(function (el) {
-        var id = String(el.id || '').replace(/^shopify-section-/, '');
-        if (/cart|drawer|notification|header/i.test(id)) add(id);
-      });
     } catch (_) {}
     add('cart-drawer');
     add('cart-icon-bubble');
     add('cart-notification');
     add('main-cart-items');
     add('main-cart-footer');
-    return ids.slice(0, 5).join(',');
+    try {
+      document.querySelectorAll('[id^="shopify-section-"]').forEach(function (el) {
+        var id = String(el.id || '').replace(/^shopify-section-/, '');
+        if (/cart|drawer|notification/i.test(id)) add(id);
+      });
+    } catch (_) {}
+    return ids.slice(0, 5);
+  }
+
+  function _shopifyCartSectionsToRender() {
+    return _shopifyCartSectionIds().join(',');
+  }
+
+  function _shopifyCartSectionsPayload() {
+    return _shopifyCartSectionIds();
   }
 
   function _findCartLineForDesign(cart, meta) {
