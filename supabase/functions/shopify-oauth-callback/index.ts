@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
     // render the response as plain text if Content-Type isn't honored.
     const finalRedirect =
       redirectUrl ||
-      `${Deno.env.get("SUPABASE_URL")?.replace("supabase.co", "lovable.app")}/products`;
+      `${Deno.env.get("SUPABASE_URL")?.replace("supabase.co", "lovable.app")}/corporate-stores?tab=shopify`;
 
     const fallbackHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${finalRedirect}"><title>Shopify Connected</title></head><body>Redirecting to <a href="${finalRedirect}">${finalRedirect}</a>…</body></html>`;
 
