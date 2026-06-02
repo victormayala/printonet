@@ -1789,7 +1789,7 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
   );
 }
 
-function WooCommerceImport({ onDone }: { onDone: () => void }) {
+export function WooCommerceImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
   const [siteUrl, setSiteUrl] = useState("");
   const [consumerKey, setConsumerKey] = useState("");
