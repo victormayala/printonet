@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, Code2, CheckCircle2 } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 import { EditProductLogoDialog, type EditableProduct } from "@/components/EditProductLogoDialog";
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
