@@ -536,7 +536,7 @@
   function _createCartWidget() {
     if (_cartWidget) return;
 
-    var cartLink = _config.cartUrl || ((_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href));
+    var cartLink = _config.cartUrl || ((_shopifyVariantId || window.Shopify) ? '/cart' : ((_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href)));
     _cartWidget = document.createElement('a');
     _cartWidget.href = cartLink;
     _cartWidget.target = '_blank';
