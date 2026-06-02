@@ -657,9 +657,19 @@
     });
   }
 
+  function _cartItemReviewUrl(item) {
+    var props = item && item.properties ? item.properties : {};
+    var visible = props['View Design'] || props['View design'] || props.view_design;
+    if (_isHttpUrl(visible) && _isOurReviewHref(visible)) return visible;
+    if (props._customizer_session_id) {
+      var previewBase = (_config && _config.baseUrl) ? String(_config.baseUrl).replace(/\/+$/, '') : 'https://customizerstudio.com';
+      return previewBase + '/review/' + encodeURIComponent(String(props._customizer_session_id));
+    }
+    return null;
+  }
+
   function _cartItemDesignUrl(item) {
     var props = item && item.properties ? item.properties : {};
-    if (_isHttpUrl(props.Design)) return props.Design;
     if (_isHttpUrl(props._customizer_design_url)) return props._customizer_design_url;
     try {
       var sides = props._customizer_sides ? JSON.parse(props._customizer_sides) : [];
@@ -676,7 +686,9 @@
     cart.items.forEach(function (item) {
       var designUrl = _cartItemDesignUrl(item);
       if (designUrl) _replaceCartLineImages(designUrl, item);
+      _ensureShopifyDesignLink(item, designUrl);
     });
+    _decorateShopifyDesignLinks();
   }
 
   function _refreshExistingShopifyDesignThumbnails() {
