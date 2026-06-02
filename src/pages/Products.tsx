@@ -1953,7 +1953,7 @@ export function WooCommerceImport({ onDone }: { onDone: () => void }) {
           <ol className="list-decimal list-inside space-y-2">
             <li>Log in to your <strong className="text-foreground">WordPress Admin</strong> dashboard</li>
             <li>Go to <strong className="text-foreground">WooCommerce → Settings → Advanced → REST API</strong></li>
-            <li>Click <strong className="text-foreground">Add key</strong> and fill in a description (e.g. "Customizer Studio")</li>
+            <li>Click <strong className="text-foreground">Add key</strong> and fill in a description (e.g. "Printonet Product Customizer")</li>
             <li>Set <strong className="text-foreground">Permissions</strong> to <code className="text-xs bg-muted px-1.5 py-0.5 rounded">Read</code></li>
             <li>Click <strong className="text-foreground">Generate API key</strong></li>
             <li>Copy the <strong className="text-foreground">Consumer Key</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">ck_</code>) and <strong className="text-foreground">Consumer Secret</strong> (starts with <code className="text-xs bg-muted px-1.5 py-0.5 rounded">cs_</code>)</li>

@@ -453,8 +453,9 @@ export default function CorporateStores() {
 
   const shopifyStores = stores.filter((s) => s.store_type === "shopify");
   const wooStores = stores.filter((s) => s.store_type === "woocommerce");
+  const hostedStores = stores.filter((s) => s.store_type !== "shopify" && s.store_type !== "woocommerce");
 
-  const renderStoreRows = (rows: CorporateStore[]) => (
+  const renderStoreRows = (rows: CorporateStore[], variant: "hosted" | "external" = "hosted") => (
     <TableBody>
       {rows.map((s) => {
         const isUnpublished = s.status === "provisioning";
@@ -478,7 +479,7 @@ export default function CorporateStores() {
                   </div>
                 </div>
               </TableCell>
-              <TableCell colSpan={isSuperAdmin ? 3 : 2}>
+              <TableCell colSpan={variant === "external" ? 2 : (isSuperAdmin ? 3 : 2)}>
                 <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                   <span>
@@ -499,21 +500,24 @@ export default function CorporateStores() {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setResumeStore(s);
-                      setOpen(true);
-                    }}
-                  >
-                    Finish setup
-                  </Button>
+                  {variant !== "external" && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setResumeStore(s);
+                        setOpen(true);
+                      }}
+                    >
+                      Finish setup
+                    </Button>
+                  )}
                   <StoreActions
                     store={s}
                     onResumeSetup={() => {
                       setResumeStore(s);
                       setOpen(true);
                     }}
+                    hideFinishSetup={variant === "external"}
                   />
                 </div>
               </TableCell>
@@ -565,10 +569,12 @@ export default function CorporateStores() {
               )}
             </div>
           </TableCell>
-          <TableCell>
-            <PaymentsCell store={s} />
-          </TableCell>
-          {isSuperAdmin && (
+          {variant !== "external" && (
+            <TableCell>
+              <PaymentsCell store={s} />
+            </TableCell>
+          )}
+          {variant !== "external" && isSuperAdmin && (
             <TableCell>
               <PlatformFeeCell store={s} />
             </TableCell>
@@ -612,6 +618,7 @@ export default function CorporateStores() {
                 setResumeStore(s);
                 setOpen(true);
               }}
+              hideFinishSetup={variant === "external"}
             />
           </TableCell>
         </TableRow>
@@ -620,7 +627,7 @@ export default function CorporateStores() {
     </TableBody>
   );
 
-  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string) => (
+  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string, variant: "hosted" | "external" = "hosted") => (
     <Card>
       <CardHeader>
         <CardTitle>Your stores</CardTitle>
@@ -653,13 +660,13 @@ export default function CorporateStores() {
               <TableRow>
                 <TableHead>Store</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Payments</TableHead>
-                {isSuperAdmin && <TableHead>Platform fee</TableHead>}
+                {variant !== "external" && <TableHead>Payments</TableHead>}
+                {variant !== "external" && isSuperAdmin && <TableHead>Platform fee</TableHead>}
                 <TableHead>Site URL</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            {renderStoreRows(rows)}
+            {renderStoreRows(rows, variant)}
           </Table>
         )}
       </CardContent>
@@ -671,7 +678,7 @@ export default function CorporateStores() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6 w-full sm:w-auto flex-wrap gap-1 p-1.5 bg-muted/60 border h-auto">
           <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
-            <Building2 className="h-4 w-4" /> All Stores
+            <Building2 className="h-4 w-4" /> Hosted Stores
           </TabsTrigger>
           <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <ShoppingBag className="h-4 w-4" /> Shopify
@@ -714,7 +721,7 @@ export default function CorporateStores() {
             </Dialog>
           </div>
 
-          {renderStoresCard(stores, 'No stores yet. Click "New store" to create one.')}
+          {renderStoresCard(hostedStores, 'No stores yet. Click "New store" to create one.')}
         </TabsContent>
 
         <TabsContent value="shopify" className="space-y-6">
@@ -724,7 +731,7 @@ export default function CorporateStores() {
               Stores connected via Shopify. Open a store to manage its integration, products, and customers.
             </p>
           </div>
-          {renderStoresCard(shopifyStores, "No Shopify stores yet. Connect a Shopify store from an existing store's Integration tab or create a new one.")}
+          {renderStoresCard(shopifyStores, "No Shopify stores yet. Connect a Shopify store from an existing store's Integration tab or create a new one.", "external")}
         </TabsContent>
 
         <TabsContent value="woocommerce" className="space-y-6">
@@ -734,7 +741,7 @@ export default function CorporateStores() {
               Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
             </p>
           </div>
-          {renderStoresCard(wooStores, "No WooCommerce stores yet. Connect a WooCommerce store from an existing store's Integration tab or create a new one.")}
+          {renderStoresCard(wooStores, "No WooCommerce stores yet. Connect a WooCommerce store from an existing store's Integration tab or create a new one.", "external")}
         </TabsContent>
 
       </Tabs>
@@ -815,7 +822,7 @@ function PasswordCopyField({ label, value }: { label: string; value: string }) {
 }
 
 
-function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResumeSetup?: () => void }) {
+function StoreActions({ store, onResumeSetup, hideFinishSetup }: { store: CorporateStore; onResumeSetup?: () => void; hideFinishSetup?: boolean }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -871,7 +878,7 @@ function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResum
 
   return (
     <div className="flex items-center justify-end gap-2">
-      {needsSetup && onResumeSetup && (
+      {!hideFinishSetup && needsSetup && onResumeSetup && (
         <Button variant="default" size="sm" onClick={onResumeSetup}>
           Finish setup
         </Button>
