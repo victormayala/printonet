@@ -911,15 +911,13 @@
     if (drawer && typeof drawer.open === 'function') {
       try { drawer.open(); return; } catch (_) {}
     }
-    if (drawer && drawer.classList) {
-      drawer.classList.remove('is-empty');
-      drawer.classList.add('active', 'animate', 'is-open', 'open');
-      drawer.setAttribute('open', '');
-      drawer.setAttribute('aria-hidden', 'false');
-    }
     var toggles = document.querySelectorAll('[aria-controls="CartDrawer"], [aria-controls="cart-drawer"], [data-cart-toggle], [data-drawer-open="cart"], button.header__icon--cart, a[href="/cart"]');
     if (toggles.length) {
       try { toggles[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (_) {}
+      return;
+    }
+    if (drawer) {
+      try { drawer.setAttribute('open', ''); } catch (_) {}
     }
   }
 
