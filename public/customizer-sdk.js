@@ -402,8 +402,11 @@
       if (payload.designLayersUrl) properties['_customizer_layers_url'] = payload.designLayersUrl;
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
-        if (frontSide && (frontSide.previewPNG || frontSide.designPNG)) {
-          properties['_customizer_design_url'] = frontSide.previewPNG || frontSide.designPNG;
+        var frontImg = frontSide && (frontSide.previewPNG || frontSide.designPNG);
+        if (frontImg) {
+          // Visible property (no underscore) so Shopify themes render the design image on the line item
+          properties['Design'] = frontImg;
+          properties['_customizer_design_url'] = frontImg;
         }
         properties['_customizer_sides'] = JSON.stringify(payload.sides.map(function (s) {
           var side = { view: s.view, url: s.designPNG };
@@ -412,6 +415,9 @@
         }));
       }
 
+      // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
+      var sectionsToRender = 'cart-drawer,cart-icon-bubble,cart-live-region-text,cart-notification,cart-notification-button,cart-notification-product,main-cart-items,main-cart-footer';
+
       fetch('/cart/add.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -419,6 +425,8 @@
           id: shopifyId,
           quantity: (payload && payload.quantity) || 1,
           properties: properties,
+          sections: sectionsToRender,
+          sections_url: window.location.pathname,
         }),
         credentials: 'same-origin',
       })
@@ -429,15 +437,7 @@
             callback(false);
             return;
           }
-          // Dispatch Shopify cart update event for themes that listen
-          document.dispatchEvent(new CustomEvent('cart:refresh'));
-          // Some themes use this
-          if (typeof window.Shopify !== 'undefined' && window.Shopify.onCartUpdate) {
-            fetch('/cart.js', { credentials: 'same-origin' })
-              .then(function (r) { return r.json(); })
-              .then(function (cart) { window.Shopify.onCartUpdate(cart); })
-              .catch(function () {});
-          }
+          _refreshShopifyCartUI(data && data.sections);
           callback(true);
         })
         .catch(function (err) {
@@ -446,6 +446,8 @@
         });
       return;
     }
+
+    
 
     // WooCommerce native cart (IDs may come from SDK open() or from review page postMessage payload)
     var wcPid = _wcProductId || (payload && payload.wcProductId) || null;
@@ -514,6 +516,55 @@
     // No store integration — just complete
     callback(true);
   }
+
+  // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
+  function _refreshShopifyCartUI(sections) {
+    try {
+      if (sections && typeof sections === 'object') {
+        Object.keys(sections).forEach(function (sectionId) {
+          var html = sections[sectionId];
+          if (!html) return;
+          var target = document.getElementById(sectionId);
+          if (target) {
+            var parsed = new DOMParser().parseFromString(html, 'text/html');
+            var inner = parsed.getElementById(sectionId);
+            target.innerHTML = inner ? inner.innerHTML : html;
+            return;
+          }
+          var sectionWrapper = document.getElementById('shopify-section-' + sectionId);
+          if (sectionWrapper) {
+            sectionWrapper.innerHTML = html;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[CustomizerStudio] Cart section render failed:', e);
+    }
+
+    document.dispatchEvent(new CustomEvent('cart:refresh'));
+    document.dispatchEvent(new CustomEvent('cart:build'));
+    document.dispatchEvent(new CustomEvent('cart:updated'));
+    document.dispatchEvent(new CustomEvent('cart-updated'));
+    document.dispatchEvent(new CustomEvent('theme:cart:reload'));
+
+    fetch('/cart.js', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (cart) {
+        document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
+        if (window.Shopify && window.Shopify.onCartUpdate) {
+          try { window.Shopify.onCartUpdate(cart); } catch (_) {}
+        }
+        var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
+        if (drawer && typeof drawer.open === 'function') {
+          try { drawer.open(); } catch (_) {}
+        } else if (drawer && drawer.classList) {
+          drawer.classList.add('active', 'is-open', 'open');
+        }
+      })
+      .catch(function () {});
+  }
+
+
 
   function _closeSummary() {
     if (_summaryOverlay && _summaryOverlay.parentNode) {
