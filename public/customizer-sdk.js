@@ -558,6 +558,25 @@
     return typeof v === 'string' && /^https?:\/\//i.test(v);
   }
 
+  function _reviewUrlForSession(sessionId) {
+    var base = (_config && _config.baseUrl) ? String(_config.baseUrl).replace(/\/+$/, '') : 'https://platform.printonet.com';
+    return base + '/r/' + encodeURIComponent(String(sessionId || ''));
+  }
+
+  function _shopifyCartSectionsToRender() {
+    var ids = [
+      'cart-drawer', 'cart-icon-bubble', 'cart-live-region-text', 'cart-notification',
+      'cart-notification-button', 'cart-notification-product', 'main-cart-items', 'main-cart-footer'
+    ];
+    try {
+      document.querySelectorAll('[id^="shopify-section-"]').forEach(function (el) {
+        var id = String(el.id || '').replace(/^shopify-section-/, '');
+        if (id && /cart|drawer|notification|header/i.test(id) && ids.indexOf(id) < 0) ids.push(id);
+      });
+    } catch (_) {}
+    return ids.join(',');
+  }
+
   function _findCartLineForDesign(cart, meta) {
     if (!cart || !cart.items || !meta) return null;
     var sessionId = meta.sessionId ? String(meta.sessionId) : '';
@@ -652,11 +671,10 @@
 
   function _cartItemReviewUrl(item) {
     var props = item && item.properties ? item.properties : {};
-    var visible = props['View Design'] || props['View design'] || props.view_design;
+    var visible = props.Design || props['View Design'] || props['View design'] || props.view_design;
     if (_isHttpUrl(visible) && _isOurReviewHref(visible)) return visible;
     if (props._customizer_session_id) {
-      var previewBase = (_config && _config.baseUrl) ? String(_config.baseUrl).replace(/\/+$/, '') : 'https://customizerstudio.com';
-      return previewBase + '/review/' + encodeURIComponent(String(props._customizer_session_id));
+      return _reviewUrlForSession(props._customizer_session_id);
     }
     return null;
   }
