@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus } from "lucide-react";
+import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, Code2, CheckCircle2 } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 import { EditProductLogoDialog, type EditableProduct } from "@/components/EditProductLogoDialog";
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
@@ -56,8 +55,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [pushOpen, setPushOpen] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
-  const [manualInstall, setManualInstall] = useState<{ snippet: string; message?: string; pendingConfirmation?: boolean } | null>(null);
+  const [shopifyInstall, setShopifyInstall] = useState<{ snippet: string; message?: string; confirmed: boolean } | null>(null);
   const [snippetCopied, setSnippetCopied] = useState(false);
+  const [confirmingInstall, setConfirmingInstall] = useState(false);
 
   const isCorporate = store.store_type === "corporate";
   const queryKey = ["store_customizer_flags", store.id];
@@ -95,9 +95,15 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           if (data?.manual_install_required) {
             if (!opts?.silent) {
               setSnippetCopied(false);
-              setManualInstall({ snippet: data.snippet || "", message: data.message, pendingConfirmation: true });
+              setShopifyInstall({ snippet: data.snippet || "", message: data.message, confirmed: false });
+              toast({ title: "Action needed", description: "Add the install snippet to your Shopify theme — see the steps above the products list." });
+            } else {
+              setShopifyInstall((prev) => prev ?? { snippet: data.snippet || "", message: data.message, confirmed: false });
             }
             return true;
+          }
+          if (data?.snippet) {
+            setShopifyInstall({ snippet: data.snippet, confirmed: !!data.manual_install_confirmed });
           }
 
         } catch (e) {
@@ -349,6 +355,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   };
 
   const confirmManualInstall = async () => {
+    if (confirmingInstall) return;
+    setConfirmingInstall(true);
     try {
       const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
         body: { storeId: store.id, manualInstallConfirmed: true },
@@ -356,19 +364,126 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       if (error) throw error;
       toast({
         title: "Shopify script marked installed",
-        description: "Resync will no longer show the install instructions for this storefront.",
+        description: "Your storefront is ready — toggle products on/off and they'll sync live.",
       });
-      setManualInstall(null);
+      setShopifyInstall((prev) => (prev ? { ...prev, confirmed: true } : prev));
     } catch (e) {
       toast({
         title: "Could not save confirmation",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
+    } finally {
+      setConfirmingInstall(false);
     }
   };
 
+  // Auto-load Shopify install snippet on mount so the instructions are always
+  // visible inline (no modal). The edge function returns the snippet whether
+  // install is pending or already confirmed.
+  useEffect(() => {
+    if (store.store_type !== "shopify") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("sync-shopify-customizer", {
+          body: { storeId: store.id },
+        });
+        if (cancelled || error || !data?.snippet) return;
+        setShopifyInstall({
+          snippet: data.snippet,
+          message: data.message,
+          confirmed: !!data.manual_install_confirmed && !data.manual_install_required,
+        });
+      } catch {/* silent — panel just won't render */}
+    })();
+    return () => { cancelled = true; };
+  }, [store.id, store.store_type]);
+
+  const copySnippet = async () => {
+    if (!shopifyInstall?.snippet) return;
+    try {
+      await navigator.clipboard.writeText(shopifyInstall.snippet);
+      setSnippetCopied(true);
+      setTimeout(() => setSnippetCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy failed", description: "Select the snippet text and copy manually.", variant: "destructive" });
+    }
+  };
+
+
   return (
+    <div className="space-y-6">
+      {store.store_type === "shopify" && shopifyInstall && (
+        <Card className={shopifyInstall.confirmed ? "border-emerald-500/30 bg-emerald-500/5" : "border-primary/40 bg-primary/5"}>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex items-start gap-3">
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${shopifyInstall.confirmed ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary/15 text-primary"}`}>
+                  {shopifyInstall.confirmed ? <CheckCircle2 className="h-5 w-5" /> : <Code2 className="h-5 w-5" />}
+                </div>
+                <div>
+                  <CardTitle className="text-base">
+                    {shopifyInstall.confirmed ? "Shopify install script — installed" : "One-time Shopify install script"}
+                  </CardTitle>
+                  <CardDescription className="mt-1 max-w-2xl">
+                    {shopifyInstall.confirmed
+                      ? "The customizer script is live on your Shopify theme. Toggle products below — changes sync instantly. If you ever change themes, paste the snippet again."
+                      : (shopifyInstall.message || "Paste this snippet into your Shopify theme once. After that, every product toggle below syncs live — no further setup needed.")}
+                  </CardDescription>
+                </div>
+              </div>
+              {shopifyInstall.confirmed && <Badge variant="secondary" className="gap-1"><Check className="h-3 w-3" /> Installed</Badge>}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Installation steps</h4>
+              <ol className="space-y-2.5 text-sm">
+                {[
+                  <>In your Shopify admin, open <strong>Online Store → Themes</strong>.</>,
+                  <>On your live theme, click <strong>⋯ → Edit code</strong>.</>,
+                  <>Under <strong>Layout</strong>, open <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">theme.liquid</code>.</>,
+                  <>Paste the snippet below just before the closing <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">&lt;/head&gt;</code> tag and click <strong>Save</strong>.</>,
+                  <>Come back here and click <strong>I added the script</strong> — you're done.</>,
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">{i + 1}</span>
+                    <span className="text-muted-foreground pt-0.5">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold">Snippet</h4>
+                <Button size="sm" variant="outline" onClick={copySnippet}>
+                  {snippetCopied ? <><Check className="h-3.5 w-3.5 mr-1.5" />Copied</> : <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy snippet</>}
+                </Button>
+              </div>
+              <Textarea
+                readOnly
+                value={shopifyInstall.snippet}
+                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                className="font-mono text-xs h-24 bg-background"
+              />
+            </div>
+            {!shopifyInstall.confirmed && (
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="https://admin.shopify.com/" target="_blank" rel="noopener noreferrer">
+                    Open Shopify admin <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                  </a>
+                </Button>
+                <Button size="sm" onClick={confirmManualInstall} disabled={confirmingInstall}>
+                  {confirmingInstall && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                  I added the script
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -574,61 +689,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         }}
         onSaved={() => qc.invalidateQueries({ queryKey })}
       />
-      <Dialog open={!!manualInstall} onOpenChange={(v) => { if (!v) setManualInstall(null); }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>One-time Shopify theme install</DialogTitle>
-            <DialogDescription>
-              {manualInstall?.message ||
-                "Your Shopify plan blocks automatic script installation. Add this snippet to your theme once — product toggles will then sync live."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Installation steps</h4>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>In Shopify admin, go to <strong>Online Store → Themes</strong>.</li>
-                <li>On your live theme, click <strong>⋯ → Edit code</strong>.</li>
-                <li>Under <strong>Layout</strong>, open <code className="px-1 rounded bg-muted">theme.liquid</code>.</li>
-                <li>Paste the snippet below right before the closing <code className="px-1 rounded bg-muted">&lt;/head&gt;</code> tag.</li>
-                <li>Click <strong>Save</strong>. You're done — no further resyncs needed.</li>
-              </ol>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold">Snippet</h4>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(manualInstall?.snippet || "");
-                      setSnippetCopied(true);
-                      setTimeout(() => setSnippetCopied(false), 2000);
-                    } catch {
-                      toast({ title: "Copy failed", description: "Select the text and copy manually.", variant: "destructive" });
-                    }
-                  }}
-                >
-                  {snippetCopied ? <><Check className="h-3.5 w-3.5 mr-1.5" />Copied</> : <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</>}
-                </Button>
-              </div>
-              <Textarea
-                readOnly
-                value={manualInstall?.snippet || ""}
-                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                className="font-mono text-xs h-32"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setManualInstall(null)}>Close</Button>
-            {manualInstall?.pendingConfirmation && (
-              <Button onClick={confirmManualInstall}>I added the script</Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
+    </div>
   );
 }
