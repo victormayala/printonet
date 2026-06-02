@@ -690,5 +690,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         onSaved={() => qc.invalidateQueries({ queryKey })}
       />
     </Card>
+    </div>
   );
 }
