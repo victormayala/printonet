@@ -368,8 +368,10 @@
 
   // --- Add to cart (Shopify, WooCommerce, or generic) ---
   function _addToCart(payload, callback) {
+    var shopifyId = _shopifyVariantId || (payload && payload.shopifyVariantId) || null;
+
     // Shopify native cart
-    if (_shopifyVariantId && window.Shopify) {
+    if (shopifyId) {
       var properties = {};
       if (payload.sessionId) properties['_customizer_session_id'] = payload.sessionId;
       if (payload.sides && payload.sides.length > 0) {
@@ -388,8 +390,8 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: _shopifyVariantId,
-          quantity: 1,
+          id: shopifyId,
+          quantity: (payload && payload.quantity) || 1,
           properties: properties,
         }),
         credentials: 'same-origin',
