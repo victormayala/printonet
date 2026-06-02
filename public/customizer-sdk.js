@@ -557,7 +557,17 @@
     if (!_isHttpUrl(designUrl)) return;
     var productImage = cartItem && (cartItem.image || cartItem.featured_image && cartItem.featured_image.url || '');
     var containers = [];
+    var itemKey = cartItem && cartItem.key ? String(cartItem.key) : '';
     var lineSelectors = '.cart-item, [data-cart-item], [data-cart-item-key], cart-drawer-items li, cart-notification, .cart-notification-product, tr, li';
+    if (itemKey) {
+      try {
+        var encodedKey = encodeURIComponent(itemKey);
+        document.querySelectorAll('[data-cart-item-key="' + _cssEscape(itemKey) + '"], [data-key="' + _cssEscape(itemKey) + '"], [data-line-item-key="' + _cssEscape(itemKey) + '"], a[href*="' + _cssEscape(itemKey) + '"], a[href*="' + _cssEscape(encodedKey) + '"]').forEach(function (el) {
+          var row = el.closest(lineSelectors) || el;
+          if (containers.indexOf(row) < 0) containers.push(row);
+        });
+      } catch (_) {}
+    }
     try {
       document.querySelectorAll(lineSelectors).forEach(function (el) {
         var html = el.innerHTML || '';
@@ -597,6 +607,28 @@
           img.setAttribute('data-customizer-design-thumbnail', 'true');
         });
       } catch (_) {}
+    });
+  }
+
+  function _cartItemDesignUrl(item) {
+    var props = item && item.properties ? item.properties : {};
+    if (_isHttpUrl(props.Design)) return props.Design;
+    if (_isHttpUrl(props._customizer_design_url)) return props._customizer_design_url;
+    try {
+      var sides = props._customizer_sides ? JSON.parse(props._customizer_sides) : [];
+      if (Array.isArray(sides) && sides.length) {
+        var front = sides.find(function (s) { return s && s.view === 'front'; }) || sides[0];
+        if (_isHttpUrl(front && (front.preview_url || front.url))) return front.preview_url || front.url;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function _applyDesignThumbnailsFromCart(cart) {
+    if (!cart || !Array.isArray(cart.items)) return;
+    cart.items.forEach(function (item) {
+      var designUrl = _cartItemDesignUrl(item);
+      if (designUrl) _replaceCartLineImages(designUrl, item);
     });
   }
 
@@ -643,6 +675,7 @@
         var designUrl = meta && meta.designUrl;
         if (!designUrl && designedLine && designedLine.properties) designUrl = designedLine.properties.Design;
         _replaceCartLineImages(designUrl, designedLine);
+        _applyDesignThumbnailsFromCart(cart);
         document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
