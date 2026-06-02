@@ -768,9 +768,13 @@
     if (!href) return false;
     var base = (_config && _config.baseUrl ? String(_config.baseUrl) : 'https://customizerstudio.com').replace(/\/+$/, '');
     if (href.indexOf(base + '/review/') === 0) return true;
+    if (href.indexOf(base + '/r/') === 0) return true;
     if (href.indexOf('://customizerstudio.com/review/') !== -1) return true;
+    if (href.indexOf('://customizerstudio.com/r/') !== -1) return true;
     if (href.indexOf('://printonet.com/review/') !== -1) return true;
+    if (href.indexOf('://printonet.com/r/') !== -1) return true;
     if (href.indexOf('://platform.printonet.com/review/') !== -1) return true;
+    if (href.indexOf('://platform.printonet.com/r/') !== -1) return true;
     return false;
   }
 
@@ -779,7 +783,7 @@
   function _decorateShopifyDesignLinks() {
     if (!_isShopifyStore()) return;
     try {
-      var anchors = document.querySelectorAll('a[href*="/review/"]');
+      var anchors = document.querySelectorAll('a[href*="/review/"], a[href*="/r/"]');
       anchors.forEach(function (a) {
         if (a.getAttribute('data-printonet-design-link') === '1') return;
         if (!_isOurReviewHref(a.getAttribute('href') || '')) return;
@@ -799,7 +803,7 @@
         var dd = a.closest('dd');
         if (dd) {
           var dt = dd.previousElementSibling;
-          if (dt && dt.tagName === 'DT' && /view design/i.test(dt.textContent || '')) {
+          if (dt && dt.tagName === 'DT' && /^(view\s*)?design$/i.test((dt.textContent || '').trim())) {
             dt.style.display = 'none';
           }
           // Some themes wrap the whole property in <li>; also strip a leading "View design:" text in the same <dd>.
@@ -808,12 +812,12 @@
         var prev = a.previousSibling;
         while (prev && prev.nodeType === 3) {
           var nv = prev.nodeValue || '';
-          if (/view\s*design\s*:?\s*$/i.test(nv)) prev.nodeValue = '';
+          if (/(view\s*)?design\s*:?\s*$/i.test(nv)) prev.nodeValue = '';
           prev = prev.previousSibling;
         }
         // Some themes render label as <span> sibling
         var prevEl = a.previousElementSibling;
-        if (prevEl && /^view\s*design\s*:?\s*$/i.test((prevEl.textContent || '').trim())) {
+        if (prevEl && /^(view\s*)?design\s*:?\s*$/i.test((prevEl.textContent || '').trim())) {
           prevEl.style.display = 'none';
         }
       });
