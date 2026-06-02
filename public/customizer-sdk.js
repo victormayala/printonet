@@ -902,30 +902,7 @@
   // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
   function _refreshShopifyCartUI(sections, meta) {
     try {
-      if (sections && typeof sections === 'object') {
-        Object.keys(sections).forEach(function (sectionId) {
-          var html = sections[sectionId];
-          if (!html) return;
-          var parsed = new DOMParser().parseFromString(html, 'text/html');
-          var target = document.getElementById(sectionId);
-          if (target) {
-            var inner = parsed.getElementById(sectionId);
-            target.innerHTML = inner ? inner.innerHTML : html;
-            return;
-          }
-          var sectionWrapper = document.getElementById('shopify-section-' + sectionId);
-          if (sectionWrapper) {
-            var parsedWrapper = parsed.getElementById('shopify-section-' + sectionId);
-            sectionWrapper.innerHTML = parsedWrapper ? parsedWrapper.innerHTML : html;
-            return;
-          }
-          var incomingDrawer = parsed.querySelector('cart-drawer, cart-notification');
-          var currentDrawer = incomingDrawer ? document.querySelector(incomingDrawer.tagName.toLowerCase()) : null;
-          if (incomingDrawer && currentDrawer) {
-            currentDrawer.innerHTML = incomingDrawer.innerHTML;
-          }
-        });
-      }
+      _renderShopifyCartSections(sections);
     } catch (e) {
       console.warn('[CustomizerStudio] Cart section render failed:', e);
     }
@@ -955,19 +932,20 @@
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
         }
-        var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
+        var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification, #CartDrawer');
         if (drawer && typeof drawer.renderContents === 'function' && meta && meta.addResponse) {
-          try { drawer.renderContents(meta.addResponse); } catch (_) {}
+          try { drawer.renderContents(Object.assign({}, meta.addResponse, { sections: sections || {} })); } catch (_) {}
         }
-        if (drawer && typeof drawer.open === 'function') {
-          try { drawer.open(); } catch (_) {}
-        } else if (drawer && drawer.classList) {
-          drawer.classList.add('active', 'is-open', 'open');
-        }
-        var toggles = document.querySelectorAll('[aria-controls="CartDrawer"], [aria-controls="cart-drawer"], [data-cart-toggle], [data-drawer-open="cart"], button.header__icon--cart');
-        if (drawer && toggles.length) {
-          try { toggles[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (_) {}
-        }
+        _openShopifyCartDrawer();
+        fetch('/?sections=' + encodeURIComponent(_shopifyCartSectionsToRender()), { credentials: 'same-origin' })
+          .then(function (r) { return r.json(); })
+          .then(function (freshSections) {
+            _renderShopifyCartSections(freshSections);
+            _applyDesignThumbnailsFromCart(cart);
+            _decorateShopifyDesignLinks();
+            _openShopifyCartDrawer();
+          })
+          .catch(function () {});
       })
       .catch(function () {});
   }
