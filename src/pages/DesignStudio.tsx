@@ -2713,7 +2713,7 @@ export default function DesignStudio({
       return result;
     } catch (err) {
       console.error("Export error:", err);
-      alert("Export failed. Please try again.");
+      toast.error("Export failed. Please try again.");
     } finally {
       setExporting(false);
     }
