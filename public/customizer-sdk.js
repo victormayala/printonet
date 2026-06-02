@@ -795,14 +795,39 @@
     return '$' + ((Number(cents || 0) / 100).toFixed(2));
   }
 
+  function _drawerHasRenderedItems(drawer) {
+    if (!drawer) return false;
+    try {
+      var lineSelectors = [
+        'cart-drawer-items .cart-item',
+        '.cart-items .cart-item',
+        '.cart-drawer__items .cart-item',
+        '[data-cart-item]',
+        '.cart__item',
+        '.cart-item',
+        'li.line-item',
+        '.line-item',
+        'tr.cart-item',
+      ];
+      for (var i = 0; i < lineSelectors.length; i++) {
+        if (drawer.querySelector(lineSelectors[i])) return true;
+      }
+      if (drawer.querySelector('form[action="/cart"] img, form[action*="/cart"] img')) return true;
+    } catch (_) {}
+    return false;
+  }
+
   function _ensureVisibleShopifyCartLine(cart, meta) {
     var drawer = _shopifyDrawerElement();
     if (!drawer || !cart || !Array.isArray(cart.items) || cart.items.length === 0) return;
+    // If the theme has already rendered any cart line, never override its markup/CSS.
+    if (_drawerHasRenderedItems(drawer)) {
+      try { drawer.querySelectorAll('[data-printonet-fallback-cart-line="1"]').forEach(function (el) { el.remove(); }); } catch (_) {}
+      return;
+    }
     var item = _findCartLineForDesign(cart, meta) || cart.items[cart.items.length - 1];
     if (!item) return;
     var title = String(item.product_title || item.title || 'Custom product');
-    var drawerText = String(drawer.textContent || '').toLowerCase();
-    if (title && drawerText.indexOf(title.toLowerCase()) >= 0) return;
 
     try { drawer.querySelectorAll('[data-printonet-fallback-cart-line="1"]').forEach(function (el) { el.remove(); }); } catch (_) {}
 
