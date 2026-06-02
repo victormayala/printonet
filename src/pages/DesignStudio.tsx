@@ -2161,7 +2161,7 @@ export default function DesignStudio({
       setAiPrompt("");
     } catch (err: any) {
       console.error("AI generation error:", err);
-      alert(err.message || "Failed to generate design. Try again.");
+      toast.error(err.message || "Failed to generate design. Try again.");
     } finally {
       setAiGenerating(false);
     }
