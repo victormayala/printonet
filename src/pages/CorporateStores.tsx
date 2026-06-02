@@ -651,12 +651,12 @@ export default function CorporateStores() {
                         <TableCell>
                           {s.custom_domain ? (
                             <a
-                              href={`https://${s.custom_domain}`}
+                              href={/^https?:\/\//i.test(s.custom_domain) ? s.custom_domain : `https://${s.custom_domain}`}
                               target="_blank"
                               rel="noreferrer"
                               className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                             >
-                              {s.custom_domain}
+                              {s.custom_domain.replace(/^https?:\/\//i, "")}
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : s.store_type === "shopify" || s.store_type === "woocommerce" ? (
