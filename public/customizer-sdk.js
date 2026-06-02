@@ -1062,6 +1062,7 @@
     properties['_customizer_session_id'] = newItem.sessionId;
     if (newItem.printFileUrl) properties['_customizer_print_file_url'] = newItem.printFileUrl;
     if (newItem.designLayersUrl) properties['_customizer_layers_url'] = newItem.designLayersUrl;
+    properties.Design = _reviewUrlForSession(newItem.sessionId);
     if (newItem.previewImage) {
       properties['_customizer_design_url'] = newItem.previewImage;
       properties['_customizer_sides'] = JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]);
@@ -1084,14 +1085,7 @@
           console.log('[CustomizerStudio] Shopify sync error:', data.description || data.message);
           return;
         }
-        // Trigger Shopify cart refresh events
-        document.dispatchEvent(new CustomEvent('cart:refresh'));
-        if (window.Shopify && window.Shopify.onCartUpdate) {
-          fetch('/cart.js', { credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (cart) { window.Shopify.onCartUpdate(cart); })
-            .catch(function () {});
-        }
+        _refreshShopifyCartUI(data && data.sections, { sessionId: newItem.sessionId, variantId: String(newItem.shopifyVariantId), lineKey: data && data.key, designUrl: newItem.previewImage || null, addResponse: data || null });
       })
       .catch(function (err) {
         console.error('[CustomizerStudio] Shopify cart sync failed:', err);
