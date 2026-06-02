@@ -908,6 +908,19 @@
   // theme's <cart-drawer> / <cart-notification> via renderContents, then open it.
   // We deliberately do NOT re-render section HTML ourselves (that strips the
   // theme's CSS hooks/event wiring and produces a "broken" blank drawer).
+  function _clearShopifyCartEmptyState() {
+    try {
+      document.querySelectorAll('cart-drawer.is-empty, cart-items.is-empty, cart-notification.is-empty, .cart-drawer.is-empty, .cart.is-empty, .is-empty').forEach(function (el) {
+        // Only strip is-empty from cart-related containers to avoid touching unrelated UI.
+        var tag = (el.tagName || '').toLowerCase();
+        if (tag === 'cart-drawer' || tag === 'cart-items' || tag === 'cart-notification' ||
+            el.matches('.cart-drawer, .cart, .cart-items, .cart-notification, .drawer__inner, .cart__contents, .cart__footer')) {
+          el.classList.remove('is-empty');
+        }
+      });
+    } catch (_) {}
+  }
+
   function _refreshShopifyCartUI(sections, meta) {
     var addResponse = (meta && meta.addResponse) || {};
     var mergedResponse = Object.assign({}, addResponse, {
@@ -924,6 +937,7 @@
         console.warn('[CustomizerStudio] drawer.renderContents failed:', e);
       }
     }
+    _clearShopifyCartEmptyState();
 
     // Broadcast standard theme events so cart bubbles / counters update.
     var cartEvents = ['cart:refresh', 'cart:build', 'cart:updated', 'cart-updated', 'theme:cart:reload'];
