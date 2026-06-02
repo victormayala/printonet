@@ -53,10 +53,10 @@ function resolveImage(url?: string) {
   return `${STOREFRONT_PUBLIC_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
-export function useStoreTemplates(storeId: string | null | undefined) {
+export function useStoreTemplates(storeId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: ["cms-templates", storeId],
-    enabled: !!storeId,
+    enabled: enabled && !!storeId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const res = await cms<ListTemplatesResponse>(storeId!, "list-templates", {});
