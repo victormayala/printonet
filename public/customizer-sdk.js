@@ -434,10 +434,10 @@
       if (httpsSides.length > 0) {
         properties['_customizer_sides'] = JSON.stringify(httpsSides);
       }
-      // Single visible, short Printonet review link shoppers can click to preview their design.
-      // Use the shortest supported route so checkout fallback text stays compact.
+      // Keep checkout clean: Shopify checkout cannot run our SDK, so expose a short
+      // message there and let the SDK inject the actual cart/drawer preview link.
       if (payload.sessionId) {
-        properties['Design'] = _reviewUrlForSession(payload.sessionId);
+        properties['Design preview'] = 'View the design preview in the cart before checkout.';
       }
 
       // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
@@ -719,11 +719,11 @@
     if (!container) return;
     try {
       container.querySelectorAll('dt, dd, li, p, span, small, div').forEach(function (el) {
-        if (!el || el.getAttribute('data-printonet-design-link-wrap') === '1' || el.querySelector('[data-printonet-design-link="1"]')) return;
+        if (!el || el.getAttribute('data-printonet-design-link-wrap') === '1' || el.closest('[data-printonet-design-link="1"]') || el.querySelector('[data-printonet-design-link="1"]')) return;
         if (el === container || el.querySelector('img, button, input, select, quantity-input, cart-remove-button')) return;
         var text = (el.textContent || '').trim();
         if (!text) return;
-        var isRawDesign = (reviewUrl && text.indexOf(reviewUrl) >= 0) || /^view\s*design\s*:?/i.test(text) || /^design\s*:\s*https?:\/\//i.test(text);
+        var isRawDesign = (reviewUrl && text.indexOf(reviewUrl) >= 0) || /^view\s*design\s*:?/i.test(text) || /^design\s*:\s*https?:\/\//i.test(text) || (/^design\s*preview\s*:?/i.test(text) && /cart/i.test(text));
         if (!isRawDesign) return;
         var className = String(el.className || '');
         var tag = (el.tagName || '').toUpperCase();
@@ -1062,7 +1062,7 @@
     properties['_customizer_session_id'] = newItem.sessionId;
     if (newItem.printFileUrl) properties['_customizer_print_file_url'] = newItem.printFileUrl;
     if (newItem.designLayersUrl) properties['_customizer_layers_url'] = newItem.designLayersUrl;
-    properties.Design = _reviewUrlForSession(newItem.sessionId);
+    properties['Design preview'] = 'View the design preview in the cart before checkout.';
     if (newItem.previewImage) {
       properties['_customizer_design_url'] = newItem.previewImage;
       properties['_customizer_sides'] = JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]);
