@@ -69,10 +69,25 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     // tenant_slug and no hosted storefront. Their injected store plugin/loader
     // reads these DB flags live, so there is no hosted storefront snapshot to push.
     if (!store.tenant_slug) {
+      if (store.store_type === "shopify") {
+        try {
+          const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
+            body: { storeId: store.id },
+          });
+          if (error) throw error;
+        } catch (e) {
+          toast({
+            title: "Shopify resync failed",
+            description: e instanceof Error ? e.message : String(e),
+            variant: "destructive",
+          });
+          return false;
+        }
+      }
       if (!opts?.silent) {
         const platform = store.store_type === "shopify" ? "Shopify" : store.store_type === "woocommerce" ? "WooCommerce" : "this store";
         toast({
-          title: "Customizer settings are live",
+          title: store.store_type === "shopify" ? "Shopify storefront resynced" : "Customizer settings are live",
           description: `${platform} reads enabled products directly from Printonet. Refresh the storefront product page to see changes.`,
         });
       }
