@@ -569,6 +569,15 @@
       id = String(id || '').replace(/^shopify-section-/, '');
       if (id && ids.indexOf(id) < 0) ids.push(id);
     }
+    var nativeDrawer = _shopifyDrawerElement();
+    if (nativeDrawer && typeof nativeDrawer.getSectionsToRender === 'function') {
+      try {
+        nativeDrawer.getSectionsToRender().forEach(function (section) {
+          add(section && section.id);
+        });
+        if (ids.length > 0) return ids.slice(0, 5);
+      } catch (_) {}
+    }
     try {
       document.querySelectorAll('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification').forEach(function (el) {
         var wrap = el.closest('[id^="shopify-section-"]');
@@ -772,8 +781,9 @@
   }
 
   function _shopifyDrawerElement() {
-    return document.querySelector('cart-drawer, #CartDrawer, [data-cart-drawer], .cart-drawer') ||
-      document.querySelector('cart-notification, .cart-notification');
+    return document.querySelector('cart-drawer') ||
+      document.querySelector('cart-notification') ||
+      document.querySelector('#CartDrawer, [data-cart-drawer], .cart-drawer, .cart-notification');
   }
 
   function _refreshExistingShopifyDesignThumbnails() {
@@ -948,13 +958,13 @@
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
         }
 
-        // Make sure the drawer actually opens for themes whose renderContents
-        // doesn't auto-open. Skip if there's no drawer element at all (we fall
-        // back to a /cart navigation elsewhere).
-        if (nativeRendered || drawer) _openShopifyCartDrawer();
+        // If the theme accepted renderContents, let it control opening and CSS
+        // state exactly like its own product form. Only click/open as fallback
+        // for themes without a native renderer.
+        if (!nativeRendered && drawer) _openShopifyCartDrawer();
       })
       .catch(function () {
-        if (nativeRendered || drawer) _openShopifyCartDrawer();
+        if (!nativeRendered && drawer) _openShopifyCartDrawer();
       });
   }
 
