@@ -915,8 +915,14 @@
 
   // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
   function _refreshShopifyCartUI(sections, meta) {
+    var handledByNativeDrawer = false;
     try {
-      _renderShopifyCartSections(sections);
+      var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification, #CartDrawer');
+      if (drawer && typeof drawer.renderContents === 'function' && meta && meta.addResponse) {
+        drawer.renderContents(Object.assign({}, meta.addResponse, { sections: sections || meta.addResponse.sections || {} }));
+        handledByNativeDrawer = true;
+      }
+      if (!handledByNativeDrawer) _renderShopifyCartSections(sections);
     } catch (e) {
       console.warn('[CustomizerStudio] Cart section render failed:', e);
     }
@@ -946,15 +952,11 @@
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
         }
-        var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification, #CartDrawer');
-        if (drawer && typeof drawer.renderContents === 'function' && meta && meta.addResponse) {
-          try { drawer.renderContents(Object.assign({}, meta.addResponse, { sections: sections || {} })); } catch (_) {}
-        }
         _openShopifyCartDrawer();
-        fetch('/?sections=' + encodeURIComponent(_shopifyCartSectionsToRender()), { credentials: 'same-origin' })
+        fetch('/?sections=' + _shopifyCartSectionsToRender(), { credentials: 'same-origin' })
           .then(function (r) { return r.json(); })
           .then(function (freshSections) {
-            _renderShopifyCartSections(freshSections);
+            if (!handledByNativeDrawer) _renderShopifyCartSections(freshSections);
             _applyDesignThumbnailsFromCart(cart);
             _decorateShopifyDesignLinks();
             _openShopifyCartDrawer();
