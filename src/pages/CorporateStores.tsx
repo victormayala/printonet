@@ -660,13 +660,13 @@ export default function CorporateStores() {
               <TableRow>
                 <TableHead>Store</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Payments</TableHead>
-                {isSuperAdmin && <TableHead>Platform fee</TableHead>}
+                {variant !== "external" && <TableHead>Payments</TableHead>}
+                {variant !== "external" && isSuperAdmin && <TableHead>Platform fee</TableHead>}
                 <TableHead>Site URL</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            {renderStoreRows(rows)}
+            {renderStoreRows(rows, variant)}
           </Table>
         )}
       </CardContent>
