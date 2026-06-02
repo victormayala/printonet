@@ -2482,7 +2482,7 @@ export default function DesignStudio({
                 if (typeof obj === "object") {
                   for (const key of Object.keys(obj)) {
                     if (typeof obj[key] === "string" && obj[key].startsWith("blob:")) {
-                      obj[key] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
+                      obj[key] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
                     } else if (typeof obj[key] === "object") {
                       replaceBlobUrls(obj[key]);
                     }
