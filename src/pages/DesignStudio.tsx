@@ -753,14 +753,7 @@ export default function DesignStudio({
 
     const outVariant = initialDesignOutput?.variant;
     if (outVariant && (outVariant.hex || outVariant.colorName || outVariant.color)) {
-      setSelectedVariant({
-        color: outVariant.color || outVariant.colorName || "",
-        colorName: outVariant.colorName || outVariant.color || "",
-        hex: outVariant.hex || "#000000",
-        image: outVariant.image,
-        gallery: Array.isArray(outVariant.gallery) ? outVariant.gallery : undefined,
-        sizes: outVariant.sizes,
-      });
+      setSelectedVariant(normalizeProductVariant(outVariant, 0));
       return;
     }
 
@@ -772,14 +765,7 @@ export default function DesignStudio({
       if (wooColor) {
         const matched = matchVariantFromWooColor(variants as any, wooColor);
         if (matched) {
-          setSelectedVariant({
-            color: matched.color || matched.colorName,
-            colorName: matched.colorName || matched.color,
-            hex: matched.hex,
-            image: (matched as any).image,
-            gallery: Array.isArray((matched as any).gallery) ? ((matched as any).gallery as string[]) : undefined,
-            sizes: (matched as any).sizes,
-          } as any);
+          setSelectedVariant(normalizeProductVariant(matched, 0));
         }
       }
     }
@@ -2913,7 +2899,7 @@ export default function DesignStudio({
                               aria-hidden
                             />
                             <span className="truncate text-left text-sm font-medium">
-                              {selectedVariant.colorName || selectedVariant.color}
+                              {selectedVariant.colorName || selectedVariant.color || "Selected color"}
                             </span>
                           </>
                         ) : (
@@ -3388,7 +3374,7 @@ export default function DesignStudio({
             </div>
           </div>
           <div className="mt-2 text-center text-xs text-muted-foreground">
-            {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
+            {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName || selectedVariant.color}` : ""}
           </div>
         </div>
       </div>
