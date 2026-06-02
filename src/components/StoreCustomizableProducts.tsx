@@ -471,8 +471,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             {!shopifyInstall.confirmed && (
               <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
                 <Button variant="ghost" size="sm" asChild>
-                  <a href={`https://${(store.store_url || "").replace(/^https?:\/\//, "").replace(/\/+$/, "")}/admin/themes`} target="_blank" rel="noopener noreferrer">
-                    Open Shopify themes <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                  <a href="https://admin.shopify.com/" target="_blank" rel="noopener noreferrer">
+                    Open Shopify admin <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
                   </a>
                 </Button>
                 <Button size="sm" onClick={confirmManualInstall} disabled={confirmingInstall}>
