@@ -108,6 +108,11 @@
     _config.cartUrl = options.cartUrl || '';
     _config.storeUrl = options.storeUrl || '';
     _config.woocommerceSiteUrl = options.woocommerceSiteUrl || '';
+    if (_isShopifyStore()) {
+      _refreshExistingShopifyDesignThumbnails();
+      setTimeout(_refreshExistingShopifyDesignThumbnails, 600);
+      setTimeout(_refreshExistingShopifyDesignThumbnails, 1600);
+    }
   }
 
   function open(options) {
@@ -402,7 +407,6 @@
       if (payload.designLayersUrl) properties['_customizer_layers_url'] = payload.designLayersUrl;
       // Only HTTPS URLs can render in Shopify cart line items — base64 data URLs are too long
       // and break theme rendering / get truncated by Shopify.
-      function _isHttpUrl(v) { return typeof v === 'string' && /^https?:\/\//i.test(v); }
       var httpsSides = [];
       if (payload.sides && payload.sides.length > 0) {
         for (var i = 0; i < payload.sides.length; i++) {
@@ -451,7 +455,12 @@
             callback(false);
             return;
           }
-          _refreshShopifyCartUI(data && data.sections);
+          _refreshShopifyCartUI(data && data.sections, {
+            sessionId: payload && payload.sessionId,
+            variantId: String(shopifyId),
+            lineKey: data && data.key,
+            designUrl: frontHttps || null,
+          });
           callback(true);
         })
         .catch(function (err) {
@@ -531,8 +540,119 @@
     callback(true);
   }
 
+  function _isHttpUrl(v) {
+    return typeof v === 'string' && /^https?:\/\//i.test(v);
+  }
+
+  function _findCartLineForDesign(cart, meta) {
+    if (!cart || !cart.items || !meta) return null;
+    var sessionId = meta.sessionId ? String(meta.sessionId) : '';
+    var variantId = meta.variantId ? String(meta.variantId) : '';
+    for (var i = 0; i < cart.items.length; i++) {
+      var item = cart.items[i];
+      var props = item && item.properties ? item.properties : {};
+      var propSession = props._customizer_session_id ? String(props._customizer_session_id) : '';
+      if (sessionId && propSession === sessionId) return item;
+      if (variantId && String(item && item.variant_id) === variantId && props.Design) return item;
+    }
+    return null;
+  }
+
+  function _replaceCartLineImages(designUrl, cartItem) {
+    if (!_isHttpUrl(designUrl)) return;
+    var productImage = cartItem && (cartItem.image || cartItem.featured_image && cartItem.featured_image.url || '');
+    var containers = [];
+    var itemKey = cartItem && cartItem.key ? String(cartItem.key) : '';
+    var lineSelectors = '.cart-item, [data-cart-item], [data-cart-item-key], cart-drawer-items li, cart-notification, .cart-notification-product, tr, li';
+    if (itemKey) {
+      try {
+        var encodedKey = encodeURIComponent(itemKey);
+        document.querySelectorAll('[data-cart-item-key="' + _cssEscape(itemKey) + '"], [data-key="' + _cssEscape(itemKey) + '"], [data-line-item-key="' + _cssEscape(itemKey) + '"], a[href*="' + _cssEscape(itemKey) + '"], a[href*="' + _cssEscape(encodedKey) + '"]').forEach(function (el) {
+          var row = el.closest(lineSelectors) || el;
+          if (containers.indexOf(row) < 0) containers.push(row);
+        });
+      } catch (_) {}
+    }
+    try {
+      document.querySelectorAll(lineSelectors).forEach(function (el) {
+        var html = el.innerHTML || '';
+        var text = el.textContent || '';
+        if (html.indexOf(designUrl) >= 0 || text.indexOf(designUrl) >= 0) containers.push(el);
+      });
+    } catch (_) {}
+
+    var seen = [];
+    containers.forEach(function (el) {
+      try {
+        el.querySelectorAll('img').forEach(function (img) {
+          if (seen.indexOf(img) >= 0) return;
+          seen.push(img);
+          img.src = designUrl;
+          img.srcset = '';
+          img.setAttribute('src', designUrl);
+          img.setAttribute('data-customizer-design-thumbnail', 'true');
+        });
+      } catch (_) {}
+    });
+    if (seen.length > 0) return;
+
+    var selectors = [
+      'img[src="' + _cssEscape(productImage) + '"]',
+    ];
+    var seen = [];
+    selectors.forEach(function (selector) {
+      if (!selector || selector === 'img[src=""]') return;
+      try {
+        document.querySelectorAll(selector).forEach(function (img) {
+          if (seen.indexOf(img) >= 0) return;
+          seen.push(img);
+          img.src = designUrl;
+          img.srcset = '';
+          img.setAttribute('src', designUrl);
+          img.setAttribute('data-customizer-design-thumbnail', 'true');
+        });
+      } catch (_) {}
+    });
+  }
+
+  function _cartItemDesignUrl(item) {
+    var props = item && item.properties ? item.properties : {};
+    if (_isHttpUrl(props.Design)) return props.Design;
+    if (_isHttpUrl(props._customizer_design_url)) return props._customizer_design_url;
+    try {
+      var sides = props._customizer_sides ? JSON.parse(props._customizer_sides) : [];
+      if (Array.isArray(sides) && sides.length) {
+        var front = sides.find(function (s) { return s && s.view === 'front'; }) || sides[0];
+        if (_isHttpUrl(front && (front.preview_url || front.url))) return front.preview_url || front.url;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function _applyDesignThumbnailsFromCart(cart) {
+    if (!cart || !Array.isArray(cart.items)) return;
+    cart.items.forEach(function (item) {
+      var designUrl = _cartItemDesignUrl(item);
+      if (designUrl) _replaceCartLineImages(designUrl, item);
+    });
+  }
+
+  function _refreshExistingShopifyDesignThumbnails() {
+    if (!_isShopifyStore()) return;
+    fetch('/cart.js', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(_applyDesignThumbnailsFromCart)
+      .catch(function () {});
+  }
+
+  function _cssEscape(value) {
+    if (!value) return '';
+    if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
+    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
   // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
-  function _refreshShopifyCartUI(sections) {
+  function _refreshShopifyCartUI(sections, meta) {
     try {
       if (sections && typeof sections === 'object') {
         Object.keys(sections).forEach(function (sectionId) {
@@ -564,6 +684,11 @@
     fetch('/cart.js', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (cart) {
+        var designedLine = _findCartLineForDesign(cart, meta);
+        var designUrl = meta && meta.designUrl;
+        if (!designUrl && designedLine && designedLine.properties) designUrl = designedLine.properties.Design;
+        _replaceCartLineImages(designUrl, designedLine);
+        _applyDesignThumbnailsFromCart(cart);
         document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
