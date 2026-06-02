@@ -402,7 +402,6 @@
       if (payload.designLayersUrl) properties['_customizer_layers_url'] = payload.designLayersUrl;
       // Only HTTPS URLs can render in Shopify cart line items — base64 data URLs are too long
       // and break theme rendering / get truncated by Shopify.
-      function _isHttpUrl(v) { return typeof v === 'string' && /^https?:\/\//i.test(v); }
       var httpsSides = [];
       if (payload.sides && payload.sides.length > 0) {
         for (var i = 0; i < payload.sides.length; i++) {
@@ -451,7 +450,11 @@
             callback(false);
             return;
           }
-          _refreshShopifyCartUI(data && data.sections);
+          _refreshShopifyCartUI(data && data.sections, {
+            sessionId: payload && payload.sessionId,
+            variantId: String(shopifyId),
+            designUrl: frontHttps || null,
+          });
           callback(true);
         })
         .catch(function (err) {
