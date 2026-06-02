@@ -361,10 +361,7 @@ export default function ReviewDesign() {
       return;
     }
 
-    // Default path (Shopify, hosted, or no linked store): add to local cart.
-    // The SDK on the parent storefront listens for the broadcast "cart-updated"
-    // postMessage and uses `shopifyVariantId` to call Shopify's /cart/add.js
-    // with the design metadata as line-item properties.
+    // Hosted/no linked store path: add to Printonet's local cart.
     addItem({
       sessionId: sessionId || "",
       productName,
