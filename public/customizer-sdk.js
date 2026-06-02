@@ -713,7 +713,7 @@
         if (el === container || el.querySelector('img, button, input, select, quantity-input, cart-remove-button')) return;
         var text = (el.textContent || '').trim();
         if (!text) return;
-        var isRawDesign = /view\s*design\s*:?/i.test(text) || (reviewUrl && text.indexOf(reviewUrl) >= 0);
+        var isRawDesign = (reviewUrl && text.indexOf(reviewUrl) >= 0) || /^view\s*design\s*:?/i.test(text) || /^design\s*:\s*https?:\/\//i.test(text);
         if (!isRawDesign) return;
         var className = String(el.className || '');
         var tag = (el.tagName || '').toUpperCase();
