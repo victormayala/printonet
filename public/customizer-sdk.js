@@ -666,6 +666,87 @@
       .catch(function () {});
   }
 
+  // Printonet "P" mark used inside the cart "View design" anchor.
+  var _PRINTONET_MARK_SVG =
+    '<svg width="14" height="14" viewBox="0 0 1918 2353" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;display:inline-block;vertical-align:-2px;">' +
+      '<path d="M1770.73 1072.54C1775.86 1566.71 1372.47 1971.39 878.29 1967.72C676.43 1966.22 490.86 1896.74 343.09 1781.54C336.96 1776.76 328.02 1781.1 328.02 1788.88V2343.44C328.02 2348.59 323.84 2352.77 318.69 2352.77H9.33C4.18 2352.77 0 2348.59 0 2343.44V1081.92C0 593.39 397.31 196.1 884.95 196.1C1020.55 196.1 1148.78 228.04 1263.31 282.42C1269.16 285.2 1270.53 292.9 1265.95 297.48L1018.41 545.01C1016.13 547.29 1012.85 548.21 1009.71 547.48C967.54 537.76 925.33 532.88 882.32 532.88C834.96 532.88 788.47 539.03 742.87 550.42C491.16 617.08 324.51 846.88 327.14 1095.95C327.14 1105.49 328 1114.17 328.02 1123.69C328.02 1123.91 328.02 1124.14 328.05 1124.36C330.7 1159.33 336.83 1194.31 345.57 1229.27C409.59 1473.97 630.61 1644.99 884.08 1644.99C912.15 1644.99 941.09 1642.37 966.52 1638.86C985.81 1635.36 1005.11 1630.97 1027.04 1625.7C1044.58 1621.32 1062.12 1616.05 1077.91 1609.92C1346.29 1509.93 1493.63 1224.89 1420.84 948.62C1418.53 937.07 1414.86 925.51 1411.04 912.77C1410.05 909.48 1410.94 905.9 1413.38 903.47L1652.34 664.51C1656.78 660.07 1664.22 661.2 1667.19 666.72C1732.2 787.85 1769.23 926.14 1770.75 1072.55L1770.73 1072.54Z" fill="currentColor"/>' +
+      '<path d="M1680.82 1.33C1591.8 11.09 1516.61 78.95 1497.46 166.43C1491.31 194.55 1490.95 221.89 1495.34 247.68C1506.4 312.61 1490.04 379.11 1445.7 427.81L1444.71 428.9L1172.53 701.08C1121.55 757.06 1043.54 784.26 970.57 764.07C916.11 749.01 857.17 747.51 798.25 762.91C619.08 809.74 510.56 993.31 557.71 1173.7C601.69 1341.97 766.41 1447.66 935.49 1421.58C946.71 1419.93 957.6 1417.09 968.5 1414.24C979.4 1411.39 990.3 1408.55 1000.88 1404.49C1162.31 1344.19 1253.04 1171.73 1209.05 1003.46C1206.9 995.23 1204.44 987.18 1201.71 979.3C1175.96 905.05 1188.52 823.01 1241.42 764.9L1454.87 551.34L1521.32 484.89C1563.64 442.05 1622.56 417.45 1682.53 424.25C1688.84 424.97 1695.25 425.39 1701.74 425.49C1811.67 427.27 1903.98 344.91 1916.78 237.53C1917.69 230.42 1917.8 223.31 1917.92 216.19C1918.03 209.07 1918.15 201.95 1917.47 194.83C1907.38 77.29 1803.1 -12.09 1680.83 1.32Z" fill="#FDD100"/>' +
+    '</svg>';
+
+  function _isOurReviewHref(href) {
+    if (!href) return false;
+    var base = (_config && _config.baseUrl ? String(_config.baseUrl) : 'https://customizerstudio.com').replace(/\/+$/, '');
+    if (href.indexOf(base + '/review/') === 0) return true;
+    if (href.indexOf('://customizerstudio.com/review/') !== -1) return true;
+    if (href.indexOf('://printonet.com/review/') !== -1) return true;
+    if (href.indexOf('://platform.printonet.com/review/') !== -1) return true;
+    return false;
+  }
+
+  // Replace Shopify's default "View design: https://..." line-item property rendering
+  // with a Printonet icon + clean "View design" link. Runs on cart page, drawer, and notification.
+  function _decorateShopifyDesignLinks() {
+    if (!_isShopifyStore()) return;
+    try {
+      var anchors = document.querySelectorAll('a[href*="/review/"]');
+      anchors.forEach(function (a) {
+        if (a.getAttribute('data-printonet-design-link') === '1') return;
+        if (!_isOurReviewHref(a.getAttribute('href') || '')) return;
+
+        a.setAttribute('data-printonet-design-link', '1');
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+        a.style.display = 'inline-flex';
+        a.style.alignItems = 'center';
+        a.style.gap = '6px';
+        a.style.textDecoration = 'none';
+        a.style.color = 'inherit';
+        a.style.fontWeight = '600';
+        a.innerHTML = _PRINTONET_MARK_SVG + '<span style="text-decoration:underline;">View design</span>';
+
+        // Hide the theme-rendered "View design:" label preceding the value.
+        var dd = a.closest('dd');
+        if (dd) {
+          var dt = dd.previousElementSibling;
+          if (dt && dt.tagName === 'DT' && /view design/i.test(dt.textContent || '')) {
+            dt.style.display = 'none';
+          }
+          // Some themes wrap the whole property in <li>; also strip a leading "View design:" text in the same <dd>.
+        }
+        // Strip "View design:" / "View Design:" text nodes immediately before the anchor.
+        var prev = a.previousSibling;
+        while (prev && prev.nodeType === 3) {
+          var nv = prev.nodeValue || '';
+          if (/view\s*design\s*:?\s*$/i.test(nv)) prev.nodeValue = '';
+          prev = prev.previousSibling;
+        }
+        // Some themes render label as <span> sibling
+        var prevEl = a.previousElementSibling;
+        if (prevEl && /^view\s*design\s*:?\s*$/i.test((prevEl.textContent || '').trim())) {
+          prevEl.style.display = 'none';
+        }
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  var _cartMutationObserver = null;
+  var _cartMutationDebounce = null;
+  function _observeShopifyCartMutations() {
+    if (_cartMutationObserver || typeof MutationObserver === 'undefined') return;
+    try {
+      _cartMutationObserver = new MutationObserver(function () {
+        if (_cartMutationDebounce) return;
+        _cartMutationDebounce = setTimeout(function () {
+          _cartMutationDebounce = null;
+          _decorateShopifyDesignLinks();
+          _refreshExistingShopifyDesignThumbnails();
+        }, 120);
+      });
+      _cartMutationObserver.observe(document.body, { childList: true, subtree: true });
+    } catch (e) { /* ignore */ }
+  }
+
+
   function _cssEscape(value) {
     if (!value) return '';
     if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
