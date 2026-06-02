@@ -81,7 +81,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           if (error) {
             // Try to extract the body returned by the edge function (contains
             // friendly `message` for known cases like needs_reauth).
-            const ctx: any = (error as any).context;
+            const ctx = (error as { context?: { text?: () => Promise<string> } }).context;
             let friendly: string | null = null;
             try {
               const txt = ctx && typeof ctx.text === "function" ? await ctx.text() : null;
