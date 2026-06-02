@@ -665,28 +665,43 @@
       return;
     }
 
-    var btn = document.createElement('button');
-    btn.setAttribute('data-customizer', '');
-    btn.setAttribute('data-product-name', productName);
-    btn.type = 'button';
-    btn.textContent = '🎨 Customize This Product';
-    btn.style.cssText =
-      'display:block;width:100%;margin-top:12px;margin-bottom:16px;padding:14px 24px;' +
-      'font-size:15px;font-weight:600;font-family:inherit;' +
-      'background:#7c3aed;color:#fff;border:none;border-radius:8px;' +
-      'cursor:pointer;transition:background .15s,transform .1s;' +
-      'text-align:center;letter-spacing:0.02em;';
-    btn.onmouseover = function () { btn.style.background = '#6d28d9'; };
-    btn.onmouseout = function () { btn.style.background = '#7c3aed'; };
-    btn.onmousedown = function () { btn.style.transform = 'scale(0.98)'; };
-    btn.onmouseup = function () { btn.style.transform = 'scale(1)'; };
+    fetchProducts(function (err, products) {
+      if (document.querySelector('[data-customizer]')) return;
+      if (err || !products) {
+        console.error('[CustomizerLoader] Failed to load customizable products:', err);
+        return;
+      }
+      var needle = productName.toLowerCase();
+      var match = products.find(function (p) { return p.name && p.name.toLowerCase() === needle; });
+      if (!match) {
+        console.log('[CustomizerLoader] Product is not enabled for customization:', productName);
+        return;
+      }
 
-    // Insert after the anchor element
-    if (anchor.parentNode) {
-      anchor.parentNode.insertBefore(btn, anchor.nextSibling);
-    }
+      var btn = document.createElement('button');
+      btn.setAttribute('data-customizer', '');
+      btn.setAttribute('data-product-id', match.id);
+      btn.setAttribute('data-product-name', match.name || productName);
+      btn.type = 'button';
+      btn.textContent = '🎨 Customize This Product';
+      btn.style.cssText =
+        'display:block;width:100%;margin-top:12px;margin-bottom:16px;padding:14px 24px;' +
+        'font-size:15px;font-weight:600;font-family:inherit;' +
+        'background:#7c3aed;color:#fff;border:none;border-radius:8px;' +
+        'cursor:pointer;transition:background .15s,transform .1s;' +
+        'text-align:center;letter-spacing:0.02em;';
+      btn.onmouseover = function () { btn.style.background = '#6d28d9'; };
+      btn.onmouseout = function () { btn.style.background = '#7c3aed'; };
+      btn.onmousedown = function () { btn.style.transform = 'scale(0.98)'; };
+      btn.onmouseup = function () { btn.style.transform = 'scale(1)'; };
 
-    console.log('[CustomizerLoader] Auto-injected Customize button for:', productName);
+      // Insert after the anchor element
+      if (anchor.parentNode) {
+        anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+      }
+
+      console.log('[CustomizerLoader] Auto-injected Customize button for:', match.name || productName);
+    });
   }
 
   // --- Initialize ---
