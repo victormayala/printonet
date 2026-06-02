@@ -71,10 +71,26 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     if (!store.tenant_slug) {
       if (store.store_type === "shopify") {
         try {
-          const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
+          const { data, error } = await supabase.functions.invoke("sync-shopify-customizer", {
             body: { storeId: store.id },
           });
-          if (error) throw error;
+          if (error) {
+            // Try to extract the body returned by the edge function (contains
+            // friendly `message` for known cases like needs_reauth).
+            const ctx: any = (error as any).context;
+            let friendly: string | null = null;
+            try {
+              const txt = ctx && typeof ctx.text === "function" ? await ctx.text() : null;
+              if (txt) {
+                const parsed = JSON.parse(txt);
+                friendly = parsed?.message || parsed?.error || null;
+              }
+            } catch {/* ignore */}
+            throw new Error(friendly || error.message || "Shopify sync failed");
+          }
+          if (data?.error === "needs_reauth") {
+            throw new Error(data.message || "Reconnect your Shopify store to continue.");
+          }
         } catch (e) {
           toast({
             title: "Shopify resync failed",
@@ -83,6 +99,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           });
           return false;
         }
+
       }
       if (!opts?.silent) {
         const platform = store.store_type === "shopify" ? "Shopify" : store.store_type === "woocommerce" ? "WooCommerce" : "this store";
