@@ -296,10 +296,72 @@ export default function ReviewDesign() {
       return;
     }
 
-    // Default path (Shopify, hosted, or no linked store): add to local cart.
-    // The SDK on the parent storefront listens for the broadcast "cart-updated"
-    // postMessage and uses `shopifyVariantId` to call Shopify's /cart/add.js
-    // with the design metadata as line-item properties.
+    // Shopify path: ask the storefront opener to add the item to Shopify's native cart.
+    // The hosted review page cannot call /cart/add.js itself because it is on Printonet's domain.
+    if (shopifyVariantId) {
+      if (!window.opener) {
+        toast({
+          variant: "destructive",
+          title: "Couldn't reach Shopify cart",
+          description: "Return to the Shopify product page and try adding the design again.",
+        });
+        return;
+      }
+
+      setSendingToWoo(true);
+      const shopifyPayload = {
+        ...(designOutput ?? { sides: [] }),
+        sessionId,
+        quantity,
+        selectedSize,
+        shopifyVariantId,
+        previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
+        printFileUrl: printFileUrl || undefined,
+        designLayersUrl: designLayersUrl || undefined,
+      };
+
+      const result = await new Promise<boolean>((resolve) => {
+        let timer: number;
+        const onMessage = (event: MessageEvent) => {
+          const data = event.data;
+          if (!data || data.source !== "customizer-studio" || data.type !== "review-add-to-cart-result") return;
+          if (data.payload?.sessionId && data.payload.sessionId !== sessionId) return;
+          window.clearTimeout(timer);
+          window.removeEventListener("message", onMessage);
+          resolve(Boolean(data.payload?.ok));
+        };
+        timer = window.setTimeout(() => {
+          window.removeEventListener("message", onMessage);
+          resolve(false);
+        }, 12000);
+        window.addEventListener("message", onMessage);
+        window.opener.postMessage({
+          source: "customizer-studio",
+          type: "review-add-to-cart",
+          payload: shopifyPayload,
+        }, "*");
+      });
+
+      setSendingToWoo(false);
+      if (!result) {
+        toast({
+          variant: "destructive",
+          title: "Couldn't add to Shopify cart",
+          description: "The storefront did not confirm the item was added. Please try again from the Shopify product page.",
+        });
+        return;
+      }
+
+      setAddedToCart(true);
+      toast({
+        title: "Added to Shopify cart",
+        description: `${productName}${variantWithSize ? ` · ${variantWithSize}` : ""} added.`,
+      });
+      window.location.href = storeOrigin ? `${storeOrigin}/cart` : returnUrl;
+      return;
+    }
+
+    // Hosted/no linked store path: add to Printonet's local cart.
     addItem({
       sessionId: sessionId || "",
       productName,

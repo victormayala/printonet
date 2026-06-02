@@ -132,6 +132,8 @@ function broadcastCartCount(items: CartItem[]) {
     shopifyVariantId: _lastAddedItem.shopifyVariantId || null,
     quantity: _lastAddedItem.quantity,
     previewImage: _lastAddedItem.previewImage || null,
+    printFileUrl: _lastAddedItem.printFileUrl || null,
+    designLayersUrl: _lastAddedItem.designLayersUrl || null,
   } : null;
   _lastAddedItem = null;
   const message = {

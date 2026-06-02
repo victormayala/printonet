@@ -45,11 +45,21 @@
   /** After design-complete we close the iframe and remove _handleMessage; review tab posts here — keep listening on the storefront window. */
   var _reviewTabCartListenerAttached = false;
 
-  function _handleReviewAddToCartPayload(payload) {
+  function _handleReviewAddToCartPayload(payload, targetWindow) {
     _addToCart(payload, function () {
+      var success = arguments.length > 0 ? !!arguments[0] : true;
       var evt = new CustomEvent('customizer:addtocart', { detail: payload });
       document.dispatchEvent(evt);
       _callbacks.onComplete(payload);
+      if (targetWindow && typeof targetWindow.postMessage === 'function') {
+        try {
+          targetWindow.postMessage({
+            source: 'customizer-studio',
+            type: 'review-add-to-cart-result',
+            payload: { ok: success, sessionId: payload && payload.sessionId }
+          }, '*');
+        } catch (_) {}
+      }
     });
   }
 
@@ -62,7 +72,7 @@
   function _handleReviewTabCartMessage(event) {
     var data = event.data;
     if (!data || data.source !== 'customizer-studio' || data.type !== 'review-add-to-cart') return;
-    _handleReviewAddToCartPayload(data.payload);
+    _handleReviewAddToCartPayload(data.payload, event.source);
   }
 
   // Build a URL for a store-relative path. If storeUrl is configured we hit
@@ -210,7 +220,7 @@
       _updateCartWidget(data.payload && data.payload.totalItems || 0);
     } else if (data.type === 'review-add-to-cart') {
       // Fired from hosted review while iframe overlay is still active (rare)
-      _handleReviewAddToCartPayload(data.payload);
+      _handleReviewAddToCartPayload(data.payload, event.source);
     } else if (data.type === 'design-cancel') {
       _callbacks.onCancel();
       _closeIframe();
@@ -358,10 +368,14 @@
 
   // --- Add to cart (Shopify, WooCommerce, or generic) ---
   function _addToCart(payload, callback) {
+    var shopifyId = _shopifyVariantId || (payload && payload.shopifyVariantId) || null;
+
     // Shopify native cart
-    if (_shopifyVariantId && window.Shopify) {
+    if (shopifyId) {
       var properties = {};
       if (payload.sessionId) properties['_customizer_session_id'] = payload.sessionId;
+      if (payload.printFileUrl) properties['_customizer_print_file_url'] = payload.printFileUrl;
+      if (payload.designLayersUrl) properties['_customizer_layers_url'] = payload.designLayersUrl;
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
         if (frontSide && (frontSide.previewPNG || frontSide.designPNG)) {
@@ -378,8 +392,8 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: _shopifyVariantId,
-          quantity: 1,
+          id: shopifyId,
+          quantity: (payload && payload.quantity) || 1,
           properties: properties,
         }),
         credentials: 'same-origin',
@@ -522,7 +536,7 @@
   function _createCartWidget() {
     if (_cartWidget) return;
 
-    var cartLink = _config.cartUrl || ((_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href));
+    var cartLink = _config.cartUrl || ((_shopifyVariantId || window.Shopify) ? '/cart' : ((_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href)));
     _cartWidget = document.createElement('a');
     _cartWidget.href = cartLink;
     _cartWidget.target = '_blank';
@@ -585,6 +599,8 @@
 
     var properties = {};
     properties['_customizer_session_id'] = newItem.sessionId;
+    if (newItem.printFileUrl) properties['_customizer_print_file_url'] = newItem.printFileUrl;
+    if (newItem.designLayersUrl) properties['_customizer_layers_url'] = newItem.designLayersUrl;
     if (newItem.previewImage) {
       properties['_customizer_design_url'] = newItem.previewImage;
       properties['_customizer_sides'] = JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]);
