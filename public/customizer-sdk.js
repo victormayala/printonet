@@ -432,6 +432,12 @@
       if (httpsSides.length > 0) {
         properties['_customizer_sides'] = JSON.stringify(httpsSides);
       }
+      // Public preview link — Shopify renders HTTPS URLs in line-item properties
+      // as clickable links on both the /cart page and the hosted checkout.
+      if (payload.sessionId) {
+        var previewBase = (_config && _config.baseUrl) ? String(_config.baseUrl).replace(/\/+$/, '') : 'https://customizerstudio.com';
+        properties['View Design'] = previewBase + '/review/' + encodeURIComponent(payload.sessionId);
+      }
 
       // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
       var sectionsToRender = 'cart-drawer,cart-icon-bubble,cart-live-region-text,cart-notification,cart-notification-button,cart-notification-product,main-cart-items,main-cart-footer';
