@@ -125,6 +125,7 @@ const App = () => (
             <Route path="/preview/:productId" element={<ProductPreview />} />
             <Route path="/print/:sessionId" element={<PrintView />} />
             <Route path="/review/:sessionId" element={<ReviewDesign />} />
+            <Route path="/r/:sessionId" element={<ReviewDesign />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout/return" element={<CheckoutReturn />} />
             <Route path="/checkout/:sessionId" element={<Checkout />} />
