@@ -400,19 +400,33 @@
       if (payload.sessionId) properties['_customizer_session_id'] = payload.sessionId;
       if (payload.printFileUrl) properties['_customizer_print_file_url'] = payload.printFileUrl;
       if (payload.designLayersUrl) properties['_customizer_layers_url'] = payload.designLayersUrl;
+      // Only HTTPS URLs can render in Shopify cart line items — base64 data URLs are too long
+      // and break theme rendering / get truncated by Shopify.
+      function _isHttpUrl(v) { return typeof v === 'string' && /^https?:\/\//i.test(v); }
+      var httpsSides = [];
       if (payload.sides && payload.sides.length > 0) {
-        var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
-        var frontImg = frontSide && (frontSide.previewPNG || frontSide.designPNG);
-        if (frontImg) {
-          // Visible property (no underscore) so Shopify themes render the design image on the line item
-          properties['Design'] = frontImg;
-          properties['_customizer_design_url'] = frontImg;
+        for (var i = 0; i < payload.sides.length; i++) {
+          var s = payload.sides[i];
+          var url = _isHttpUrl(s && s.previewPNG) ? s.previewPNG
+                  : _isHttpUrl(s && s.designPNG) ? s.designPNG
+                  : null;
+          if (url) httpsSides.push({ view: s.view, url: url, preview_url: url });
         }
-        properties['_customizer_sides'] = JSON.stringify(payload.sides.map(function (s) {
-          var side = { view: s.view, url: s.designPNG };
-          if (s.previewPNG) side.preview_url = s.previewPNG;
-          return side;
-        }));
+      }
+      var frontHttps = null;
+      if (httpsSides.length > 0) {
+        var f = httpsSides.find(function (x) { return x.view === 'front'; }) || httpsSides[0];
+        frontHttps = f && f.url;
+      }
+      if (!frontHttps && _isHttpUrl(payload.previewImage)) frontHttps = payload.previewImage;
+      if (!frontHttps && _isHttpUrl(payload.printFileUrl)) frontHttps = payload.printFileUrl;
+      if (frontHttps) {
+        // Visible property (no underscore) so Shopify themes show the design image / link on the line item
+        properties['Design'] = frontHttps;
+        properties['_customizer_design_url'] = frontHttps;
+      }
+      if (httpsSides.length > 0) {
+        properties['_customizer_sides'] = JSON.stringify(httpsSides);
       }
 
       // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
