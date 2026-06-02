@@ -23,7 +23,7 @@ import {
   Store, Globe, Loader2, Package, ImageIcon, LogOut, UserCircle,
   Code, Copy, Check, ExternalLink, Info, LayoutGrid, List, Eye,
   ArrowUpDown, SlidersHorizontal, RefreshCw, Link2, Unlink, Sparkles,
-  Truck, Search, Download, Send, MoreVertical, CircleDot, CloudUpload
+  Truck, Search, Download, Send, MoreVertical, CircleDot, CloudUpload, AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -1765,18 +1765,22 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
             </Button>
           ) : (
             <div className="space-y-3">
+              <div className="flex items-start gap-2 p-3 rounded-md border border-yellow-500/40 bg-yellow-500/10 text-sm">
+                <AlertCircle className="h-4 w-4 mt-0.5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+                <div>
+                  <p className="font-medium text-yellow-700 dark:text-yellow-300">Action required — authorize the app</p>
+                  <p className="text-yellow-700/80 dark:text-yellow-200/80">Click the yellow button below to open Shopify and approve access. You'll be redirected back automatically once done.</p>
+                </div>
+              </div>
               <a
                 href={authUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-yellow-500 text-black font-semibold text-sm hover:bg-yellow-400 transition-colors shadow-md ring-2 ring-yellow-500/50 ring-offset-2 ring-offset-background animate-pulse"
               >
                 <ExternalLink className="h-4 w-4" />
                 Open Shopify to Authorize
               </a>
-              <p className="text-xs text-muted-foreground">
-                Click the link above to open Shopify in a new tab and authorize access. Once done, you'll be redirected back automatically.
-              </p>
             </div>
           )}
         </CardContent>
