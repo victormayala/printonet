@@ -110,8 +110,10 @@
     _config.woocommerceSiteUrl = options.woocommerceSiteUrl || '';
     if (_isShopifyStore()) {
       _refreshExistingShopifyDesignThumbnails();
-      setTimeout(_refreshExistingShopifyDesignThumbnails, 600);
-      setTimeout(_refreshExistingShopifyDesignThumbnails, 1600);
+      _decorateShopifyDesignLinks();
+      setTimeout(function () { _refreshExistingShopifyDesignThumbnails(); _decorateShopifyDesignLinks(); }, 600);
+      setTimeout(function () { _refreshExistingShopifyDesignThumbnails(); _decorateShopifyDesignLinks(); }, 1600);
+      _observeShopifyCartMutations();
     }
   }
 
