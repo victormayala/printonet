@@ -27,7 +27,7 @@
   // --- Built-in defaults so the script works standalone (e.g. when injected via Shopify ScriptTag) ---
   var DEFAULT_BASE_URL = 'https://platform.printonet.com';
   var DEFAULT_API_URL = 'https://qumrnazgdrijdcihtkah.supabase.co/functions/v1';
-  var DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1bXJuYXpnZHJpamRjaWh0a2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTM2OTQsImV4cCI6MjA4OTUyOTY5NH0.zVeYe3358jl3Gen7jG2I6f_kAqY1MLf1uAMn8EOb99I';
+  var DEFAULT_ANON_KEY = 'sb_publishable_-28LXo1HXj_t6An4cfWsow_ZTQghv_J';
 
   // --- Read config from the script tag itself (with fallbacks) ---
   var scriptTag = document.currentScript;
@@ -105,7 +105,11 @@
         fetch(linksUrl, { headers: headers })
           .then(function (res) { return res.json(); })
           .then(function (links) {
-            var ids = (links || []).map(function (l) { return l.product_id; }).filter(Boolean);
+            if (!Array.isArray(links)) {
+              console.error('[CustomizerLoader] Unexpected response from store products:', links);
+              return callback(new Error('Invalid response loading customizable products'), null);
+            }
+            var ids = links.map(function (l) { return l.product_id; }).filter(Boolean);
             if (ids.length === 0) {
               _products = [];
               callback(null, []);
