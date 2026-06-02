@@ -105,7 +105,11 @@
         fetch(linksUrl, { headers: headers })
           .then(function (res) { return res.json(); })
           .then(function (links) {
-            var ids = (links || []).map(function (l) { return l.product_id; }).filter(Boolean);
+            if (!Array.isArray(links)) {
+              console.error('[CustomizerLoader] Unexpected response from store products:', links);
+              return callback(new Error('Invalid response loading customizable products'), null);
+            }
+            var ids = links.map(function (l) { return l.product_id; }).filter(Boolean);
             if (ids.length === 0) {
               _products = [];
               callback(null, []);
