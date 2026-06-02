@@ -695,12 +695,14 @@
     try {
       container.querySelectorAll('dt, dd, li, p, span, small, div').forEach(function (el) {
         if (!el || el.getAttribute('data-printonet-design-link-wrap') === '1' || el.querySelector('[data-printonet-design-link="1"]')) return;
+        if (el === container || el.querySelector('img, button, input, select, quantity-input, cart-remove-button')) return;
         var text = (el.textContent || '').trim();
         if (!text) return;
         var isRawDesign = /view\s*design\s*:?/i.test(text) || (reviewUrl && text.indexOf(reviewUrl) >= 0);
         if (!isRawDesign) return;
         var className = String(el.className || '');
-        if (el.children.length <= 2 || /property|properties|product-option|line-item/i.test(className)) {
+        var tag = (el.tagName || '').toUpperCase();
+        if (/^(DT|DD|LI|P|SPAN|SMALL)$/.test(tag) || /property|properties|product-option/i.test(className)) {
           el.style.display = 'none';
           el.setAttribute('data-printonet-hidden-raw-design', '1');
         }
