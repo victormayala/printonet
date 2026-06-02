@@ -10,10 +10,12 @@ import { CorporateStore } from "@/types/corporateStore";
 
 export function StoreThemeTab({ store }: { store: CorporateStore }) {
   const qc = useQueryClient();
-  const { data } = useStoreTemplates(store.id);
+  const hasHostedStorefront = !!store.tenant_slug;
+  const { data } = useStoreTemplates(hasHostedStorefront ? store.id : null, hasHostedStorefront);
 
   const { data: currentSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ["cms-site-settings", store.id],
+    enabled: hasHostedStorefront,
     queryFn: async () => {
       return await cms<{ settings: { published_data?: any; draft_data?: any } }>(
         store.id,
@@ -54,7 +56,7 @@ export function StoreThemeTab({ store }: { store: CorporateStore }) {
   };
 
   const apply = async () => {
-    if (!selected) return;
+    if (!selected || !hasHostedStorefront) return;
     setSaving(true);
     try {
       await cms(store.id, "set-template", { template_id: selected });
@@ -70,6 +72,21 @@ export function StoreThemeTab({ store }: { store: CorporateStore }) {
       setSaving(false);
     }
   };
+
+  if (!hasHostedStorefront) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" /> Storefront theme
+          </CardTitle>
+          <CardDescription>
+            Shopify stores use the live Shopify theme. Printonet storefront themes only apply to hosted stores.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card>

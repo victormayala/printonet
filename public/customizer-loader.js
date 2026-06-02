@@ -46,6 +46,7 @@
   var SUPABASE_URL = API_URL.replace('/functions/v1', '');
   var ANON_KEY = (scriptTag && scriptTag.getAttribute('data-anon-key')) || DEFAULT_ANON_KEY;
   var USER_ID = (scriptTag && scriptTag.getAttribute('data-user-id')) || _srcParams.uid || '';
+  var STORE_ID = (scriptTag && scriptTag.getAttribute('data-store-id')) || _srcParams.sid || '';
   var CART_URL = (scriptTag && scriptTag.getAttribute('data-cart-url')) || '';
   var STORE_SITE_URL =
     (scriptTag && scriptTag.getAttribute('data-store-site-url')) ||
@@ -54,11 +55,22 @@
   var _products = null; // cached after first fetch
   var _pickerOverlay = null;
 
-  // --- Fetch all active products from the database ---
-  function fetchProducts(callback) {
-    if (_products) return callback(null, _products);
+  function normalizeHost(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '')
+      .replace(/\/+$/, '')
+      .split('/')[0];
+  }
 
-    var url = SUPABASE_URL + '/rest/v1/inventory_products?is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id';
+  function resolveStoreId(callback) {
+    if (STORE_ID) return callback(null, STORE_ID);
+    if (!USER_ID) return callback(null, null);
+
+    var host = normalizeHost(window.location && window.location.hostname);
+    var url = SUPABASE_URL + '/rest/v1/corporate_stores?status=eq.active&user_id=eq.' + encodeURIComponent(USER_ID) + '&store_type=in.(shopify,woocommerce)&select=id,custom_domain';
     var headers = {
       'apikey': ANON_KEY,
       'Authorization': 'Bearer ' + ANON_KEY,
@@ -67,12 +79,61 @@
 
     fetch(url, { headers: headers })
       .then(function (res) { return res.json(); })
-      .then(function (data) {
-        _products = data;
-        callback(null, data);
+      .then(function (stores) {
+        var match = (stores || []).find(function (s) { return normalizeHost(s.custom_domain) === host; });
+        STORE_ID = match && match.id ? match.id : '';
+        callback(null, STORE_ID || null);
       })
-      .catch(function (err) {
-        callback(err, null);
+      .catch(function (err) { callback(err, null); });
+  }
+
+  // --- Fetch all active products from the database ---
+  function fetchProducts(callback) {
+    if (_products) return callback(null, _products);
+
+    var headers = {
+      'apikey': ANON_KEY,
+      'Authorization': 'Bearer ' + ANON_KEY,
+      'Content-Type': 'application/json',
+    };
+
+    resolveStoreId(function (storeErr, storeId) {
+      if (storeErr) return callback(storeErr, null);
+
+      if (storeId) {
+        var linksUrl = SUPABASE_URL + '/rest/v1/corporate_store_products?store_id=eq.' + encodeURIComponent(storeId) + '&is_active=eq.true&customizable=eq.true&select=product_id,sort_order&order=sort_order.asc';
+        fetch(linksUrl, { headers: headers })
+          .then(function (res) { return res.json(); })
+          .then(function (links) {
+            var ids = (links || []).map(function (l) { return l.product_id; }).filter(Boolean);
+            if (ids.length === 0) {
+              _products = [];
+              callback(null, []);
+              return null;
+            }
+            var productsUrl = SUPABASE_URL + '/rest/v1/inventory_products?id=in.(' + ids.join(',') + ')&is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id';
+            return fetch(productsUrl, { headers: headers })
+              .then(function (res) { return res.json(); })
+              .then(function (data) {
+                var byId = {};
+                (data || []).forEach(function (p) { byId[p.id] = p; });
+                _products = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+                callback(null, _products);
+              });
+          })
+          .catch(function (err) { callback(err, null); });
+        return;
+      }
+
+      var url = SUPABASE_URL + '/rest/v1/inventory_products?is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id';
+      if (USER_ID) url += '&user_id=eq.' + encodeURIComponent(USER_ID);
+      fetch(url, { headers: headers })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          _products = data;
+          callback(null, data);
+        })
+        .catch(function (err) { callback(err, null); });
       });
   }
 
@@ -604,28 +665,43 @@
       return;
     }
 
-    var btn = document.createElement('button');
-    btn.setAttribute('data-customizer', '');
-    btn.setAttribute('data-product-name', productName);
-    btn.type = 'button';
-    btn.textContent = '🎨 Customize This Product';
-    btn.style.cssText =
-      'display:block;width:100%;margin-top:12px;margin-bottom:16px;padding:14px 24px;' +
-      'font-size:15px;font-weight:600;font-family:inherit;' +
-      'background:#7c3aed;color:#fff;border:none;border-radius:8px;' +
-      'cursor:pointer;transition:background .15s,transform .1s;' +
-      'text-align:center;letter-spacing:0.02em;';
-    btn.onmouseover = function () { btn.style.background = '#6d28d9'; };
-    btn.onmouseout = function () { btn.style.background = '#7c3aed'; };
-    btn.onmousedown = function () { btn.style.transform = 'scale(0.98)'; };
-    btn.onmouseup = function () { btn.style.transform = 'scale(1)'; };
+    fetchProducts(function (err, products) {
+      if (document.querySelector('[data-customizer]')) return;
+      if (err || !products) {
+        console.error('[CustomizerLoader] Failed to load customizable products:', err);
+        return;
+      }
+      var needle = productName.toLowerCase();
+      var match = products.find(function (p) { return p.name && p.name.toLowerCase() === needle; });
+      if (!match) {
+        console.log('[CustomizerLoader] Product is not enabled for customization:', productName);
+        return;
+      }
 
-    // Insert after the anchor element
-    if (anchor.parentNode) {
-      anchor.parentNode.insertBefore(btn, anchor.nextSibling);
-    }
+      var btn = document.createElement('button');
+      btn.setAttribute('data-customizer', '');
+      btn.setAttribute('data-product-id', match.id);
+      btn.setAttribute('data-product-name', match.name || productName);
+      btn.type = 'button';
+      btn.textContent = '🎨 Customize This Product';
+      btn.style.cssText =
+        'display:block;width:100%;margin-top:12px;margin-bottom:16px;padding:14px 24px;' +
+        'font-size:15px;font-weight:600;font-family:inherit;' +
+        'background:#7c3aed;color:#fff;border:none;border-radius:8px;' +
+        'cursor:pointer;transition:background .15s,transform .1s;' +
+        'text-align:center;letter-spacing:0.02em;';
+      btn.onmouseover = function () { btn.style.background = '#6d28d9'; };
+      btn.onmouseout = function () { btn.style.background = '#7c3aed'; };
+      btn.onmousedown = function () { btn.style.transform = 'scale(0.98)'; };
+      btn.onmouseup = function () { btn.style.transform = 'scale(1)'; };
 
-    console.log('[CustomizerLoader] Auto-injected Customize button for:', productName);
+      // Insert after the anchor element
+      if (anchor.parentNode) {
+        anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+      }
+
+      console.log('[CustomizerLoader] Auto-injected Customize button for:', match.name || productName);
+    });
   }
 
   // --- Initialize ---
