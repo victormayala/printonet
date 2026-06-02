@@ -39,15 +39,21 @@ Deno.serve(async (req) => {
       return new Response("Shopify OAuth not configured on server", { status: 500 });
     }
 
-    // Exchange authorization code for permanent access token
+    // Exchange authorization code for an EXPIRING offline access token (required
+    // by Shopify as of Dec 2025 — non-expiring tokens return 403 on API calls).
+    const tokenBody = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      expiring: "1",
+    });
     const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-      }),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: tokenBody,
     });
 
     if (!tokenRes.ok) {
@@ -58,6 +64,12 @@ Deno.serve(async (req) => {
 
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
+    const refreshToken = tokenData.refresh_token ?? null;
+    const expiresIn = typeof tokenData.expires_in === "number" ? tokenData.expires_in : null;
+    const refreshTokenExpiresIn =
+      typeof tokenData.refresh_token_expires_in === "number"
+        ? tokenData.refresh_token_expires_in
+        : null;
 
     if (!accessToken) {
       return new Response("No access_token in Shopify response", { status: 400 });
