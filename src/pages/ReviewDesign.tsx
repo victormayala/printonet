@@ -281,10 +281,15 @@ export default function ReviewDesign() {
       }
       setSendingToWoo(false);
       setTransferDebug(`transfer failed: ${transfer.error || "unknown_error"}`);
+      const rawErr = transfer.error || "";
+      const friendly =
+        /failed to fetch|network|typeerror/i.test(rawErr)
+          ? `Couldn't reach ${storeOrigin}. Check that the store URL is correct, reachable over HTTPS, and has the Printonet plugin installed.`
+          : rawErr || "No redirect URL returned from store.";
       toast({
         variant: "destructive",
-        title: "Direct Woo transfer failed",
-        description: transfer.error || "No redirect URL returned from store.",
+        title: "Couldn't send design to store cart",
+        description: friendly,
       });
       return;
     }
@@ -292,10 +297,11 @@ export default function ReviewDesign() {
     setTransferDebug("no store origin detected");
     toast({
       variant: "destructive",
-      title: "No store origin detected",
-      description: "Cannot send directly to Woo from this screen.",
+      title: "No store linked",
+      description: "Open this customizer from your store, or set a store URL in your cart.",
     });
     return;
+
 
   };
 
@@ -415,18 +421,6 @@ export default function ReviewDesign() {
           </div>
         )}
 
-        <div className="px-4 py-3 rounded-lg bg-muted/40 border border-border space-y-1">
-          <p className="text-xs text-muted-foreground">
-            Store origin: <span className="text-foreground">{resolveStoreOrigin() || "not detected"}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Woo product id: <span className="text-foreground">{wcProductId || "none"}</span> · variation id:{" "}
-            <span className="text-foreground">{wcVariationId || "none"}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Transfer debug: <span className="text-foreground">{transferDebug}</span>
-          </p>
-        </div>
 
         {/* Actions */}
         <div className="flex gap-3">

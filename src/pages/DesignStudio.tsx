@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group, Path, Pattern, Point } from "fabric";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { buildLayersExportJson } from "@/lib/layersExport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2160,7 +2161,7 @@ export default function DesignStudio({
       setAiPrompt("");
     } catch (err: any) {
       console.error("AI generation error:", err);
-      alert(err.message || "Failed to generate design. Try again.");
+      toast.error(err.message || "Failed to generate design. Try again.");
     } finally {
       setAiGenerating(false);
     }
@@ -2225,7 +2226,7 @@ export default function DesignStudio({
 
     const sourceUrl = extractAiDesignImage(active);
     if (!sourceUrl) {
-      alert("Could not extract image data.");
+      toast.error("Could not extract image data.");
       return;
     }
 
@@ -2243,7 +2244,7 @@ export default function DesignStudio({
       replaceAiDesignImage(active, transparentUrl);
     } catch (err: any) {
       console.error("Remove background error:", err);
-      alert(err.message || "Failed to remove background. Try again.");
+      toast.error(err.message || "Failed to remove background. Try again.");
     } finally {
       setRemovingBg(false);
     }
@@ -2712,7 +2713,7 @@ export default function DesignStudio({
       return result;
     } catch (err) {
       console.error("Export error:", err);
-      alert("Export failed. Please try again.");
+      toast.error("Export failed. Please try again.");
     } finally {
       setExporting(false);
     }
