@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getValidShopifyToken } from "../_shared/shopify-token.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,9 +99,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { store_url, access_token, user_id, is_sync } = await req.json();
-    if (!store_url || !access_token) {
-      return new Response(JSON.stringify({ error: "store_url and access_token are required" }), {
+    const { user_id, is_sync } = await req.json();
+    if (!user_id) {
+      return new Response(JSON.stringify({ error: "user_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -109,6 +111,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Resolve a fresh (refreshed-if-needed) Shopify access token from stored credentials.
+    const { store_url, access_token } = await getValidShopifyToken(supabase, user_id);
 
     // Fetch products via GraphQL Admin API
     const products = await fetchAllProducts(store_url, access_token);
