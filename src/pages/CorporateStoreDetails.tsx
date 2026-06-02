@@ -503,6 +503,11 @@ export default function CorporateStoreDetails() {
           <TabsTrigger value="content" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <Type className="h-4 w-4" /> Content
           </TabsTrigger>
+          {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
+            <TabsTrigger value="integration" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+              <Link2 className="h-4 w-4" /> Integration
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-0">
@@ -528,6 +533,16 @@ export default function CorporateStoreDetails() {
         <TabsContent forceMount={false} value="content" className="mt-0">
           <StoreContentCMS store={store} />
         </TabsContent>
+
+        {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
+          <TabsContent forceMount={false} value="integration" className="mt-0">
+            {store.store_type === "shopify" ? (
+              <ShopifyImport onDone={() => queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] })} />
+            ) : (
+              <WooCommerceImport onDone={() => queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] })} />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       
