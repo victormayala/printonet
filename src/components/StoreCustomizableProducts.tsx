@@ -95,9 +95,15 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           if (data?.manual_install_required) {
             if (!opts?.silent) {
               setSnippetCopied(false);
-              setManualInstall({ snippet: data.snippet || "", message: data.message, pendingConfirmation: true });
+              setShopifyInstall({ snippet: data.snippet || "", message: data.message, confirmed: false });
+              toast({ title: "Action needed", description: "Add the install snippet to your Shopify theme — see the steps above the products list." });
+            } else {
+              setShopifyInstall((prev) => prev ?? { snippet: data.snippet || "", message: data.message, confirmed: false });
             }
             return true;
+          }
+          if (data?.snippet) {
+            setShopifyInstall({ snippet: data.snippet, confirmed: !!data.manual_install_confirmed });
           }
 
         } catch (e) {
