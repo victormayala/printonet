@@ -39,18 +39,29 @@ Deno.serve(async (req) => {
 
     const products = await wcRes.json();
 
+    // Ensure a dashboard-only corporate store exists for this WooCommerce site and
+    // link all imported products to it. Created with store_type='woocommerce'.
+    let syncStoreId: string | null = null;
+    if (user_id) {
+      syncStoreId = await ensureSyncStore(supabase, {
+        user_id,
+        platform: "woocommerce",
+        store_url: site_url,
+      });
+    }
+
     // On sync, only delete WooCommerce-sourced products (not all user products)
     if (is_sync && user_id) {
       const { data: existing } = await supabase
         .from("inventory_products")
         .select("id, supplier_source")
         .eq("user_id", user_id);
-      
+
       if (existing) {
         const wcProductIds = existing
           .filter((p: any) => p.supplier_source?.provider === "woocommerce")
           .map((p: any) => p.id);
-        
+
         if (wcProductIds.length > 0) {
           await supabase
             .from("inventory_products")
@@ -89,9 +100,23 @@ Deno.serve(async (req) => {
         },
       };
 
-      const { error } = await supabase.from("inventory_products").insert(row);
-      if (!error) importedCount++;
+      const { data: inserted, error } = await supabase
+        .from("inventory_products")
+        .insert(row)
+        .select("id")
+        .single();
+      if (!error && inserted?.id) {
+        importedCount++;
+        if (syncStoreId && user_id) {
+          await linkProductToSyncStore(supabase, {
+            user_id,
+            store_id: syncStoreId,
+            product_id: inserted.id,
+          });
+        }
+      }
     }
+
 
     // Update last_synced_at
     if (user_id) {
