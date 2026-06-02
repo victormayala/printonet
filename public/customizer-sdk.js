@@ -392,7 +392,7 @@
 
   // --- Add to cart (Shopify, WooCommerce, or generic) ---
   function _addToCart(payload, callback) {
-    var shopifyId = _shopifyVariantId || (payload && payload.shopifyVariantId) || null;
+    var shopifyId = (payload && payload.shopifyVariantId) || _getShopifyVariantId();
 
     // Shopify native cart
     if (shopifyId) {
