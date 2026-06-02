@@ -69,6 +69,28 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Best-effort: revoke the OAuth access token on Shopify's side so the app
+    // no longer appears as an installed app for the merchant.
+    if (accessToken && shop) {
+      try {
+        const revokeRes = await fetch(
+          `https://${shop}/admin/api/2025-01/api_permissions/current.json`,
+          {
+            method: "DELETE",
+            headers: { "X-Shopify-Access-Token": accessToken, "Content-Type": "application/json" },
+          }
+        );
+        if (!revokeRes.ok) {
+          const t = await revokeRes.text();
+          console.warn("Shopify token revoke returned non-OK:", revokeRes.status, t);
+        } else {
+          console.log("Revoked Shopify access token for shop:", shop);
+        }
+      } catch (e) {
+        console.warn("Shopify token revoke failed:", e);
+      }
+    }
+
     // Remove the integration row
     await supabase.from("store_integrations").delete().eq("id", integration.id);
 
