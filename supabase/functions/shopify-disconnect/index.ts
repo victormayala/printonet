@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     // Look up the integration
     const { data: integration } = await supabase
       .from("store_integrations")
-      .select("id, store_url, credentials, script_tag_id")
+      .select("id, store_url, credentials, script_tag_id, store_id")
       .eq("user_id", user_id)
       .eq("platform", "shopify")
       .maybeSingle();
