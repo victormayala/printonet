@@ -413,6 +413,77 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
 
 
   return (
+    <div className="space-y-6">
+      {store.store_type === "shopify" && shopifyInstall && (
+        <Card className={shopifyInstall.confirmed ? "border-emerald-500/30 bg-emerald-500/5" : "border-primary/40 bg-primary/5"}>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex items-start gap-3">
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${shopifyInstall.confirmed ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary/15 text-primary"}`}>
+                  {shopifyInstall.confirmed ? <CheckCircle2 className="h-5 w-5" /> : <Code2 className="h-5 w-5" />}
+                </div>
+                <div>
+                  <CardTitle className="text-base">
+                    {shopifyInstall.confirmed ? "Shopify install script — installed" : "One-time Shopify install script"}
+                  </CardTitle>
+                  <CardDescription className="mt-1 max-w-2xl">
+                    {shopifyInstall.confirmed
+                      ? "The customizer script is live on your Shopify theme. Toggle products below — changes sync instantly. If you ever change themes, paste the snippet again."
+                      : (shopifyInstall.message || "Paste this snippet into your Shopify theme once. After that, every product toggle below syncs live — no further setup needed.")}
+                  </CardDescription>
+                </div>
+              </div>
+              {shopifyInstall.confirmed && <Badge variant="secondary" className="gap-1"><Check className="h-3 w-3" /> Installed</Badge>}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Installation steps</h4>
+              <ol className="space-y-2.5 text-sm">
+                {[
+                  <>In your Shopify admin, open <strong>Online Store → Themes</strong>.</>,
+                  <>On your live theme, click <strong>⋯ → Edit code</strong>.</>,
+                  <>Under <strong>Layout</strong>, open <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">theme.liquid</code>.</>,
+                  <>Paste the snippet below just before the closing <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">&lt;/head&gt;</code> tag and click <strong>Save</strong>.</>,
+                  <>Come back here and click <strong>I added the script</strong> — you're done.</>,
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">{i + 1}</span>
+                    <span className="text-muted-foreground pt-0.5">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold">Snippet</h4>
+                <Button size="sm" variant="outline" onClick={copySnippet}>
+                  {snippetCopied ? <><Check className="h-3.5 w-3.5 mr-1.5" />Copied</> : <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy snippet</>}
+                </Button>
+              </div>
+              <Textarea
+                readOnly
+                value={shopifyInstall.snippet}
+                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                className="font-mono text-xs h-24 bg-background"
+              />
+            </div>
+            {!shopifyInstall.confirmed && (
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={`https://${(store.store_url || "").replace(/^https?:\/\//, "").replace(/\/+$/, "")}/admin/themes`} target="_blank" rel="noopener noreferrer">
+                    Open Shopify themes <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                  </a>
+                </Button>
+                <Button size="sm" onClick={confirmManualInstall} disabled={confirmingInstall}>
+                  {confirmingInstall && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                  I added the script
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3 flex-wrap">
