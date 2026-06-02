@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ensureSyncStore, linkProductToSyncStore } from "../_shared/sync-store.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
