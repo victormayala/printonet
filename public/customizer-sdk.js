@@ -434,17 +434,14 @@
       if (httpsSides.length > 0) {
         properties['_customizer_sides'] = JSON.stringify(httpsSides);
       }
-      // Single visible, Printonet-branded link shoppers can click to preview their design.
-      // Shopify themes render visible line-item properties as "<key>: <value>", and HTTPS
-      // values become clickable links automatically — so the shopper sees:
-      //   View Design: https://customizerstudio.com/review/<id>
+      // Single visible, short Printonet review link shoppers can click to preview their design.
+      // Use the shortest supported route so checkout fallback text stays compact.
       if (payload.sessionId) {
-        var previewBase = (_config && _config.baseUrl) ? String(_config.baseUrl).replace(/\/+$/, '') : 'https://customizerstudio.com';
-        properties['View Design'] = previewBase + '/review/' + encodeURIComponent(payload.sessionId);
+        properties['Design'] = _reviewUrlForSession(payload.sessionId);
       }
 
       // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
-      var sectionsToRender = 'cart-drawer,cart-icon-bubble,cart-live-region-text,cart-notification,cart-notification-button,cart-notification-product,main-cart-items,main-cart-footer';
+      var sectionsToRender = _shopifyCartSectionsToRender();
 
       fetch('/cart/add.js', {
         method: 'POST',
