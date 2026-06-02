@@ -721,7 +721,7 @@ export default function CorporateStores() {
             </Dialog>
           </div>
 
-          {renderStoresCard(stores, 'No stores yet. Click "New store" to create one.')}
+          {renderStoresCard(hostedStores, 'No stores yet. Click "New store" to create one.')}
         </TabsContent>
 
         <TabsContent value="shopify" className="space-y-6">
@@ -731,7 +731,7 @@ export default function CorporateStores() {
               Stores connected via Shopify. Open a store to manage its integration, products, and customers.
             </p>
           </div>
-          {renderStoresCard(shopifyStores, "No Shopify stores yet. Connect a Shopify store from an existing store's Integration tab or create a new one.")}
+          {renderStoresCard(shopifyStores, "No Shopify stores yet. Connect a Shopify store from an existing store's Integration tab or create a new one.", "external")}
         </TabsContent>
 
         <TabsContent value="woocommerce" className="space-y-6">
