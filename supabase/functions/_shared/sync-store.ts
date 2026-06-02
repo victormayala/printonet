@@ -9,6 +9,8 @@ type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabas
 
 export type SyncPlatform = "shopify" | "woocommerce";
 
+const normalizeStoreUrl = (value: string) => value.trim().replace(/\/+$/, "");
+
 /**
  * Returns the corporate_stores.id for the integration, creating one if needed.
  * Also writes the store_id back onto the store_integrations row.
@@ -23,7 +25,8 @@ export async function ensureSyncStore(
     name?: string;
   },
 ): Promise<string> {
-  const { user_id, platform, store_url } = params;
+  const { user_id, platform } = params;
+  const store_url = normalizeStoreUrl(params.store_url);
 
   // 1. Find the integration row.
   const { data: integ, error: integErr } = await supabase
@@ -44,7 +47,23 @@ export async function ensureSyncStore(
     if (existing?.id) return existing.id;
   }
 
-  // 3. Otherwise create the store.
+  // 3. Reuse an existing dashboard-only store for this same integration URL if
+  // the integration row lost its store_id during an older connect flow.
+  const { data: existingByName } = await supabase
+    .from("corporate_stores")
+    .select("id")
+    .eq("user_id", user_id)
+    .eq("store_type", platform)
+    .eq("custom_domain", store_url)
+    .maybeSingle();
+  if (existingByName?.id) {
+    if (integ?.id) {
+      await supabase.from("store_integrations").update({ store_id: existingByName.id }).eq("id", integ.id);
+    }
+    return existingByName.id;
+  }
+
+  // 4. Otherwise create the store.
   const { data: userRes } = await supabase.auth.admin.getUserById(user_id);
   const contactEmail = userRes?.user?.email ?? `${user_id}@printonet.local`;
 
@@ -66,6 +85,7 @@ export async function ensureSyncStore(
       user_id,
       name: derivedName,
       contact_email: contactEmail,
+      custom_domain: store_url,
       store_type: platform, // 'shopify' | 'woocommerce'
       status: "active",     // dashboard-only; no provisioning needed
       tenant_slug: null,
