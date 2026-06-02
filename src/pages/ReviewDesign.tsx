@@ -74,6 +74,7 @@ export default function ReviewDesign() {
   const wcProductId = searchParams.get("wcProductId") || "";
   const wcVariationId = searchParams.get("wcVariationId") || "";
   const wcAttributesParam = searchParams.get("wcAttributes") || "";
+  const shopifyVariantId = searchParams.get("shopifyVariantId") || "";
 
   useEffect(() => {
     if (!sessionId) return;
