@@ -698,7 +698,7 @@ export default function DesignStudio({
       image_side1: embedProductData.image_side1 || null,
       image_side2: embedProductData.image_side2 || null,
       print_areas: embedProductData.print_areas || null,
-      variants: embedProductData.variants || [],
+      variants: (embedProductData.variants || []).filter((v): v is NonNullable<typeof v> => v != null && typeof v === "object"),
     };
     setInvProduct(ep);
     viewStatesRef.current = { front: null, back: null, side1: null, side2: null };
