@@ -2244,7 +2244,7 @@ export default function DesignStudio({
       replaceAiDesignImage(active, transparentUrl);
     } catch (err: any) {
       console.error("Remove background error:", err);
-      alert(err.message || "Failed to remove background. Try again.");
+      toast.error(err.message || "Failed to remove background. Try again.");
     } finally {
       setRemovingBg(false);
     }
