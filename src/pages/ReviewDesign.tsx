@@ -255,9 +255,10 @@ export default function ReviewDesign() {
       ...(wcAttributes ? { wcAttributes } : {}),
     };
     const storeOrigin = resolveStoreOrigin();
+    const isWooFlow = Boolean(wcProductId);
 
-    // Preferred path: send directly to Woo from this screen.
-    if (storeOrigin) {
+    // Woo-only path: send directly to the merchant's WooCommerce cart.
+    if (isWooFlow && storeOrigin) {
       setSendingToWoo(true);
       setTransferDebug(`attempting transfer to ${storeOrigin}`);
       const transfer = await transferHostedCartToWoo(storeOrigin, [
@@ -294,13 +295,26 @@ export default function ReviewDesign() {
       return;
     }
 
-    setTransferDebug("no store origin detected");
-    toast({
-      variant: "destructive",
-      title: "No store linked",
-      description: "Open this customizer from your store, or set a store URL in your cart.",
+    // Default path (Shopify, hosted, or no linked store): add to local cart.
+    addItem({
+      sessionId: sessionId || "",
+      productName,
+      previewImage: previewSide?.previewPNG || previewSide?.designPNG || null,
+      quantity,
+      priceInCents,
+      variant: variantWithSize || undefined,
+      storeOrigin,
+      printFileUrl: printFileUrl || undefined,
+      designLayersUrl: designLayersUrl || undefined,
     });
+    setAddedToCart(true);
+    toast({
+      title: "Added to cart",
+      description: `${productName}${variantWithSize ? ` · ${variantWithSize}` : ""} added.`,
+    });
+    navigate(`/cart${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`);
     return;
+
 
 
   };
