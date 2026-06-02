@@ -671,10 +671,32 @@
         console.error('[CustomizerLoader] Failed to load customizable products:', err);
         return;
       }
-      var needle = productName.toLowerCase();
-      var match = products.find(function (p) { return p.name && p.name.toLowerCase() === needle; });
+      function normalizeName(s) {
+        return String(s || '')
+          .toLowerCase()
+          .replace(/[®™©]/g, '')
+          .replace(/[\u2013\u2014\u2212]/g, '-')
+          .replace(/[^\w\s-]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+      var needle = normalizeName(productName);
+      var handle = (window.Shopify && window.Shopify.product && window.Shopify.product.handle) || '';
+      var handleNeedle = normalizeName(handle.replace(/-/g, ' '));
+      var match = products.find(function (p) {
+        var n = normalizeName(p.name);
+        return n && (n === needle || (handleNeedle && n === handleNeedle));
+      });
       if (!match) {
-        console.log('[CustomizerLoader] Product is not enabled for customization:', productName);
+        match = products.find(function (p) {
+          var n = normalizeName(p.name);
+          if (!n || !needle) return false;
+          return n.indexOf(needle) !== -1 || needle.indexOf(n) !== -1;
+        });
+      }
+      if (!match) {
+        console.log('[CustomizerLoader] Product is not enabled for customization. Page title:', productName, '| handle:', handle);
+        console.log('[CustomizerLoader] Available customizable products:', products.map(function (p) { return p.name; }));
         return;
       }
 
