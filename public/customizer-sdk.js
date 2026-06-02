@@ -196,6 +196,7 @@
       reviewUrl += '&storeOrigin=' + encodeURIComponent(window.location.origin);
       if (_wcProductId) reviewUrl += '&wcProductId=' + encodeURIComponent(_wcProductId);
       if (_wcVariationId) reviewUrl += '&wcVariationId=' + encodeURIComponent(String(_wcVariationId));
+      if (_shopifyVariantId) reviewUrl += '&shopifyVariantId=' + encodeURIComponent(String(_shopifyVariantId));
       if (_wcAttributes && typeof _wcAttributes === 'object') {
         try {
           reviewUrl += '&wcAttributes=' + encodeURIComponent(JSON.stringify(_wcAttributes));

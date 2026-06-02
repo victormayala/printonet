@@ -74,6 +74,7 @@ export default function ReviewDesign() {
   const wcProductId = searchParams.get("wcProductId") || "";
   const wcVariationId = searchParams.get("wcVariationId") || "";
   const wcAttributesParam = searchParams.get("wcAttributes") || "";
+  const shopifyVariantId = searchParams.get("shopifyVariantId") || "";
 
   useEffect(() => {
     if (!sessionId) return;
@@ -296,6 +297,9 @@ export default function ReviewDesign() {
     }
 
     // Default path (Shopify, hosted, or no linked store): add to local cart.
+    // The SDK on the parent storefront listens for the broadcast "cart-updated"
+    // postMessage and uses `shopifyVariantId` to call Shopify's /cart/add.js
+    // with the design metadata as line-item properties.
     addItem({
       sessionId: sessionId || "",
       productName,
@@ -304,16 +308,18 @@ export default function ReviewDesign() {
       priceInCents,
       variant: variantWithSize || undefined,
       storeOrigin,
+      shopifyVariantId: shopifyVariantId || undefined,
       printFileUrl: printFileUrl || undefined,
       designLayersUrl: designLayersUrl || undefined,
     });
     setAddedToCart(true);
     toast({
-      title: "Added to cart",
+      title: shopifyVariantId ? "Sent to your Shopify cart" : "Added to cart",
       description: `${productName}${variantWithSize ? ` · ${variantWithSize}` : ""} added.`,
     });
     navigate(`/cart${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`);
     return;
+
 
 
 
