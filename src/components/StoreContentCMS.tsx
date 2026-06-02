@@ -1311,6 +1311,7 @@ export function StoreContentCMS({
   const [versionErr, setVersionErr] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!store.tenant_slug) return;
     let cancelled = false;
     (async () => {
       try {
@@ -1323,7 +1324,7 @@ export function StoreContentCMS({
     return () => {
       cancelled = true;
     };
-  }, [store.id]);
+  }, [store.id, store.tenant_slug]);
 
   const versionMismatch = serverVersion !== null && serverVersion !== PLATFORM_CMS_SCHEMA_VERSION;
   const canPublish = !versionMismatch;
