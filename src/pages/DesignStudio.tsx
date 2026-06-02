@@ -404,6 +404,24 @@ interface InitialDesignOutput {
   variant?: ProductVariant | null;
 }
 
+function normalizeProductVariant(input: unknown, index: number): ProductVariant | null {
+  if (!input || typeof input !== "object") return null;
+  const variant = input as Partial<ProductVariant> & Record<string, unknown>;
+  const fallbackLabel = `Color ${index + 1}`;
+  const colorName = String(variant.colorName || variant.color || fallbackLabel).trim() || fallbackLabel;
+  const color = String(variant.color || colorName).trim() || colorName;
+  const hex = typeof variant.hex === "string" && variant.hex.trim() ? variant.hex : "#cccccc";
+
+  return {
+    color,
+    colorName,
+    hex,
+    image: typeof variant.image === "string" ? variant.image : undefined,
+    gallery: Array.isArray(variant.gallery) ? variant.gallery.filter((url): url is string => typeof url === "string") : undefined,
+    sizes: Array.isArray(variant.sizes) ? variant.sizes : undefined,
+  };
+}
+
 import { type BrandConfig, DEFAULT_BRAND_CONFIG, applyBrandCSS } from "@/lib/brand-config";
 import { resolveGalleryImageForView } from "@/lib/variant-gallery";
 import { extractWooColorSelection, matchVariantFromWooColor } from "@/lib/woo-variant-match";
@@ -698,7 +716,9 @@ export default function DesignStudio({
       image_side1: embedProductData.image_side1 || null,
       image_side2: embedProductData.image_side2 || null,
       print_areas: embedProductData.print_areas || null,
-      variants: (embedProductData.variants || []).filter((v): v is NonNullable<typeof v> => v != null && typeof v === "object"),
+      variants: Array.isArray(embedProductData.variants)
+        ? embedProductData.variants.map(normalizeProductVariant).filter((v): v is ProductVariant => v !== null)
+        : [],
     };
     setInvProduct(ep);
     viewStatesRef.current = { front: null, back: null, side1: null, side2: null };
@@ -733,14 +753,7 @@ export default function DesignStudio({
 
     const outVariant = initialDesignOutput?.variant;
     if (outVariant && (outVariant.hex || outVariant.colorName || outVariant.color)) {
-      setSelectedVariant({
-        color: outVariant.color || outVariant.colorName || "",
-        colorName: outVariant.colorName || outVariant.color || "",
-        hex: outVariant.hex || "#000000",
-        image: outVariant.image,
-        gallery: Array.isArray(outVariant.gallery) ? outVariant.gallery : undefined,
-        sizes: outVariant.sizes,
-      });
+      setSelectedVariant(normalizeProductVariant(outVariant, 0));
       return;
     }
 
@@ -752,14 +765,7 @@ export default function DesignStudio({
       if (wooColor) {
         const matched = matchVariantFromWooColor(variants as any, wooColor);
         if (matched) {
-          setSelectedVariant({
-            color: matched.color || matched.colorName,
-            colorName: matched.colorName || matched.color,
-            hex: matched.hex,
-            image: (matched as any).image,
-            gallery: Array.isArray((matched as any).gallery) ? ((matched as any).gallery as string[]) : undefined,
-            sizes: (matched as any).sizes,
-          } as any);
+          setSelectedVariant(normalizeProductVariant(matched, 0));
         }
       }
     }
@@ -2893,7 +2899,7 @@ export default function DesignStudio({
                               aria-hidden
                             />
                             <span className="truncate text-left text-sm font-medium">
-                              {selectedVariant.colorName || selectedVariant.color}
+                              {selectedVariant.colorName || selectedVariant.color || "Selected color"}
                             </span>
                           </>
                         ) : (
@@ -2911,9 +2917,8 @@ export default function DesignStudio({
                   >
                     {invProduct.variants.filter(Boolean).map((v, i) => {
                       const label = v.colorName || v.color || `Color ${i + 1}`;
-                      const isSelected =
-                        selectedVariant?.hex === v.hex &&
-                        (selectedVariant.colorName || selectedVariant.color) === (v.colorName || v.color || label);
+                      const selectedLabel = selectedVariant?.colorName || selectedVariant?.color || "";
+                      const isSelected = Boolean(selectedVariant) && selectedVariant?.hex === v.hex && selectedLabel === label;
                       return (
                         <DropdownMenuItem
                           key={`${v.hex}-${i}-${label}`}
@@ -3369,7 +3374,7 @@ export default function DesignStudio({
             </div>
           </div>
           <div className="mt-2 text-center text-xs text-muted-foreground">
-            {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName}` : ""}
+            {VIEW_LABELS[activeView]} View{selectedVariant ? ` • ${selectedVariant.colorName || selectedVariant.color}` : ""}
           </div>
         </div>
       </div>
