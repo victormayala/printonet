@@ -1646,9 +1646,29 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     toast({ title: "Shopify disconnected" });
   };
 
-  if (loadingIntegration) {
-    return <SupplierTabSkeleton />;
-  }
+  const handleReauth = async () => {
+    if (!integration) return;
+    setLoading(true);
+    setAuthUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("shopify-oauth-init", {
+        body: {
+          shop: integration.store_url,
+          user_id: user?.id,
+          redirect_url: window.location.origin + "/products",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.authorization_url) {
+        window.open(data.authorization_url, "_blank", "noopener,noreferrer");
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: err.message || "Failed to start re-authentication" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (integration) {
     return (
@@ -1665,10 +1685,18 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
               )}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-3">
+          <CardContent className="flex flex-wrap gap-3">
             <Button onClick={handleSync} disabled={syncing} className="gap-2">
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Sync Products
+            </Button>
+            <Button
+              onClick={handleReauth}
+              disabled={loading}
+              className="gap-2 bg-yellow-500 text-black hover:bg-yellow-400 focus-visible:ring-yellow-500"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              Re-authenticate
             </Button>
             <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="gap-2 text-destructive hover:text-destructive">
               {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
@@ -1679,6 +1707,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
       </div>
     );
   }
+
 
 
   const handleOAuthConnect = async () => {
