@@ -129,12 +129,28 @@ Deno.serve(async (req) => {
       // Non-fatal — continue with integration save
     }
 
+    // Build credentials payload including the expiring-token fields.
+    const nowMs = Date.now();
+    const credentialsPayload: Record<string, unknown> = {
+      access_token: accessToken,
+      scopes: tokenData.scope || "",
+    };
+    if (refreshToken) credentialsPayload.refresh_token = refreshToken;
+    if (expiresIn !== null) {
+      credentialsPayload.expires_at = new Date(nowMs + expiresIn * 1000).toISOString();
+    }
+    if (refreshTokenExpiresIn !== null) {
+      credentialsPayload.refresh_token_expires_at = new Date(
+        nowMs + refreshTokenExpiresIn * 1000,
+      ).toISOString();
+    }
+
     // Upsert: update if same user + platform + store already exists
     const integrationRow = {
       user_id: userId,
       platform: "shopify",
       store_url: storeUrl,
-      credentials: { access_token: accessToken, scopes: tokenData.scope || "" },
+      credentials: credentialsPayload,
       script_tag_id: scriptTagId,
       last_synced_at: null,
     };
@@ -158,7 +174,7 @@ Deno.serve(async (req) => {
           .from("store_integrations")
           .update({
             store_url: storeUrl,
-            credentials: { access_token: accessToken, scopes: tokenData.scope || "" },
+            credentials: credentialsPayload,
             script_tag_id: scriptTagId,
           })
           .eq("id", existing.id);
