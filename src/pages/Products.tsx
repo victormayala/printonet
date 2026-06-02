@@ -1850,6 +1850,12 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
   const handleDisconnect = async () => {
     if (!integration) return;
     setDisconnecting(true);
+    // Also remove the dashboard-only sync store created for this WooCommerce site.
+    const syncStoreId = (integration as any).store_id;
+    if (syncStoreId) {
+      await supabase.from("corporate_store_products").delete().eq("store_id", syncStoreId);
+      await supabase.from("corporate_stores").delete().eq("id", syncStoreId);
+    }
     await supabase.from("store_integrations").delete().eq("id", integration.id);
     setIntegration(null);
     setSiteUrl("");
