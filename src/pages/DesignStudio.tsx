@@ -2909,7 +2909,7 @@ export default function DesignStudio({
                     align="end"
                     className="max-h-72 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto z-[100]"
                   >
-                    {invProduct.variants.map((v, i) => {
+                    {invProduct.variants.filter(Boolean).map((v, i) => {
                       const label = v.colorName || v.color || `Color ${i + 1}`;
                       const isSelected =
                         selectedVariant?.hex === v.hex &&
