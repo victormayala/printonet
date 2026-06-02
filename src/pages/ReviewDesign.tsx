@@ -321,10 +321,6 @@ export default function ReviewDesign() {
       };
 
       const result = await new Promise<boolean>((resolve) => {
-        const timer = window.setTimeout(() => {
-          window.removeEventListener("message", onMessage);
-          resolve(false);
-        }, 12000);
         const onMessage = (event: MessageEvent) => {
           const data = event.data;
           if (!data || data.source !== "customizer-studio" || data.type !== "review-add-to-cart-result") return;
@@ -333,6 +329,10 @@ export default function ReviewDesign() {
           window.removeEventListener("message", onMessage);
           resolve(Boolean(data.payload?.ok));
         };
+        const timer = window.setTimeout(() => {
+          window.removeEventListener("message", onMessage);
+          resolve(false);
+        }, 12000);
         window.addEventListener("message", onMessage);
         window.opener.postMessage({
           source: "customizer-studio",
