@@ -447,7 +447,7 @@
       return;
     }
 
-    function _noop() {}
+    
 
     // WooCommerce native cart (IDs may come from SDK open() or from review page postMessage payload)
     var wcPid = _wcProductId || (payload && payload.wcProductId) || null;
