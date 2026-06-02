@@ -741,7 +741,7 @@ export default function CorporateStores() {
               Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
             </p>
           </div>
-          {renderStoresCard(wooStores, "No WooCommerce stores yet. Connect a WooCommerce store from an existing store's Integration tab or create a new one.")}
+          {renderStoresCard(wooStores, "No WooCommerce stores yet. Connect a WooCommerce store from an existing store's Integration tab or create a new one.", "external")}
         </TabsContent>
 
       </Tabs>
