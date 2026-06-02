@@ -954,6 +954,7 @@
         var designUrl = (meta && meta.designUrl) || (designedLine ? _cartItemDesignUrl(designedLine) : null);
 
         var applyOverlays = function () {
+          _clearShopifyCartEmptyState();
           _replaceCartLineImages(designUrl, designedLine);
           _applyDesignThumbnailsFromCart(cart);
           _decorateShopifyDesignLinks();
