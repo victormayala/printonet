@@ -440,8 +440,8 @@
         properties['Design preview'] = 'View the design preview in the cart before checkout.';
       }
 
-      // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
-      var sectionsToRender = _shopifyCartSectionsToRender();
+      // Ask Shopify to render cart sections so native drawers can update without a refresh.
+      var sectionsToRender = _shopifyCartSectionsPayload();
 
       fetch('/cart/add.js', {
         method: 'POST',
@@ -1089,7 +1089,7 @@
         id: newItem.shopifyVariantId,
         quantity: newItem.quantity || 1,
         properties: properties,
-        sections: _shopifyCartSectionsToRender(),
+        sections: _shopifyCartSectionsPayload(),
         sections_url: window.location.pathname,
       }),
       credentials: 'same-origin',
