@@ -1917,10 +1917,17 @@ function WooCommerceImport({ onDone }: { onDone: () => void }) {
               )}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-3">
+          <CardContent className="flex flex-wrap gap-3">
             <Button onClick={handleSync} disabled={syncing} className="gap-2">
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Sync Products
+            </Button>
+            <Button
+              onClick={() => setIntegration(null)}
+              className="gap-2 bg-yellow-500 text-black hover:bg-yellow-400 focus-visible:ring-yellow-500"
+            >
+              <Link2 className="h-4 w-4" />
+              Update credentials
             </Button>
             <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="gap-2 text-destructive hover:text-destructive">
               {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
