@@ -402,8 +402,11 @@
       if (payload.designLayersUrl) properties['_customizer_layers_url'] = payload.designLayersUrl;
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
-        if (frontSide && (frontSide.previewPNG || frontSide.designPNG)) {
-          properties['_customizer_design_url'] = frontSide.previewPNG || frontSide.designPNG;
+        var frontImg = frontSide && (frontSide.previewPNG || frontSide.designPNG);
+        if (frontImg) {
+          // Visible property (no underscore) so Shopify themes render the design image on the line item
+          properties['Design'] = frontImg;
+          properties['_customizer_design_url'] = frontImg;
         }
         properties['_customizer_sides'] = JSON.stringify(payload.sides.map(function (s) {
           var side = { view: s.view, url: s.designPNG };
@@ -412,6 +415,9 @@
         }));
       }
 
+      // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
+      var sectionsToRender = 'cart-drawer,cart-icon-bubble,cart-live-region-text,cart-notification,cart-notification-button,cart-notification-product,main-cart-items,main-cart-footer';
+
       fetch('/cart/add.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -419,6 +425,8 @@
           id: shopifyId,
           quantity: (payload && payload.quantity) || 1,
           properties: properties,
+          sections: sectionsToRender,
+          sections_url: window.location.pathname,
         }),
         credentials: 'same-origin',
       })
@@ -429,15 +437,7 @@
             callback(false);
             return;
           }
-          // Dispatch Shopify cart update event for themes that listen
-          document.dispatchEvent(new CustomEvent('cart:refresh'));
-          // Some themes use this
-          if (typeof window.Shopify !== 'undefined' && window.Shopify.onCartUpdate) {
-            fetch('/cart.js', { credentials: 'same-origin' })
-              .then(function (r) { return r.json(); })
-              .then(function (cart) { window.Shopify.onCartUpdate(cart); })
-              .catch(function () {});
-          }
+          _refreshShopifyCartUI(data && data.sections);
           callback(true);
         })
         .catch(function (err) {
@@ -446,6 +446,8 @@
         });
       return;
     }
+
+    function _noop() {}
 
     // WooCommerce native cart (IDs may come from SDK open() or from review page postMessage payload)
     var wcPid = _wcProductId || (payload && payload.wcProductId) || null;
