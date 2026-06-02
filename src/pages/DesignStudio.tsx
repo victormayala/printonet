@@ -1893,9 +1893,9 @@ export default function DesignStudio({
           const svgString = ReactDOMServer.renderToStaticMarkup(
             React.createElement(iconComp, { size: 120, color: value, strokeWidth: 1.5 })
           );
-          const blob = new Blob([svgString], { type: "image/svg+xml" });
-          const url = URL.createObjectURL(blob);
+          const url = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
           const imgEl = new Image();
+          imgEl.crossOrigin = "anonymous";
           imgEl.onload = () => {
             const prevLeft = selectedObject.left;
             const prevTop = selectedObject.top;
@@ -1917,7 +1917,6 @@ export default function DesignStudio({
             canvas?.setActiveObject(newImg);
             canvas?.renderAll();
             saveState();
-            URL.revokeObjectURL(url);
           };
           imgEl.src = url;
         }
