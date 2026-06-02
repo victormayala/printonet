@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import Products from "@/pages/Products";
+
 import { StoreThemePicker } from "@/components/StoreThemePicker";
 import { cms } from "@/lib/cmsClient";
 
