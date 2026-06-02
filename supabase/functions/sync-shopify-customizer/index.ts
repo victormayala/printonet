@@ -65,8 +65,17 @@ Deno.serve(async (req) => {
     headers: { "X-Shopify-Access-Token": access_token, "Content-Type": "application/json" },
   });
   if (!listRes.ok) {
-    return json(listRes.status, { error: "Shopify rejected ScriptTag lookup", response: (await listRes.text()).slice(0, 1000) });
+    const text = await listRes.text();
+    if (/requires merchant approval/i.test(text) || /script_tags scope/i.test(text)) {
+      return json(403, {
+        error: "needs_reauth",
+        message:
+          "Your Shopify connection is missing the script_tags permission. Please disconnect and reconnect your Shopify store to grant the updated scopes.",
+      });
+    }
+    return json(listRes.status, { error: "Shopify rejected ScriptTag lookup", response: text.slice(0, 1000) });
   }
+
 
   const listData = await listRes.json();
   const existing = (listData.script_tags || []).find((tag: { id?: number; src?: string }) =>
