@@ -157,27 +157,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Redirect user back to the app
-    const finalRedirect = redirectUrl || `${Deno.env.get("SUPABASE_URL")?.replace("supabase.co", "lovable.app")}/products`;
-    // Use a simple HTML page with a success message and redirect
-    const html = `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>Shopify Connected</title></head>
-<body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;color:#fff;">
-  <div style="text-align:center;">
-    <h2>✅ Shopify Connected!</h2>
-    <p>Redirecting you back...</p>
-    <script>
-      setTimeout(function() {
-        window.location.href = ${JSON.stringify(finalRedirect)};
-      }, 1500);
-    </script>
-  </div>
-</body>
-</html>`;
+    // Redirect user back to the app via a proper 302 + meta-refresh fallback.
+    // We avoid an HTML interstitial because some contexts (Shopify admin / new-tab popups)
+    // render the response as plain text if Content-Type isn't honored.
+    const finalRedirect =
+      redirectUrl ||
+      `${Deno.env.get("SUPABASE_URL")?.replace("supabase.co", "lovable.app")}/products`;
 
-    return new Response(html, {
-      headers: { "Content-Type": "text/html" },
+    const fallbackHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${finalRedirect}"><title>Shopify Connected</title></head><body>Redirecting to <a href="${finalRedirect}">${finalRedirect}</a>…</body></html>`;
+
+    return new Response(fallbackHtml, {
+      status: 302,
+      headers: {
+        Location: finalRedirect,
+        "Content-Type": "text/html; charset=utf-8",
+      },
     });
   } catch (err: any) {
     console.error("Shopify OAuth callback error:", err);
