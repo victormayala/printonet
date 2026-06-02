@@ -534,8 +534,58 @@
     callback(true);
   }
 
+  function _isHttpUrl(v) {
+    return typeof v === 'string' && /^https?:\/\//i.test(v);
+  }
+
+  function _findCartLineForDesign(cart, meta) {
+    if (!cart || !cart.items || !meta) return null;
+    var sessionId = meta.sessionId ? String(meta.sessionId) : '';
+    var variantId = meta.variantId ? String(meta.variantId) : '';
+    for (var i = 0; i < cart.items.length; i++) {
+      var item = cart.items[i];
+      var props = item && item.properties ? item.properties : {};
+      var propSession = props._customizer_session_id ? String(props._customizer_session_id) : '';
+      if (sessionId && propSession === sessionId) return item;
+      if (variantId && String(item && item.variant_id) === variantId && props.Design) return item;
+    }
+    return null;
+  }
+
+  function _replaceCartLineImages(designUrl, cartItem) {
+    if (!_isHttpUrl(designUrl)) return;
+    var selectors = [
+      'img[src="' + _cssEscape(cartItem && (cartItem.image || cartItem.featured_image && cartItem.featured_image.url || '')) + '"]',
+      '[data-cart-item-image] img',
+      '.cart-item__image',
+      '.cart-notification-product__image img',
+      'cart-drawer .cart-item img',
+      'cart-notification img',
+    ];
+    var seen = [];
+    selectors.forEach(function (selector) {
+      if (!selector || selector === 'img[src=""]') return;
+      try {
+        document.querySelectorAll(selector).forEach(function (img) {
+          if (seen.indexOf(img) >= 0) return;
+          seen.push(img);
+          img.src = designUrl;
+          img.srcset = '';
+          img.setAttribute('src', designUrl);
+          img.setAttribute('data-customizer-design-thumbnail', 'true');
+        });
+      } catch (_) {}
+    });
+  }
+
+  function _cssEscape(value) {
+    if (!value) return '';
+    if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
+    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
   // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
-  function _refreshShopifyCartUI(sections) {
+  function _refreshShopifyCartUI(sections, meta) {
     try {
       if (sections && typeof sections === 'object') {
         Object.keys(sections).forEach(function (sectionId) {
@@ -567,6 +617,10 @@
     fetch('/cart.js', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (cart) {
+        var designedLine = _findCartLineForDesign(cart, meta);
+        var designUrl = meta && meta.designUrl;
+        if (!designUrl && designedLine && designedLine.properties) designUrl = designedLine.properties.Design;
+        _replaceCartLineImages(designUrl, designedLine);
         document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
