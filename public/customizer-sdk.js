@@ -670,6 +670,7 @@
     var containers = _cartLineContainers(cartItem, designUrl || '');
     containers.forEach(function (container) {
       try {
+        _hideRawShopifyDesignProperty(container, reviewUrl);
         if (!container || container.querySelector('[data-printonet-design-link="1"]')) return;
         var wrap = document.createElement('div');
         wrap.setAttribute('data-printonet-design-link-wrap', '1');
@@ -686,6 +687,24 @@
         props.appendChild(wrap);
       } catch (_) {}
     });
+  }
+
+  function _hideRawShopifyDesignProperty(container, reviewUrl) {
+    if (!container) return;
+    try {
+      container.querySelectorAll('dt, dd, li, p, span, small, div').forEach(function (el) {
+        if (!el || el.getAttribute('data-printonet-design-link-wrap') === '1' || el.querySelector('[data-printonet-design-link="1"]')) return;
+        var text = (el.textContent || '').trim();
+        if (!text) return;
+        var isRawDesign = /view\s*design\s*:?/i.test(text) || (reviewUrl && text.indexOf(reviewUrl) >= 0);
+        if (!isRawDesign) return;
+        var className = String(el.className || '');
+        if (el.children.length <= 2 || /property|properties|product-option|line-item/i.test(className)) {
+          el.style.display = 'none';
+          el.setAttribute('data-printonet-hidden-raw-design', '1');
+        }
+      });
+    } catch (_) {}
   }
 
   function _cartItemDesignUrl(item) {
