@@ -66,8 +66,18 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
    */
   const pushSnapshot = async (opts?: { silent?: boolean }) => {
     // Dashboard-only stores (Shopify/WooCommerce sync containers) have no
-    // tenant_slug and no hosted storefront — skip the push entirely.
-    if (!store.tenant_slug) return true;
+    // tenant_slug and no hosted storefront. Their injected store plugin/loader
+    // reads these DB flags live, so there is no hosted storefront snapshot to push.
+    if (!store.tenant_slug) {
+      if (!opts?.silent) {
+        const platform = store.store_type === "shopify" ? "Shopify" : store.store_type === "woocommerce" ? "WooCommerce" : "this store";
+        toast({
+          title: "Customizer settings are live",
+          description: `${platform} reads enabled products directly from Printonet. Refresh the storefront product page to see changes.`,
+        });
+      }
+      return true;
+    }
     try {
       const { data, error } = await supabase.functions.invoke("sync-customizer-flags", {
         body: { storeId: store.id },
