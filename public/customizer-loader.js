@@ -599,7 +599,7 @@
     if (window.CustomizerStudio) return cb();
     var s = document.createElement('script');
     // Cache-bust to ensure store pages pick up latest SDK logic immediately.
-    s.src = BASE_URL + '/customizer-sdk.js?v=20260602-shopify-short-review-live-cart-1';
+    s.src = BASE_URL + '/customizer-sdk.js?v=20260602-cart-drawer-link-checkout-message-1';
     s.onload = cb;
     s.onerror = function () { console.error('[CustomizerLoader] Failed to load SDK'); };
     document.head.appendChild(s);
