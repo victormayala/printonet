@@ -569,10 +569,12 @@ export default function CorporateStores() {
               )}
             </div>
           </TableCell>
-          <TableCell>
-            <PaymentsCell store={s} />
-          </TableCell>
-          {isSuperAdmin && (
+          {variant !== "external" && (
+            <TableCell>
+              <PaymentsCell store={s} />
+            </TableCell>
+          )}
+          {variant !== "external" && isSuperAdmin && (
             <TableCell>
               <PlatformFeeCell store={s} />
             </TableCell>
@@ -616,6 +618,7 @@ export default function CorporateStores() {
                 setResumeStore(s);
                 setOpen(true);
               }}
+              hideFinishSetup={variant === "external"}
             />
           </TableCell>
         </TableRow>
@@ -624,7 +627,7 @@ export default function CorporateStores() {
     </TableBody>
   );
 
-  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string) => (
+  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string, variant: "hosted" | "external" = "hosted") => (
     <Card>
       <CardHeader>
         <CardTitle>Your stores</CardTitle>
