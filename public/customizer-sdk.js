@@ -733,7 +733,7 @@
         if (el === container || el.querySelector('img, button, input, select, quantity-input, cart-remove-button')) return;
         var text = (el.textContent || '').trim();
         if (!text) return;
-        var isRawDesign = (reviewUrl && text.indexOf(reviewUrl) >= 0) || /^view\s*design\s*:?/i.test(text) || /^design\s*:\s*https?:\/\//i.test(text) || (/^design\s*preview\s*:?/i.test(text) && /cart/i.test(text));
+        var isRawDesign = (reviewUrl && text.indexOf(reviewUrl) >= 0) || /^view\s*design\s*:?/i.test(text) || /^design\s*:\s*https?:\/\//i.test(text) || /^design\s*preview\s*:?/i.test(text) || text.indexOf('View the design preview in the cart before checkout') >= 0;
         if (!isRawDesign) return;
         var className = String(el.className || '');
         var tag = (el.tagName || '').toUpperCase();
