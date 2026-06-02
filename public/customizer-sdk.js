@@ -434,14 +434,14 @@
       if (httpsSides.length > 0) {
         properties['_customizer_sides'] = JSON.stringify(httpsSides);
       }
-      // Single visible, short Printonet review link shoppers can click to preview their design.
-      // Use the shortest supported route so checkout fallback text stays compact.
+      // Keep checkout clean: Shopify checkout cannot run our SDK, so expose a short
+      // message there and let the SDK inject the actual cart/drawer preview link.
       if (payload.sessionId) {
-        properties['Design'] = _reviewUrlForSession(payload.sessionId);
+        properties['Design preview'] = 'View the design preview in the cart before checkout.';
       }
 
-      // Ask Shopify to render cart sections so we can hot-swap the cart UI without a refresh
-      var sectionsToRender = _shopifyCartSectionsToRender();
+      // Ask Shopify to render cart sections so native drawers can update without a refresh.
+      var sectionsToRender = _shopifyCartSectionsPayload();
 
       fetch('/cart/add.js', {
         method: 'POST',
@@ -563,7 +563,7 @@
     return base + '/r/' + encodeURIComponent(String(sessionId || ''));
   }
 
-  function _shopifyCartSectionsToRender() {
+  function _shopifyCartSectionIds() {
     var ids = [];
     function add(id) {
       id = String(id || '').replace(/^shopify-section-/, '');
@@ -574,17 +574,27 @@
         var wrap = el.closest('[id^="shopify-section-"]');
         if (wrap) add(wrap.id);
       });
-      document.querySelectorAll('[id^="shopify-section-"]').forEach(function (el) {
-        var id = String(el.id || '').replace(/^shopify-section-/, '');
-        if (/cart|drawer|notification|header/i.test(id)) add(id);
-      });
     } catch (_) {}
     add('cart-drawer');
     add('cart-icon-bubble');
     add('cart-notification');
     add('main-cart-items');
     add('main-cart-footer');
-    return ids.slice(0, 5).join(',');
+    try {
+      document.querySelectorAll('[id^="shopify-section-"]').forEach(function (el) {
+        var id = String(el.id || '').replace(/^shopify-section-/, '');
+        if (/cart|drawer|notification/i.test(id)) add(id);
+      });
+    } catch (_) {}
+    return ids.slice(0, 5);
+  }
+
+  function _shopifyCartSectionsToRender() {
+    return _shopifyCartSectionIds().join(',');
+  }
+
+  function _shopifyCartSectionsPayload() {
+    return _shopifyCartSectionIds();
   }
 
   function _findCartLineForDesign(cart, meta) {
@@ -696,7 +706,13 @@
     containers.forEach(function (container) {
       try {
         _hideRawShopifyDesignProperty(container, reviewUrl);
-        if (!container || container.querySelector('[data-printonet-design-link="1"]')) return;
+        if (!container) return;
+        var existing = container.querySelector('[data-printonet-design-link="1"]');
+        if (existing) {
+          existing.innerHTML = _printonetDesignLinkHtml();
+          existing.style.textDecoration = 'underline';
+          return;
+        }
         var wrap = document.createElement('div');
         wrap.setAttribute('data-printonet-design-link-wrap', '1');
         wrap.style.cssText = 'margin-top:6px;display:flex;align-items:center;line-height:1.3;';
@@ -705,8 +721,8 @@
         a.setAttribute('data-printonet-design-link', '1');
         a.setAttribute('target', '_blank');
         a.setAttribute('rel', 'noopener noreferrer');
-        a.style.cssText = 'display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit;font-weight:600;font-size:0.92em;';
-        a.innerHTML = _PRINTONET_MARK_SVG + '<span style="text-decoration:underline;">View design</span>';
+        a.style.cssText = 'display:inline-flex;align-items:center;gap:6px;text-decoration:underline;color:inherit;font-weight:600;font-size:0.92em;';
+        a.innerHTML = _printonetDesignLinkHtml();
         wrap.appendChild(a);
         var props = container.querySelector('.cart-item__details, .ajaxcart__product-meta, .mini-cart__item-content, [class*="properties"], dl, .cart-item__name') || container;
         if (props && props.style && props.style.display === 'none') props = container;
@@ -719,11 +735,11 @@
     if (!container) return;
     try {
       container.querySelectorAll('dt, dd, li, p, span, small, div').forEach(function (el) {
-        if (!el || el.getAttribute('data-printonet-design-link-wrap') === '1' || el.querySelector('[data-printonet-design-link="1"]')) return;
+        if (!el || el.getAttribute('data-printonet-design-link-wrap') === '1' || el.closest('[data-printonet-design-link="1"]') || el.querySelector('[data-printonet-design-link="1"]')) return;
         if (el === container || el.querySelector('img, button, input, select, quantity-input, cart-remove-button')) return;
         var text = (el.textContent || '').trim();
         if (!text) return;
-        var isRawDesign = (reviewUrl && text.indexOf(reviewUrl) >= 0) || /^view\s*design\s*:?/i.test(text) || /^design\s*:\s*https?:\/\//i.test(text);
+        var isRawDesign = (reviewUrl && text.indexOf(reviewUrl) >= 0) || /^view\s*design\s*:?/i.test(text) || /^design\s*:\s*https?:\/\//i.test(text) || /^design\s*preview\s*:?/i.test(text) || text.indexOf('View the design preview in the cart before checkout') >= 0;
         if (!isRawDesign) return;
         var className = String(el.className || '');
         var tag = (el.tagName || '').toUpperCase();
@@ -774,6 +790,10 @@
       '<path d="M1680.82 1.33C1591.8 11.09 1516.61 78.95 1497.46 166.43C1491.31 194.55 1490.95 221.89 1495.34 247.68C1506.4 312.61 1490.04 379.11 1445.7 427.81L1444.71 428.9L1172.53 701.08C1121.55 757.06 1043.54 784.26 970.57 764.07C916.11 749.01 857.17 747.51 798.25 762.91C619.08 809.74 510.56 993.31 557.71 1173.7C601.69 1341.97 766.41 1447.66 935.49 1421.58C946.71 1419.93 957.6 1417.09 968.5 1414.24C979.4 1411.39 990.3 1408.55 1000.88 1404.49C1162.31 1344.19 1253.04 1171.73 1209.05 1003.46C1206.9 995.23 1204.44 987.18 1201.71 979.3C1175.96 905.05 1188.52 823.01 1241.42 764.9L1454.87 551.34L1521.32 484.89C1563.64 442.05 1622.56 417.45 1682.53 424.25C1688.84 424.97 1695.25 425.39 1701.74 425.49C1811.67 427.27 1903.98 344.91 1916.78 237.53C1917.69 230.42 1917.8 223.31 1917.92 216.19C1918.03 209.07 1918.15 201.95 1917.47 194.83C1907.38 77.29 1803.1 -12.09 1680.83 1.32Z" fill="#FDD100"/>' +
     '</svg>';
 
+  function _printonetDesignLinkHtml() {
+    return _PRINTONET_MARK_SVG + 'View design';
+  }
+
   function _isOurReviewHref(href) {
     if (!href) return false;
     var base = (_config && _config.baseUrl ? String(_config.baseUrl) : 'https://customizerstudio.com').replace(/\/+$/, '');
@@ -795,7 +815,6 @@
     try {
       var anchors = document.querySelectorAll('a[href*="/review/"], a[href*="/r/"]');
       anchors.forEach(function (a) {
-        if (a.getAttribute('data-printonet-design-link') === '1') return;
         if (!_isOurReviewHref(a.getAttribute('href') || '')) return;
 
         a.setAttribute('data-printonet-design-link', '1');
@@ -804,10 +823,10 @@
         a.style.display = 'inline-flex';
         a.style.alignItems = 'center';
         a.style.gap = '6px';
-        a.style.textDecoration = 'none';
+        a.style.textDecoration = 'underline';
         a.style.color = 'inherit';
         a.style.fontWeight = '600';
-        a.innerHTML = _PRINTONET_MARK_SVG + '<span style="text-decoration:underline;">View design</span>';
+        a.innerHTML = _printonetDesignLinkHtml();
 
         // Hide the theme-rendered "View design:" label preceding the value.
         var dd = a.closest('dd');
@@ -901,8 +920,14 @@
 
   // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
   function _refreshShopifyCartUI(sections, meta) {
+    var handledByNativeDrawer = false;
     try {
-      _renderShopifyCartSections(sections);
+      var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification, #CartDrawer');
+      if (drawer && typeof drawer.renderContents === 'function' && meta && meta.addResponse) {
+        drawer.renderContents(Object.assign({}, meta.addResponse, { sections: sections || meta.addResponse.sections || {} }));
+        handledByNativeDrawer = true;
+      }
+      if (!handledByNativeDrawer) _renderShopifyCartSections(sections);
     } catch (e) {
       console.warn('[CustomizerStudio] Cart section render failed:', e);
     }
@@ -932,15 +957,11 @@
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
         }
-        var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification, #CartDrawer');
-        if (drawer && typeof drawer.renderContents === 'function' && meta && meta.addResponse) {
-          try { drawer.renderContents(Object.assign({}, meta.addResponse, { sections: sections || {} })); } catch (_) {}
-        }
         _openShopifyCartDrawer();
-        fetch('/?sections=' + encodeURIComponent(_shopifyCartSectionsToRender()), { credentials: 'same-origin' })
+        fetch('/?sections=' + _shopifyCartSectionsToRender(), { credentials: 'same-origin' })
           .then(function (r) { return r.json(); })
           .then(function (freshSections) {
-            _renderShopifyCartSections(freshSections);
+            if (!handledByNativeDrawer) _renderShopifyCartSections(freshSections);
             _applyDesignThumbnailsFromCart(cart);
             _decorateShopifyDesignLinks();
             _openShopifyCartDrawer();
@@ -1062,7 +1083,7 @@
     properties['_customizer_session_id'] = newItem.sessionId;
     if (newItem.printFileUrl) properties['_customizer_print_file_url'] = newItem.printFileUrl;
     if (newItem.designLayersUrl) properties['_customizer_layers_url'] = newItem.designLayersUrl;
-    properties.Design = _reviewUrlForSession(newItem.sessionId);
+    properties['Design preview'] = 'View the design preview in the cart before checkout.';
     if (newItem.previewImage) {
       properties['_customizer_design_url'] = newItem.previewImage;
       properties['_customizer_sides'] = JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]);
@@ -1075,7 +1096,7 @@
         id: newItem.shopifyVariantId,
         quantity: newItem.quantity || 1,
         properties: properties,
-        sections: _shopifyCartSectionsToRender(),
+        sections: _shopifyCartSectionsPayload(),
         sections_url: window.location.pathname,
       }),
       credentials: 'same-origin',
