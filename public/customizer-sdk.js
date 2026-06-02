@@ -517,6 +517,55 @@
     callback(true);
   }
 
+  // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
+  function _refreshShopifyCartUI(sections) {
+    try {
+      if (sections && typeof sections === 'object') {
+        Object.keys(sections).forEach(function (sectionId) {
+          var html = sections[sectionId];
+          if (!html) return;
+          var target = document.getElementById(sectionId);
+          if (target) {
+            var parsed = new DOMParser().parseFromString(html, 'text/html');
+            var inner = parsed.getElementById(sectionId);
+            target.innerHTML = inner ? inner.innerHTML : html;
+            return;
+          }
+          var sectionWrapper = document.getElementById('shopify-section-' + sectionId);
+          if (sectionWrapper) {
+            sectionWrapper.innerHTML = html;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[CustomizerStudio] Cart section render failed:', e);
+    }
+
+    document.dispatchEvent(new CustomEvent('cart:refresh'));
+    document.dispatchEvent(new CustomEvent('cart:build'));
+    document.dispatchEvent(new CustomEvent('cart:updated'));
+    document.dispatchEvent(new CustomEvent('cart-updated'));
+    document.dispatchEvent(new CustomEvent('theme:cart:reload'));
+
+    fetch('/cart.js', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (cart) {
+        document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
+        if (window.Shopify && window.Shopify.onCartUpdate) {
+          try { window.Shopify.onCartUpdate(cart); } catch (_) {}
+        }
+        var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
+        if (drawer && typeof drawer.open === 'function') {
+          try { drawer.open(); } catch (_) {}
+        } else if (drawer && drawer.classList) {
+          drawer.classList.add('active', 'is-open', 'open');
+        }
+      })
+      .catch(function () {});
+  }
+
+
+
   function _closeSummary() {
     if (_summaryOverlay && _summaryOverlay.parentNode) {
       _summaryOverlay.parentNode.removeChild(_summaryOverlay);
