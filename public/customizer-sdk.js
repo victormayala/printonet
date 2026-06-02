@@ -462,6 +462,17 @@
             designUrl: frontHttps || null,
           });
           callback(true);
+          // Reliable cross-theme fallback: navigate to /cart so the shopper
+          // immediately sees the new line item with the correct design thumbnail
+          // (our _refreshExistingShopifyDesignThumbnails runs on cart-page load).
+          // This avoids depending on theme-specific drawer events that often
+          // require a manual page reload.
+          try {
+            var hasDrawer = !!document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
+            if (!hasDrawer && !/\/cart(\/|$|\?)/.test(window.location.pathname)) {
+              setTimeout(function () { window.location.assign('/cart'); }, 150);
+            }
+          } catch (_) {}
         })
         .catch(function (err) {
           console.error('[CustomizerStudio] Shopify add to cart failed:', err);
