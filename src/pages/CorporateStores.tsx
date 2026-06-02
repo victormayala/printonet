@@ -440,7 +440,7 @@ export default function CorporateStores() {
         .from("corporate_stores")
         .select("*")
         .eq("user_id", user!.id)
-        .in("store_type", ["corporate", "retail", "website"])
+        .in("store_type", ["corporate", "retail", "website", "shopify", "woocommerce"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CorporateStore[];
@@ -615,6 +615,16 @@ export default function CorporateStores() {
                                     <Building2 className="h-3 w-3" /> Corporate
                                   </Badge>
                                 )}
+                                {s.store_type === "shopify" && (
+                                  <Badge variant="secondary" className="gap-1 shrink-0">
+                                    <ShoppingBag className="h-3 w-3" /> Shopify
+                                  </Badge>
+                                )}
+                                {s.store_type === "woocommerce" && (
+                                  <Badge variant="secondary" className="gap-1 shrink-0">
+                                    <Globe className="h-3 w-3" /> WooCommerce
+                                  </Badge>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground truncate">{s.contact_email}</div>
                             </div>
@@ -649,6 +659,8 @@ export default function CorporateStores() {
                               {s.custom_domain}
                               <ExternalLink className="h-3 w-3" />
                             </a>
+                          ) : s.store_type === "shopify" || s.store_type === "woocommerce" ? (
+                            <span className="text-xs text-muted-foreground">Dashboard-only</span>
                           ) : s.tenant_slug ? (
                             (() => {
                               const sitePath = s.store_type === "website" ? `/sites/${s.tenant_slug}` : `/${s.tenant_slug}`;
