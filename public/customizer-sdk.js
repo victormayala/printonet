@@ -992,60 +992,71 @@
     }
   }
 
-  // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
+  // Refresh Shopify cart UI after our /cart/add.js call. Mirrors what Dawn's
+  // product-form.js does: hand the add response (including `sections`) to the
+  // theme's <cart-drawer> / <cart-notification> via renderContents, then open it.
+  // We deliberately do NOT re-render section HTML ourselves (that strips the
+  // theme's CSS hooks/event wiring and produces a "broken" blank drawer).
   function _refreshShopifyCartUI(sections, meta) {
-    var handledByNativeDrawer = false;
-    try {
-      var drawer = _shopifyDrawerElement();
-      if (drawer && typeof drawer.renderContents === 'function' && meta && meta.addResponse) {
-        drawer.renderContents(Object.assign({}, meta.addResponse, { sections: sections || meta.addResponse.sections || {} }));
-        handledByNativeDrawer = true;
+    var addResponse = (meta && meta.addResponse) || {};
+    var mergedResponse = Object.assign({}, addResponse, {
+      sections: sections || addResponse.sections || {},
+    });
+
+    var drawer = _shopifyDrawerElement();
+    var nativeRendered = false;
+    if (drawer && typeof drawer.renderContents === 'function') {
+      try {
+        drawer.renderContents(mergedResponse);
+        nativeRendered = true;
+      } catch (e) {
+        console.warn('[CustomizerStudio] drawer.renderContents failed:', e);
       }
-      if (!handledByNativeDrawer) _renderShopifyCartSections(sections);
-    } catch (e) {
-      console.warn('[CustomizerStudio] Cart section render failed:', e);
     }
 
-    document.dispatchEvent(new CustomEvent('cart:refresh'));
-    document.dispatchEvent(new CustomEvent('cart:build'));
-    document.dispatchEvent(new CustomEvent('cart:updated'));
-    document.dispatchEvent(new CustomEvent('cart-updated'));
-    document.dispatchEvent(new CustomEvent('theme:cart:reload'));
+    // Broadcast standard theme events so cart bubbles / counters update.
+    var cartEvents = ['cart:refresh', 'cart:build', 'cart:updated', 'cart-updated', 'theme:cart:reload'];
+    cartEvents.forEach(function (name) {
+      try { document.dispatchEvent(new CustomEvent(name)); } catch (_) {}
+    });
 
+    // After the theme has had a chance to render, fetch live cart state and
+    // overlay our design thumbnails + "View design" link decoration.
     fetch('/cart.js', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (cart) {
         var designedLine = _findCartLineForDesign(cart, meta);
-        var designUrl = meta && meta.designUrl;
-        if (!designUrl && designedLine) designUrl = _cartItemDesignUrl(designedLine);
-        _replaceCartLineImages(designUrl, designedLine);
-        _applyDesignThumbnailsFromCart(cart);
-        _ensureVisibleShopifyCartLine(cart, meta);
-        _decorateShopifyDesignLinks();
-        setTimeout(function () { _applyDesignThumbnailsFromCart(cart); _decorateShopifyDesignLinks(); }, 80);
-        setTimeout(_decorateShopifyDesignLinks, 200);
-        setTimeout(function () { _refreshExistingShopifyDesignThumbnails(); _decorateShopifyDesignLinks(); }, 600);
-        setTimeout(function () { _refreshExistingShopifyDesignThumbnails(); _decorateShopifyDesignLinks(); }, 1200);
-        document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
-        document.body.dispatchEvent(new CustomEvent('cart:refresh', { detail: { cart: cart } }));
-        document.body.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cart } }));
-        if (window.Shopify && window.Shopify.onCartUpdate) {
+        var designUrl = (meta && meta.designUrl) || (designedLine ? _cartItemDesignUrl(designedLine) : null);
+
+        var applyOverlays = function () {
+          _replaceCartLineImages(designUrl, designedLine);
+          _applyDesignThumbnailsFromCart(cart);
+          _decorateShopifyDesignLinks();
+        };
+
+        // Run immediately, then again after theme animations / late inserts.
+        applyOverlays();
+        setTimeout(applyOverlays, 120);
+        setTimeout(applyOverlays, 400);
+        setTimeout(applyOverlays, 1000);
+
+        try { document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } })); } catch (_) {}
+        try { document.body.dispatchEvent(new CustomEvent('cart:refresh', { detail: { cart: cart } })); } catch (_) {}
+        try { document.body.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cart } })); } catch (_) {}
+        if (window.Shopify && typeof window.Shopify.onCartUpdate === 'function') {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
         }
-        _openShopifyCartDrawer();
-        fetch('/?sections=' + _shopifyCartSectionsToRender(), { credentials: 'same-origin' })
-          .then(function (r) { return r.json(); })
-          .then(function (freshSections) {
-            if (!handledByNativeDrawer) _renderShopifyCartSections(freshSections);
-            _applyDesignThumbnailsFromCart(cart);
-            _ensureVisibleShopifyCartLine(cart, meta);
-            _decorateShopifyDesignLinks();
-            _openShopifyCartDrawer();
-          })
-          .catch(function () {});
+
+        // Make sure the drawer actually opens for themes whose renderContents
+        // doesn't auto-open. Skip if there's no drawer element at all (we fall
+        // back to a /cart navigation elsewhere).
+        if (nativeRendered || drawer) _openShopifyCartDrawer();
       })
-      .catch(function () {});
+      .catch(function () {
+        if (nativeRendered || drawer) _openShopifyCartDrawer();
+      });
   }
+
 
 
 
