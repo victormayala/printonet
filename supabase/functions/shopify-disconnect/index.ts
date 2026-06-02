@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     // Look up the integration
     const { data: integration } = await supabase
       .from("store_integrations")
-      .select("id, store_url, credentials, script_tag_id")
+      .select("id, store_url, credentials, script_tag_id, store_id")
       .eq("user_id", user_id)
       .eq("platform", "shopify")
       .maybeSingle();
@@ -71,6 +71,13 @@ Deno.serve(async (req) => {
 
     // Remove the integration row
     await supabase.from("store_integrations").delete().eq("id", integration.id);
+
+    // Remove the dashboard-only sync store and its product links
+    const syncStoreId = (integration as any).store_id;
+    if (syncStoreId) {
+      await supabase.from("corporate_store_products").delete().eq("store_id", syncStoreId);
+      await supabase.from("corporate_stores").delete().eq("id", syncStoreId);
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

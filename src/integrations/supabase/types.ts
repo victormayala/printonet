@@ -1353,6 +1353,7 @@ export type Database = {
           last_synced_at: string | null
           platform: string
           script_tag_id: number | null
+          store_id: string | null
           store_url: string
           updated_at: string
           user_id: string
@@ -1364,6 +1365,7 @@ export type Database = {
           last_synced_at?: string | null
           platform: string
           script_tag_id?: number | null
+          store_id?: string | null
           store_url: string
           updated_at?: string
           user_id: string
@@ -1375,11 +1377,20 @@ export type Database = {
           last_synced_at?: string | null
           platform?: string
           script_tag_id?: number | null
+          store_id?: string | null
           store_url?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "store_integrations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stripe_webhook_events: {
         Row: {
