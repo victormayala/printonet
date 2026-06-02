@@ -683,7 +683,8 @@
         a.style.cssText = 'display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit;font-weight:600;font-size:0.92em;';
         a.innerHTML = _PRINTONET_MARK_SVG + '<span style="text-decoration:underline;">View design</span>';
         wrap.appendChild(a);
-        var props = container.querySelector('.product-option, .cart-item__details, .cart-item__name, [class*="properties"], dl') || container;
+        var props = container.querySelector('.cart-item__details, .ajaxcart__product-meta, .mini-cart__item-content, [class*="properties"], dl, .cart-item__name') || container;
+        if (props && props.style && props.style.display === 'none') props = container;
         props.appendChild(wrap);
       } catch (_) {}
     });
