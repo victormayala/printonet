@@ -59,23 +59,26 @@ Deno.serve(async (req) => {
 
   const { id: integrationId, store_url, access_token } = await getValidShopifyToken(admin, store.user_id);
   const shop = shopDomainFromUrl(store_url);
-  const loaderSrc = `${CUSTOMIZER_STUDIO_URL.replace(/\/+$/, "")}/customizer-loader.js?uid=${encodeURIComponent(store.user_id)}&sid=${encodeURIComponent(store.id)}`;
+  const snippet = `<script src="${loaderSrc}" defer></script>`;
+  const manualInstallPayload = {
+    ok: true,
+    manual_install_required: true,
+    loader_src: loaderSrc,
+    snippet,
+    message:
+      "Shopify no longer auto-installs script tags for new apps. Paste the snippet into your theme's theme.liquid just before </head>. You only need to do this once — product toggles update live from Printonet.",
+  };
+  const isScopeBlocked = (status: number, text: string) =>
+    status === 403 || /requires merchant approval/i.test(text) || /script_tags scope/i.test(text);
 
   const listRes = await fetch(`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/script_tags.json`, {
     headers: { "X-Shopify-Access-Token": access_token, "Content-Type": "application/json" },
   });
   if (!listRes.ok) {
     const text = await listRes.text();
-    if (/requires merchant approval/i.test(text) || /script_tags scope/i.test(text)) {
-      return json(403, {
-        error: "needs_reauth",
-        message:
-          "Your Shopify connection is missing the script_tags permission. Please disconnect and reconnect your Shopify store to grant the updated scopes.",
-      });
-    }
+    if (isScopeBlocked(listRes.status, text)) return json(200, manualInstallPayload);
     return json(listRes.status, { error: "Shopify rejected ScriptTag lookup", response: text.slice(0, 1000) });
   }
-
 
   const listData = await listRes.json();
   const existing = (listData.script_tags || []).find((tag: { id?: number; src?: string }) =>
@@ -90,7 +93,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ script_tag: { id: existing.id, src: loaderSrc, event: "onload", display_scope: "online_store" } }),
     });
     if (!updateRes.ok) {
-      return json(updateRes.status, { error: "Shopify rejected ScriptTag update", response: (await updateRes.text()).slice(0, 1000) });
+      const text = await updateRes.text();
+      if (isScopeBlocked(updateRes.status, text)) return json(200, manualInstallPayload);
+      return json(updateRes.status, { error: "Shopify rejected ScriptTag update", response: text.slice(0, 1000) });
     }
     const updated = await updateRes.json();
     scriptTagId = updated.script_tag?.id ?? existing.id;
@@ -101,7 +106,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ script_tag: { event: "onload", src: loaderSrc, display_scope: "online_store" } }),
     });
     if (!createRes.ok) {
-      return json(createRes.status, { error: "Shopify rejected ScriptTag creation", response: (await createRes.text()).slice(0, 1000) });
+      const text = await createRes.text();
+      if (isScopeBlocked(createRes.status, text)) return json(200, manualInstallPayload);
+      return json(createRes.status, { error: "Shopify rejected ScriptTag creation", response: text.slice(0, 1000) });
     }
     const created = await createRes.json();
     scriptTagId = created.script_tag?.id ?? null;
@@ -111,5 +118,5 @@ Deno.serve(async (req) => {
     await admin.from("store_integrations").update({ script_tag_id: scriptTagId }).eq("id", integrationId);
   }
 
-  return json(200, { ok: true, script_tag_id: scriptTagId, loader_src: loaderSrc });
+  return json(200, { ok: true, script_tag_id: scriptTagId, loader_src: loaderSrc, snippet });
 });
