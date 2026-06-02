@@ -2394,6 +2394,10 @@ export default function DesignStudio({
 
         try {
           await renderCanvas.loadFromJSON(canvasJson);
+          // Fabric's loadFromJSON restores canvas width/height from the saved JSON,
+          // which collapses our 1200x1200 render target back to the editor size.
+          // Force the canonical size back so the remap math stays valid.
+          renderCanvas.setDimensions({ width: FIXED_RENDER_SIZE, height: FIXED_RENDER_SIZE });
           renderCanvas.backgroundColor = "rgba(0,0,0,0)";
           renderCanvas.backgroundImage = undefined;
 
