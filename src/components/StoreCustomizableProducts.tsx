@@ -618,61 +618,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         }}
         onSaved={() => qc.invalidateQueries({ queryKey })}
       />
-      <Dialog open={!!manualInstall} onOpenChange={(v) => { if (!v) setManualInstall(null); }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>One-time Shopify theme install</DialogTitle>
-            <DialogDescription>
-              {manualInstall?.message ||
-                "Your Shopify plan blocks automatic script installation. Add this snippet to your theme once — product toggles will then sync live."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Installation steps</h4>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>In Shopify admin, go to <strong>Online Store → Themes</strong>.</li>
-                <li>On your live theme, click <strong>⋯ → Edit code</strong>.</li>
-                <li>Under <strong>Layout</strong>, open <code className="px-1 rounded bg-muted">theme.liquid</code>.</li>
-                <li>Paste the snippet below right before the closing <code className="px-1 rounded bg-muted">&lt;/head&gt;</code> tag.</li>
-                <li>Click <strong>Save</strong>. You're done — no further resyncs needed.</li>
-              </ol>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold">Snippet</h4>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(manualInstall?.snippet || "");
-                      setSnippetCopied(true);
-                      setTimeout(() => setSnippetCopied(false), 2000);
-                    } catch {
-                      toast({ title: "Copy failed", description: "Select the text and copy manually.", variant: "destructive" });
-                    }
-                  }}
-                >
-                  {snippetCopied ? <><Check className="h-3.5 w-3.5 mr-1.5" />Copied</> : <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</>}
-                </Button>
-              </div>
-              <Textarea
-                readOnly
-                value={manualInstall?.snippet || ""}
-                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                className="font-mono text-xs h-32"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setManualInstall(null)}>Close</Button>
-            {manualInstall?.pendingConfirmation && (
-              <Button onClick={confirmManualInstall}>I added the script</Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }
