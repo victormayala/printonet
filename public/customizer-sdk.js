@@ -1075,6 +1075,8 @@
         id: newItem.shopifyVariantId,
         quantity: newItem.quantity || 1,
         properties: properties,
+        sections: _shopifyCartSectionsToRender(),
+        sections_url: window.location.pathname,
       }),
       credentials: 'same-origin',
     })
