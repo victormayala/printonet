@@ -453,6 +453,7 @@
           _refreshShopifyCartUI(data && data.sections, {
             sessionId: payload && payload.sessionId,
             variantId: String(shopifyId),
+            lineKey: data && data.key,
             designUrl: frontHttps || null,
           });
           callback(true);
@@ -554,13 +555,34 @@
 
   function _replaceCartLineImages(designUrl, cartItem) {
     if (!_isHttpUrl(designUrl)) return;
+    var productImage = cartItem && (cartItem.image || cartItem.featured_image && cartItem.featured_image.url || '');
+    var containers = [];
+    var lineSelectors = '.cart-item, [data-cart-item], [data-cart-item-key], cart-drawer-items li, cart-notification, .cart-notification-product, tr, li';
+    try {
+      document.querySelectorAll(lineSelectors).forEach(function (el) {
+        var html = el.innerHTML || '';
+        var text = el.textContent || '';
+        if (html.indexOf(designUrl) >= 0 || text.indexOf(designUrl) >= 0) containers.push(el);
+      });
+    } catch (_) {}
+
+    var seen = [];
+    containers.forEach(function (el) {
+      try {
+        el.querySelectorAll('img').forEach(function (img) {
+          if (seen.indexOf(img) >= 0) return;
+          seen.push(img);
+          img.src = designUrl;
+          img.srcset = '';
+          img.setAttribute('src', designUrl);
+          img.setAttribute('data-customizer-design-thumbnail', 'true');
+        });
+      } catch (_) {}
+    });
+    if (seen.length > 0) return;
+
     var selectors = [
-      'img[src="' + _cssEscape(cartItem && (cartItem.image || cartItem.featured_image && cartItem.featured_image.url || '')) + '"]',
-      '[data-cart-item-image] img',
-      '.cart-item__image',
-      '.cart-notification-product__image img',
-      'cart-drawer .cart-item img',
-      'cart-notification img',
+      'img[src="' + _cssEscape(productImage) + '"]',
     ];
     var seen = [];
     selectors.forEach(function (selector) {
