@@ -56,7 +56,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [pushOpen, setPushOpen] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
-  const [manualInstall, setManualInstall] = useState<{ snippet: string; message?: string } | null>(null);
+  const [manualInstall, setManualInstall] = useState<{ snippet: string; message?: string; pendingConfirmation?: boolean } | null>(null);
   const [snippetCopied, setSnippetCopied] = useState(false);
 
   const isCorporate = store.store_type === "corporate";
@@ -81,7 +81,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           if (error) {
             // Try to extract the body returned by the edge function (contains
             // friendly `message` for known cases like needs_reauth).
-            const ctx: any = (error as any).context;
+            const ctx = (error as { context?: { text?: () => Promise<string> } }).context;
             let friendly: string | null = null;
             try {
               const txt = ctx && typeof ctx.text === "function" ? await ctx.text() : null;
@@ -95,7 +95,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           if (data?.manual_install_required) {
             if (!opts?.silent) {
               setSnippetCopied(false);
-              setManualInstall({ snippet: data.snippet || "", message: data.message });
+              setManualInstall({ snippet: data.snippet || "", message: data.message, pendingConfirmation: true });
             }
             return true;
           }
@@ -346,6 +346,26 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     await navigator.clipboard.writeText(storefrontUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const confirmManualInstall = async () => {
+    try {
+      const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
+        body: { storeId: store.id, manualInstallConfirmed: true },
+      });
+      if (error) throw error;
+      toast({
+        title: "Shopify script marked installed",
+        description: "Resync will no longer show the install instructions for this storefront.",
+      });
+      setManualInstall(null);
+    } catch (e) {
+      toast({
+        title: "Could not save confirmation",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -603,6 +623,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setManualInstall(null)}>Close</Button>
+            {manualInstall?.pendingConfirmation && (
+              <Button onClick={confirmManualInstall}>I added the script</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
   const { data: userRes, error: userErr } = await admin.auth.getUser(token);
   if (userErr || !userRes?.user) return json(401, { error: "Invalid token" });
 
-  let body: { storeId?: string };
+  let body: { storeId?: string; manualInstallConfirmed?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -62,6 +62,38 @@ Deno.serve(async (req) => {
   const baseUrl = CUSTOMIZER_STUDIO_URL.replace(/\/+$/, "");
   const loaderSrc = `${baseUrl}/customizer-loader.js?uid=${encodeURIComponent(store.user_id)}&sid=${encodeURIComponent(store.id)}`;
   const snippet = `<script src="${loaderSrc}" defer></script>`;
+  const { data: integrationState } = await admin
+    .from("store_integrations")
+    .select("credentials, script_tag_id")
+    .eq("id", integrationId)
+    .maybeSingle();
+  const credentials =
+    integrationState?.credentials && typeof integrationState.credentials === "object"
+      ? integrationState.credentials as Record<string, unknown>
+      : {};
+  const manualInstallAcked =
+    !!credentials.customizer_loader_manual_installed_at &&
+    credentials.customizer_loader_manual_store_id === store.id;
+
+  if (body.manualInstallConfirmed) {
+    await admin
+      .from("store_integrations")
+      .update({
+        credentials: {
+          ...credentials,
+          customizer_loader_manual_installed_at: new Date().toISOString(),
+          customizer_loader_manual_store_id: store.id,
+          customizer_loader_manual_loader_src: loaderSrc,
+        },
+      })
+      .eq("id", integrationId);
+    return json(200, { ok: true, manual_install_confirmed: true, loader_src: loaderSrc, snippet });
+  }
+
+  if (manualInstallAcked) {
+    return json(200, { ok: true, manual_install_confirmed: true, loader_src: loaderSrc, snippet });
+  }
+
   const manualInstallPayload = {
     ok: true,
     manual_install_required: true,
