@@ -196,7 +196,12 @@
 
     if (data.type === 'design-complete') {
       _closeIframe();
-      // Redirect the iframe (or open) the hosted review page with returnUrl
+      if (_shopifyVariantId) {
+        _showSummary(data.payload || {});
+        return;
+      }
+
+      // Non-Shopify flows use the hosted review page.
       var sid = data.payload && data.payload.sessionId;
       var reviewBase = _config.baseUrl
         ? (_config.baseUrl + '/review/' + sid)
