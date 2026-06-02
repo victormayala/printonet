@@ -470,13 +470,9 @@
             variantId: String(shopifyId),
             lineKey: data && data.key,
             designUrl: frontHttps || null,
+            addResponse: data || null,
           });
           callback(true);
-          // Reliable cross-theme fallback: navigate to /cart so the shopper
-          // immediately sees the new line item with the correct design thumbnail
-          // (our _refreshExistingShopifyDesignThumbnails runs on cart-page load).
-          // This avoids depending on theme-specific drawer events that often
-          // require a manual page reload.
           try {
             var hasDrawer = !!document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
             if (!hasDrawer && !/\/cart(\/|$|\?)/.test(window.location.pathname)) {
@@ -845,21 +841,32 @@
       .then(function (cart) {
         var designedLine = _findCartLineForDesign(cart, meta);
         var designUrl = meta && meta.designUrl;
-        if (!designUrl && designedLine && designedLine.properties) designUrl = designedLine.properties.Design;
+        if (!designUrl && designedLine) designUrl = _cartItemDesignUrl(designedLine);
         _replaceCartLineImages(designUrl, designedLine);
         _applyDesignThumbnailsFromCart(cart);
         _decorateShopifyDesignLinks();
+        setTimeout(function () { _applyDesignThumbnailsFromCart(cart); _decorateShopifyDesignLinks(); }, 80);
         setTimeout(_decorateShopifyDesignLinks, 200);
-        setTimeout(_decorateShopifyDesignLinks, 800);
+        setTimeout(function () { _refreshExistingShopifyDesignThumbnails(); _decorateShopifyDesignLinks(); }, 600);
+        setTimeout(function () { _refreshExistingShopifyDesignThumbnails(); _decorateShopifyDesignLinks(); }, 1200);
         document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
+        document.body.dispatchEvent(new CustomEvent('cart:refresh', { detail: { cart: cart } }));
+        document.body.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cart } }));
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
         }
         var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
+        if (drawer && typeof drawer.renderContents === 'function' && meta && meta.addResponse) {
+          try { drawer.renderContents(meta.addResponse); } catch (_) {}
+        }
         if (drawer && typeof drawer.open === 'function') {
           try { drawer.open(); } catch (_) {}
         } else if (drawer && drawer.classList) {
           drawer.classList.add('active', 'is-open', 'open');
+        }
+        var toggles = document.querySelectorAll('[aria-controls="CartDrawer"], [href="/cart"], a[href$="/cart"], .header__icon--cart, [data-cart-toggle]');
+        if (drawer && toggles.length) {
+          try { toggles[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (_) {}
         }
       })
       .catch(function () {});
