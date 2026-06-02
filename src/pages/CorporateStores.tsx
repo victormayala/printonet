@@ -822,7 +822,7 @@ function PasswordCopyField({ label, value }: { label: string; value: string }) {
 }
 
 
-function StoreActions({ store, onResumeSetup }: { store: CorporateStore; onResumeSetup?: () => void }) {
+function StoreActions({ store, onResumeSetup, hideFinishSetup }: { store: CorporateStore; onResumeSetup?: () => void; hideFinishSetup?: boolean }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
