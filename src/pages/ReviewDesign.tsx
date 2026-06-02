@@ -415,18 +415,6 @@ export default function ReviewDesign() {
           </div>
         )}
 
-        <div className="px-4 py-3 rounded-lg bg-muted/40 border border-border space-y-1">
-          <p className="text-xs text-muted-foreground">
-            Store origin: <span className="text-foreground">{resolveStoreOrigin() || "not detected"}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Woo product id: <span className="text-foreground">{wcProductId || "none"}</span> · variation id:{" "}
-            <span className="text-foreground">{wcVariationId || "none"}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Transfer debug: <span className="text-foreground">{transferDebug}</span>
-          </p>
-        </div>
 
         {/* Actions */}
         <div className="flex gap-3">
