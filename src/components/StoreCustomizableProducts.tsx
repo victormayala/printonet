@@ -355,6 +355,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   };
 
   const confirmManualInstall = async () => {
+    if (confirmingInstall) return;
+    setConfirmingInstall(true);
     try {
       const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
         body: { storeId: store.id, manualInstallConfirmed: true },
@@ -362,17 +364,53 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
       if (error) throw error;
       toast({
         title: "Shopify script marked installed",
-        description: "Resync will no longer show the install instructions for this storefront.",
+        description: "Your storefront is ready — toggle products on/off and they'll sync live.",
       });
-      setManualInstall(null);
+      setShopifyInstall((prev) => (prev ? { ...prev, confirmed: true } : prev));
     } catch (e) {
       toast({
         title: "Could not save confirmation",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
+    } finally {
+      setConfirmingInstall(false);
     }
   };
+
+  // Auto-load Shopify install snippet on mount so the instructions are always
+  // visible inline (no modal). The edge function returns the snippet whether
+  // install is pending or already confirmed.
+  useEffect(() => {
+    if (store.store_type !== "shopify") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("sync-shopify-customizer", {
+          body: { storeId: store.id },
+        });
+        if (cancelled || error || !data?.snippet) return;
+        setShopifyInstall({
+          snippet: data.snippet,
+          message: data.message,
+          confirmed: !!data.manual_install_confirmed && !data.manual_install_required,
+        });
+      } catch {/* silent — panel just won't render */}
+    })();
+    return () => { cancelled = true; };
+  }, [store.id, store.store_type]);
+
+  const copySnippet = async () => {
+    if (!shopifyInstall?.snippet) return;
+    try {
+      await navigator.clipboard.writeText(shopifyInstall.snippet);
+      setSnippetCopied(true);
+      setTimeout(() => setSnippetCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy failed", description: "Select the snippet text and copy manually.", variant: "destructive" });
+    }
+  };
+
 
   return (
     <Card>
