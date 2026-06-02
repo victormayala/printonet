@@ -479,7 +479,7 @@ export default function CorporateStores() {
                   </div>
                 </div>
               </TableCell>
-              <TableCell colSpan={isSuperAdmin ? 3 : 2}>
+              <TableCell colSpan={variant === "external" ? 2 : (isSuperAdmin ? 3 : 2)}>
                 <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                   <span>
@@ -500,21 +500,24 @@ export default function CorporateStores() {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setResumeStore(s);
-                      setOpen(true);
-                    }}
-                  >
-                    Finish setup
-                  </Button>
+                  {variant !== "external" && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setResumeStore(s);
+                        setOpen(true);
+                      }}
+                    >
+                      Finish setup
+                    </Button>
+                  )}
                   <StoreActions
                     store={s}
                     onResumeSetup={() => {
                       setResumeStore(s);
                       setOpen(true);
                     }}
+                    hideFinishSetup={variant === "external"}
                   />
                 </div>
               </TableCell>
