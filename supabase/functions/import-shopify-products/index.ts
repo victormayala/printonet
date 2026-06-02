@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getValidShopifyToken } from "../_shared/shopify-token.ts";
+import { ensureSyncStore, linkProductToSyncStore } from "../_shared/sync-store.ts";
 
 
 const corsHeaders = {
