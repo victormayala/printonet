@@ -791,6 +791,9 @@
         if (!designUrl && designedLine && designedLine.properties) designUrl = designedLine.properties.Design;
         _replaceCartLineImages(designUrl, designedLine);
         _applyDesignThumbnailsFromCart(cart);
+        _decorateShopifyDesignLinks();
+        setTimeout(_decorateShopifyDesignLinks, 200);
+        setTimeout(_decorateShopifyDesignLinks, 800);
         document.dispatchEvent(new CustomEvent('cart:change', { detail: { cart: cart } }));
         if (window.Shopify && window.Shopify.onCartUpdate) {
           try { window.Shopify.onCartUpdate(cart); } catch (_) {}
