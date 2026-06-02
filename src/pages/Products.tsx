@@ -1499,7 +1499,7 @@ function ProductForm({
   );
 }
 
-function ShopifyImport({ onDone }: { onDone: () => void }) {
+export function ShopifyImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
   const [storeUrl, setStoreUrl] = useState("");
   const [token, setToken] = useState("");
