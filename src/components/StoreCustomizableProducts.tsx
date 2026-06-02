@@ -65,6 +65,9 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
    * Fire-and-log: UI toggles still save to the DB regardless of push result.
    */
   const pushSnapshot = async (opts?: { silent?: boolean }) => {
+    // Dashboard-only stores (Shopify/WooCommerce sync containers) have no
+    // tenant_slug and no hosted storefront — skip the push entirely.
+    if (!store.tenant_slug) return true;
     try {
       const { data, error } = await supabase.functions.invoke("sync-customizer-flags", {
         body: { storeId: store.id },
