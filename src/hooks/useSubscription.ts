@@ -20,7 +20,7 @@ export const PLAN_META: Record<PlanKey, {
   feeLabel: string;
 }> = {
   customizer_monthly: {
-    name: "Customizer Studio",
+    name: "Printonet Product Customizer",
     monthly: 29,
     includedStores: 0,
     includedSeats: 1,
