@@ -668,6 +668,30 @@
     return null;
   }
 
+  function _ensureShopifyDesignLink(cartItem, designUrl) {
+    var reviewUrl = _cartItemReviewUrl(cartItem);
+    if (!_isHttpUrl(reviewUrl)) return;
+    var containers = _cartLineContainers(cartItem, designUrl || '');
+    containers.forEach(function (container) {
+      try {
+        if (!container || container.querySelector('[data-printonet-design-link="1"]')) return;
+        var wrap = document.createElement('div');
+        wrap.setAttribute('data-printonet-design-link-wrap', '1');
+        wrap.style.cssText = 'margin-top:6px;display:flex;align-items:center;line-height:1.3;';
+        var a = document.createElement('a');
+        a.href = reviewUrl;
+        a.setAttribute('data-printonet-design-link', '1');
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+        a.style.cssText = 'display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit;font-weight:600;font-size:0.92em;';
+        a.innerHTML = _PRINTONET_MARK_SVG + '<span style="text-decoration:underline;">View design</span>';
+        wrap.appendChild(a);
+        var props = container.querySelector('.product-option, .cart-item__details, .cart-item__name, [class*="properties"], dl') || container;
+        props.appendChild(wrap);
+      } catch (_) {}
+    });
+  }
+
   function _cartItemDesignUrl(item) {
     var props = item && item.properties ? item.properties : {};
     if (_isHttpUrl(props._customizer_design_url)) return props._customizer_design_url;
