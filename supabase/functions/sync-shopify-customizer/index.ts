@@ -59,6 +59,8 @@ Deno.serve(async (req) => {
 
   const { id: integrationId, store_url, access_token } = await getValidShopifyToken(admin, store.user_id);
   const shop = shopDomainFromUrl(store_url);
+  const baseUrl = CUSTOMIZER_STUDIO_URL.replace(/\/+$/, "");
+  const loaderSrc = `${baseUrl}/customizer-loader.js?uid=${encodeURIComponent(store.user_id)}&sid=${encodeURIComponent(store.id)}`;
   const snippet = `<script src="${loaderSrc}" defer></script>`;
   const manualInstallPayload = {
     ok: true,
