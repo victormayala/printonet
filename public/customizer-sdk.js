@@ -83,6 +83,25 @@
     return base ? base + path : path;
   }
 
+  function _getShopifyVariantId() {
+    if (_shopifyVariantId) return _shopifyVariantId;
+    var variantInput = document.querySelector('form[action="/cart/add"] input[name="id"], form[action^="/cart/add"] input[name="id"]');
+    if (variantInput && variantInput.value) return String(variantInput.value);
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var variantParam = params.get('variant');
+      if (variantParam) return variantParam;
+    } catch (_) {}
+    if (window.Shopify && window.Shopify.product && window.Shopify.product.variants && window.Shopify.product.variants.length) {
+      return String(window.Shopify.product.variants[0].id);
+    }
+    return null;
+  }
+
+  function _isShopifyStore() {
+    return !!(_getShopifyVariantId() || window.Shopify || /\.myshopify\.com$/i.test(window.location.hostname));
+  }
+
   function init(options) {
     _config.apiUrl = options.apiUrl || '';
     _config.baseUrl = options.baseUrl || '';
@@ -196,7 +215,12 @@
 
     if (data.type === 'design-complete') {
       _closeIframe();
-      // Redirect the iframe (or open) the hosted review page with returnUrl
+      if (_isShopifyStore()) {
+        _showSummary(data.payload || {});
+        return;
+      }
+
+      // Non-Shopify flows use the hosted review page.
       var sid = data.payload && data.payload.sessionId;
       var reviewBase = _config.baseUrl
         ? (_config.baseUrl + '/review/' + sid)
@@ -368,7 +392,7 @@
 
   // --- Add to cart (Shopify, WooCommerce, or generic) ---
   function _addToCart(payload, callback) {
-    var shopifyId = _shopifyVariantId || (payload && payload.shopifyVariantId) || null;
+    var shopifyId = (payload && payload.shopifyVariantId) || _getShopifyVariantId();
 
     // Shopify native cart
     if (shopifyId) {
@@ -536,7 +560,7 @@
   function _createCartWidget() {
     if (_cartWidget) return;
 
-    var cartLink = _config.cartUrl || ((_shopifyVariantId || window.Shopify) ? '/cart' : ((_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href)));
+    var cartLink = _config.cartUrl || (_isShopifyStore() ? '/cart' : ((_config.baseUrl || '') + '/cart?returnUrl=' + encodeURIComponent(window.location.href)));
     _cartWidget = document.createElement('a');
     _cartWidget.href = cartLink;
     _cartWidget.target = '_blank';
