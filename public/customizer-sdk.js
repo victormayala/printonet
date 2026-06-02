@@ -858,6 +858,47 @@
     return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 
+  function _renderShopifyCartSections(sections) {
+    if (!sections || typeof sections !== 'object') return;
+    Object.keys(sections).forEach(function (sectionId) {
+      var html = sections[sectionId];
+      if (!html) return;
+      var parsed = new DOMParser().parseFromString(html, 'text/html');
+      var target = document.getElementById(sectionId);
+      if (target) {
+        var inner = parsed.getElementById(sectionId);
+        target.innerHTML = inner ? inner.innerHTML : html;
+        return;
+      }
+      var sectionWrapper = document.getElementById('shopify-section-' + sectionId);
+      if (sectionWrapper) {
+        var parsedWrapper = parsed.getElementById('shopify-section-' + sectionId);
+        sectionWrapper.innerHTML = parsedWrapper ? parsedWrapper.innerHTML : html;
+        return;
+      }
+      var incomingDrawer = parsed.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification');
+      var currentDrawer = incomingDrawer ? document.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification') : null;
+      if (incomingDrawer && currentDrawer) currentDrawer.innerHTML = incomingDrawer.innerHTML;
+    });
+  }
+
+  function _openShopifyCartDrawer() {
+    var drawer = document.querySelector('cart-drawer, cart-notification, [data-cart-drawer], .cart-drawer, .cart-notification, #CartDrawer');
+    if (drawer && typeof drawer.open === 'function') {
+      try { drawer.open(); return; } catch (_) {}
+    }
+    if (drawer && drawer.classList) {
+      drawer.classList.remove('is-empty');
+      drawer.classList.add('active', 'animate', 'is-open', 'open');
+      drawer.setAttribute('open', '');
+      drawer.setAttribute('aria-hidden', 'false');
+    }
+    var toggles = document.querySelectorAll('[aria-controls="CartDrawer"], [aria-controls="cart-drawer"], [data-cart-toggle], [data-drawer-open="cart"], button.header__icon--cart, a[href="/cart"]');
+    if (toggles.length) {
+      try { toggles[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (_) {}
+    }
+  }
+
   // Hot-swap Shopify cart UI (drawer, icon bubble, etc.) without a full page reload.
   function _refreshShopifyCartUI(sections, meta) {
     try {
