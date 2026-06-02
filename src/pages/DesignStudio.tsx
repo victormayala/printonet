@@ -2477,24 +2477,40 @@ export default function DesignStudio({
           if (typeof cleanedJson === "string" && cleanedJson.includes("blob:")) {
             try {
               const parsed = JSON.parse(cleanedJson);
-              const replaceBlobUrls = (obj: any) => {
-                if (!obj) return;
-                if (typeof obj === "object") {
-                  for (const key of Object.keys(obj)) {
-                    if (typeof obj[key] === "string" && obj[key].startsWith("blob:")) {
-                      obj[key] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-                    } else if (typeof obj[key] === "object") {
-                      replaceBlobUrls(obj[key]);
-                    }
+              const blobToDataUrl = async (blobUrl: string): Promise<string> => {
+                try {
+                  const res = await fetch(blobUrl);
+                  const blob = await res.blob();
+                  return await new Promise<string>((resolve, reject) => {
+                    const fr = new FileReader();
+                    fr.onload = () => resolve(String(fr.result || ""));
+                    fr.onerror = () => reject(fr.error);
+                    fr.readAsDataURL(blob);
+                  });
+                } catch {
+                  // 1x1 transparent PNG fallback if the blob is gone
+                  return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+                }
+              };
+              const walk = async (obj: any): Promise<void> => {
+                if (!obj || typeof obj !== "object") return;
+                for (const key of Object.keys(obj)) {
+                  const val = obj[key];
+                  if (typeof val === "string" && val.startsWith("blob:")) {
+                    obj[key] = await blobToDataUrl(val);
+                  } else if (val && typeof val === "object") {
+                    await walk(val);
                   }
                 }
               };
-              replaceBlobUrls(parsed);
+              await walk(parsed);
               cleanedJson = JSON.stringify(parsed);
             } catch (e) {
               console.warn("Failed to clean blob URLs from canvas JSON:", e);
             }
           }
+
+
 
           await exportCanvas.loadFromJSON(cleanedJson);
           exportCanvas.backgroundColor = "rgba(0,0,0,0)";
