@@ -2226,7 +2226,7 @@ export default function DesignStudio({
 
     const sourceUrl = extractAiDesignImage(active);
     if (!sourceUrl) {
-      alert("Could not extract image data.");
+      toast.error("Could not extract image data.");
       return;
     }
 
