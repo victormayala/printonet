@@ -119,6 +119,14 @@ Deno.serve(async (req) => {
     // Fetch products via GraphQL Admin API
     const products = await fetchAllProducts(store_url, access_token);
 
+    // Ensure a dashboard-only corporate store exists for this Shopify shop and link
+    // all imported products to it. Created with store_type='shopify', no tenant_slug.
+    const syncStoreId = await ensureSyncStore(supabase, {
+      user_id,
+      platform: "shopify",
+      store_url,
+    });
+
     // On sync, only delete Shopify-sourced products (not all user products)
     if (is_sync && user_id) {
       const { data: existing } = await supabase
@@ -172,9 +180,21 @@ Deno.serve(async (req) => {
         },
       };
 
-      const { error } = await supabase.from("inventory_products").insert(row);
-      if (!error) importedCount++;
+      const { data: inserted, error } = await supabase
+        .from("inventory_products")
+        .insert(row)
+        .select("id")
+        .single();
+      if (!error && inserted?.id) {
+        importedCount++;
+        await linkProductToSyncStore(supabase, {
+          user_id,
+          store_id: syncStoreId,
+          product_id: inserted.id,
+        });
+      }
     }
+
 
     // Update last_synced_at
     if (user_id) {
