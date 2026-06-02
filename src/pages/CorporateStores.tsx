@@ -453,8 +453,9 @@ export default function CorporateStores() {
 
   const shopifyStores = stores.filter((s) => s.store_type === "shopify");
   const wooStores = stores.filter((s) => s.store_type === "woocommerce");
+  const hostedStores = stores.filter((s) => s.store_type !== "shopify" && s.store_type !== "woocommerce");
 
-  const renderStoreRows = (rows: CorporateStore[]) => (
+  const renderStoreRows = (rows: CorporateStore[], variant: "hosted" | "external" = "hosted") => (
     <TableBody>
       {rows.map((s) => {
         const isUnpublished = s.status === "provisioning";
