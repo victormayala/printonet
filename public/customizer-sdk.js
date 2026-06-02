@@ -690,6 +690,7 @@
 
   function _cartItemDesignUrl(item) {
     var props = item && item.properties ? item.properties : {};
+    if (_isHttpUrl(props.Design) && !_isOurReviewHref(props.Design)) return props.Design;
     if (_isHttpUrl(props._customizer_design_url)) return props._customizer_design_url;
     try {
       var sides = props._customizer_sides ? JSON.parse(props._customizer_sides) : [];
@@ -864,7 +865,7 @@
         } else if (drawer && drawer.classList) {
           drawer.classList.add('active', 'is-open', 'open');
         }
-        var toggles = document.querySelectorAll('[aria-controls="CartDrawer"], [href="/cart"], a[href$="/cart"], .header__icon--cart, [data-cart-toggle]');
+        var toggles = document.querySelectorAll('[aria-controls="CartDrawer"], [aria-controls="cart-drawer"], [data-cart-toggle], [data-drawer-open="cart"], button.header__icon--cart');
         if (drawer && toggles.length) {
           try { toggles[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (_) {}
         }
