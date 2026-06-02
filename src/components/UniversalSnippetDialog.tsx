@@ -18,7 +18,7 @@ export function UniversalSnippetDialog() {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  const snippet = `<!-- Customizer Studio — paste in your site's <head> or before </body> -->
+  const snippet = `<!-- Printonet Product Customizer — paste in your site's <head> or before </body> -->
 <script
   src="${baseUrl}/customizer-loader.js"
   data-api-url="${apiUrl}"
