@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const HOSTED_SHARED: string[] = [
   "Hosted storefront with custom domain",
-  "Embeddable Customizer Studio",
+  "Embeddable Printonet Product Customizer",
   "AI Design Assistant",
   "Stripe hosted checkout",
   "Supplier catalog sync (S&S, SanMar)",
@@ -40,7 +40,7 @@ function planFeatures(key: PlanKey): string[] {
   const meta = PLAN_META[key];
   if (key === "customizer_monthly") {
     return [
-      "Embeddable Customizer Studio",
+      "Embeddable Printonet Product Customizer",
       "1 team seat",
       "AI Design Assistant",
       "Production-ready exports",
@@ -152,7 +152,7 @@ export default function Pricing() {
 
         {/* Customizer-only plan */}
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-          Customizer Studio only
+          Printonet Product Customizer only
         </h2>
         <Card className="p-6 mb-12 md:flex md:items-center md:gap-8 border-dashed">
           <div className="flex items-start gap-4 flex-1">
