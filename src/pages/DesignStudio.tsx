@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, FabricText, Rect, Circle, Triangle, Polygon, Line as FabricLine, Ellipse, FabricImage, Group, Path, Pattern, Point } from "fabric";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { buildLayersExportJson } from "@/lib/layersExport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
