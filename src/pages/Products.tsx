@@ -1646,6 +1646,10 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     toast({ title: "Shopify disconnected" });
   };
 
+  if (loadingIntegration) {
+    return <SupplierTabSkeleton />;
+  }
+
   const handleReauth = async () => {
     if (!integration) return;
     setLoading(true);
