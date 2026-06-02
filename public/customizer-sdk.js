@@ -425,15 +425,17 @@
       if (!frontHttps && _isHttpUrl(payload.previewImage)) frontHttps = payload.previewImage;
       if (!frontHttps && _isHttpUrl(payload.printFileUrl)) frontHttps = payload.printFileUrl;
       if (frontHttps) {
-        // Visible property (no underscore) so Shopify themes show the design image / link on the line item
-        properties['Design'] = frontHttps;
+        // Underscore-prefixed = hidden from cart/checkout UI but still readable by our SDK
+        // for thumbnail swapping. We deliberately do NOT expose the raw storage URL to shoppers.
         properties['_customizer_design_url'] = frontHttps;
       }
       if (httpsSides.length > 0) {
         properties['_customizer_sides'] = JSON.stringify(httpsSides);
       }
-      // Public preview link — Shopify renders HTTPS URLs in line-item properties
-      // as clickable links on both the /cart page and the hosted checkout.
+      // Single visible, Printonet-branded link shoppers can click to preview their design.
+      // Shopify themes render visible line-item properties as "<key>: <value>", and HTTPS
+      // values become clickable links automatically — so the shopper sees:
+      //   View Design: https://customizerstudio.com/review/<id>
       if (payload.sessionId) {
         var previewBase = (_config && _config.baseUrl) ? String(_config.baseUrl).replace(/\/+$/, '') : 'https://customizerstudio.com';
         properties['View Design'] = previewBase + '/review/' + encodeURIComponent(payload.sessionId);
