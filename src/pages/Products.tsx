@@ -3921,8 +3921,6 @@ export default function Products({ initialTab = "products", showStorefrontTabs =
             ({ data: resp, error: invokeErr } = await supabase.functions.invoke("export-to-shopify", {
               body: {
                 product_ids: [productId],
-                store_url: integration.store_url,
-                access_token: creds.access_token,
                 user_id: user?.id,
               },
             }));
