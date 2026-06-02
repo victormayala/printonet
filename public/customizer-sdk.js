@@ -814,16 +814,23 @@
         Object.keys(sections).forEach(function (sectionId) {
           var html = sections[sectionId];
           if (!html) return;
+          var parsed = new DOMParser().parseFromString(html, 'text/html');
           var target = document.getElementById(sectionId);
           if (target) {
-            var parsed = new DOMParser().parseFromString(html, 'text/html');
             var inner = parsed.getElementById(sectionId);
             target.innerHTML = inner ? inner.innerHTML : html;
             return;
           }
           var sectionWrapper = document.getElementById('shopify-section-' + sectionId);
           if (sectionWrapper) {
-            sectionWrapper.innerHTML = html;
+            var parsedWrapper = parsed.getElementById('shopify-section-' + sectionId);
+            sectionWrapper.innerHTML = parsedWrapper ? parsedWrapper.innerHTML : html;
+            return;
+          }
+          var incomingDrawer = parsed.querySelector('cart-drawer, cart-notification');
+          var currentDrawer = incomingDrawer ? document.querySelector(incomingDrawer.tagName.toLowerCase()) : null;
+          if (incomingDrawer && currentDrawer) {
+            currentDrawer.innerHTML = incomingDrawer.innerHTML;
           }
         });
       }
