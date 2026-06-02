@@ -14,7 +14,7 @@ export default function Customizer() {
   return (
     <div className="container max-w-7xl mx-auto py-8 px-4 space-y-6">
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold">Customizer Studio</h1>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold">Printonet Product Customizer</h1>
         <p className="mt-1 text-muted-foreground">
           Configure the embeddable customizer's appearance and copy the snippet to install it on your Shopify store.
         </p>
