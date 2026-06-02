@@ -1575,15 +1575,7 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("import-shopify-products", {
-        body: { store_url: normalizedStoreUrl, access_token: accessToken, user_id: user?.id },
-      });
-
-      if (error) {
-        const rawMessage = await getEdgeFunctionErrorMessage(error);
-        throw new Error(getFriendlyShopifyErrorMessage(rawMessage));
-      }
-
+      // Save credentials first so the edge function can look them up.
       const integrationPayload = {
         user_id: user?.id,
         platform: "shopify" as const,
@@ -1597,6 +1589,15 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
         : await supabase.from("store_integrations").insert(integrationPayload);
 
       if (saveError) throw saveError;
+
+      const { data, error } = await supabase.functions.invoke("import-shopify-products", {
+        body: { user_id: user?.id },
+      });
+
+      if (error) {
+        const rawMessage = await getEdgeFunctionErrorMessage(error);
+        throw new Error(getFriendlyShopifyErrorMessage(rawMessage));
+      }
 
       toast({ title: `Connected! Imported ${data.imported_count} products from Shopify` });
       await fetchIntegration();
