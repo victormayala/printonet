@@ -374,6 +374,8 @@
     if (shopifyId) {
       var properties = {};
       if (payload.sessionId) properties['_customizer_session_id'] = payload.sessionId;
+      if (payload.printFileUrl) properties['_customizer_print_file_url'] = payload.printFileUrl;
+      if (payload.designLayersUrl) properties['_customizer_layers_url'] = payload.designLayersUrl;
       if (payload.sides && payload.sides.length > 0) {
         var frontSide = payload.sides.find(function (s) { return s.view === 'front'; }) || payload.sides[0];
         if (frontSide && (frontSide.previewPNG || frontSide.designPNG)) {
@@ -597,6 +599,8 @@
 
     var properties = {};
     properties['_customizer_session_id'] = newItem.sessionId;
+    if (newItem.printFileUrl) properties['_customizer_print_file_url'] = newItem.printFileUrl;
+    if (newItem.designLayersUrl) properties['_customizer_layers_url'] = newItem.designLayersUrl;
     if (newItem.previewImage) {
       properties['_customizer_design_url'] = newItem.previewImage;
       properties['_customizer_sides'] = JSON.stringify([{ view: 'front', url: newItem.previewImage, preview_url: newItem.previewImage }]);
