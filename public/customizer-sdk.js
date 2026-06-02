@@ -706,7 +706,13 @@
     containers.forEach(function (container) {
       try {
         _hideRawShopifyDesignProperty(container, reviewUrl);
-        if (!container || container.querySelector('[data-printonet-design-link="1"]')) return;
+        if (!container) return;
+        var existing = container.querySelector('[data-printonet-design-link="1"]');
+        if (existing) {
+          existing.innerHTML = _printonetDesignLinkHtml();
+          existing.style.textDecoration = 'underline';
+          return;
+        }
         var wrap = document.createElement('div');
         wrap.setAttribute('data-printonet-design-link-wrap', '1');
         wrap.style.cssText = 'margin-top:6px;display:flex;align-items:center;line-height:1.3;';
@@ -809,7 +815,6 @@
     try {
       var anchors = document.querySelectorAll('a[href*="/review/"], a[href*="/r/"]');
       anchors.forEach(function (a) {
-        if (a.getAttribute('data-printonet-design-link') === '1') return;
         if (!_isOurReviewHref(a.getAttribute('href') || '')) return;
 
         a.setAttribute('data-printonet-design-link', '1');
