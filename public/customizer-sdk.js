@@ -108,6 +108,11 @@
     _config.cartUrl = options.cartUrl || '';
     _config.storeUrl = options.storeUrl || '';
     _config.woocommerceSiteUrl = options.woocommerceSiteUrl || '';
+    if (_isShopifyStore()) {
+      _refreshExistingShopifyDesignThumbnails();
+      setTimeout(_refreshExistingShopifyDesignThumbnails, 600);
+      setTimeout(_refreshExistingShopifyDesignThumbnails, 1600);
+    }
   }
 
   function open(options) {
@@ -630,6 +635,14 @@
       var designUrl = _cartItemDesignUrl(item);
       if (designUrl) _replaceCartLineImages(designUrl, item);
     });
+  }
+
+  function _refreshExistingShopifyDesignThumbnails() {
+    if (!_isShopifyStore()) return;
+    fetch('/cart.js', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(_applyDesignThumbnailsFromCart)
+      .catch(function () {});
   }
 
   function _cssEscape(value) {
