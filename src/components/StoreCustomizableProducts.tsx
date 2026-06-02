@@ -88,9 +88,20 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             } catch {/* ignore */}
             throw new Error(friendly || error.message || "Shopify sync failed");
           }
-          if (data?.error === "needs_reauth") {
-            throw new Error(data.message || "Reconnect your Shopify store to continue.");
+          if (data?.manual_install_required) {
+            try { await navigator.clipboard.writeText(data.snippet || ""); } catch {/* ignore */}
+            if (!opts?.silent) {
+              toast({
+                title: "Manual install needed (one-time) — snippet copied",
+                description:
+                  (data.message || "Paste this snippet into your theme.liquid just before </head>:") +
+                  "\n\n" + (data.snippet || ""),
+                duration: 20000,
+              });
+            }
+            return true;
           }
+
         } catch (e) {
           toast({
             title: "Shopify resync failed",
