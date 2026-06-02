@@ -1612,11 +1612,8 @@ function ShopifyImport({ onDone }: { onDone: () => void }) {
     if (!integration) return;
     setSyncing(true);
     try {
-      const creds = integration.credentials;
       const { data, error } = await supabase.functions.invoke("import-shopify-products", {
         body: {
-          store_url: integration.store_url,
-          access_token: creds.access_token,
           user_id: user?.id,
           is_sync: true,
         },
