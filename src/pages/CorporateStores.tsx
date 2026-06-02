@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import Products from "@/pages/Products";
+
 import { StoreThemePicker } from "@/components/StoreThemePicker";
 import { cms } from "@/lib/cmsClient";
 
@@ -451,9 +451,235 @@ export default function CorporateStores() {
   // new stores are now created in 'active' status directly so no polling is
   // required. Stale 'provisioning' rows from old flows simply stay as-is.
 
+  const shopifyStores = stores.filter((s) => s.store_type === "shopify");
+  const wooStores = stores.filter((s) => s.store_type === "woocommerce");
+
+  const renderStoreRows = (rows: CorporateStore[]) => (
+    <TableBody>
+      {rows.map((s) => {
+        const isUnpublished = s.status === "provisioning";
+        if (isUnpublished) {
+          const displaySlug =
+            s.requested_slug ??
+            (s.tenant_slug && !s.tenant_slug.startsWith("pending-")
+              ? s.tenant_slug
+              : null);
+          return (
+            <TableRow key={s.id} className="bg-amber-50/40 dark:bg-amber-950/10">
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-8 w-8 rounded shrink-0"
+                    style={{ background: s.primary_color }}
+                  />
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">Setup incomplete</div>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell colSpan={isSuperAdmin ? 3 : 2}>
+                <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>
+                    Finish onboarding to publish this store. Your chosen
+                    site address isn't reserved yet — someone else could
+                    claim it if you don't complete setup.
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell>
+                {displaySlug ? (
+                  <span className="text-sm font-mono text-muted-foreground inline-flex items-center gap-1">
+                    stores.printonet.com{s.store_type === "website" ? "/sites" : ""}/{displaySlug}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setResumeStore(s);
+                      setOpen(true);
+                    }}
+                  >
+                    Finish setup
+                  </Button>
+                  <StoreActions
+                    store={s}
+                    onResumeSetup={() => {
+                      setResumeStore(s);
+                      setOpen(true);
+                    }}
+                  />
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        }
+        return (
+        <TableRow key={s.id}>
+          <TableCell>
+            <div className="flex items-center gap-3">
+              {s.logo_url ? (
+                <img src={s.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
+              ) : (
+                <div
+                  className="h-8 w-8 rounded shrink-0"
+                  style={{ background: s.primary_color }}
+                />
+              )}
+              <div className="min-w-0">
+                <div className="font-medium truncate flex items-center gap-2">
+                  <span className="truncate">{s.name}</span>
+                  {s.store_type === "corporate" && (
+                    <Badge variant="secondary" className="gap-1 shrink-0">
+                      <Building2 className="h-3 w-3" /> Corporate
+                    </Badge>
+                  )}
+                  {s.store_type === "shopify" && (
+                    <Badge variant="secondary" className="gap-1 shrink-0">
+                      <ShoppingBag className="h-3 w-3" /> Shopify
+                    </Badge>
+                  )}
+                  {s.store_type === "woocommerce" && (
+                    <Badge variant="secondary" className="gap-1 shrink-0">
+                      <Globe className="h-3 w-3" /> WooCommerce
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">{s.contact_email}</div>
+              </div>
+            </div>
+          </TableCell>
+          <TableCell>
+            <div className="space-y-1">
+              <StatusBadge status={s.status} />
+              {s.error_message && s.status === "failed" && (
+                <div className="text-xs text-amber-700 dark:text-amber-500 max-w-xs truncate" title={s.error_message}>
+                  {s.error_message}
+                </div>
+              )}
+            </div>
+          </TableCell>
+          <TableCell>
+            <PaymentsCell store={s} />
+          </TableCell>
+          {isSuperAdmin && (
+            <TableCell>
+              <PlatformFeeCell store={s} />
+            </TableCell>
+          )}
+          <TableCell>
+            {s.custom_domain ? (
+              <a
+                href={/^https?:\/\//i.test(s.custom_domain) ? s.custom_domain : `https://${s.custom_domain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+              >
+                {s.custom_domain.replace(/^https?:\/\//i, "")}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : s.store_type === "shopify" || s.store_type === "woocommerce" ? (
+              <span className="text-xs text-muted-foreground">Dashboard-only</span>
+            ) : s.tenant_slug ? (
+              (() => {
+                const sitePath = s.store_type === "website" ? `/sites/${s.tenant_slug}` : `/${s.tenant_slug}`;
+                return (
+                  <a
+                    href={`https://stores.printonet.com${sitePath}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    stores.printonet.com{sitePath}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                );
+              })()
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+          </TableCell>
+          <TableCell className="text-right">
+            <StoreActions
+              store={s}
+              onResumeSetup={() => {
+                setResumeStore(s);
+                setOpen(true);
+              }}
+            />
+          </TableCell>
+        </TableRow>
+        );
+      })}
+    </TableBody>
+  );
+
+  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Your stores</CardTitle>
+        <CardDescription>
+          Each store is a fully isolated, Printonet-branded storefront connected to your hosted catalog.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-3 border-b last:border-0">
+                <Skeleton className="h-8 w-8 rounded" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-8 w-8 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-sm">{emptyMessage}</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Store</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Payments</TableHead>
+                {isSuperAdmin && <TableHead>Platform fee</TableHead>}
+                <TableHead>Site URL</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            {renderStoreRows(rows)}
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6 w-full sm:w-auto flex-wrap gap-1 p-1.5 bg-muted/60 border h-auto">
+          <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <Building2 className="h-4 w-4" /> All Stores
+          </TabsTrigger>
+          <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <ShoppingBag className="h-4 w-4" /> Shopify
+          </TabsTrigger>
+          <TabsTrigger value="woocommerce" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+            <Globe className="h-4 w-4" /> WooCommerce
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="stores" className="space-y-6">
           <div className="flex items-start justify-between gap-4">
@@ -488,223 +714,27 @@ export default function CorporateStores() {
             </Dialog>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Your stores</CardTitle>
-              <CardDescription>
-                Each store is a fully isolated, Printonet-branded storefront connected to your hosted catalog.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 py-3 border-b last:border-0">
-                      <Skeleton className="h-8 w-8 rounded" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-48" />
-                        <Skeleton className="h-3 w-64" />
-                      </div>
-                      <Skeleton className="h-6 w-20 rounded-full" />
-                      <Skeleton className="h-8 w-8 rounded" />
-                    </div>
-                  ))}
-                </div>
-              ) : stores.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p className="text-sm">No stores yet. Click "New store" to create one.</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Store</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Payments</TableHead>
-                      {isSuperAdmin && <TableHead>Platform fee</TableHead>}
-                      <TableHead>Site URL</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stores.map((s) => {
-                      // Stores that haven't completed onboarding (step 1 → 2 → publish)
-                      // sit in 'provisioning' with a placeholder tenant_slug. Hide all
-                      // details and surface only a "Finish setup" CTA + warning that
-                      // the chosen URL isn't reserved yet.
-                      const isUnpublished = s.status === "provisioning";
-                      if (isUnpublished) {
-                        const displaySlug =
-                          s.requested_slug ??
-                          (s.tenant_slug && !s.tenant_slug.startsWith("pending-")
-                            ? s.tenant_slug
-                            : null);
-                        return (
-                          <TableRow key={s.id} className="bg-amber-50/40 dark:bg-amber-950/10">
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-8 w-8 rounded shrink-0"
-                                  style={{ background: s.primary_color }}
-                                />
-                                <div className="min-w-0">
-                                  <div className="font-medium truncate">{s.name}</div>
-                                  <div className="text-xs text-muted-foreground">Setup incomplete</div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell colSpan={isSuperAdmin ? 3 : 2}>
-                              <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
-                                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                                <span>
-                                  Finish onboarding to publish this store. Your chosen
-                                  site address isn't reserved yet — someone else could
-                                  claim it if you don't complete setup.
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {displaySlug ? (
-                                <span className="text-sm font-mono text-muted-foreground inline-flex items-center gap-1">
-                                  stores.printonet.com{s.store_type === "website" ? "/sites" : ""}/{displaySlug}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    setResumeStore(s);
-                                    setOpen(true);
-                                  }}
-                                >
-                                  Finish setup
-                                </Button>
-                                <StoreActions
-                                  store={s}
-                                  onResumeSetup={() => {
-                                    setResumeStore(s);
-                                    setOpen(true);
-                                  }}
-                                />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      }
-                      return (
-                      <TableRow key={s.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {s.logo_url ? (
-                              <img src={s.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
-                            ) : (
-                              <div
-                                className="h-8 w-8 rounded shrink-0"
-                                style={{ background: s.primary_color }}
-                              />
-                            )}
-                            <div className="min-w-0">
-                              <div className="font-medium truncate flex items-center gap-2">
-                                <span className="truncate">{s.name}</span>
-                                {s.store_type === "corporate" && (
-                                  <Badge variant="secondary" className="gap-1 shrink-0">
-                                    <Building2 className="h-3 w-3" /> Corporate
-                                  </Badge>
-                                )}
-                                {s.store_type === "shopify" && (
-                                  <Badge variant="secondary" className="gap-1 shrink-0">
-                                    <ShoppingBag className="h-3 w-3" /> Shopify
-                                  </Badge>
-                                )}
-                                {s.store_type === "woocommerce" && (
-                                  <Badge variant="secondary" className="gap-1 shrink-0">
-                                    <Globe className="h-3 w-3" /> WooCommerce
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-xs text-muted-foreground truncate">{s.contact_email}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <StatusBadge status={s.status} />
-                            {s.error_message && s.status === "failed" && (
-                              <div className="text-xs text-amber-700 dark:text-amber-500 max-w-xs truncate" title={s.error_message}>
-                                {s.error_message}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <PaymentsCell store={s} />
-                        </TableCell>
-                        {isSuperAdmin && (
-                          <TableCell>
-                            <PlatformFeeCell store={s} />
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          {s.custom_domain ? (
-                            <a
-                              href={/^https?:\/\//i.test(s.custom_domain) ? s.custom_domain : `https://${s.custom_domain}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-                            >
-                              {s.custom_domain.replace(/^https?:\/\//i, "")}
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          ) : s.store_type === "shopify" || s.store_type === "woocommerce" ? (
-                            <span className="text-xs text-muted-foreground">Dashboard-only</span>
-                          ) : s.tenant_slug ? (
-                            (() => {
-                              const sitePath = s.store_type === "website" ? `/sites/${s.tenant_slug}` : `/${s.tenant_slug}`;
-                              return (
-                                <a
-                                  href={`https://stores.printonet.com${sitePath}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-sm font-mono text-primary hover:underline inline-flex items-center gap-1"
-                                >
-                                  stores.printonet.com{sitePath}
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              );
-                            })()
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <StoreActions
-                            store={s}
-                            onResumeSetup={() => {
-                              setResumeStore(s);
-                              setOpen(true);
-                            }}
-                          />
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          {renderStoresCard(stores, 'No stores yet. Click "New store" to create one.')}
         </TabsContent>
 
-        <TabsContent value="shopify" forceMount className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 data-[state=inactive]:hidden">
-          <Products initialTab="shopify" showStorefrontTabs hideTabsList />
+        <TabsContent value="shopify" className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Shopify Stores</h1>
+            <p className="text-muted-foreground mt-1">
+              Stores connected via Shopify. Open a store to manage its integration, products, and customers.
+            </p>
+          </div>
+          {renderStoresCard(shopifyStores, "No Shopify stores yet. Connect a Shopify store from an existing store's Integration tab or create a new one.")}
         </TabsContent>
 
-        <TabsContent value="woocommerce" forceMount className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 data-[state=inactive]:hidden">
-          <Products initialTab="woocommerce" showStorefrontTabs hideTabsList />
+        <TabsContent value="woocommerce" className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">WooCommerce Stores</h1>
+            <p className="text-muted-foreground mt-1">
+              Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
+            </p>
+          </div>
+          {renderStoresCard(wooStores, "No WooCommerce stores yet. Connect a WooCommerce store from an existing store's Integration tab or create a new one.")}
         </TabsContent>
 
       </Tabs>
