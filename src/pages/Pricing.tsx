@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ArrowLeft, Sparkles, Store, Users } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Store, Users, ShoppingBag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +13,8 @@ import {
   type PlanKey,
 } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const HOSTED_SHARED: string[] = [
   "Hosted storefront with custom domain",
