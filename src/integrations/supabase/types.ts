@@ -1261,6 +1261,30 @@ export type Database = {
         }
         Relationships: []
       }
+      shopify_compliance_log: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json | null
+          shop_domain: string | null
+          topic: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          shop_domain?: string | null
+          topic: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          shop_domain?: string | null
+          topic?: string
+        }
+        Relationships: []
+      }
       site_navigation: {
         Row: {
           created_at: string
