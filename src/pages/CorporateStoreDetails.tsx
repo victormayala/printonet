@@ -600,7 +600,12 @@ export default function CorporateStoreDetails() {
         </TabsContent>
 
         {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
-          <TabsContent forceMount={false} value="integration" className="mt-0">
+          <TabsContent forceMount={false} value="integration" className="mt-0 space-y-6">
+            <IntegrationScriptPanel
+              storeId={store.id}
+              platform={store.store_type as "shopify" | "woocommerce"}
+              onChange={setScriptInstalled}
+            />
             {store.store_type === "shopify" ? (
               <ShopifyImport onDone={() => queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] })} />
             ) : (
