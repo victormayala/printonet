@@ -90,3 +90,9 @@ verify_jwt = false
 
 [functions.debug-env-40779174228f353a03b2a7eb0a7bfa83440b79b3d28b62f5]
 verify_jwt = false
+
+[functions.shopify-billing-callback]
+verify_jwt = false
+
+[functions.shopify-billing-webhook]
+verify_jwt = false

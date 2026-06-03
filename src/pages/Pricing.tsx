@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ArrowLeft, Sparkles, Store, Users } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Store, Users, ShoppingBag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +13,8 @@ import {
   type PlanKey,
 } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const HOSTED_SHARED: string[] = [
   "Hosted storefront with custom domain",
@@ -62,10 +64,77 @@ export default function Pricing() {
   const { user } = useAuth();
   const { planKey: currentPlan, isActive } = useSubscription();
   const [openPlan, setOpenPlan] = useState<PlanKey | null>(null);
+  const [shopifyShop, setShopifyShop] = useState<string | null>(null);
+  const [shopifyLoading, setShopifyLoading] = useState<PlanKey | null>(null);
+
+  // Detect whether this user has connected a Shopify store, so we can route
+  // them through Shopify Billing instead of Stripe checkout.
+  useEffect(() => {
+    if (!user) {
+      setShopifyShop(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("store_integrations")
+        .select("store_url")
+        .eq("user_id", user.id)
+        .eq("platform", "shopify")
+        .maybeSingle();
+      if (!cancelled) {
+        setShopifyShop(
+          data?.store_url ? data.store_url.replace(/^https?:\/\//, "") : null,
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const hostedTiers: PlanKey[] = ["starter_monthly", "growth_monthly", "pro_monthly"];
   const customizerMeta = PLAN_META.customizer_monthly;
   const isCustomizerCurrent = currentPlan === "customizer_monthly" && isActive;
+
+  async function startShopifyBilling(plan: PlanKey) {
+    try {
+      setShopifyLoading(plan);
+      const { data, error } = await supabase.functions.invoke(
+        "shopify-billing-create",
+        {
+          body: {
+            priceId: plan,
+            returnUrl: `${window.location.origin}/billing/return`,
+          },
+        },
+      );
+      if (error || !data?.confirmationUrl) {
+        throw new Error(
+          (error as any)?.message ||
+            (data as any)?.error ||
+            "Could not start Shopify billing",
+        );
+      }
+      // Full redirect to Shopify's confirmation page (option A).
+      window.location.href = data.confirmationUrl;
+    } catch (e) {
+      toast({
+        title: "Shopify billing failed",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+      setShopifyLoading(null);
+    }
+  }
+
+  function handleChoosePlan(plan: PlanKey) {
+    if (shopifyShop) {
+      startShopifyBilling(plan);
+    } else {
+      setOpenPlan(plan);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,6 +165,21 @@ export default function Pricing() {
             </p>
           </Card>
         )}
+
+        {shopifyShop && (
+          <Card className="p-4 mb-8 bg-primary/5 border-primary/30">
+            <div className="flex items-start gap-3">
+              <ShoppingBag className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <p className="text-sm">
+                <span className="font-medium">Billed through Shopify.</span>{" "}
+                Your store <span className="font-mono">{shopifyShop}</span> is
+                connected — subscribing will add the charge to your next
+                Shopify invoice. No second payment method needed.
+              </p>
+            </div>
+          </Card>
+        )}
+
 
         {/* Hosted store plans */}
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
@@ -139,16 +223,25 @@ export default function Pricing() {
                 </ul>
 
                 <Button
-                  disabled={!user || isCurrent}
+                  disabled={!user || isCurrent || shopifyLoading === key}
                   variant={isHighlighted ? "default" : "outline"}
-                  onClick={() => setOpenPlan(key)}
+                  onClick={() => handleChoosePlan(key)}
                 >
-                  {isCurrent ? "Current plan" : `Choose ${meta.name}`}
+                  {shopifyLoading === key ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
+                  ) : isCurrent ? (
+                    "Current plan"
+                  ) : shopifyShop ? (
+                    `Subscribe via Shopify`
+                  ) : (
+                    `Choose ${meta.name}`
+                  )}
                 </Button>
               </Card>
             );
           })}
         </div>
+
 
         {/* Customizer-only plan */}
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
@@ -185,10 +278,18 @@ export default function Pricing() {
             <Button
               className="w-full"
               variant={isCustomizerCurrent ? "outline" : "default"}
-              disabled={!user || isCustomizerCurrent}
-              onClick={() => setOpenPlan("customizer_monthly")}
+              disabled={!user || isCustomizerCurrent || shopifyLoading === "customizer_monthly"}
+              onClick={() => handleChoosePlan("customizer_monthly")}
             >
-              {isCustomizerCurrent ? "Current plan" : "Choose Customizer"}
+              {shopifyLoading === "customizer_monthly" ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
+              ) : isCustomizerCurrent ? (
+                "Current plan"
+              ) : shopifyShop ? (
+                "Subscribe via Shopify"
+              ) : (
+                "Choose Customizer"
+              )}
             </Button>
           </div>
         </Card>
