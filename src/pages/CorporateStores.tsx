@@ -946,9 +946,11 @@ export default function CorporateStores() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6 w-full sm:w-auto flex-wrap gap-1 p-1.5 bg-muted/60 border h-auto">
-          <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
-            <Building2 className="h-4 w-4" /> Hosted Stores
-          </TabsTrigger>
+          {hostedStoresEnabled && (
+            <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+              <Building2 className="h-4 w-4" /> Hosted Stores
+            </TabsTrigger>
+          )}
           <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <ShoppingBag className="h-4 w-4" /> Shopify
           </TabsTrigger>
