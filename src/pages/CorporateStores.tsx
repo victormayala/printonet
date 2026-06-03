@@ -449,6 +449,23 @@ export default function CorporateStores() {
     },
   });
 
+  const { data: connectedStoreIds = new Set<string>() } = useQuery({
+    queryKey: ["store_integrations_connected_ids", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("store_integrations")
+        .select("store_id,platform")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      const set = new Set<string>();
+      (data ?? []).forEach((r: { store_id: string | null; platform: string }) => {
+        if (r.store_id) set.add(`${r.platform}:${r.store_id}`);
+      });
+      return set;
+    },
+  });
+
   // Provisioning rows used to be polled against the WordPress tenant engine;
   // new stores are now created in 'active' status directly so no polling is
   // required. Stale 'provisioning' rows from old flows simply stay as-is.
