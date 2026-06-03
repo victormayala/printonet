@@ -234,6 +234,7 @@ export default function CorporateStoreDetails() {
   const [domainDraft, setDomainDraft] = useState("");
   const [savingDomain, setSavingDomain] = useState(false);
   const [editBrandingOpen, setEditBrandingOpen] = useState(false);
+  const [scriptInstalled, setScriptInstalled] = useState(false);
   const currentTab = searchParams.get("tab") ?? "overview";
   const setCurrentTab = (tab: string) => {
     const next = new URLSearchParams(searchParams);
@@ -241,6 +242,18 @@ export default function CorporateStoreDetails() {
     else next.set("tab", tab);
     setSearchParams(next, { replace: true });
   };
+
+  useEffect(() => {
+    if (!id) return;
+    const sync = () => setScriptInstalled(isScriptMarkedInstalled(id));
+    sync();
+    window.addEventListener("customizer-script-install-changed", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("customizer-script-install-changed", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [id]);
 
   const openEditDomain = () => {
     setDomainDraft(store?.custom_domain ?? "");
