@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { StoreThemePicker } from "@/components/StoreThemePicker";
 import { cms } from "@/lib/cmsClient";
+import shopifyLogo from "@/assets/shopify-logo.svg.asset.json";
+import wooLogo from "@/assets/woocommerce-logo.svg.asset.json";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -469,10 +471,16 @@ export default function CorporateStores() {
             <TableRow key={s.id} className="bg-amber-50/40 dark:bg-amber-950/10">
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <div
-                    className="h-8 w-8 rounded shrink-0"
-                    style={{ background: s.primary_color }}
-                  />
+                  {s.store_type === "shopify" ? (
+                    <img src={shopifyLogo.url} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                  ) : s.store_type === "woocommerce" ? (
+                    <img src={wooLogo.url} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                  ) : (
+                    <div
+                      className="h-8 w-8 rounded shrink-0"
+                      style={{ background: s.primary_color }}
+                    />
+                  )}
                   <div className="min-w-0">
                     <div className="font-medium truncate">{s.name}</div>
                     <div className="text-xs text-muted-foreground">Setup incomplete</div>
@@ -528,7 +536,11 @@ export default function CorporateStores() {
         <TableRow key={s.id}>
           <TableCell>
             <div className="flex items-center gap-3">
-              {s.logo_url ? (
+              {s.store_type === "shopify" ? (
+                <img src={shopifyLogo.url} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+              ) : s.store_type === "woocommerce" ? (
+                <img src={wooLogo.url} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+              ) : s.logo_url ? (
                 <img src={s.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
               ) : (
                 <div
