@@ -712,13 +712,10 @@
         var n = normalizeName(p.name);
         return n && (n === needle || (handleNeedle && n === handleNeedle));
       });
-      if (!match) {
-        match = products.find(function (p) {
-          var n = normalizeName(p.name);
-          if (!n || !needle) return false;
-          return n.indexOf(needle) !== -1 || needle.indexOf(n) !== -1;
-        });
-      }
+      // Strict match only: only inject the Customize button when the storefront
+      // product's name (or handle) matches a customizable product exactly.
+      // Substring/fuzzy matches were intentionally removed — they caused the
+      // button to appear on unrelated products that happened to share a word.
       if (!match) {
         console.log('[CustomizerLoader] Product is not enabled for customization. Page title:', productName, '| handle:', handle);
         console.log('[CustomizerLoader] Available customizable products:', products.map(function (p) { return p.name; }));

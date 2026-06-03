@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, Code2, CheckCircle2 } from "lucide-react";
+import { Loader2, Package, Search, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, RotateCw } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 import { EditProductLogoDialog, type EditableProduct } from "@/components/EditProductLogoDialog";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Textarea } from "@/components/ui/textarea";
+
 import { toast } from "@/hooks/use-toast";
 import { CorporateStore } from "@/types/corporateStore";
 
@@ -54,10 +54,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [copied, setCopied] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
-  const [shopifyInstall, setShopifyInstall] = useState<{ snippet: string; message?: string; confirmed: boolean } | null>(null);
-  const [snippetCopied, setSnippetCopied] = useState(false);
-  const [confirmingInstall, setConfirmingInstall] = useState(false);
 
   const isCorporate = store.store_type === "corporate";
   const queryKey = ["store_customizer_flags", store.id];
@@ -75,12 +73,10 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     if (!store.tenant_slug) {
       if (store.store_type === "shopify") {
         try {
-          const { data, error } = await supabase.functions.invoke("sync-shopify-customizer", {
+          const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
             body: { storeId: store.id },
           });
           if (error) {
-            // Try to extract the body returned by the edge function (contains
-            // friendly `message` for known cases like needs_reauth).
             const ctx = (error as { context?: { text?: () => Promise<string> } }).context;
             let friendly: string | null = null;
             try {
@@ -92,20 +88,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             } catch {/* ignore */}
             throw new Error(friendly || error.message || "Shopify sync failed");
           }
-          if (data?.manual_install_required) {
-            if (!opts?.silent) {
-              setSnippetCopied(false);
-              setShopifyInstall({ snippet: data.snippet || "", message: data.message, confirmed: false });
-              toast({ title: "Action needed", description: "Add the install snippet to your Shopify theme — see the steps above the products list." });
-            } else {
-              setShopifyInstall((prev) => prev ?? { snippet: data.snippet || "", message: data.message, confirmed: false });
-            }
-            return true;
-          }
-          if (data?.snippet) {
-            setShopifyInstall({ snippet: data.snippet, confirmed: !!data.manual_install_confirmed });
-          }
-
         } catch (e) {
           toast({
             title: "Shopify resync failed",
@@ -114,12 +96,11 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           });
           return false;
         }
-
       }
       if (!opts?.silent) {
         const platform = store.store_type === "shopify" ? "Shopify" : store.store_type === "woocommerce" ? "WooCommerce" : "this store";
         toast({
-          title: store.store_type === "shopify" ? "Shopify storefront resynced" : "Customizer settings are live",
+          title: "Customizer settings are live",
           description: `${platform} reads enabled products directly from Printonet. Refresh the storefront product page to see changes.`,
         });
       }
@@ -354,136 +335,37 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const confirmManualInstall = async () => {
-    if (confirmingInstall) return;
-    setConfirmingInstall(true);
+  const handleImportProducts = async () => {
+    if (importBusy) return;
+    if (store.store_type !== "shopify" && store.store_type !== "woocommerce") return;
+    setImportBusy(true);
     try {
-      const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
-        body: { storeId: store.id, manualInstallConfirmed: true },
+      const fn = store.store_type === "shopify" ? "import-shopify-products" : "import-woocommerce-products";
+      const { data, error } = await supabase.functions.invoke(fn, {
+        body: { user_id: user?.id, is_sync: true },
       });
       if (error) throw error;
       toast({
-        title: "Shopify script marked installed",
-        description: "Your storefront is ready — toggle products on/off and they'll sync live.",
+        title: "Products synced",
+        description: `Imported ${data?.imported_count ?? 0}${typeof data?.total === "number" ? ` of ${data.total}` : ""} products.`,
       });
-      setShopifyInstall((prev) => (prev ? { ...prev, confirmed: true } : prev));
+      await qc.invalidateQueries({ queryKey });
     } catch (e) {
       toast({
-        title: "Could not save confirmation",
+        title: "Sync failed",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
     } finally {
-      setConfirmingInstall(false);
+      setImportBusy(false);
     }
   };
 
-  // Auto-load Shopify install snippet on mount so the instructions are always
-  // visible inline (no modal). The edge function returns the snippet whether
-  // install is pending or already confirmed.
-  useEffect(() => {
-    if (store.store_type !== "shopify") return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("sync-shopify-customizer", {
-          body: { storeId: store.id },
-        });
-        if (cancelled || error || !data?.snippet) return;
-        setShopifyInstall({
-          snippet: data.snippet,
-          message: data.message,
-          confirmed: !!data.manual_install_confirmed && !data.manual_install_required,
-        });
-      } catch {/* silent — panel just won't render */}
-    })();
-    return () => { cancelled = true; };
-  }, [store.id, store.store_type]);
 
-  const copySnippet = async () => {
-    if (!shopifyInstall?.snippet) return;
-    try {
-      await navigator.clipboard.writeText(shopifyInstall.snippet);
-      setSnippetCopied(true);
-      setTimeout(() => setSnippetCopied(false), 2000);
-    } catch {
-      toast({ title: "Copy failed", description: "Select the snippet text and copy manually.", variant: "destructive" });
-    }
-  };
 
 
   return (
     <div className="space-y-6">
-      {store.store_type === "shopify" && shopifyInstall && (
-        <Card className={shopifyInstall.confirmed ? "border-emerald-500/30 bg-emerald-500/5" : "border-primary/40 bg-primary/5"}>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div className="flex items-start gap-3">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${shopifyInstall.confirmed ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary/15 text-primary"}`}>
-                  {shopifyInstall.confirmed ? <CheckCircle2 className="h-5 w-5" /> : <Code2 className="h-5 w-5" />}
-                </div>
-                <div>
-                  <CardTitle className="text-base">
-                    {shopifyInstall.confirmed ? "Shopify install script — installed" : "One-time Shopify install script"}
-                  </CardTitle>
-                  <CardDescription className="mt-1 max-w-2xl">
-                    {shopifyInstall.confirmed
-                      ? "The customizer script is live on your Shopify theme. Toggle products below — changes sync instantly. If you ever change themes, paste the snippet again."
-                      : (shopifyInstall.message || "Paste this snippet into your Shopify theme once. After that, every product toggle below syncs live — no further setup needed.")}
-                  </CardDescription>
-                </div>
-              </div>
-              {shopifyInstall.confirmed && <Badge variant="secondary" className="gap-1"><Check className="h-3 w-3" /> Installed</Badge>}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div>
-              <h4 className="text-sm font-semibold mb-3">Installation steps</h4>
-              <ol className="space-y-2.5 text-sm">
-                {[
-                  <>In your Shopify admin, open <strong>Online Store → Themes</strong>.</>,
-                  <>On your live theme, click <strong>⋯ → Edit code</strong>.</>,
-                  <>Under <strong>Layout</strong>, open <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">theme.liquid</code>.</>,
-                  <>Paste the snippet below just before the closing <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">&lt;/head&gt;</code> tag and click <strong>Save</strong>.</>,
-                  <>Come back here and click <strong>I added the script</strong> — you're done.</>,
-                ].map((step, i) => (
-                  <li key={i} className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">{i + 1}</span>
-                    <span className="text-muted-foreground pt-0.5">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold">Snippet</h4>
-                <Button size="sm" variant="outline" onClick={copySnippet}>
-                  {snippetCopied ? <><Check className="h-3.5 w-3.5 mr-1.5" />Copied</> : <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy snippet</>}
-                </Button>
-              </div>
-              <Textarea
-                readOnly
-                value={shopifyInstall.snippet}
-                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                className="font-mono text-xs h-24 bg-background"
-              />
-            </div>
-            {!shopifyInstall.confirmed && (
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-                <Button variant="ghost" size="sm" asChild>
-                  <a href="https://admin.shopify.com/" target="_blank" rel="noopener noreferrer">
-                    Open Shopify admin <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-                  </a>
-                </Button>
-                <Button size="sm" onClick={confirmManualInstall} disabled={confirmingInstall}>
-                  {confirmingInstall && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-                  I added the script
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -494,6 +376,18 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <Button size="sm" onClick={() => setPushOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Add products
             </Button>
+            {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleImportProducts}
+                disabled={importBusy}
+                title={`Re-import products from ${store.store_type === "shopify" ? "Shopify" : "WooCommerce"}`}
+              >
+                <RotateCw className={`h-3.5 w-3.5 ${importBusy ? "animate-spin" : ""}`} />
+                {importBusy ? "Syncing…" : "Sync Products"}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
