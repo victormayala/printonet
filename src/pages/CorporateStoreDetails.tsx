@@ -377,7 +377,19 @@ export default function CorporateStoreDetails() {
       <header className="rounded-2xl border bg-card p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-start gap-5 min-w-0">
-            {store.logo_url ? (
+            {store.store_type === "shopify" ? (
+              <img
+                src={shopifyLogo.url}
+                alt="Shopify"
+                className="h-16 w-16 rounded-xl object-contain bg-muted border shrink-0 p-1"
+              />
+            ) : store.store_type === "woocommerce" ? (
+              <img
+                src={wooLogo.url}
+                alt="WooCommerce"
+                className="h-16 w-16 rounded-xl object-contain bg-muted border shrink-0 p-1"
+              />
+            ) : store.logo_url ? (
               <img
                 src={store.logo_url}
                 alt=""
