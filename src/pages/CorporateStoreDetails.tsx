@@ -603,6 +603,7 @@ export default function CorporateStoreDetails() {
           <TabsContent forceMount={false} value="integration" className="mt-0 space-y-6">
             <IntegrationScriptPanel
               storeId={store.id}
+              userId={user?.id}
               platform={store.store_type as "shopify" | "woocommerce"}
               onChange={setScriptInstalled}
             />

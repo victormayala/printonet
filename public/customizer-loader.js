@@ -66,16 +66,27 @@
   }
 
   function resolveStoreId(callback) {
-    if (STORE_ID) return callback(null, STORE_ID);
-    if (!USER_ID) return callback(null, null);
-
-    var host = normalizeHost(window.location && window.location.hostname);
-    var url = SUPABASE_URL + '/rest/v1/corporate_stores?status=eq.active&user_id=eq.' + encodeURIComponent(USER_ID) + '&store_type=in.(shopify,woocommerce)&select=id,custom_domain';
     var headers = {
       'apikey': ANON_KEY,
       'Authorization': 'Bearer ' + ANON_KEY,
       'Content-Type': 'application/json',
     };
+
+    if (STORE_ID) {
+      var explicitUrl = SUPABASE_URL + '/rest/v1/corporate_stores?id=eq.' + encodeURIComponent(STORE_ID) + '&status=eq.active&store_type=in.(shopify,woocommerce)&select=id&limit=1';
+      fetch(explicitUrl, { headers: headers })
+        .then(function (res) { return res.json(); })
+        .then(function (stores) {
+          var activeStoreId = Array.isArray(stores) && stores[0] && stores[0].id ? stores[0].id : '';
+          callback(null, activeStoreId || null);
+        })
+        .catch(function (err) { callback(err, null); });
+      return;
+    }
+    if (!USER_ID) return callback(null, null);
+
+    var host = normalizeHost(window.location && window.location.hostname);
+    var url = SUPABASE_URL + '/rest/v1/corporate_stores?status=eq.active&user_id=eq.' + encodeURIComponent(USER_ID) + '&store_type=in.(shopify,woocommerce)&select=id,custom_domain';
 
     fetch(url, { headers: headers })
       .then(function (res) { return res.json(); })
@@ -129,15 +140,11 @@
         return;
       }
 
-      var url = SUPABASE_URL + '/rest/v1/inventory_products?is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id';
-      if (USER_ID) url += '&user_id=eq.' + encodeURIComponent(USER_ID);
-      fetch(url, { headers: headers })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          _products = data;
-          callback(null, data);
-        })
-        .catch(function (err) { callback(err, null); });
+      // Fail closed: never fall back to all inventory products. The storefront
+      // button may only appear for products enabled in corporate_store_products
+      // for the resolved connected store.
+      _products = [];
+      callback(null, []);
       });
   }
 

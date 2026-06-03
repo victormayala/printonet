@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { StoreThemePicker } from "@/components/StoreThemePicker";
 import { OnboardingSteps } from "@/components/OnboardingSteps";
-import { UniversalSnippetDialog } from "@/components/UniversalSnippetDialog";
 import { cms } from "@/lib/cmsClient";
 import shopifyLogo from "@/assets/shopify-logo.svg";
 import wooLogo from "@/assets/woocommerce-logo.svg";
@@ -999,7 +998,6 @@ export default function CorporateStores() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {shopifyStores.length > 0 && <UniversalSnippetDialog />}
               <ConnectExternalStoreButton platform="shopify" />
             </div>
           </div>
@@ -1032,7 +1030,6 @@ export default function CorporateStores() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {wooStores.length > 0 && <UniversalSnippetDialog />}
               <ConnectExternalStoreButton platform="woocommerce" />
             </div>
           </div>
