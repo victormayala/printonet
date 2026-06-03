@@ -1010,9 +1010,9 @@ export default function CorporateStores() {
               description="A few steps to get the customizer live on your Shopify storefront."
               steps={[
                 { title: "Store connected", description: "Your Shopify store is linked to Printonet and products are syncing." },
-                { title: "Mark products customizable", description: "Open a product and toggle 'Customizable' so the Customize button appears." },
-                { title: "Verify the script", description: "We auto-inject the customizer-loader script. If your theme blocks it, paste the embed snippet manually." },
-                { title: "Go live", description: "Visit a product page on your storefront and confirm the Customize button works end-to-end." },
+                { title: "Install the embed snippet", description: "Open the store's Integration tab and paste the snippet into your theme just before </head>." },
+                { title: "Mark products customizable", description: "In the Products tab, toggle 'Customizable' on for the products you want to allow customers to customize." },
+                { title: "Go live", description: "Visit one of those product pages on your storefront and confirm the Customize button works end-to-end." },
               ]}
             />
           )}
