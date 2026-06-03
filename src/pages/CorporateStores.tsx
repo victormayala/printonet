@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { StoreThemePicker } from "@/components/StoreThemePicker";
+import { OnboardingSteps } from "@/components/OnboardingSteps";
+import { UniversalSnippetDialog } from "@/components/UniversalSnippetDialog";
 import { cms } from "@/lib/cmsClient";
 import shopifyLogo from "@/assets/shopify-logo.svg";
 import wooLogo from "@/assets/woocommerce-logo.svg";
@@ -996,8 +998,24 @@ export default function CorporateStores() {
                 Stores connected via Shopify. Open a store to manage its integration, products, and customers.
               </p>
             </div>
-            <ConnectExternalStoreButton platform="shopify" />
+            <div className="flex items-center gap-2 flex-wrap">
+              {shopifyStores.length > 0 && <UniversalSnippetDialog />}
+              <ConnectExternalStoreButton platform="shopify" />
+            </div>
           </div>
+          {shopifyStores.length > 0 && (
+            <OnboardingSteps
+              storageKey="corporate-stores-shopify"
+              title="Finish your Shopify setup"
+              description="A few steps to get the customizer live on your Shopify storefront."
+              steps={[
+                { title: "Store connected", description: "Your Shopify store is linked to Printonet and products are syncing." },
+                { title: "Mark products customizable", description: "Open a product and toggle 'Customizable' so the Customize button appears." },
+                { title: "Verify the script", description: "We auto-inject the customizer-loader script. If your theme blocks it, paste the embed snippet manually." },
+                { title: "Go live", description: "Visit a product page on your storefront and confirm the Customize button works end-to-end." },
+              ]}
+            />
+          )}
           {renderStoresCard(
             shopifyStores,
             <ConnectEmptyState platform="shopify" />,
@@ -1013,8 +1031,24 @@ export default function CorporateStores() {
                 Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
               </p>
             </div>
-            <ConnectExternalStoreButton platform="woocommerce" />
+            <div className="flex items-center gap-2 flex-wrap">
+              {wooStores.length > 0 && <UniversalSnippetDialog />}
+              <ConnectExternalStoreButton platform="woocommerce" />
+            </div>
           </div>
+          {wooStores.length > 0 && (
+            <OnboardingSteps
+              storageKey="corporate-stores-woocommerce"
+              title="Finish your WooCommerce setup"
+              description="A few steps to get the customizer live on your WooCommerce storefront."
+              steps={[
+                { title: "Store connected", description: "Your WooCommerce store is linked to Printonet and products are syncing." },
+                { title: "Install the embed snippet", description: "Paste the embed script in your theme header (or install the Printonet WordPress plugin)." },
+                { title: "Mark products customizable", description: "Open a product and toggle 'Customizable' so the Customize button appears." },
+                { title: "Go live", description: "Visit a product page on your storefront and confirm the Customize button works end-to-end." },
+              ]}
+            />
+          )}
           {renderStoresCard(
             wooStores,
             <ConnectEmptyState platform="woocommerce" />,
