@@ -655,10 +655,11 @@
     // Don't inject if there's already a data-customizer element
     if (document.querySelector('[data-customizer]')) return;
 
-    // Detect Shopify: check window.Shopify or URL pattern
-    var isShopify = !!(window.Shopify);
-    var isProductPage = isShopify && (
-      (window.Shopify.product) ||
+    // Detect Shopify PDPs even before Shopify's window globals are ready.
+    // Some themes/load orders expose window.Shopify.product late, but the URL
+    // is already enough to know this is a product page.
+    var isProductPage = !!(
+      (window.Shopify && window.Shopify.product) ||
       /\/products\/[^/]+/.test(window.location.pathname)
     );
 
