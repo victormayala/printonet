@@ -102,6 +102,21 @@ export default function AdminUsers() {
     }
   };
 
+  const sendPasswordReset = async (u: AdminUser) => {
+    setBusy(u.id);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(u.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success(`Password reset email sent to ${u.email}`);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed to send reset email"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const callUserAction = async (u: AdminUser, action: "ban" | "unban" | "delete") => {
     if (u.id === me?.id) {
       toast.error("You can't perform this action on your own account.");
