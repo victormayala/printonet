@@ -550,20 +550,16 @@ export default function CorporateStores() {
               )}
               <div className="min-w-0">
                 <div className="font-medium truncate flex items-center gap-2">
-                  <span className="truncate">{s.name}</span>
+                  <span className="truncate">
+                    {s.store_type === "shopify"
+                      ? s.name.replace(/\s*\(Shopify\)\s*$/i, "")
+                      : s.store_type === "woocommerce"
+                      ? s.name.replace(/\s*\(WooCommerce\)\s*$/i, "")
+                      : s.name}
+                  </span>
                   {s.store_type === "corporate" && (
                     <Badge variant="secondary" className="gap-1 shrink-0">
                       <Building2 className="h-3 w-3" /> Corporate
-                    </Badge>
-                  )}
-                  {s.store_type === "shopify" && (
-                    <Badge variant="secondary" className="gap-1 shrink-0">
-                      <ShoppingBag className="h-3 w-3" /> Shopify
-                    </Badge>
-                  )}
-                  {s.store_type === "woocommerce" && (
-                    <Badge variant="secondary" className="gap-1 shrink-0">
-                      <Globe className="h-3 w-3" /> WooCommerce
                     </Badge>
                   )}
                 </div>
