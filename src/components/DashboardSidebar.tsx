@@ -20,6 +20,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { NavLink as RouterNavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 import logoIcon from "@/assets/printonet-logo-sidebar.svg";
 
 import logoFull from "@/assets/printonet-logo-sidebar-full.svg";
@@ -51,7 +52,7 @@ type NavItem = {
   iconColor?: string;
 };
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, iconColor: "text-indigo-500" },
   {
     title: "Catalog",
@@ -65,20 +66,22 @@ const navItems: NavItem[] = [
       { title: "Suppliers", to: "/suppliers", icon: Truck },
     ],
   },
-  {
-    title: "My Stores",
-    url: "/corporate-stores",
-    icon: Building2,
-    iconColor: "text-sky-500",
-    matchPaths: ["/corporate-stores"],
-    subItems: [
-      { title: "Hosted Stores", to: "/corporate-stores", icon: Store },
-      { title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag },
-      { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
-    ],
-  },
-  { title: "Orders", url: "/orders", icon: ShoppingBag, iconColor: "text-amber-500" },
 ];
+
+const myStoresItem: NavItem = {
+  title: "My Stores",
+  url: "/corporate-stores",
+  icon: Building2,
+  iconColor: "text-sky-500",
+  matchPaths: ["/corporate-stores"],
+  subItems: [
+    { title: "Hosted Stores", to: "/corporate-stores", icon: Store },
+    { title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag },
+    { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
+  ],
+};
+
+const ordersItem: NavItem = { title: "Orders", url: "/orders", icon: ShoppingBag, iconColor: "text-amber-500" };
 
 const profileItem: NavItem = {
   title: "Profile",
@@ -112,8 +115,15 @@ export function DashboardSidebar() {
   const collapsed = state === "collapsed";
   const { signOut } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
   const { pathname, search } = useLocation();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    ...(hostedStoresEnabled ? [myStoresItem] : []),
+    ordersItem,
+  ];
 
   useEffect(() => {
     try {

@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Loader2, Shield, ShieldOff, Pause, Play, Ban, CircleCheck, Trash2, KeyRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 type AdminUser = {
@@ -28,6 +29,7 @@ type AdminUser = {
   is_super_admin: boolean;
   store_count: number;
   is_banned: boolean;
+  hosted_stores_enabled: boolean;
 };
 
 const getErrorMessage = (e: unknown, fallback: string) =>
@@ -117,6 +119,23 @@ export default function AdminUsers() {
     }
   };
 
+  const toggleHostedStores = async (u: AdminUser, enabled: boolean) => {
+    setBusy(u.id);
+    try {
+      const { error } = await (supabase as any).rpc("admin_set_hosted_stores_enabled", {
+        p_user_id: u.id,
+        p_enabled: enabled,
+      });
+      if (error) throw error;
+      toast.success(`Hosted stores ${enabled ? "enabled" : "disabled"} for ${u.email}`);
+      await qc.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed to update hosted stores access"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const callUserAction = async (u: AdminUser, action: "ban" | "unban" | "delete") => {
     if (u.id === me?.id) {
       toast.error("You can't perform this action on your own account.");
@@ -165,19 +184,20 @@ export default function AdminUsers() {
               <TableHead>Role</TableHead>
               <TableHead>Account</TableHead>
               <TableHead>Joined</TableHead>
+              <TableHead>Hosted stores</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10">
+                <TableCell colSpan={8} className="text-center py-10">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-sm">
+                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground text-sm">
                   No users found.
                 </TableCell>
               </TableRow>
@@ -203,6 +223,18 @@ export default function AdminUsers() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(u.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={u.is_super_admin || u.hosted_stores_enabled}
+                        disabled={busy === u.id || u.is_super_admin}
+                        onCheckedChange={(v) => toggleHostedStores(u, v)}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {u.is_super_admin ? "always on" : u.hosted_stores_enabled ? "on" : "off"}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right space-x-2 space-y-1">
                     <Button

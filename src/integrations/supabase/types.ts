@@ -1239,6 +1239,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           default_price_source: string
+          hosted_stores_enabled: boolean
           id: string
           store_name: string | null
           updated_at: string
@@ -1247,6 +1248,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           default_price_source?: string
+          hosted_stores_enabled?: boolean
           id: string
           store_name?: string | null
           updated_at?: string
@@ -1255,6 +1257,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           default_price_source?: string
+          hosted_stores_enabled?: boolean
           id?: string
           store_name?: string | null
           updated_at?: string
@@ -1558,6 +1561,7 @@ export type Database = {
         Returns: {
           created_at: string
           email: string
+          hosted_stores_enabled: boolean
           id: string
           is_banned: boolean
           is_super_admin: boolean
@@ -1566,6 +1570,10 @@ export type Database = {
         }[]
       }
       admin_platform_stats: { Args: never; Returns: Json }
+      admin_set_hosted_stores_enabled: {
+        Args: { p_enabled: boolean; p_user_id: string }
+        Returns: boolean
+      }
       admin_set_invite_only: { Args: { p_enabled: boolean }; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
