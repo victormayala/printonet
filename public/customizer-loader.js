@@ -169,6 +169,38 @@
     return null;
   }
 
+  function getShopifyProductId() {
+    if (window.Shopify && window.Shopify.product && window.Shopify.product.id) {
+      return String(window.Shopify.product.id);
+    }
+    var candidates = [
+      '[name="product-id"]',
+      'input[name="product-id"]',
+      '[data-product-id]',
+      '[data-shopify-product-id]',
+      'product-form[data-product-id]',
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      var el = document.querySelector(candidates[i]);
+      if (!el) continue;
+      var value = (el.value || el.getAttribute('content') || el.getAttribute('data-product-id') || el.getAttribute('data-shopify-product-id') || '').trim();
+      if (/^\d+$/.test(value)) return value;
+    }
+    return null;
+  }
+
+  function getExternalId(product, provider) {
+    var source = product && product.supplier_source;
+    if (!source || typeof source !== 'object') return '';
+    if (provider === 'shopify') {
+      return String(source.shopify_product_id || (source.external_ids && source.external_ids.shopify) || '').trim();
+    }
+    if (provider === 'woocommerce') {
+      return String(source.woocommerce_product_id || (source.external_ids && source.external_ids.woocommerce) || '').trim();
+    }
+    return '';
+  }
+
   function getWooProductForm() {
     return document.querySelector('form.variations_form.cart') || document.querySelector('form.cart');
   }
