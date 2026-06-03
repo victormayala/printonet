@@ -52,7 +52,8 @@
     (scriptTag && scriptTag.getAttribute('data-store-site-url')) ||
     (typeof window !== 'undefined' && window.location && window.location.origin ? window.location.origin : '');
 
-  var _products = null; // cached after first fetch
+  var _products = null; // short-lived cache of products enabled for this connected store
+  var _productsFetchedAt = 0;
   var _pickerOverlay = null;
 
   function normalizeHost(value) {
@@ -100,7 +101,7 @@
 
   // --- Fetch all active products from the database ---
   function fetchProducts(callback) {
-    if (_products) return callback(null, _products);
+    if (_products && Date.now() - _productsFetchedAt < 5000) return callback(null, _products);
 
     var headers = {
       'apikey': ANON_KEY,
@@ -123,16 +124,18 @@
             var ids = links.map(function (l) { return l.product_id; }).filter(Boolean);
             if (ids.length === 0) {
               _products = [];
+              _productsFetchedAt = Date.now();
               callback(null, []);
               return null;
             }
-            var productsUrl = SUPABASE_URL + '/rest/v1/inventory_products?id=in.(' + ids.join(',') + ')&is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id';
+            var productsUrl = SUPABASE_URL + '/rest/v1/inventory_products?id=in.(' + ids.join(',') + ')&is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id,supplier_source';
             return fetch(productsUrl, { headers: headers })
               .then(function (res) { return res.json(); })
               .then(function (data) {
                 var byId = {};
                 (data || []).forEach(function (p) { byId[p.id] = p; });
                 _products = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+                _productsFetchedAt = Date.now();
                 callback(null, _products);
               });
           })
@@ -144,6 +147,7 @@
       // button may only appear for products enabled in corporate_store_products
       // for the resolved connected store.
       _products = [];
+      _productsFetchedAt = Date.now();
       callback(null, []);
       });
   }
@@ -163,6 +167,38 @@
     var variants = window.Shopify.product.variants;
     if (variants && variants.length > 0) return String(variants[0].id);
     return null;
+  }
+
+  function getShopifyProductId() {
+    if (window.Shopify && window.Shopify.product && window.Shopify.product.id) {
+      return String(window.Shopify.product.id);
+    }
+    var candidates = [
+      '[name="product-id"]',
+      'input[name="product-id"]',
+      '[data-product-id]',
+      '[data-shopify-product-id]',
+      'product-form[data-product-id]',
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      var el = document.querySelector(candidates[i]);
+      if (!el) continue;
+      var value = (el.value || el.getAttribute('content') || el.getAttribute('data-product-id') || el.getAttribute('data-shopify-product-id') || '').trim();
+      if (/^\d+$/.test(value)) return value;
+    }
+    return null;
+  }
+
+  function getExternalId(product, provider) {
+    var source = product && product.supplier_source;
+    if (!source || typeof source !== 'object') return '';
+    if (provider === 'shopify') {
+      return String(source.shopify_product_id || (source.external_ids && source.external_ids.shopify) || '').trim();
+    }
+    if (provider === 'woocommerce') {
+      return String(source.woocommerce_product_id || (source.external_ids && source.external_ids.woocommerce) || '').trim();
+    }
+    return '';
   }
 
   function getWooProductForm() {
@@ -715,17 +751,18 @@
       var needle = normalizeName(productName);
       var handle = (window.Shopify && window.Shopify.product && window.Shopify.product.handle) || '';
       var handleNeedle = normalizeName(handle.replace(/-/g, ' '));
+      var shopifyProductId = getShopifyProductId();
       var match = products.find(function (p) {
+        if (shopifyProductId && getExternalId(p, 'shopify') === shopifyProductId) return true;
         var n = normalizeName(p.name);
         return n && (n === needle || (handleNeedle && n === handleNeedle));
       });
-      // Strict match only: only inject the Customize button when the storefront
-      // product's name (or handle) matches a customizable product exactly.
-      // Substring/fuzzy matches were intentionally removed — they caused the
-      // button to appear on unrelated products that happened to share a word.
+      // Strict match only: prefer the Shopify product ID imported into
+      // supplier_source, with exact title/handle fallback. Substring/fuzzy
+      // matches stay disabled because they show buttons on unrelated products.
       if (!match) {
-        console.log('[CustomizerLoader] Product is not enabled for customization. Page title:', productName, '| handle:', handle);
-        console.log('[CustomizerLoader] Available customizable products:', products.map(function (p) { return p.name; }));
+        console.log('[CustomizerLoader] Product is not enabled for customization. Shopify ID:', shopifyProductId, '| title:', productName, '| handle:', handle);
+        console.log('[CustomizerLoader] Available customizable products:', products.map(function (p) { return { name: p.name, shopifyId: getExternalId(p, 'shopify') }; }));
         return;
       }
 

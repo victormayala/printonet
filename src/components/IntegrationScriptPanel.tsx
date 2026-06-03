@@ -27,7 +27,7 @@ export function IntegrationScriptPanel({ storeId, userId, platform, onChange }: 
 
   const snippet = `<!-- Printonet Product Customizer — paste in your site's <head> or before </body> -->
 <script
-  src="${baseUrl}/customizer-loader.js"
+  src="${baseUrl}/customizer-loader.js?v=20260603-product-id-match"
   data-api-url="${apiUrl}"
   data-base-url="${baseUrl}"
   data-anon-key="${anonKey}"
