@@ -46,7 +46,7 @@ export default function BillingReturn() {
             <Link to="/corporate-stores">Open dashboard</Link>
           </Button>
         </div>
-        {sessionId && seconds <= 0 && (
+        {(sessionId || isShopify) && seconds <= 0 && (
           <p className="text-xs text-muted-foreground mt-4">
             Plan still not visible? Refresh in a moment — webhooks typically arrive within seconds.
           </p>
