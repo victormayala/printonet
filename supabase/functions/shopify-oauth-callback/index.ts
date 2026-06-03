@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
 
     // ---- Auto-inject the customizer-loader.js into the merchant's storefront ----
     // Use Shopify's ScriptTag API so the merchant doesn't need to edit theme.liquid.
-    const loaderSrc = `https://platform.printonet.com/customizer-loader.js?uid=${encodeURIComponent(userId)}`;
+    const loaderSrc = `https://platform.printonet.com/customizer-loader.js?v=20260603-shopify-pdp-url-detect&uid=${encodeURIComponent(userId)}`;
     let scriptTagId: number | null = null;
 
     try {
