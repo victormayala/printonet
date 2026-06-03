@@ -278,10 +278,18 @@ export default function Pricing() {
             <Button
               className="w-full"
               variant={isCustomizerCurrent ? "outline" : "default"}
-              disabled={!user || isCustomizerCurrent}
-              onClick={() => setOpenPlan("customizer_monthly")}
+              disabled={!user || isCustomizerCurrent || shopifyLoading === "customizer_monthly"}
+              onClick={() => handleChoosePlan("customizer_monthly")}
             >
-              {isCustomizerCurrent ? "Current plan" : "Choose Customizer"}
+              {shopifyLoading === "customizer_monthly" ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
+              ) : isCustomizerCurrent ? (
+                "Current plan"
+              ) : shopifyShop ? (
+                "Subscribe via Shopify"
+              ) : (
+                "Choose Customizer"
+              )}
             </Button>
           </div>
         </Card>
