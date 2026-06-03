@@ -757,24 +757,39 @@ export default function CorporateStores() {
         </TabsContent>
 
         <TabsContent value="shopify" className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Shopify Stores</h1>
-            <p className="text-muted-foreground mt-1">
-              Stores connected via Shopify. Open a store to manage its integration, products, and customers.
-            </p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Shopify Stores</h1>
+              <p className="text-muted-foreground mt-1">
+                Stores connected via Shopify. Open a store to manage its integration, products, and customers.
+              </p>
+            </div>
+            <ConnectExternalStoreButton platform="shopify" />
           </div>
-          {renderStoresCard(shopifyStores, "No Shopify stores yet. Connect a Shopify store from an existing store's Integration tab or create a new one.", "external")}
+          {renderStoresCard(
+            shopifyStores,
+            <ConnectEmptyState platform="shopify" />,
+            "external",
+          )}
         </TabsContent>
 
         <TabsContent value="woocommerce" className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">WooCommerce Stores</h1>
-            <p className="text-muted-foreground mt-1">
-              Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
-            </p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">WooCommerce Stores</h1>
+              <p className="text-muted-foreground mt-1">
+                Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
+              </p>
+            </div>
+            <ConnectExternalStoreButton platform="woocommerce" />
           </div>
-          {renderStoresCard(wooStores, "No WooCommerce stores yet. Connect a WooCommerce store from an existing store's Integration tab or create a new one.", "external")}
+          {renderStoresCard(
+            wooStores,
+            <ConnectEmptyState platform="woocommerce" />,
+            "external",
+          )}
         </TabsContent>
+
 
       </Tabs>
     </div>
