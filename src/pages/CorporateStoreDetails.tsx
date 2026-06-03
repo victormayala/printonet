@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import shopifyLogo from "@/assets/shopify-logo.svg";
 import wooLogo from "@/assets/woocommerce-logo.svg";
 
