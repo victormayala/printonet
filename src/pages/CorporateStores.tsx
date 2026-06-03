@@ -19,6 +19,7 @@ import wooLogo from "@/assets/woocommerce-logo.svg";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
