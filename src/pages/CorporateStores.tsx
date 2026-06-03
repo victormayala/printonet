@@ -472,9 +472,9 @@ export default function CorporateStores() {
               <TableCell>
                 <div className="flex items-center gap-3">
                   {s.store_type === "shopify" ? (
-                    <img src={shopifyLogo.url} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                    <img src={shopifyLogo} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
                   ) : s.store_type === "woocommerce" ? (
-                    <img src={wooLogo.url} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                    <img src={wooLogo} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
                   ) : (
                     <div
                       className="h-8 w-8 rounded shrink-0"
@@ -537,9 +537,9 @@ export default function CorporateStores() {
           <TableCell>
             <div className="flex items-center gap-3">
               {s.store_type === "shopify" ? (
-                <img src={shopifyLogo.url} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                <img src={shopifyLogo} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
               ) : s.store_type === "woocommerce" ? (
-                <img src={wooLogo.url} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                <img src={wooLogo} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
               ) : s.logo_url ? (
                 <img src={s.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
               ) : (
