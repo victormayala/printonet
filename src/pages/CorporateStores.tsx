@@ -449,6 +449,23 @@ export default function CorporateStores() {
     },
   });
 
+  const { data: connectedStoreIds = new Set<string>() } = useQuery({
+    queryKey: ["store_integrations_connected_ids", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("store_integrations")
+        .select("store_id,platform")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      const set = new Set<string>();
+      (data ?? []).forEach((r: { store_id: string | null; platform: string }) => {
+        if (r.store_id) set.add(`${r.platform}:${r.store_id}`);
+      });
+      return set;
+    },
+  });
+
   // Provisioning rows used to be polled against the WordPress tenant engine;
   // new stores are now created in 'active' status directly so no polling is
   // required. Stale 'provisioning' rows from old flows simply stay as-is.
@@ -569,7 +586,14 @@ export default function CorporateStores() {
           </TableCell>
           <TableCell>
             <div className="space-y-1">
-              <StatusBadge status={s.status} />
+              {(s.store_type === "shopify" || s.store_type === "woocommerce") &&
+              !connectedStoreIds.has(`${s.store_type}:${s.id}`) ? (
+                <Badge variant="destructive" className="gap-1">
+                  <AlertCircle className="h-3 w-3" /> Disconnected
+                </Badge>
+              ) : (
+                <StatusBadge status={s.status} />
+              )}
               {s.error_message && s.status === "failed" && (
                 <div className="text-xs text-amber-700 dark:text-amber-500 max-w-xs truncate" title={s.error_message}>
                   {s.error_message}
