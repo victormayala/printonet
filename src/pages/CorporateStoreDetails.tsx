@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import shopifyLogo from "@/assets/shopify-logo.svg";
 import wooLogo from "@/assets/woocommerce-logo.svg";
 
@@ -139,6 +139,7 @@ import { StoreOverviewStats } from "@/components/StoreOverviewStats";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 import { ShopifyImport, WooCommerceImport } from "@/pages/Products";
 import { Link2 } from "lucide-react";
+import { IntegrationScriptPanel, isScriptMarkedInstalled } from "@/components/IntegrationScriptPanel";
 
 
 function StatusBadge({ status }: { status: CorporateStore["status"] }) {
@@ -233,6 +234,7 @@ export default function CorporateStoreDetails() {
   const [domainDraft, setDomainDraft] = useState("");
   const [savingDomain, setSavingDomain] = useState(false);
   const [editBrandingOpen, setEditBrandingOpen] = useState(false);
+  const [scriptInstalled, setScriptInstalled] = useState(false);
   const currentTab = searchParams.get("tab") ?? "overview";
   const setCurrentTab = (tab: string) => {
     const next = new URLSearchParams(searchParams);
@@ -240,6 +242,18 @@ export default function CorporateStoreDetails() {
     else next.set("tab", tab);
     setSearchParams(next, { replace: true });
   };
+
+  useEffect(() => {
+    if (!id) return;
+    const sync = () => setScriptInstalled(isScriptMarkedInstalled(id));
+    sync();
+    window.addEventListener("customizer-script-install-changed", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("customizer-script-install-changed", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [id]);
 
   const openEditDomain = () => {
     setDomainDraft(store?.custom_domain ?? "");
@@ -548,6 +562,15 @@ export default function CorporateStoreDetails() {
           {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
             <TabsTrigger value="integration" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
               <Link2 className="h-4 w-4" /> Integration
+              {!scriptInstalled && (
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                  aria-label="Embed script not installed"
+                  title="Embed script not installed"
+                >
+                  <AlertCircle className="h-3 w-3" />
+                </span>
+              )}
             </TabsTrigger>
           )}
         </TabsList>
@@ -577,7 +600,12 @@ export default function CorporateStoreDetails() {
         </TabsContent>
 
         {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
-          <TabsContent forceMount={false} value="integration" className="mt-0">
+          <TabsContent forceMount={false} value="integration" className="mt-0 space-y-6">
+            <IntegrationScriptPanel
+              storeId={store.id}
+              platform={store.store_type as "shopify" | "woocommerce"}
+              onChange={setScriptInstalled}
+            />
             {store.store_type === "shopify" ? (
               <ShopifyImport onDone={() => queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] })} />
             ) : (
