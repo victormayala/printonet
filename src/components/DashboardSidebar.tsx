@@ -212,7 +212,8 @@ export function DashboardSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map(renderItem)}
-              {isSuperAdmin && renderItem({ title: "Admin", url: "/admin", icon: Shield, iconColor: "text-violet-500" })}
+              {/* Admin tab hidden per request — re-enable by restoring the line below */}
+              {/* {isSuperAdmin && renderItem({ title: "Admin", url: "/admin", icon: Shield, iconColor: "text-violet-500" })} */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
