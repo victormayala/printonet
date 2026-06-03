@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, ExternalLink, Copy, Check, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, Code2, CheckCircle2 } from "lucide-react";
+import { Loader2, Package, Search, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, RotateCw } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 import { EditProductLogoDialog, type EditableProduct } from "@/components/EditProductLogoDialog";
