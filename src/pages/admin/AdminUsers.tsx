@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Shield, ShieldOff, Pause, Play, Ban, CircleCheck, Trash2 } from "lucide-react";
+import { Loader2, Shield, ShieldOff, Pause, Play, Ban, CircleCheck, Trash2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 type AdminUser = {
@@ -97,6 +97,21 @@ export default function AdminUsers() {
       toast.success(`${status === "paused" ? "Paused" : "Reactivated"} stores for ${u.email}`);
     } catch (e: unknown) {
       toast.error(getErrorMessage(e, "Failed"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const sendPasswordReset = async (u: AdminUser) => {
+    setBusy(u.id);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(u.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success(`Password reset email sent to ${u.email}`);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed to send reset email"));
     } finally {
       setBusy(null);
     }
@@ -201,6 +216,14 @@ export default function AdminUsers() {
                       ) : (
                         <><Shield className="h-3.5 w-3.5 mr-1" /> Make admin</>
                       )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy === u.id}
+                      onClick={() => sendPasswordReset(u)}
+                    >
+                      <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset password
                     </Button>
                     {u.store_count > 0 && (
                       <>
