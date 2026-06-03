@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import shopifyLogo from "@/assets/shopify-logo.svg.asset.json";
+import wooLogo from "@/assets/woocommerce-logo.svg.asset.json";
 
 const MULTI_TLDS = ["co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp", "com.br", "co.za"];
 const LOVABLE_DNS_VERIFICATION_VALUE =
@@ -375,7 +377,19 @@ export default function CorporateStoreDetails() {
       <header className="rounded-2xl border bg-card p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-start gap-5 min-w-0">
-            {store.logo_url ? (
+            {store.store_type === "shopify" ? (
+              <img
+                src={shopifyLogo.url}
+                alt="Shopify"
+                className="h-16 w-16 rounded-xl object-contain bg-muted border shrink-0 p-1"
+              />
+            ) : store.store_type === "woocommerce" ? (
+              <img
+                src={wooLogo.url}
+                alt="WooCommerce"
+                className="h-16 w-16 rounded-xl object-contain bg-muted border shrink-0 p-1"
+              />
+            ) : store.logo_url ? (
               <img
                 src={store.logo_url}
                 alt=""
