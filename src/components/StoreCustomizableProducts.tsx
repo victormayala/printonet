@@ -376,6 +376,18 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             <Button size="sm" onClick={() => setPushOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Add products
             </Button>
+            {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleImportProducts}
+                disabled={importBusy}
+                title={`Re-import products from ${store.store_type === "shopify" ? "Shopify" : "WooCommerce"}`}
+              >
+                <RotateCw className={`h-3.5 w-3.5 ${importBusy ? "animate-spin" : ""}`} />
+                {importBusy ? "Syncing…" : "Sync Products"}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
