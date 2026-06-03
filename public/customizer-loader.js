@@ -52,7 +52,8 @@
     (scriptTag && scriptTag.getAttribute('data-store-site-url')) ||
     (typeof window !== 'undefined' && window.location && window.location.origin ? window.location.origin : '');
 
-  var _products = null; // cached after first fetch
+  var _products = null; // short-lived cache of products enabled for this connected store
+  var _productsFetchedAt = 0;
   var _pickerOverlay = null;
 
   function normalizeHost(value) {
@@ -100,7 +101,7 @@
 
   // --- Fetch all active products from the database ---
   function fetchProducts(callback) {
-    if (_products) return callback(null, _products);
+    if (_products && Date.now() - _productsFetchedAt < 5000) return callback(null, _products);
 
     var headers = {
       'apikey': ANON_KEY,
@@ -123,16 +124,18 @@
             var ids = links.map(function (l) { return l.product_id; }).filter(Boolean);
             if (ids.length === 0) {
               _products = [];
+              _productsFetchedAt = Date.now();
               callback(null, []);
               return null;
             }
-            var productsUrl = SUPABASE_URL + '/rest/v1/inventory_products?id=in.(' + ids.join(',') + ')&is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id';
+            var productsUrl = SUPABASE_URL + '/rest/v1/inventory_products?id=in.(' + ids.join(',') + ')&is_active=eq.true&select=id,name,category,description,base_price,image_front,image_back,image_side1,image_side2,variants,print_areas,user_id,supplier_source';
             return fetch(productsUrl, { headers: headers })
               .then(function (res) { return res.json(); })
               .then(function (data) {
                 var byId = {};
                 (data || []).forEach(function (p) { byId[p.id] = p; });
                 _products = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+                _productsFetchedAt = Date.now();
                 callback(null, _products);
               });
           })
@@ -144,6 +147,7 @@
       // button may only appear for products enabled in corporate_store_products
       // for the resolved connected store.
       _products = [];
+      _productsFetchedAt = Date.now();
       callback(null, []);
       });
   }
