@@ -217,6 +217,14 @@ export default function AdminUsers() {
                         <><Shield className="h-3.5 w-3.5 mr-1" /> Make admin</>
                       )}
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy === u.id}
+                      onClick={() => sendPasswordReset(u)}
+                    >
+                      <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset password
+                    </Button>
                     {u.store_count > 0 && (
                       <>
                         <Button size="sm" variant="outline" disabled={busy === u.id} onClick={() => setStoresStatus(u, "paused")}>
