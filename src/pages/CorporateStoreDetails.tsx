@@ -562,6 +562,15 @@ export default function CorporateStoreDetails() {
           {(store.store_type === "shopify" || store.store_type === "woocommerce") && (
             <TabsTrigger value="integration" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
               <Link2 className="h-4 w-4" /> Integration
+              {!scriptInstalled && (
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                  aria-label="Embed script not installed"
+                  title="Embed script not installed"
+                >
+                  <AlertCircle className="h-3 w-3" />
+                </span>
+              )}
             </TabsTrigger>
           )}
         </TabsList>
