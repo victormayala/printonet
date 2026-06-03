@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Loader2, Shield, ShieldOff, Pause, Play, Ban, CircleCheck, Trash2, KeyRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 type AdminUser = {
@@ -28,6 +29,7 @@ type AdminUser = {
   is_super_admin: boolean;
   store_count: number;
   is_banned: boolean;
+  hosted_stores_enabled: boolean;
 };
 
 const getErrorMessage = (e: unknown, fallback: string) =>
@@ -112,6 +114,23 @@ export default function AdminUsers() {
       toast.success(`Password reset email sent to ${u.email}`);
     } catch (e: unknown) {
       toast.error(getErrorMessage(e, "Failed to send reset email"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const toggleHostedStores = async (u: AdminUser, enabled: boolean) => {
+    setBusy(u.id);
+    try {
+      const { error } = await (supabase as any).rpc("admin_set_hosted_stores_enabled", {
+        p_user_id: u.id,
+        p_enabled: enabled,
+      });
+      if (error) throw error;
+      toast.success(`Hosted stores ${enabled ? "enabled" : "disabled"} for ${u.email}`);
+      await qc.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Failed to update hosted stores access"));
     } finally {
       setBusy(null);
     }
