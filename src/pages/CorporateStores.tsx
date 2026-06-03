@@ -659,7 +659,7 @@ export default function CorporateStores() {
     </TableBody>
   );
 
-  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string, variant: "hosted" | "external" = "hosted") => (
+  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string | JSX.Element, variant: "hosted" | "external" = "hosted") => (
     <Card>
       <CardHeader>
         <CardTitle>Your stores</CardTitle>
