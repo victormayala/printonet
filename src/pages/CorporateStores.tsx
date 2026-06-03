@@ -416,6 +416,238 @@ function LogoField({
   );
 }
 
+type ConnectPlatform = "shopify" | "woocommerce";
+
+function ConnectExternalStoreDialog({
+  platform,
+  open,
+  onOpenChange,
+}: {
+  platform: ConnectPlatform;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [shopUrl, setShopUrl] = useState("");
+  const [consumerKey, setConsumerKey] = useState("");
+  const [consumerSecret, setConsumerSecret] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const reset = () => {
+    setShopUrl("");
+    setConsumerKey("");
+    setConsumerSecret("");
+    setLoading(false);
+  };
+
+  const handleShopify = async () => {
+    if (!shopUrl.trim()) {
+      notify.error("Enter your Shopify store URL or name");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("shopify-oauth-init", {
+        body: {
+          shop: shopUrl.trim(),
+          user_id: user?.id,
+          redirect_url: window.location.origin + "/corporate-stores?tab=shopify",
+        },
+      });
+      if (error) throw error;
+      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+      const authUrl = (data as { authorization_url?: string })?.authorization_url;
+      if (!authUrl) throw new Error("No authorization URL returned");
+      window.open(authUrl, "_blank", "noopener,noreferrer");
+      toast({
+        title: "Approve the install in the new tab",
+        description: "Once you finish on Shopify, return here and refresh. Your store will appear in the list.",
+      });
+      onOpenChange(false);
+      reset();
+    } catch (err) {
+      notify.error("Could not start Shopify connection", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWoo = async () => {
+    if (!shopUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()) {
+      notify.error("All fields are required");
+      return;
+    }
+    setLoading(true);
+    try {
+      const normalizedUrl = shopUrl.trim().replace(/\/$/, "");
+      const { error: saveError } = await supabase.from("store_integrations").insert({
+        user_id: user!.id,
+        platform: "woocommerce" as const,
+        store_url: normalizedUrl,
+        credentials: { consumer_key: consumerKey.trim(), consumer_secret: consumerSecret.trim() },
+      });
+      if (saveError) throw saveError;
+
+      const { data, error } = await supabase.functions.invoke("import-woocommerce-products", {
+        body: {
+          site_url: normalizedUrl,
+          consumer_key: consumerKey.trim(),
+          consumer_secret: consumerSecret.trim(),
+          user_id: user!.id,
+        },
+      });
+      if (error) throw error;
+      toast({
+        title: "WooCommerce connected",
+        description: `Imported ${(data as { imported_count?: number })?.imported_count ?? 0} products.`,
+      });
+      onOpenChange(false);
+      reset();
+      queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] });
+    } catch (err) {
+      notify.error("WooCommerce connection failed", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isShopify = platform === "shopify";
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        onOpenChange(v);
+        if (!v) reset();
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <img
+              src={isShopify ? shopifyLogo : wooLogo}
+              alt=""
+              className="h-6 w-6 object-contain"
+            />
+            Connect {isShopify ? "Shopify" : "WooCommerce"} store
+          </DialogTitle>
+          <DialogDescription>
+            {isShopify
+              ? "Enter your store URL — we'll open Shopify in a new tab so you can approve the install."
+              : "Enter your site URL and a WooCommerce REST API key pair (with Read/Write access)."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="connect-store-url">
+              {isShopify ? "Shopify store URL" : "WooCommerce site URL"}
+            </Label>
+            <Input
+              id="connect-store-url"
+              placeholder={isShopify ? "my-store.myshopify.com" : "https://shop.example.com"}
+              value={shopUrl}
+              onChange={(e) => setShopUrl(e.target.value)}
+              disabled={loading}
+              autoFocus
+            />
+          </div>
+          {!isShopify && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="connect-ck">Consumer key</Label>
+                <Input
+                  id="connect-ck"
+                  value={consumerKey}
+                  onChange={(e) => setConsumerKey(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="connect-cs">Consumer secret</Label>
+                <Input
+                  id="connect-cs"
+                  type="password"
+                  value={consumerSecret}
+                  onChange={(e) => setConsumerSecret(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Generate keys in WooCommerce: Settings → Advanced → REST API.
+              </p>
+            </>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button onClick={isShopify ? handleShopify : handleWoo} disabled={loading}>
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="h-4 w-4" />
+            )}
+            <span className="ml-1">{isShopify ? "Continue to Shopify" : "Connect & import"}</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ConnectExternalStoreButton({ platform }: { platform: ConnectPlatform }) {
+  const [open, setOpen] = useState(false);
+  const label = platform === "shopify" ? "Connect Shopify store" : "Connect WooCommerce store";
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4" />
+        {label}
+      </Button>
+      <ConnectExternalStoreDialog platform={platform} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+function ConnectEmptyState({ platform }: { platform: ConnectPlatform }) {
+  const [open, setOpen] = useState(false);
+  const isShopify = platform === "shopify";
+  return (
+    <div className="flex flex-col items-center gap-4 py-6">
+      <img
+        src={isShopify ? shopifyLogo : wooLogo}
+        alt=""
+        className="h-12 w-12 object-contain opacity-80"
+      />
+      <div className="text-center space-y-1">
+        <p className="text-base font-medium text-foreground">
+          No {isShopify ? "Shopify" : "WooCommerce"} stores connected yet
+        </p>
+        <p className="text-sm">
+          Connect your {isShopify ? "Shopify" : "WooCommerce"} store to sync products and manage orders here.
+        </p>
+      </div>
+      <Button onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4" />
+        Connect {isShopify ? "Shopify" : "WooCommerce"} store
+      </Button>
+      <ConnectExternalStoreDialog platform={platform} open={open} onOpenChange={setOpen} />
+    </div>
+  );
+}
+
 export default function CorporateStores() {
   const { user } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
@@ -659,7 +891,7 @@ export default function CorporateStores() {
     </TableBody>
   );
 
-  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string, variant: "hosted" | "external" = "hosted") => (
+  const renderStoresCard = (rows: CorporateStore[], emptyMessage: string | JSX.Element, variant: "hosted" | "external" = "hosted") => (
     <Card>
       <CardHeader>
         <CardTitle>Your stores</CardTitle>
@@ -684,7 +916,7 @@ export default function CorporateStores() {
           </div>
         ) : rows.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p className="text-sm">{emptyMessage}</p>
+            {typeof emptyMessage === "string" ? <p className="text-sm">{emptyMessage}</p> : emptyMessage}
           </div>
         ) : (
           <Table>
@@ -757,24 +989,39 @@ export default function CorporateStores() {
         </TabsContent>
 
         <TabsContent value="shopify" className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Shopify Stores</h1>
-            <p className="text-muted-foreground mt-1">
-              Stores connected via Shopify. Open a store to manage its integration, products, and customers.
-            </p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Shopify Stores</h1>
+              <p className="text-muted-foreground mt-1">
+                Stores connected via Shopify. Open a store to manage its integration, products, and customers.
+              </p>
+            </div>
+            <ConnectExternalStoreButton platform="shopify" />
           </div>
-          {renderStoresCard(shopifyStores, "No Shopify stores yet. Connect a Shopify store from an existing store's Integration tab or create a new one.", "external")}
+          {renderStoresCard(
+            shopifyStores,
+            <ConnectEmptyState platform="shopify" />,
+            "external",
+          )}
         </TabsContent>
 
         <TabsContent value="woocommerce" className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">WooCommerce Stores</h1>
-            <p className="text-muted-foreground mt-1">
-              Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
-            </p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">WooCommerce Stores</h1>
+              <p className="text-muted-foreground mt-1">
+                Stores connected via WooCommerce. Open a store to manage its integration, products, and customers.
+              </p>
+            </div>
+            <ConnectExternalStoreButton platform="woocommerce" />
           </div>
-          {renderStoresCard(wooStores, "No WooCommerce stores yet. Connect a WooCommerce store from an existing store's Integration tab or create a new one.", "external")}
+          {renderStoresCard(
+            wooStores,
+            <ConnectEmptyState platform="woocommerce" />,
+            "external",
+          )}
         </TabsContent>
+
 
       </Tabs>
     </div>
