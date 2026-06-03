@@ -132,6 +132,7 @@ import { CorporateStore } from "@/types/corporateStore";
 
 import { StoreCustomizableProducts } from "@/components/StoreCustomizableProducts";
 import { StoreCustomizerSettings } from "@/components/StoreCustomizerSettings";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 import { StoreCustomers } from "@/components/StoreCustomers";
 import { StoreShippingTax } from "@/components/StoreShippingTax";
 import { StoreContentCMS } from "@/components/StoreContentCMS";
@@ -392,6 +393,10 @@ export default function CorporateStoreDetails() {
 
   if (store.store_type === "website") {
     return <Navigate to={`/websites/${store.id}`} replace />;
+  }
+
+  if ((store.store_type === "corporate" || store.store_type === "retail") && !hostedStoresEnabled) {
+    return <Navigate to="/corporate-stores?tab=shopify" replace />;
   }
 
 
