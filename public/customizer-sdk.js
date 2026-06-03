@@ -622,7 +622,11 @@
     var itemUrl = cartItem && cartItem.url ? String(cartItem.url) : '';
     var itemTitle = cartItem && (cartItem.product_title || cartItem.title) ? String(cartItem.product_title || cartItem.title) : '';
     var reviewUrl = _cartItemReviewUrl(cartItem);
-    var lineSelectors = '.cart-item, [data-cart-item], [data-cart-item-key], [data-line-item-key], .cart-notification-product, .cart__item, .ajaxcart__product, .mini-cart__item, .line-item, li.line-item, tr.cart-item';
+    // Themes vary wildly — include both explicit line classes and the Dawn-style
+    // <cart-drawer-items>/<cart-notification> custom elements. The earlier narrow
+    // list missed generic <li>/<tr> rows that themes like Dawn render inside the
+    // drawer, which left the original product photo as the cart thumbnail.
+    var lineSelectors = '.cart-item, [data-cart-item], [data-cart-item-key], [data-line-item-key], cart-drawer-items li, cart-drawer-items tr, cart-drawer-items .cart-item, .cart-drawer li, .cart-drawer tr, cart-notification, cart-notification .cart-notification-product, .cart-notification-product, .cart__item, .ajaxcart__product, .mini-cart__item, .line-item, li.line-item, tr.cart-item';
     function add(el) {
       if (!el || containers.indexOf(el) >= 0) return;
       containers.push(el);
