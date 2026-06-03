@@ -12,8 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { StoreThemePicker } from "@/components/StoreThemePicker";
 import { cms } from "@/lib/cmsClient";
-import shopifyLogo from "@/assets/shopify-logo.svg.asset.json";
-import wooLogo from "@/assets/woocommerce-logo.svg.asset.json";
+import shopifyLogo from "@/assets/shopify-logo.svg";
+import wooLogo from "@/assets/woocommerce-logo.svg";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
