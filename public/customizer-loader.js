@@ -621,6 +621,27 @@
 
     if (!isProductPage) return;
 
+    // Bail if this Shopify store is no longer connected in the dashboard.
+    // resolveStoreId only returns an ID when an active corporate_stores row of
+    // type shopify/woocommerce exists for this USER_ID. When the merchant
+    // disconnects, that row is deleted, so we skip injection (the script tag
+    // may still be present on the storefront until Shopify removes it).
+    if (USER_ID) {
+      resolveStoreId(function (err, storeId) {
+        if (err || !storeId) {
+          console.log('[CustomizerLoader] Store not connected — skipping Customize button injection.');
+          return;
+        }
+        continueAutoInject(attempt);
+      });
+      return;
+    }
+    continueAutoInject(attempt);
+  }
+
+  function continueAutoInject(attempt) {
+    if (document.querySelector('[data-customizer]')) return;
+
     // Get product name from Shopify object, meta tag, or page title
     var productName = '';
     if (window.Shopify && window.Shopify.product) {
