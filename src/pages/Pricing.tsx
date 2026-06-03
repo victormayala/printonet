@@ -166,6 +166,21 @@ export default function Pricing() {
           </Card>
         )}
 
+        {shopifyShop && (
+          <Card className="p-4 mb-8 bg-primary/5 border-primary/30">
+            <div className="flex items-start gap-3">
+              <ShoppingBag className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <p className="text-sm">
+                <span className="font-medium">Billed through Shopify.</span>{" "}
+                Your store <span className="font-mono">{shopifyShop}</span> is
+                connected — subscribing will add the charge to your next
+                Shopify invoice. No second payment method needed.
+              </p>
+            </div>
+          </Card>
+        )}
+
+
         {/* Hosted store plans */}
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
           Hosted store plans
