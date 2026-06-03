@@ -751,17 +751,18 @@
       var needle = normalizeName(productName);
       var handle = (window.Shopify && window.Shopify.product && window.Shopify.product.handle) || '';
       var handleNeedle = normalizeName(handle.replace(/-/g, ' '));
+      var shopifyProductId = getShopifyProductId();
       var match = products.find(function (p) {
+        if (shopifyProductId && getExternalId(p, 'shopify') === shopifyProductId) return true;
         var n = normalizeName(p.name);
         return n && (n === needle || (handleNeedle && n === handleNeedle));
       });
-      // Strict match only: only inject the Customize button when the storefront
-      // product's name (or handle) matches a customizable product exactly.
-      // Substring/fuzzy matches were intentionally removed — they caused the
-      // button to appear on unrelated products that happened to share a word.
+      // Strict match only: prefer the Shopify product ID imported into
+      // supplier_source, with exact title/handle fallback. Substring/fuzzy
+      // matches stay disabled because they show buttons on unrelated products.
       if (!match) {
-        console.log('[CustomizerLoader] Product is not enabled for customization. Page title:', productName, '| handle:', handle);
-        console.log('[CustomizerLoader] Available customizable products:', products.map(function (p) { return p.name; }));
+        console.log('[CustomizerLoader] Product is not enabled for customization. Shopify ID:', shopifyProductId, '| title:', productName, '| handle:', handle);
+        console.log('[CustomizerLoader] Available customizable products:', products.map(function (p) { return { name: p.name, shopifyId: getExternalId(p, 'shopify') }; }));
         return;
       }
 
