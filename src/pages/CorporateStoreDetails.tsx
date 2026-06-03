@@ -227,6 +227,7 @@ export default function CorporateStoreDetails() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
   
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPause, setConfirmPause] = useState(false);
