@@ -471,10 +471,16 @@ export default function CorporateStores() {
             <TableRow key={s.id} className="bg-amber-50/40 dark:bg-amber-950/10">
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <div
-                    className="h-8 w-8 rounded shrink-0"
-                    style={{ background: s.primary_color }}
-                  />
+                  {s.store_type === "shopify" ? (
+                    <img src={shopifyLogo.url} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                  ) : s.store_type === "woocommerce" ? (
+                    <img src={wooLogo.url} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+                  ) : (
+                    <div
+                      className="h-8 w-8 rounded shrink-0"
+                      style={{ background: s.primary_color }}
+                    />
+                  )}
                   <div className="min-w-0">
                     <div className="font-medium truncate">{s.name}</div>
                     <div className="text-xs text-muted-foreground">Setup incomplete</div>
