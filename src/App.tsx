@@ -42,6 +42,7 @@ import Billing from "./pages/Billing";
 import BillingReturn from "./pages/BillingReturn";
 import Dashboard from "./pages/Dashboard";
 import { AdminLayout } from "@/components/AdminLayout";
+import { HostedStoresRoute } from "@/components/HostedStoresRoute";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminStores from "./pages/admin/AdminStores";
@@ -100,11 +101,11 @@ const App = () => (
             <Route element={<DashboardRoute />}>
               <Route path="/dashboard" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Dashboard />} />
               <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Products initialTab="products" />} />
-              <Route path="/storefront" element={<Navigate to="/corporate-stores?tab=shopify" replace />} />
-              <Route path="/corporate-stores" element={<CorporateStores />} />
-              <Route path="/corporate-stores/:id" element={<CorporateStoreDetails />} />
+              <Route path="/storefront" element={<HostedStoresRoute><Navigate to="/corporate-stores?tab=shopify" replace /></HostedStoresRoute>} />
+              <Route path="/corporate-stores" element={<HostedStoresRoute><CorporateStores /></HostedStoresRoute>} />
+              <Route path="/corporate-stores/:id" element={<HostedStoresRoute><CorporateStoreDetails /></HostedStoresRoute>} />
               <Route path="/websites" element={<Navigate to="/corporate-stores" replace />} />
-              <Route path="/websites/:id" element={<WebsiteDetails />} />
+              <Route path="/websites/:id" element={<HostedStoresRoute><WebsiteDetails /></HostedStoresRoute>} />
               <Route path="/suppliers" element={<Products initialTab="suppliers" />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/customizer" element={<Navigate to="/corporate-stores" replace />} />
