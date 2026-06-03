@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import shopifyLogo from "@/assets/shopify-logo.svg.asset.json";
+import wooLogo from "@/assets/woocommerce-logo.svg.asset.json";
 
 const MULTI_TLDS = ["co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp", "com.br", "co.za"];
 const LOVABLE_DNS_VERIFICATION_VALUE =
