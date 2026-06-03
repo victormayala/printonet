@@ -1421,9 +1421,12 @@ export type Database = {
           id: string
           price_id: string
           product_id: string | null
+          shopify_charge_id: string | null
+          shopify_shop_domain: string | null
+          source: string
           status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1437,9 +1440,12 @@ export type Database = {
           id?: string
           price_id: string
           product_id?: string | null
+          shopify_charge_id?: string | null
+          shopify_shop_domain?: string | null
+          source?: string
           status?: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1453,9 +1459,12 @@ export type Database = {
           id?: string
           price_id?: string
           product_id?: string | null
+          shopify_charge_id?: string | null
+          shopify_shop_domain?: string | null
+          source?: string
           status?: string
-          stripe_customer_id?: string
-          stripe_subscription_id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }
