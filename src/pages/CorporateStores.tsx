@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { StoreThemePicker } from "@/components/StoreThemePicker";
+import { OnboardingSteps } from "@/components/OnboardingSteps";
+import { UniversalSnippetDialog } from "@/components/UniversalSnippetDialog";
 import { cms } from "@/lib/cmsClient";
 import shopifyLogo from "@/assets/shopify-logo.svg";
 import wooLogo from "@/assets/woocommerce-logo.svg";
