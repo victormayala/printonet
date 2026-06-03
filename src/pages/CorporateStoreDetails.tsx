@@ -419,8 +419,20 @@ export default function CorporateStoreDetails() {
             )}
             <div className="min-w-0 space-y-1.5">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold tracking-tight truncate">{store.name}</h1>
-                <StatusBadge status={store.status} />
+                <h1 className="text-2xl font-bold tracking-tight truncate">
+                  {store.store_type === "shopify"
+                    ? store.name.replace(/\s*\(Shopify\)\s*$/i, "")
+                    : store.store_type === "woocommerce"
+                    ? store.name.replace(/\s*\(WooCommerce\)\s*$/i, "")
+                    : store.name}
+                </h1>
+                {(store.store_type === "shopify" || store.store_type === "woocommerce") && integrationConnected === false ? (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertCircle className="h-3 w-3" /> Disconnected
+                  </Badge>
+                ) : (
+                  <StatusBadge status={store.status} />
+                )}
                 {store.store_type === "corporate" && (
                   <Badge variant="secondary" className="gap-1">
                     <Package className="h-3 w-3" /> Corporate
