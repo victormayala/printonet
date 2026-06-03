@@ -72,7 +72,7 @@ const navItems: NavItem[] = [
     iconColor: "text-sky-500",
     matchPaths: ["/corporate-stores"],
     subItems: [
-      { title: "Stores", to: "/corporate-stores", icon: Store },
+      { title: "Hosted Stores", to: "/corporate-stores", icon: Store },
       { title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag },
       { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
     ],
