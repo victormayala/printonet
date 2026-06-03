@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Code, Copy, Check, Info, ExternalLink, Sparkles } from "lucide-react";
+import { Code, Copy, Check, Info, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export function UniversalSnippetDialog() {
@@ -44,19 +44,10 @@ export function UniversalSnippetDialog() {
         <DialogHeader>
           <DialogTitle>Universal Embed Script</DialogTitle>
           <DialogDescription>
-            One script tag — all your products automatically work with the customizer.
+            Paste this once into your store's theme. After that, just turn the customizer on
+            for the products you want to customize — no per-product code needed.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
-          <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-          <div className="space-y-1">
-            <p className="font-medium text-foreground">Using Shopify? Skip this entirely.</p>
-            <p className="text-muted-foreground">
-              Connect your Shopify store via OAuth and we'll auto-inject the customizer on every product page — no theme edits, no script tag needed.
-            </p>
-          </div>
-        </div>
 
         <div>
           <h4 className="text-sm font-semibold mb-2">1. Add this to your site's header</h4>
@@ -77,34 +68,17 @@ export function UniversalSnippetDialog() {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold mb-2">2. Add buttons to your product pages</h4>
-          <div className="space-y-3">
-            <div className="rounded-lg border p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">Product picker (shows all products)</p>
-              <code className="text-xs bg-muted px-2 py-1 rounded block font-mono">
-                {'<button data-customizer>Customize</button>'}
-              </code>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">Specific product (by name)</p>
-              <code className="text-xs bg-muted px-2 py-1 rounded block font-mono">
-                {'<button data-customizer data-product-name="Classic T-Shirt">Customize</button>'}
-              </code>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">Specific product (by ID)</p>
-              <code className="text-xs bg-muted px-2 py-1 rounded block font-mono">
-                {'<button data-customizer data-product-id="abc-123">Customize</button>'}
-              </code>
-            </div>
-          </div>
+          <h4 className="text-sm font-semibold mb-2">2. Turn the customizer on per product</h4>
+          <p className="text-sm text-muted-foreground">
+            Open any product in Printonet and toggle <span className="font-medium text-foreground">Customizable</span> on.
+            The Customize button will automatically appear on that product's page in your store.
+          </p>
         </div>
 
         <div className="flex items-start gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
           <Info className="h-4 w-4 mt-0.5 shrink-0" />
           <div className="space-y-1">
-            <p>The script loads automatically, fetches your active products, and handles everything. No per-product code needed.</p>
-            <p>Listen for results with: <code className="text-xs bg-muted px-1 py-0.5 rounded">document.addEventListener('customizer:complete', e =&gt; console.log(e.detail))</code></p>
+            <p>Advanced: you can also drop your own button anywhere with <code className="text-xs bg-muted px-1 py-0.5 rounded">{'<button data-customizer>Customize</button>'}</code>.</p>
             <Link to="/developers" className="inline-flex items-center gap-1 text-primary hover:underline text-xs font-medium">
               Full documentation & advanced options <ExternalLink className="h-3 w-3" />
             </Link>
