@@ -73,12 +73,10 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
     if (!store.tenant_slug) {
       if (store.store_type === "shopify") {
         try {
-          const { data, error } = await supabase.functions.invoke("sync-shopify-customizer", {
+          const { error } = await supabase.functions.invoke("sync-shopify-customizer", {
             body: { storeId: store.id },
           });
           if (error) {
-            // Try to extract the body returned by the edge function (contains
-            // friendly `message` for known cases like needs_reauth).
             const ctx = (error as { context?: { text?: () => Promise<string> } }).context;
             let friendly: string | null = null;
             try {
@@ -90,20 +88,6 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
             } catch {/* ignore */}
             throw new Error(friendly || error.message || "Shopify sync failed");
           }
-          if (data?.manual_install_required) {
-            if (!opts?.silent) {
-              setSnippetCopied(false);
-              setShopifyInstall({ snippet: data.snippet || "", message: data.message, confirmed: false });
-              toast({ title: "Action needed", description: "Add the install snippet to your Shopify theme — see the steps above the products list." });
-            } else {
-              setShopifyInstall((prev) => prev ?? { snippet: data.snippet || "", message: data.message, confirmed: false });
-            }
-            return true;
-          }
-          if (data?.snippet) {
-            setShopifyInstall({ snippet: data.snippet, confirmed: !!data.manual_install_confirmed });
-          }
-
         } catch (e) {
           toast({
             title: "Shopify resync failed",
@@ -112,12 +96,11 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
           });
           return false;
         }
-
       }
       if (!opts?.silent) {
         const platform = store.store_type === "shopify" ? "Shopify" : store.store_type === "woocommerce" ? "WooCommerce" : "this store";
         toast({
-          title: store.store_type === "shopify" ? "Shopify storefront resynced" : "Customizer settings are live",
+          title: "Customizer settings are live",
           description: `${platform} reads enabled products directly from Printonet. Refresh the storefront product page to see changes.`,
         });
       }
