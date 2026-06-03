@@ -139,6 +139,7 @@ import { StoreOverviewStats } from "@/components/StoreOverviewStats";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 import { ShopifyImport, WooCommerceImport } from "@/pages/Products";
 import { Link2 } from "lucide-react";
+import { IntegrationScriptPanel, isScriptMarkedInstalled } from "@/components/IntegrationScriptPanel";
 
 
 function StatusBadge({ status }: { status: CorporateStore["status"] }) {
