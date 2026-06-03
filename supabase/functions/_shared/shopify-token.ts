@@ -173,7 +173,6 @@ export async function getValidShopifyToken(
     };
   }
 
-  const shop = shopDomainFromUrl(integration.store_url);
   const refreshed = await refreshAccessToken(shop, refreshToken);
 
   const now = Date.now();
