@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Shield, ShieldOff, Pause, Play, Ban, CircleCheck, Trash2 } from "lucide-react";
+import { Loader2, Shield, ShieldOff, Pause, Play, Ban, CircleCheck, Trash2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 type AdminUser = {
