@@ -52,34 +52,35 @@ type NavItem = {
   iconColor?: string;
 };
 
-const baseNavItems: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, iconColor: "text-indigo-500" },
-  {
-    title: "Catalog",
-    url: "/products",
-    icon: BookOpen,
-    iconColor: "text-emerald-500",
-    matchPaths: ["/products", "/suppliers"],
-    subItems: [
-      { title: "Products", to: "/products", icon: Package },
-      { title: "Categories", to: "/products?tab=categories", icon: LayoutGrid },
-      { title: "Suppliers", to: "/suppliers", icon: Truck },
-    ],
-  },
-];
+const dashboardItem: NavItem = { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, iconColor: "text-indigo-500" };
 
-const myStoresItem: NavItem = {
-  title: "My Stores",
-  url: "/corporate-stores",
-  icon: Building2,
-  iconColor: "text-sky-500",
-  matchPaths: ["/corporate-stores"],
+const catalogItem: NavItem = {
+  title: "Catalog",
+  url: "/products",
+  icon: BookOpen,
+  iconColor: "text-emerald-500",
+  matchPaths: ["/products", "/suppliers"],
   subItems: [
-    { title: "Hosted Stores", to: "/corporate-stores", icon: Store },
-    { title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag },
-    { title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe },
+    { title: "Products", to: "/products", icon: Package },
+    { title: "Categories", to: "/products?tab=categories", icon: LayoutGrid },
+    { title: "Suppliers", to: "/suppliers", icon: Truck },
   ],
 };
+
+function buildMyStoresItem(hostedEnabled: boolean): NavItem {
+  const subItems: SubItem[] = [];
+  if (hostedEnabled) subItems.push({ title: "Hosted Stores", to: "/corporate-stores", icon: Store });
+  subItems.push({ title: "Shopify", to: "/corporate-stores?tab=shopify", icon: ShoppingBag });
+  subItems.push({ title: "WooCommerce", to: "/corporate-stores?tab=woocommerce", icon: Globe });
+  return {
+    title: "My Stores",
+    url: hostedEnabled ? "/corporate-stores" : "/corporate-stores?tab=shopify",
+    icon: Building2,
+    iconColor: "text-sky-500",
+    matchPaths: ["/corporate-stores"],
+    subItems,
+  };
+}
 
 const ordersItem: NavItem = { title: "Orders", url: "/orders", icon: ShoppingBag, iconColor: "text-amber-500" };
 
@@ -120,8 +121,9 @@ export function DashboardSidebar() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const navItems: NavItem[] = [
-    ...baseNavItems,
-    ...(hostedStoresEnabled ? [myStoresItem] : []),
+    dashboardItem,
+    ...(hostedStoresEnabled ? [catalogItem] : []),
+    buildMyStoresItem(hostedStoresEnabled),
     ordersItem,
   ];
 

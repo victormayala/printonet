@@ -656,8 +656,11 @@ export default function CorporateStores() {
   const [open, setOpen] = useState(false);
   const [resumeStore, setResumeStore] = useState<CorporateStore | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
   const tabParam = searchParams.get("tab");
-  const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
+  const defaultTab = hostedStoresEnabled ? "stores" : "shopify";
+  const rawTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : tabParam === "stores" ? "stores" : defaultTab;
+  const activeTab = rawTab === "stores" && !hostedStoresEnabled ? "shopify" : rawTab;
   const setActiveTab = (v: string) => {
     if (v === "stores") {
       searchParams.delete("tab");
