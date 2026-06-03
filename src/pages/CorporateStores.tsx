@@ -684,7 +684,7 @@ export default function CorporateStores() {
           </div>
         ) : rows.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p className="text-sm">{emptyMessage}</p>
+            {typeof emptyMessage === "string" ? <p className="text-sm">{emptyMessage}</p> : emptyMessage}
           </div>
         ) : (
           <Table>
