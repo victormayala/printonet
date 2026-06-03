@@ -54,10 +54,8 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [copied, setCopied] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
-  const [shopifyInstall, setShopifyInstall] = useState<{ snippet: string; message?: string; confirmed: boolean } | null>(null);
-  const [snippetCopied, setSnippetCopied] = useState(false);
-  const [confirmingInstall, setConfirmingInstall] = useState(false);
 
   const isCorporate = store.store_type === "corporate";
   const queryKey = ["store_customizer_flags", store.id];
