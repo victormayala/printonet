@@ -96,3 +96,6 @@ verify_jwt = false
 
 [functions.shopify-billing-webhook]
 verify_jwt = false
+
+[functions.shopify-compliance-webhooks]
+verify_jwt = false
