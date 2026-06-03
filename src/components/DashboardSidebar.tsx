@@ -115,8 +115,15 @@ export function DashboardSidebar() {
   const collapsed = state === "collapsed";
   const { signOut } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
   const { pathname, search } = useLocation();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    ...(hostedStoresEnabled ? [myStoresItem] : []),
+    ordersItem,
+  ];
 
   useEffect(() => {
     try {
