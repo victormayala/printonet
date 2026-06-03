@@ -289,6 +289,22 @@ export default function CorporateStoreDetails() {
     },
   });
 
+  const { data: integrationConnected } = useQuery({
+    queryKey: ["store_integration_connected", store?.id, store?.store_type, user?.id],
+    enabled: !!user?.id && !!store && (store.store_type === "shopify" || store.store_type === "woocommerce"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("store_integrations")
+        .select("id")
+        .eq("user_id", user!.id)
+        .eq("platform", store!.store_type)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+  });
+
   const runManage = async (action: "pause" | "resume" | "delete") => {
     if (!store) return;
     setBusy(action);
