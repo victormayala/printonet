@@ -15,11 +15,12 @@ export function isScriptMarkedInstalled(storeId: string | undefined | null): boo
 
 interface Props {
   storeId: string;
+  userId?: string | null;
   platform: "shopify" | "woocommerce";
   onChange?: (installed: boolean) => void;
 }
 
-export function IntegrationScriptPanel({ storeId, platform, onChange }: Props) {
+export function IntegrationScriptPanel({ storeId, userId, platform, onChange }: Props) {
   const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -30,6 +31,8 @@ export function IntegrationScriptPanel({ storeId, platform, onChange }: Props) {
   data-api-url="${apiUrl}"
   data-base-url="${baseUrl}"
   data-anon-key="${anonKey}"
+  data-user-id="${userId ?? ""}"
+  data-store-id="${storeId}"
 ></script>`;
 
   const [installed, setInstalled] = useState(false);
