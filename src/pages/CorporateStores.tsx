@@ -19,6 +19,7 @@ import wooLogo from "@/assets/woocommerce-logo.svg";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -656,8 +657,11 @@ export default function CorporateStores() {
   const [open, setOpen] = useState(false);
   const [resumeStore, setResumeStore] = useState<CorporateStore | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
   const tabParam = searchParams.get("tab");
-  const activeTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : "stores";
+  const defaultTab = hostedStoresEnabled ? "stores" : "shopify";
+  const rawTab = tabParam === "shopify" || tabParam === "woocommerce" ? tabParam : tabParam === "stores" ? "stores" : defaultTab;
+  const activeTab = rawTab === "stores" && !hostedStoresEnabled ? "shopify" : rawTab;
   const setActiveTab = (v: string) => {
     if (v === "stores") {
       searchParams.delete("tab");
@@ -942,9 +946,11 @@ export default function CorporateStores() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1280px] mx-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6 w-full sm:w-auto flex-wrap gap-1 p-1.5 bg-muted/60 border h-auto">
-          <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
-            <Building2 className="h-4 w-4" /> Hosted Stores
-          </TabsTrigger>
+          {hostedStoresEnabled && (
+            <TabsTrigger value="stores" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
+              <Building2 className="h-4 w-4" /> Hosted Stores
+            </TabsTrigger>
+          )}
           <TabsTrigger value="shopify" className="gap-2 flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg px-4 py-2">
             <ShoppingBag className="h-4 w-4" /> Shopify
           </TabsTrigger>
