@@ -1,0 +1,43 @@
+# Shopify app configuration — managed via Shopify CLI.
+# Deploy with:  shopify app deploy
+#
+# Replace `client_id` with your app's Client ID from the Shopify Partner
+# Dashboard (Apps → your app → Overview → "Client ID").
+# After running `shopify app config link`, the CLI will fill this in for you.
+
+client_id = "REPLACE_WITH_YOUR_SHOPIFY_CLIENT_ID"
+name = "Customizer Studio"
+handle = "customizer-studio"
+application_url = "https://printonet.lovable.app"
+embedded = false
+
+[access_scopes]
+# Adjust to match the scopes your app already requests during OAuth.
+scopes = "read_products,write_products,read_orders,write_script_tags,read_themes,write_themes"
+
+[auth]
+redirect_urls = [
+  "https://qumrnazgdrijdcihtkah.supabase.co/functions/v1/shopify-oauth-callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  # Mandatory GDPR / privacy compliance webhooks.
+  # All three point at the same endpoint, which dispatches by X-Shopify-Topic.
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://qumrnazgdrijdcihtkah.supabase.co/functions/v1/shopify-compliance-webhooks"
+  customer_deletion_url     = "https://qumrnazgdrijdcihtkah.supabase.co/functions/v1/shopify-compliance-webhooks"
+  shop_deletion_url         = "https://qumrnazgdrijdcihtkah.supabase.co/functions/v1/shopify-compliance-webhooks"
+
+[app_proxy]
+# Optional — remove this block if you don't use an app proxy.
+# url = "https://printonet.lovable.app/proxy"
+# subpath = "customizer"
+# prefix = "apps"
+
+[pos]
+embedded = false
+
+[build]
+include_config_on_deploy = true
