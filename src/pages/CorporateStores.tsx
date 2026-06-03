@@ -536,7 +536,11 @@ export default function CorporateStores() {
         <TableRow key={s.id}>
           <TableCell>
             <div className="flex items-center gap-3">
-              {s.logo_url ? (
+              {s.store_type === "shopify" ? (
+                <img src={shopifyLogo.url} alt="Shopify" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+              ) : s.store_type === "woocommerce" ? (
+                <img src={wooLogo.url} alt="WooCommerce" className="h-8 w-8 rounded shrink-0 object-contain p-1 bg-muted" />
+              ) : s.logo_url ? (
                 <img src={s.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
               ) : (
                 <div
