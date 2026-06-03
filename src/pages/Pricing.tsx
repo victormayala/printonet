@@ -223,16 +223,25 @@ export default function Pricing() {
                 </ul>
 
                 <Button
-                  disabled={!user || isCurrent}
+                  disabled={!user || isCurrent || shopifyLoading === key}
                   variant={isHighlighted ? "default" : "outline"}
-                  onClick={() => setOpenPlan(key)}
+                  onClick={() => handleChoosePlan(key)}
                 >
-                  {isCurrent ? "Current plan" : `Choose ${meta.name}`}
+                  {shopifyLoading === key ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
+                  ) : isCurrent ? (
+                    "Current plan"
+                  ) : shopifyShop ? (
+                    `Subscribe via Shopify`
+                  ) : (
+                    `Choose ${meta.name}`
+                  )}
                 </Button>
               </Card>
             );
           })}
         </div>
+
 
         {/* Customizer-only plan */}
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
