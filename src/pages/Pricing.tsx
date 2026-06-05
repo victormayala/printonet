@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 
 const HOSTED_SHARED: string[] = [
   "Hosted storefront with custom domain",
