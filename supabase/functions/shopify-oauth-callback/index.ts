@@ -40,6 +40,30 @@ Deno.serve(async (req) => {
       return new Response("Shopify OAuth not configured on server", { status: 500 });
     }
 
+    // Pre-check: ensure no OTHER Printonet user already owns this Shopify store.
+    {
+      const supabaseCheck = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const normalizedShop = shop.toLowerCase().replace(/\/+$/, "");
+      const { data: conflictRows } = await supabaseCheck
+        .from("store_integrations")
+        .select("user_id, store_url")
+        .eq("platform", "shopify");
+      const conflict = (conflictRows || []).find((r: any) => {
+        const u = String(r.store_url || "")
+          .replace(/^https?:\/\//i, "")
+          .replace(/\/+$/, "")
+          .toLowerCase();
+        return u === normalizedShop && r.user_id !== userId;
+      });
+      if (conflict) {
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Store already connected</title></head><body style="font-family:system-ui;padding:32px;max-width:560px;margin:auto"><h2>This Shopify store is already connected</h2><p>The store <strong>${shop}</strong> is already linked to a different Printonet account. Disconnect it there first, or contact support.</p><p><a href="${redirectUrl || "/"}">Return to Printonet</a></p></body></html>`;
+        return new Response(html, { status: 409, headers: { "Content-Type": "text/html; charset=utf-8" } });
+      }
+    }
+
     // Exchange authorization code for an EXPIRING offline access token (required
     // by Shopify as of Dec 2025 — non-expiring tokens return 403 on API calls).
     const tokenBody = new URLSearchParams({
