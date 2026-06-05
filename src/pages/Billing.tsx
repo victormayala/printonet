@@ -56,7 +56,9 @@ export default function Billing() {
         <div>
           <h1 className="text-3xl font-semibold">Billing & Plan</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your Printonet subscription and store seats.
+            {hostedStoresEnabled
+              ? "Manage your Printonet subscription and store seats."
+              : "Manage your Printonet subscription."}
           </p>
         </div>
         <Button variant="outline" onClick={() => navigate("/pricing")}>
