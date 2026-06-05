@@ -491,7 +491,14 @@ function ConnectExternalStoreDialog({
         store_url: normalizedUrl,
         credentials: { consumer_key: consumerKey.trim(), consumer_secret: consumerSecret.trim() },
       });
-      if (saveError) throw saveError;
+      if (saveError) {
+        if ((saveError as { code?: string }).code === "23505") {
+          throw new Error(
+            "This WooCommerce store is already connected to another Printonet account. Disconnect it there first, or contact support."
+          );
+        }
+        throw saveError;
+      }
 
       const { data, error } = await supabase.functions.invoke("import-woocommerce-products", {
         body: {

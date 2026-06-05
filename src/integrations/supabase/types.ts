@@ -1682,6 +1682,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      release_user_external_integrations: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "super_admin"
