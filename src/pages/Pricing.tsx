@@ -152,9 +152,10 @@ export default function Pricing() {
           Choose your plan
         </h1>
         <p className="text-muted-foreground mb-10 max-w-2xl">
-          Pick a hosted store plan to sell custom products end-to-end, or grab
-          the Customizer-only plan to embed it into a site you already run.
-          No setup fees. Cancel any time.
+          {hostedStoresEnabled
+            ? "Pick a hosted store plan to sell custom products end-to-end, or grab the Customizer-only plan to embed it into a site you already run."
+            : "Embed the Printonet Product Customizer into your existing site."}
+          {" "}No setup fees. Cancel any time.
         </p>
 
         {!user && (
