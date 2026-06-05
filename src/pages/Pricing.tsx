@@ -306,24 +306,26 @@ export default function Pricing() {
           Add-ons
         </h2>
         <div className="grid md:grid-cols-2 gap-6 mb-10">
-          <Card className="p-6 flex items-start gap-4">
-            <div className="rounded-md bg-primary/10 p-3 text-primary shrink-0">
-              <Store className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-baseline gap-2">
-                <h3 className="font-semibold">Extra hosted store</h3>
-                <span className="text-sm text-muted-foreground">
-                  ${EXTRA_STORE_PRICE}/mo each
-                </span>
+          {hostedStoresEnabled && (
+            <Card className="p-6 flex items-start gap-4">
+              <div className="rounded-md bg-primary/10 p-3 text-primary shrink-0">
+                <Store className="h-5 w-5" />
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add a separate storefront on top of what your plan includes.
-                Each store has its own products, branding, and domain.
-                Available on Starter, Grow, and Pro.
-              </p>
-            </div>
-          </Card>
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="font-semibold">Extra hosted store</h3>
+                  <span className="text-sm text-muted-foreground">
+                    ${EXTRA_STORE_PRICE}/mo each
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add a separate storefront on top of what your plan includes.
+                  Each store has its own products, branding, and domain.
+                  Available on Starter, Grow, and Pro.
+                </p>
+              </div>
+            </Card>
+          )}
           <Card className="p-6 flex items-start gap-4">
             <div className="rounded-md bg-primary/10 p-3 text-primary shrink-0">
               <Users className="h-5 w-5" />
