@@ -290,7 +290,7 @@ export default function Dashboard() {
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-80" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: hostedStoresEnabled ? 8 : 7 }).map((_, i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
