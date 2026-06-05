@@ -17,6 +17,7 @@ export default function Billing() {
   const { user } = useAuth();
   const { toast } = useToast();
   const sub = useSubscription();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
   const [opening, setOpening] = useState(false);
 
   const { data: storeCount = 0 } = useQuery({
