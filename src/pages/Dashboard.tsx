@@ -355,14 +355,16 @@ export default function Dashboard() {
           accent="bg-amber-500/15 text-amber-600"
           tint="bg-amber-50/60 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/60"
         />
-        <KpiCard
-          icon={Package}
-          label="Inventory Products"
-          value={productCount.toLocaleString()}
-          hint="In your catalog"
-          accent="bg-rose-500/15 text-rose-600"
-          tint="bg-rose-50/60 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/60"
-        />
+        {hostedStoresEnabled && (
+          <KpiCard
+            icon={Package}
+            label="Inventory Products"
+            value={productCount.toLocaleString()}
+            hint="In your catalog"
+            accent="bg-rose-500/15 text-rose-600"
+            tint="bg-rose-50/60 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/60"
+          />
+        )}
         <KpiCard
           icon={Palette}
           label="Customizable Live"
