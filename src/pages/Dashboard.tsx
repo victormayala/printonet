@@ -653,54 +653,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Quick actions */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Quick actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {hostedStoresEnabled && (
-            <Button asChild variant="outline" className="justify-start h-auto py-3">
-              <Link to="/products">
-                <Package className="h-4 w-4 mr-2" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Add products</div>
-                  <div className="text-xs text-muted-foreground">Build your catalog</div>
-                </div>
-              </Link>
-            </Button>
-          )}
-          {hostedStoresEnabled && (
-            <Button asChild variant="outline" className="justify-start h-auto py-3">
-              <Link to="/suppliers">
-                <Truck className="h-4 w-4 mr-2" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Import from supplier</div>
-                  <div className="text-xs text-muted-foreground">S&S · SanMar</div>
-                </div>
-              </Link>
-            </Button>
-          )}
-          <Button asChild variant="outline" className="justify-start h-auto py-3">
-            <Link to="/customizer">
-              <Palette className="h-4 w-4 mr-2" />
-              <div className="text-left">
-                <div className="text-sm font-medium">Customize brand</div>
-                <div className="text-xs text-muted-foreground">Logo, colors, fonts</div>
-              </div>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="justify-start h-auto py-3">
-            <Link to="/corporate-stores">
-              <Building2 className="h-4 w-4 mr-2" />
-              <div className="text-left">
-                <div className="text-sm font-medium">Launch a store</div>
-                <div className="text-xs text-muted-foreground">Hosted or connect</div>
-              </div>
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }
