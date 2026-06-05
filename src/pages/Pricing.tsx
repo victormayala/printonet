@@ -185,65 +185,69 @@ export default function Pricing() {
 
 
         {/* Hosted store plans */}
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-          Hosted store plans
-        </h2>
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {hostedTiers.map((key) => {
-            const meta = PLAN_META[key];
-            const isCurrent = currentPlan === key && isActive;
-            const isHighlighted = key === "growth_monthly";
-            return (
-              <Card
-                key={key}
-                className={`relative p-6 flex flex-col ${
-                  isHighlighted ? "border-primary border-2 shadow-lg" : ""
-                }`}
-              >
-                {isHighlighted && (
-                  <span className="absolute -top-3 left-6 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
-                    Most popular
-                  </span>
-                )}
-                <div className="mb-4">
-                  <h3 className="text-2xl font-semibold">{meta.name}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground min-h-[40px]">
-                    {PLAN_TAGLINES[key]}
-                  </p>
-                  <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">${meta.monthly}</span>
-                    <span className="text-muted-foreground">/mo</span>
-                  </div>
-                </div>
+        {hostedStoresEnabled && (
+          <>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+              Hosted store plans
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6 mb-12">
+              {hostedTiers.map((key) => {
+                const meta = PLAN_META[key];
+                const isCurrent = currentPlan === key && isActive;
+                const isHighlighted = key === "growth_monthly";
+                return (
+                  <Card
+                    key={key}
+                    className={`relative p-6 flex flex-col ${
+                      isHighlighted ? "border-primary border-2 shadow-lg" : ""
+                    }`}
+                  >
+                    {isHighlighted && (
+                      <span className="absolute -top-3 left-6 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
+                        Most popular
+                      </span>
+                    )}
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-semibold">{meta.name}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground min-h-[40px]">
+                        {PLAN_TAGLINES[key]}
+                      </p>
+                      <div className="mt-3 flex items-baseline gap-1">
+                        <span className="text-4xl font-bold">${meta.monthly}</span>
+                        <span className="text-muted-foreground">/mo</span>
+                      </div>
+                    </div>
 
-                <ul className="space-y-2 mb-6 flex-1">
-                  {planFeatures(key).map((f) => (
-                    <li key={f} className="flex gap-2 text-sm">
-                      <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+                    <ul className="space-y-2 mb-6 flex-1">
+                      {planFeatures(key).map((f) => (
+                        <li key={f} className="flex gap-2 text-sm">
+                          <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
 
-                <Button
-                  disabled={!user || isCurrent || shopifyLoading === key}
-                  variant={isHighlighted ? "default" : "outline"}
-                  onClick={() => handleChoosePlan(key)}
-                >
-                  {shopifyLoading === key ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
-                  ) : isCurrent ? (
-                    "Current plan"
-                  ) : shopifyShop ? (
-                    `Subscribe via Shopify`
-                  ) : (
-                    `Choose ${meta.name}`
-                  )}
-                </Button>
-              </Card>
-            );
-          })}
-        </div>
+                    <Button
+                      disabled={!user || isCurrent || shopifyLoading === key}
+                      variant={isHighlighted ? "default" : "outline"}
+                      onClick={() => handleChoosePlan(key)}
+                    >
+                      {shopifyLoading === key ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
+                      ) : isCurrent ? (
+                        "Current plan"
+                      ) : shopifyShop ? (
+                        `Subscribe via Shopify`
+                      ) : (
+                        `Choose ${meta.name}`
+                      )}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
 
 
         {/* Customizer-only plan */}
