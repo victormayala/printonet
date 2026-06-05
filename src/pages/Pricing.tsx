@@ -67,6 +67,7 @@ export default function Pricing() {
   const [openPlan, setOpenPlan] = useState<PlanKey | null>(null);
   const [shopifyShop, setShopifyShop] = useState<string | null>(null);
   const [shopifyLoading, setShopifyLoading] = useState<PlanKey | null>(null);
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
 
   // Detect whether this user has connected a Shopify store, so we can route
   // them through Shopify Billing instead of Stripe checkout.
