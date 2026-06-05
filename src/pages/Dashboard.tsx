@@ -606,7 +606,7 @@ export default function Dashboard() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle className="text-base">Your stores</CardTitle>
-            <CardDescription>Hosted Printonet storefronts and channels</CardDescription>
+            <CardDescription>{hostedStoresEnabled ? "Hosted Printonet storefronts and channels" : "Connected Shopify and WooCommerce stores"}</CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm">
             <Link to="/corporate-stores">
