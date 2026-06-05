@@ -75,7 +75,9 @@ export default function Billing() {
           <AlertTriangle className="h-10 w-10 text-warning mx-auto mb-3 text-amber-500" />
           <h2 className="text-xl font-semibold mb-2">No active plan</h2>
           <p className="text-muted-foreground mb-6">
-            You need an active subscription to operate corporate stores.
+            {hostedStoresEnabled
+              ? "You need an active subscription to operate corporate stores."
+              : "You need an active subscription to use the Printonet Product Customizer."}
           </p>
           <Button onClick={() => navigate("/pricing")}>Choose a plan</Button>
         </Card>
