@@ -26,6 +26,7 @@ import {
 import { format, subDays, startOfDay, startOfWeek } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -105,6 +106,7 @@ function KpiCard({
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
 
   const { data, isLoading: loading } = useQuery({
     queryKey: ["dashboard", user?.id],
@@ -288,7 +290,7 @@ export default function Dashboard() {
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-80" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: hostedStoresEnabled ? 8 : 7 }).map((_, i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
@@ -353,14 +355,16 @@ export default function Dashboard() {
           accent="bg-amber-500/15 text-amber-600"
           tint="bg-amber-50/60 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/60"
         />
-        <KpiCard
-          icon={Package}
-          label="Inventory Products"
-          value={productCount.toLocaleString()}
-          hint="In your catalog"
-          accent="bg-rose-500/15 text-rose-600"
-          tint="bg-rose-50/60 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/60"
-        />
+        {hostedStoresEnabled && (
+          <KpiCard
+            icon={Package}
+            label="Inventory Products"
+            value={productCount.toLocaleString()}
+            hint="In your catalog"
+            accent="bg-rose-500/15 text-rose-600"
+            tint="bg-rose-50/60 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/60"
+          />
+        )}
         <KpiCard
           icon={Palette}
           label="Customizable Live"
@@ -602,7 +606,7 @@ export default function Dashboard() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle className="text-base">Your stores</CardTitle>
-            <CardDescription>Hosted Printonet storefronts and channels</CardDescription>
+            <CardDescription>{hostedStoresEnabled ? "Hosted Printonet storefronts and channels" : "Connected Shopify and WooCommerce stores"}</CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm">
             <Link to="/corporate-stores">
@@ -655,24 +659,28 @@ export default function Dashboard() {
           <CardTitle className="text-base">Quick actions</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Button asChild variant="outline" className="justify-start h-auto py-3">
-            <Link to="/products">
-              <Package className="h-4 w-4 mr-2" />
-              <div className="text-left">
-                <div className="text-sm font-medium">Add products</div>
-                <div className="text-xs text-muted-foreground">Build your catalog</div>
-              </div>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="justify-start h-auto py-3">
-            <Link to="/suppliers">
-              <Truck className="h-4 w-4 mr-2" />
-              <div className="text-left">
-                <div className="text-sm font-medium">Import from supplier</div>
-                <div className="text-xs text-muted-foreground">S&S · SanMar</div>
-              </div>
-            </Link>
-          </Button>
+          {hostedStoresEnabled && (
+            <Button asChild variant="outline" className="justify-start h-auto py-3">
+              <Link to="/products">
+                <Package className="h-4 w-4 mr-2" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Add products</div>
+                  <div className="text-xs text-muted-foreground">Build your catalog</div>
+                </div>
+              </Link>
+            </Button>
+          )}
+          {hostedStoresEnabled && (
+            <Button asChild variant="outline" className="justify-start h-auto py-3">
+              <Link to="/suppliers">
+                <Truck className="h-4 w-4 mr-2" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Import from supplier</div>
+                  <div className="text-xs text-muted-foreground">S&S · SanMar</div>
+                </div>
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline" className="justify-start h-auto py-3">
             <Link to="/customizer">
               <Palette className="h-4 w-4 mr-2" />
