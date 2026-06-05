@@ -659,24 +659,28 @@ export default function Dashboard() {
           <CardTitle className="text-base">Quick actions</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Button asChild variant="outline" className="justify-start h-auto py-3">
-            <Link to="/products">
-              <Package className="h-4 w-4 mr-2" />
-              <div className="text-left">
-                <div className="text-sm font-medium">Add products</div>
-                <div className="text-xs text-muted-foreground">Build your catalog</div>
-              </div>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="justify-start h-auto py-3">
-            <Link to="/suppliers">
-              <Truck className="h-4 w-4 mr-2" />
-              <div className="text-left">
-                <div className="text-sm font-medium">Import from supplier</div>
-                <div className="text-xs text-muted-foreground">S&S · SanMar</div>
-              </div>
-            </Link>
-          </Button>
+          {hostedStoresEnabled && (
+            <Button asChild variant="outline" className="justify-start h-auto py-3">
+              <Link to="/products">
+                <Package className="h-4 w-4 mr-2" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Add products</div>
+                  <div className="text-xs text-muted-foreground">Build your catalog</div>
+                </div>
+              </Link>
+            </Button>
+          )}
+          {hostedStoresEnabled && (
+            <Button asChild variant="outline" className="justify-start h-auto py-3">
+              <Link to="/suppliers">
+                <Truck className="h-4 w-4 mr-2" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Import from supplier</div>
+                  <div className="text-xs text-muted-foreground">S&S · SanMar</div>
+                </div>
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline" className="justify-start h-auto py-3">
             <Link to="/customizer">
               <Palette className="h-4 w-4 mr-2" />
