@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, EXTRA_STORE_PRICE } from "@/hooks/useSubscription";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 import { getStripeEnvironment } from "@/lib/stripe";
 
 export default function Billing() {
