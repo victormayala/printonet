@@ -106,6 +106,7 @@ function KpiCard({
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
 
   const { data, isLoading: loading } = useQuery({
     queryKey: ["dashboard", user?.id],
