@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 
 const HOSTED_SHARED: string[] = [
   "Hosted storefront with custom domain",
@@ -66,6 +67,7 @@ export default function Pricing() {
   const [openPlan, setOpenPlan] = useState<PlanKey | null>(null);
   const [shopifyShop, setShopifyShop] = useState<string | null>(null);
   const [shopifyLoading, setShopifyLoading] = useState<PlanKey | null>(null);
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
 
   // Detect whether this user has connected a Shopify store, so we can route
   // them through Shopify Billing instead of Stripe checkout.
@@ -150,9 +152,10 @@ export default function Pricing() {
           Choose your plan
         </h1>
         <p className="text-muted-foreground mb-10 max-w-2xl">
-          Pick a hosted store plan to sell custom products end-to-end, or grab
-          the Customizer-only plan to embed it into a site you already run.
-          No setup fees. Cancel any time.
+          {hostedStoresEnabled
+            ? "Pick a hosted store plan to sell custom products end-to-end, or grab the Customizer-only plan to embed it into a site you already run."
+            : "Embed the Printonet Product Customizer into your existing site."}
+          {" "}No setup fees. Cancel any time.
         </p>
 
         {!user && (
@@ -182,65 +185,69 @@ export default function Pricing() {
 
 
         {/* Hosted store plans */}
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-          Hosted store plans
-        </h2>
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {hostedTiers.map((key) => {
-            const meta = PLAN_META[key];
-            const isCurrent = currentPlan === key && isActive;
-            const isHighlighted = key === "growth_monthly";
-            return (
-              <Card
-                key={key}
-                className={`relative p-6 flex flex-col ${
-                  isHighlighted ? "border-primary border-2 shadow-lg" : ""
-                }`}
-              >
-                {isHighlighted && (
-                  <span className="absolute -top-3 left-6 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
-                    Most popular
-                  </span>
-                )}
-                <div className="mb-4">
-                  <h3 className="text-2xl font-semibold">{meta.name}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground min-h-[40px]">
-                    {PLAN_TAGLINES[key]}
-                  </p>
-                  <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">${meta.monthly}</span>
-                    <span className="text-muted-foreground">/mo</span>
-                  </div>
-                </div>
+        {hostedStoresEnabled && (
+          <>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+              Hosted store plans
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6 mb-12">
+              {hostedTiers.map((key) => {
+                const meta = PLAN_META[key];
+                const isCurrent = currentPlan === key && isActive;
+                const isHighlighted = key === "growth_monthly";
+                return (
+                  <Card
+                    key={key}
+                    className={`relative p-6 flex flex-col ${
+                      isHighlighted ? "border-primary border-2 shadow-lg" : ""
+                    }`}
+                  >
+                    {isHighlighted && (
+                      <span className="absolute -top-3 left-6 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
+                        Most popular
+                      </span>
+                    )}
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-semibold">{meta.name}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground min-h-[40px]">
+                        {PLAN_TAGLINES[key]}
+                      </p>
+                      <div className="mt-3 flex items-baseline gap-1">
+                        <span className="text-4xl font-bold">${meta.monthly}</span>
+                        <span className="text-muted-foreground">/mo</span>
+                      </div>
+                    </div>
 
-                <ul className="space-y-2 mb-6 flex-1">
-                  {planFeatures(key).map((f) => (
-                    <li key={f} className="flex gap-2 text-sm">
-                      <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+                    <ul className="space-y-2 mb-6 flex-1">
+                      {planFeatures(key).map((f) => (
+                        <li key={f} className="flex gap-2 text-sm">
+                          <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
 
-                <Button
-                  disabled={!user || isCurrent || shopifyLoading === key}
-                  variant={isHighlighted ? "default" : "outline"}
-                  onClick={() => handleChoosePlan(key)}
-                >
-                  {shopifyLoading === key ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
-                  ) : isCurrent ? (
-                    "Current plan"
-                  ) : shopifyShop ? (
-                    `Subscribe via Shopify`
-                  ) : (
-                    `Choose ${meta.name}`
-                  )}
-                </Button>
-              </Card>
-            );
-          })}
-        </div>
+                    <Button
+                      disabled={!user || isCurrent || shopifyLoading === key}
+                      variant={isHighlighted ? "default" : "outline"}
+                      onClick={() => handleChoosePlan(key)}
+                    >
+                      {shopifyLoading === key ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Opening Shopify…</>
+                      ) : isCurrent ? (
+                        "Current plan"
+                      ) : shopifyShop ? (
+                        `Subscribe via Shopify`
+                      ) : (
+                        `Choose ${meta.name}`
+                      )}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
 
 
         {/* Customizer-only plan */}
@@ -299,24 +306,26 @@ export default function Pricing() {
           Add-ons
         </h2>
         <div className="grid md:grid-cols-2 gap-6 mb-10">
-          <Card className="p-6 flex items-start gap-4">
-            <div className="rounded-md bg-primary/10 p-3 text-primary shrink-0">
-              <Store className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-baseline gap-2">
-                <h3 className="font-semibold">Extra hosted store</h3>
-                <span className="text-sm text-muted-foreground">
-                  ${EXTRA_STORE_PRICE}/mo each
-                </span>
+          {hostedStoresEnabled && (
+            <Card className="p-6 flex items-start gap-4">
+              <div className="rounded-md bg-primary/10 p-3 text-primary shrink-0">
+                <Store className="h-5 w-5" />
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add a separate storefront on top of what your plan includes.
-                Each store has its own products, branding, and domain.
-                Available on Starter, Grow, and Pro.
-              </p>
-            </div>
-          </Card>
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="font-semibold">Extra hosted store</h3>
+                  <span className="text-sm text-muted-foreground">
+                    ${EXTRA_STORE_PRICE}/mo each
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add a separate storefront on top of what your plan includes.
+                  Each store has its own products, branding, and domain.
+                  Available on Starter, Grow, and Pro.
+                </p>
+              </div>
+            </Card>
+          )}
           <Card className="p-6 flex items-start gap-4">
             <div className="rounded-md bg-primary/10 p-3 text-primary shrink-0">
               <Users className="h-5 w-5" />
