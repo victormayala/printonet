@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, EXTRA_STORE_PRICE } from "@/hooks/useSubscription";
+import { useHostedStoresEnabled } from "@/hooks/useHostedStoresEnabled";
 import { getStripeEnvironment } from "@/lib/stripe";
 
 export default function Billing() {
@@ -16,6 +17,7 @@ export default function Billing() {
   const { user } = useAuth();
   const { toast } = useToast();
   const sub = useSubscription();
+  const { hostedStoresEnabled } = useHostedStoresEnabled();
   const [opening, setOpening] = useState(false);
 
   const { data: storeCount = 0 } = useQuery({
@@ -54,7 +56,9 @@ export default function Billing() {
         <div>
           <h1 className="text-3xl font-semibold">Billing & Plan</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your Printonet subscription and store seats.
+            {hostedStoresEnabled
+              ? "Manage your Printonet subscription and store seats."
+              : "Manage your Printonet subscription."}
           </p>
         </div>
         <Button variant="outline" onClick={() => navigate("/pricing")}>
@@ -71,7 +75,9 @@ export default function Billing() {
           <AlertTriangle className="h-10 w-10 text-warning mx-auto mb-3 text-amber-500" />
           <h2 className="text-xl font-semibold mb-2">No active plan</h2>
           <p className="text-muted-foreground mb-6">
-            You need an active subscription to operate corporate stores.
+            {hostedStoresEnabled
+              ? "You need an active subscription to operate corporate stores."
+              : "You need an active subscription to use the Printonet Product Customizer."}
           </p>
           <Button onClick={() => navigate("/pricing")}>Choose a plan</Button>
         </Card>
@@ -104,33 +110,35 @@ export default function Billing() {
             </div>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
-              <h3 className="font-semibold">Store seats</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div>
-                <div className="text-2xl font-semibold">{sub.includedStores}</div>
-                <div className="text-xs text-muted-foreground">Included</div>
+          {hostedStoresEnabled && (
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-semibold">Store seats</h3>
               </div>
-              <div>
-                <div className="text-2xl font-semibold">{sub.extraStores}</div>
-                <div className="text-xs text-muted-foreground">
-                  Add-on (${EXTRA_STORE_PRICE}/mo each)
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                  <div className="text-2xl font-semibold">{sub.includedStores}</div>
+                  <div className="text-xs text-muted-foreground">Included</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-semibold">{sub.extraStores}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Add-on (${EXTRA_STORE_PRICE}/mo each)
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-semibold">
+                    {storeCount} <span className="text-base text-muted-foreground">/ {sub.totalStoreLimit}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">In use</div>
                 </div>
               </div>
-              <div>
-                <div className="text-2xl font-semibold">
-                  {storeCount} <span className="text-base text-muted-foreground">/ {sub.totalStoreLimit}</span>
-                </div>
-                <div className="text-xs text-muted-foreground">In use</div>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Add or remove store seats from the billing portal — changes prorate automatically.
-            </p>
-          </Card>
+              <p className="text-xs text-muted-foreground">
+                Add or remove store seats from the billing portal — changes prorate automatically.
+              </p>
+            </Card>
+          )}
         </div>
       )}
     </div>
