@@ -123,7 +123,8 @@ export default function Dashboard() {
         supabase
           .from("corporate_stores")
           .select("id,name,tenant_slug,status,store_type,custom_domain")
-          .eq("user_id", user!.id),
+          .eq("user_id", user!.id)
+          .is("archived_at", null),
         hostedStoresEnabled
           ? supabase
               .from("inventory_products")
@@ -136,11 +137,13 @@ export default function Dashboard() {
               .select("id", { count: "exact", head: true })
               .eq("user_id", user!.id)
               .eq("customizable", true)
+              .is("archived_at", null)
           : Promise.resolve({ count: 0 } as { count: number }),
         supabase
           .from("store_integrations")
           .select("id", { count: "exact", head: true })
-          .eq("user_id", user!.id),
+          .eq("user_id", user!.id)
+          .is("archived_at", null),
       ]);
 
       const allStoreRows = (storesRes.data || []) as StoreRow[];
