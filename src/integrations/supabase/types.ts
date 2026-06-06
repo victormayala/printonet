@@ -301,6 +301,7 @@ export type Database = {
       }
       corporate_store_products: {
         Row: {
+          archived_at: string | null
           created_at: string
           customizable: boolean
           id: string
@@ -312,6 +313,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           customizable?: boolean
           id?: string
@@ -323,6 +325,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           customizable?: boolean
           id?: string
@@ -415,6 +418,7 @@ export type Database = {
       corporate_stores: {
         Row: {
           accent_color: string
+          archived_at: string | null
           contact_email: string
           created_at: string
           custom_domain: string | null
@@ -452,6 +456,7 @@ export type Database = {
         }
         Insert: {
           accent_color?: string
+          archived_at?: string | null
           contact_email: string
           created_at?: string
           custom_domain?: string | null
@@ -489,6 +494,7 @@ export type Database = {
         }
         Update: {
           accent_color?: string
+          archived_at?: string | null
           contact_email?: string
           created_at?: string
           custom_domain?: string | null
@@ -1374,6 +1380,7 @@ export type Database = {
       }
       store_integrations: {
         Row: {
+          archived_at: string | null
           created_at: string
           credentials: Json
           id: string
@@ -1386,6 +1393,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           credentials?: Json
           id?: string
@@ -1398,6 +1406,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           credentials?: Json
           id?: string
