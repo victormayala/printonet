@@ -1638,7 +1638,13 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
   const handleDisconnect = async () => {
     if (!integration) return;
     setDisconnecting(true);
-    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    const archivedAt = new Date().toISOString();
+    await supabase.from("store_integrations").update({ archived_at: archivedAt }).eq("id", integration.id);
+    const syncStoreId = (integration as any).store_id;
+    if (syncStoreId) {
+      await supabase.from("corporate_store_products").update({ archived_at: archivedAt }).eq("store_id", syncStoreId);
+      await supabase.from("corporate_stores").update({ archived_at: archivedAt }).eq("id", syncStoreId);
+    }
     setIntegration(null);
     setStoreUrl("");
     setToken("");
