@@ -1638,7 +1638,13 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
   const handleDisconnect = async () => {
     if (!integration) return;
     setDisconnecting(true);
-    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    const archivedAt = new Date().toISOString();
+    await supabase.from("store_integrations").update({ archived_at: archivedAt }).eq("id", integration.id);
+    const syncStoreId = (integration as any).store_id;
+    if (syncStoreId) {
+      await supabase.from("corporate_store_products").update({ archived_at: archivedAt }).eq("store_id", syncStoreId);
+      await supabase.from("corporate_stores").update({ archived_at: archivedAt }).eq("id", syncStoreId);
+    }
     setIntegration(null);
     setStoreUrl("");
     setToken("");
@@ -1887,13 +1893,14 @@ export function WooCommerceImport({ onDone }: { onDone: () => void }) {
   const handleDisconnect = async () => {
     if (!integration) return;
     setDisconnecting(true);
-    // Also remove the dashboard-only sync store created for this WooCommerce site.
+    const archivedAt = new Date().toISOString();
+    // Archive (soft-delete) the dashboard-only sync store created for this WooCommerce site.
     const syncStoreId = (integration as any).store_id;
     if (syncStoreId) {
-      await supabase.from("corporate_store_products").delete().eq("store_id", syncStoreId);
-      await supabase.from("corporate_stores").delete().eq("id", syncStoreId);
+      await supabase.from("corporate_store_products").update({ archived_at: archivedAt }).eq("store_id", syncStoreId);
+      await supabase.from("corporate_stores").update({ archived_at: archivedAt }).eq("id", syncStoreId);
     }
-    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    await supabase.from("store_integrations").update({ archived_at: archivedAt }).eq("id", integration.id);
     setIntegration(null);
     setSiteUrl("");
     setConsumerKey("");

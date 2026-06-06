@@ -687,6 +687,7 @@ export default function CorporateStores() {
         .select("*")
         .eq("user_id", user!.id)
         .in("store_type", ["corporate", "retail", "website", "shopify", "woocommerce"])
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CorporateStore[];
@@ -700,7 +701,8 @@ export default function CorporateStores() {
       const { data, error } = await supabase
         .from("store_integrations")
         .select("store_id,platform")
-        .eq("user_id", user!.id);
+        .eq("user_id", user!.id)
+        .is("archived_at", null);
       if (error) throw error;
       const set = new Set<string>();
       (data ?? []).forEach((r: { store_id: string | null; platform: string }) => {
