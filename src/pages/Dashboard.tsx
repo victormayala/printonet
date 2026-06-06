@@ -285,19 +285,11 @@ export default function Dashboard() {
   const recentOrders = orders.slice(0, 6);
   const activeStores = stores.filter((s) => s.status === "active").length;
 
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-10 w-80" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: hostedStoresEnabled ? 8 : 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-        <Skeleton className="h-72" />
-      </div>
-    );
-  }
+  // Note: intentionally no full-page skeleton early-return. Rendering the
+  // page chrome immediately (with empty/zero placeholders) keeps the layout
+  // stable on navigation so the content area does not appear to "swap in
+  // twice" (once for skeleton, again for real data). Cached data makes
+  // revisits instant; first visits briefly show zeros that fill in.
 
   return (
     <div className="p-6 space-y-6">
