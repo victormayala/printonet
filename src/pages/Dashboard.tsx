@@ -284,6 +284,9 @@ export default function Dashboard() {
 
   const recentOrders = orders.slice(0, 6);
   const activeStores = stores.filter((s) => s.status === "active").length;
+  const visibleStores = hostedStoresEnabled
+    ? stores
+    : stores.filter((s) => s.store_type === "shopify" || s.store_type === "woocommerce");
 
   // Note: intentionally no full-page skeleton early-return. Rendering the
   // page chrome immediately (with empty/zero placeholders) keeps the layout
@@ -607,17 +610,29 @@ export default function Dashboard() {
           </Button>
         </CardHeader>
         <CardContent>
-          {stores.length === 0 ? (
+          {visibleStores.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              You don't have any stores yet.{" "}
-              <Link to="/corporate-stores" className="text-primary underline">
-                Create your first store
-              </Link>
-              .
+              {hostedStoresEnabled ? (
+                <>
+                  You don't have any stores yet.{" "}
+                  <Link to="/corporate-stores" className="text-primary underline">
+                    Create your first store
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>
+                  You don't have any connected stores.{" "}
+                  <Link to="/corporate-stores" className="text-primary underline">
+                    Connect a store
+                  </Link>
+                  .
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {stores.slice(0, 6).map((s) => (
+              {visibleStores.slice(0, 6).map((s) => (
                 <Link
                   key={s.id}
                   to={`/corporate-stores/${s.id}`}
