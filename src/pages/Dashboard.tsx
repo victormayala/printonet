@@ -284,6 +284,9 @@ export default function Dashboard() {
 
   const recentOrders = orders.slice(0, 6);
   const activeStores = stores.filter((s) => s.status === "active").length;
+  const visibleStores = hostedStoresEnabled
+    ? stores
+    : stores.filter((s) => s.store_type === "shopify" || s.store_type === "woocommerce");
 
   // Note: intentionally no full-page skeleton early-return. Rendering the
   // page chrome immediately (with empty/zero placeholders) keeps the layout
