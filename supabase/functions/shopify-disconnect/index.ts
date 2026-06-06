@@ -91,14 +91,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Remove the integration row
-    await supabase.from("store_integrations").delete().eq("id", integration.id);
+    // Archive (soft-delete) the integration and dashboard-only sync store.
+    const archivedAt = new Date().toISOString();
+    await supabase.from("store_integrations").update({ archived_at: archivedAt }).eq("id", integration.id);
 
-    // Remove the dashboard-only sync store and its product links
     const syncStoreId = (integration as any).store_id;
     if (syncStoreId) {
-      await supabase.from("corporate_store_products").delete().eq("store_id", syncStoreId);
-      await supabase.from("corporate_stores").delete().eq("id", syncStoreId);
+      await supabase.from("corporate_store_products").update({ archived_at: archivedAt }).eq("store_id", syncStoreId);
+      await supabase.from("corporate_stores").update({ archived_at: archivedAt }).eq("id", syncStoreId);
     }
 
     return new Response(JSON.stringify({ ok: true }), {
