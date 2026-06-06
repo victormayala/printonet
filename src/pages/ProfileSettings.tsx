@@ -87,13 +87,10 @@ export default function ProfileSettings() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  // Intentionally no full-page spinner early-return — that swap-out + swap-in
+  // looks like the page "renders twice" on navigation. The form chrome
+  // renders immediately and fields populate when the fetch resolves.
+  void loading;
 
   const initials = storeName
     ? storeName.slice(0, 2).toUpperCase()
