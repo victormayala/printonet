@@ -109,7 +109,7 @@ export default function Dashboard() {
   const { hostedStoresEnabled } = useHostedStoresEnabled();
 
   const { data, isLoading: loading } = useQuery({
-    queryKey: ["dashboard", user?.id],
+    queryKey: ["dashboard", user?.id, hostedStoresEnabled],
     enabled: !!user?.id,
     queryFn: async () => {
       const [
@@ -124,22 +124,31 @@ export default function Dashboard() {
           .from("corporate_stores")
           .select("id,name,tenant_slug,status,store_type,custom_domain")
           .eq("user_id", user!.id),
-        supabase
-          .from("inventory_products")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user!.id),
-        supabase
-          .from("corporate_store_products")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user!.id)
-          .eq("customizable", true),
+        hostedStoresEnabled
+          ? supabase
+              .from("inventory_products")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user!.id)
+          : Promise.resolve({ count: 0 } as { count: number }),
+        hostedStoresEnabled
+          ? supabase
+              .from("corporate_store_products")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user!.id)
+              .eq("customizable", true)
+          : Promise.resolve({ count: 0 } as { count: number }),
         supabase
           .from("store_integrations")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user!.id),
       ]);
 
-      const storeRows = (storesRes.data || []) as StoreRow[];
+      const allStoreRows = (storesRes.data || []) as StoreRow[];
+      const storeRows = hostedStoresEnabled
+        ? allStoreRows
+        : allStoreRows.filter(
+            (s) => s.store_type === "shopify" || s.store_type === "woocommerce",
+          );
       const displayName =
         profileRes.data?.store_name || user!.email?.split("@")[0] || "there";
 
