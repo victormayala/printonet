@@ -5,7 +5,7 @@
 //      the webhook was registered also show up in the Orders tab.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getValidShopifyToken } from "../_shared/shopify-token.ts";
-import { ingestShopifyOrder } from "../shopify-orders-webhook/index.ts";
+import { ingestShopifyOrder } from "../_shared/shopify-orders.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
