@@ -32,7 +32,7 @@
 (function (root) {
   'use strict';
 
-  var _config = { apiUrl: '', baseUrl: '', cartUrl: '', storeUrl: '', woocommerceSiteUrl: '' };
+  var _config = { apiUrl: '', baseUrl: '', cartUrl: '', storeUrl: '', storeId: '', woocommerceSiteUrl: '' };
   var _overlay = null;
   var _iframe = null;
   var _callbacks = {};
@@ -102,11 +102,44 @@
     return !!(_getShopifyVariantId() || window.Shopify || /\.myshopify\.com$/i.test(window.location.hostname));
   }
 
+  function _recordShopifyDesignOrder(payload, cartData, properties, previewUrl) {
+    if (!_config.apiUrl || !_config.storeId || !payload || !payload.sessionId) return;
+    try {
+      var body = {
+        storeId: _config.storeId,
+        sessionId: payload.sessionId,
+        productName: (_productInfo && _productInfo.name) || payload.productName || 'Customized product',
+        quantity: (payload && payload.quantity) || 1,
+        shopifyVariantId: (payload && payload.shopifyVariantId) || _getShopifyVariantId(),
+        shopifyLineKey: cartData && cartData.key,
+        printFileUrl: payload.printFileUrl || null,
+        designLayersUrl: payload.designLayersUrl || null,
+        designPreviewUrl: previewUrl || null,
+        sides: payload.sides || [],
+        properties: properties || {},
+      };
+      var variant = payload.variant || {};
+      if (variant.colorName || variant.color) body.variantColor = variant.colorName || variant.color;
+      if (payload.selectedSize) body.variantSize = payload.selectedSize;
+      fetch(_config.apiUrl + '/record-shopify-design-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        keepalive: true,
+      }).catch(function (err) {
+        console.warn('[CustomizerStudio] Could not record Shopify design order:', err);
+      });
+    } catch (err) {
+      console.warn('[CustomizerStudio] Shopify design order capture failed:', err);
+    }
+  }
+
   function init(options) {
     _config.apiUrl = options.apiUrl || '';
     _config.baseUrl = options.baseUrl || '';
     _config.cartUrl = options.cartUrl || '';
     _config.storeUrl = options.storeUrl || '';
+    _config.storeId = options.storeId || '';
     _config.woocommerceSiteUrl = options.woocommerceSiteUrl || '';
     if (_isShopifyStore()) {
       _refreshExistingShopifyDesignThumbnails();
@@ -131,6 +164,7 @@
     _wcAttributes = options.wcAttributes || null;
     _shopifyVariantId = options.shopifyVariantId || null;
     if (options.storeUrl) _config.storeUrl = options.storeUrl;
+    if (options.storeId) _config.storeId = options.storeId;
 
     var url = _config.apiUrl + '/create-session';
     var productPayload = Object.assign({}, options.product);
@@ -469,6 +503,7 @@
             designUrl: frontHttps || null,
             addResponse: data || null,
           });
+          _recordShopifyDesignOrder(payload, data, properties, frontHttps || null);
           callback(true);
           try {
             var hasDrawer = !!document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
