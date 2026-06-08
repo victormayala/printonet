@@ -958,11 +958,27 @@ export default function DesignStudio({
     return resolvedViewImages[activeView] ?? imageForViewWithVariant(activeView);
   }
 
-  // Get print area for current view (percentage-based)
+  // Get print area for current view (percentage-based). When a view has
+  // multiple print areas, we use their bounding union as the containment region
+  // so legacy single-area logic keeps working without changes.
   function getCurrentPrintArea(): { x: number; y: number; width: number; height: number } | null {
     if (!invProduct?.print_areas) return null;
     const viewKey = activeView === "side1" ? "side1" : activeView === "side2" ? "side2" : activeView;
-    return invProduct.print_areas[viewKey] || null;
+    const raw = (invProduct.print_areas as Record<string, unknown>)[viewKey];
+    if (!raw) return null;
+    const list = Array.isArray(raw)
+      ? (raw as Array<{ x: number; y: number; width: number; height: number }>)
+      : [raw as { x: number; y: number; width: number; height: number }];
+    if (list.length === 0) return null;
+    if (list.length === 1) return list[0];
+    let minX = 100, minY = 100, maxX = 0, maxY = 0;
+    for (const a of list) {
+      minX = Math.min(minX, a.x);
+      minY = Math.min(minY, a.y);
+      maxX = Math.max(maxX, a.x + a.width);
+      maxY = Math.max(maxY, a.y + a.height);
+    }
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }
 
   const PRINT_AREA_RECT_NAME = "__print_area_boundary__";
