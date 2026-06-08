@@ -989,36 +989,38 @@ export default function DesignStudio({
 
   const PRINT_AREA_RECT_NAME = "__print_area_boundary__";
 
-  // Add/update print area boundary rect on canvas
+  // Add/update print area boundary rect(s) on canvas
   function updatePrintAreaRect(canvas: FabricCanvas) {
-    // Remove existing boundary
+    // Remove existing boundaries
     const existing = canvas.getObjects().filter((o: any) => o.customName === PRINT_AREA_RECT_NAME);
     existing.forEach((o) => canvas.remove(o));
 
-    const pa = getCurrentPrintArea();
-    if (!pa || !showPrintAreaBoundary) return;
+    if (!showPrintAreaBoundary) return;
+    const list = getCurrentPrintAreasList();
+    if (list.length === 0) return;
 
-    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
-
-    const boundary = new Rect({
-      left: px,
-      top: py,
-      width: pw,
-      height: ph,
-      fill: "transparent",
-      stroke: "#6366f1",
-      strokeWidth: 2,
-      strokeDashArray: [8, 4],
-      selectable: false,
-      evented: false,
-      excludeFromExport: true,
-    });
-    (boundary as any).customName = PRINT_AREA_RECT_NAME;
-    canvas.add(boundary);
-    // Send to back so it's behind design objects
-    canvas.sendObjectToBack(boundary);
+    for (const pa of list) {
+      const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
+      const boundary = new Rect({
+        left: px,
+        top: py,
+        width: pw,
+        height: ph,
+        fill: "transparent",
+        stroke: "#6366f1",
+        strokeWidth: 2,
+        strokeDashArray: [8, 4],
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+      });
+      (boundary as any).customName = PRINT_AREA_RECT_NAME;
+      canvas.add(boundary);
+      canvas.sendObjectToBack(boundary);
+    }
     canvas.renderAll();
   }
+
 
   // Toggle print area boundary visibility / update when image bounds change
   useEffect(() => {
