@@ -503,6 +503,7 @@
             designUrl: frontHttps || null,
             addResponse: data || null,
           });
+          _recordShopifyDesignOrder(payload, data, properties, frontHttps || null);
           callback(true);
           try {
             var hasDrawer = !!document.querySelector('cart-drawer, cart-notification, [data-cart-drawer]');
