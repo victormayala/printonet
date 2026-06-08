@@ -1,12 +1,15 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 
+type Rect = { x: number; y: number; width: number; height: number };
+
 interface PrintAreaOverlayProps {
   imageUrl: string;
-  printArea: { x: number; y: number; width: number; height: number };
+  /** Single rect (legacy) or array of rects. */
+  printArea: Rect | Rect[];
 }
 
 /**
- * Renders a dashed print-area rectangle on top of an object-contain image,
+ * Renders dashed print-area rectangle(s) on top of an object-contain image,
  * correctly accounting for letterboxing so coordinates match the actual image bounds.
  */
 export default function PrintAreaOverlay({ imageUrl, printArea }: PrintAreaOverlayProps) {
@@ -41,38 +44,25 @@ export default function PrintAreaOverlay({ imageUrl, printArea }: PrintAreaOverl
     return () => ro.disconnect();
   }, [computeBounds]);
 
-  if (!bounds) {
-    return (
-      <div ref={containerRef} className="absolute inset-0 pointer-events-none">
-        <img
-          ref={imgRef}
-          src={imageUrl}
-          className="hidden"
-          onLoad={computeBounds}
-          alt=""
-        />
-      </div>
-    );
-  }
-
-  const left = bounds.x + (printArea.x / 100) * bounds.w;
-  const top = bounds.y + (printArea.y / 100) * bounds.h;
-  const width = (printArea.width / 100) * bounds.w;
-  const height = (printArea.height / 100) * bounds.h;
+  const rects: Rect[] = Array.isArray(printArea) ? printArea : [printArea];
 
   return (
     <div ref={containerRef} className="absolute inset-0 pointer-events-none">
-      <img
-        ref={imgRef}
-        src={imageUrl}
-        className="hidden"
-        onLoad={computeBounds}
-        alt=""
-      />
-      <div
-        className="absolute border-2 border-dashed border-primary/60"
-        style={{ left, top, width, height }}
-      />
+      <img ref={imgRef} src={imageUrl} className="hidden" onLoad={computeBounds} alt="" />
+      {bounds &&
+        rects.map((pa, i) => {
+          const left = bounds.x + (pa.x / 100) * bounds.w;
+          const top = bounds.y + (pa.y / 100) * bounds.h;
+          const width = (pa.width / 100) * bounds.w;
+          const height = (pa.height / 100) * bounds.h;
+          return (
+            <div
+              key={i}
+              className="absolute border-2 border-dashed border-primary/60"
+              style={{ left, top, width, height }}
+            />
+          );
+        })}
     </div>
   );
 }
