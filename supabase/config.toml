@@ -102,3 +102,6 @@ verify_jwt = false
 
 [functions.shopify-orders-webhook]
 verify_jwt = false
+
+[functions.record-shopify-design-order]
+verify_jwt = false
