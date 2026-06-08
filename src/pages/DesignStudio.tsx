@@ -1123,7 +1123,8 @@ export default function DesignStudio({
   }
 
   function clampObjectPositionInsidePrintArea(obj: any) {
-    const coords = getCurrentPrintAreaCoords();
+    const coords = pickNearestPrintAreaCoords(obj) || getCurrentPrintAreaCoords();
+
     if (!coords || !obj) return false;
 
     const { px, py, pw, ph } = coords;
