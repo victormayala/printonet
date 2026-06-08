@@ -106,7 +106,7 @@ const App = () => (
               <Route path="/corporate-stores/:id" element={<CorporateStoreDetails />} />
               <Route path="/websites" element={<Navigate to="/corporate-stores" replace />} />
               <Route path="/websites/:id" element={<HostedStoresRoute><WebsiteDetails /></HostedStoresRoute>} />
-              <Route path="/suppliers" element={<Products initialTab="suppliers" />} />
+              <Route path="/suppliers" element={<HostedStoresRoute><Products initialTab="suppliers" /></HostedStoresRoute>} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/customizer" element={<Navigate to="/corporate-stores" replace />} />
               <Route path="/customizer/brand" element={<Navigate to="/corporate-stores" replace />} />
