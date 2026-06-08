@@ -1672,7 +1672,7 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
         body: {
           shop: integration.store_url,
           user_id: user?.id,
-          redirect_url: window.location.origin + "/products",
+          redirect_url: window.location.origin + "/corporate-stores?tab=shopify",
         },
       });
       if (error) throw error;
@@ -1739,7 +1739,7 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
         body: {
           shop: storeUrl.trim(),
           user_id: user?.id,
-          redirect_url: window.location.origin + "/products",
+          redirect_url: window.location.origin + "/corporate-stores?tab=shopify",
         },
       });
 
