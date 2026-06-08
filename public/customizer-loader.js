@@ -650,7 +650,7 @@
     if (window.CustomizerStudio) return cb();
     var s = document.createElement('script');
     // Cache-bust to ensure store pages pick up latest SDK logic immediately.
-    s.src = BASE_URL + '/customizer-sdk.js?v=20260608-shopify-design-order-capture';
+    s.src = BASE_URL + '/customizer-sdk.js?v=20260608-shopify-design-order-sync-fallback';
     s.onload = cb;
     s.onerror = function () { console.error('[CustomizerLoader] Failed to load SDK'); };
     document.head.appendChild(s);

@@ -1160,6 +1160,23 @@
           console.log('[CustomizerStudio] Shopify sync error:', data.description || data.message);
           return;
         }
+        // Record design order in Printonet Orders tab (Orders API fallback)
+        _recordShopifyDesignOrder(
+          {
+            sessionId: newItem.sessionId,
+            productName: newItem.productName,
+            quantity: newItem.quantity || 1,
+            shopifyVariantId: newItem.shopifyVariantId,
+            printFileUrl: newItem.printFileUrl || null,
+            designLayersUrl: newItem.designLayersUrl || null,
+            sides: newItem.sides || (newItem.previewImage ? [{ view: 'front', previewPNG: newItem.previewImage, designPNG: newItem.printFileUrl || newItem.previewImage }] : []),
+            variant: newItem.variant || {},
+            selectedSize: newItem.selectedSize || null,
+          },
+          data,
+          properties,
+          newItem.previewImage || null,
+        );
         _refreshShopifyCartUI(data && data.sections, { sessionId: newItem.sessionId, variantId: String(newItem.shopifyVariantId), lineKey: data && data.key, designUrl: newItem.previewImage || null, addResponse: data || null });
       })
       .catch(function (err) {
