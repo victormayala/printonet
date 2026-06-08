@@ -1501,6 +1501,7 @@ function ProductForm({
 
 export function ShopifyImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [storeUrl, setStoreUrl] = useState("");
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1649,8 +1650,11 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
     setStoreUrl("");
     setToken("");
     setDisconnecting(false);
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["corporate_stores"] });
     toast({ title: "Shopify disconnected" });
   };
+
 
   if (loadingIntegration) {
     return <SupplierTabSkeleton />;
@@ -1797,6 +1801,7 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
 
 export function WooCommerceImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [siteUrl, setSiteUrl] = useState("");
   const [consumerKey, setConsumerKey] = useState("");
   const [consumerSecret, setConsumerSecret] = useState("");
@@ -1906,6 +1911,8 @@ export function WooCommerceImport({ onDone }: { onDone: () => void }) {
     setConsumerKey("");
     setConsumerSecret("");
     setDisconnecting(false);
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["corporate_stores"] });
     toast({ title: "WooCommerce disconnected" });
   };
 
