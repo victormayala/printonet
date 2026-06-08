@@ -139,6 +139,7 @@ import { StoreContentCMS } from "@/components/StoreContentCMS";
 import { StoreOverviewStats } from "@/components/StoreOverviewStats";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 import { ShopifyImport, WooCommerceImport } from "@/pages/Products";
+import ShopifyOrderSync from "@/components/ShopifyOrderSync";
 import { Link2 } from "lucide-react";
 import { IntegrationScriptPanel, isScriptMarkedInstalled } from "@/components/IntegrationScriptPanel";
 
