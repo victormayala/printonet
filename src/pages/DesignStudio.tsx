@@ -1203,7 +1203,8 @@ export default function DesignStudio({
   }
 
   function clampScaleInsidePrintArea(obj: any) {
-    const coords = getCurrentPrintAreaCoords();
+    const coords = pickNearestPrintAreaCoords(obj) || getCurrentPrintAreaCoords();
+
     if (!coords) return;
     const { px, py, pw, ph } = coords;
 
