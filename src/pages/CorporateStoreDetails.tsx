@@ -139,6 +139,7 @@ import { StoreContentCMS } from "@/components/StoreContentCMS";
 import { StoreOverviewStats } from "@/components/StoreOverviewStats";
 import { EditStoreDialog } from "@/pages/CorporateStores";
 import { ShopifyImport, WooCommerceImport } from "@/pages/Products";
+import ShopifyOrderSync from "@/components/ShopifyOrderSync";
 import { Link2 } from "lucide-react";
 import { IntegrationScriptPanel, isScriptMarkedInstalled } from "@/components/IntegrationScriptPanel";
 
@@ -614,7 +615,10 @@ export default function CorporateStoreDetails() {
               onChange={setScriptInstalled}
             />
             {store.store_type === "shopify" ? (
-              <ShopifyImport onDone={() => queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] })} />
+              <>
+                <ShopifyImport onDone={() => queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] })} />
+                <ShopifyOrderSync storeId={store.id} onDone={() => queryClient.invalidateQueries({ queryKey: ["orders-page", user?.id] })} />
+              </>
             ) : (
               <WooCommerceImport onDone={() => queryClient.invalidateQueries({ queryKey: ["corporate_stores", user?.id] })} />
             )}
