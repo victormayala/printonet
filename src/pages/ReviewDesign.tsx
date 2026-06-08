@@ -57,7 +57,7 @@ export default function ReviewDesign() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const [session, setSession] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
