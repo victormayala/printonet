@@ -37,26 +37,40 @@ export async function ensureSyncStore(
     .maybeSingle();
   if (integErr) throw integErr;
 
-  // 2. If integration already has a valid store, return it.
+  // 2. If integration already has a valid store, return it (un-archive if needed).
   if (integ?.store_id) {
     const { data: existing } = await supabase
       .from("corporate_stores")
-      .select("id")
+      .select("id, archived_at")
       .eq("id", integ.store_id)
       .maybeSingle();
-    if (existing?.id) return existing.id;
+    if (existing?.id) {
+      if ((existing as any).archived_at) {
+        await supabase
+          .from("corporate_stores")
+          .update({ archived_at: null, status: "active" })
+          .eq("id", existing.id);
+      }
+      return existing.id;
+    }
   }
 
   // 3. Reuse an existing dashboard-only store for this same integration URL if
   // the integration row lost its store_id during an older connect flow.
   const { data: existingByName } = await supabase
     .from("corporate_stores")
-    .select("id")
+    .select("id, archived_at")
     .eq("user_id", user_id)
     .eq("store_type", platform)
     .eq("custom_domain", store_url)
     .maybeSingle();
   if (existingByName?.id) {
+    if ((existingByName as any).archived_at) {
+      await supabase
+        .from("corporate_stores")
+        .update({ archived_at: null, status: "active" })
+        .eq("id", existingByName.id);
+    }
     if (integ?.id) {
       await supabase.from("store_integrations").update({ store_id: existingByName.id }).eq("id", integ.id);
     }
