@@ -1,0 +1,1 @@
+UPDATE public.corporate_stores SET archived_at = NULL, status = 'active' WHERE id = '49aa0197-fe29-4cd7-b0ba-b0a9b5eed1f6';
