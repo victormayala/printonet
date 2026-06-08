@@ -459,36 +459,44 @@
       console.error('[CustomizerLoader] SDK not loaded');
       return;
     }
-    window.CustomizerStudio.init({
-      apiUrl: API_URL,
-      baseUrl: BASE_URL,
-      cartUrl: CART_URL,
-      woocommerceSiteUrl: STORE_SITE_URL || '',
-    });
-    window.CustomizerStudio.open({
-      product: {
-        name: product.name,
-        category: product.category,
-        image_front: product.image_front || undefined,
-        image_back: product.image_back || undefined,
-        image_side1: product.image_side1 || undefined,
-        image_side2: product.image_side2 || undefined,
-        variants: product.variants || [],
-        print_areas: product.print_areas || undefined,
-      },
-      userId: product.user_id || USER_ID || null,
-      wcProductId: wcProductId || null,
-      wcVariationId: wcVariationId || null,
-      wcAttributes: augmentWooAttributesWithSelectLabels(wcAttributes, getWooProductForm()) || null,
-      shopifyVariantId: shopifyVariantId || null,
-      onComplete: function (result) {
-        var evt = new CustomEvent('customizer:complete', { detail: result });
-        document.dispatchEvent(evt);
-      },
-      onCancel: function () {
-        var evt = new CustomEvent('customizer:cancel');
-        document.dispatchEvent(evt);
-      },
+    resolveStoreId(function (_err, resolvedStoreId) {
+      var sid = resolvedStoreId || STORE_ID || '';
+      window.CustomizerStudio.init({
+        apiUrl: API_URL,
+        baseUrl: BASE_URL,
+        cartUrl: CART_URL,
+        storeId: sid,
+        woocommerceSiteUrl: STORE_SITE_URL || '',
+      });
+      window.CustomizerStudio.open({
+        product: {
+          id: product.id || undefined,
+          product_id: product.id || undefined,
+          name: product.name,
+          category: product.category,
+          base_price: product.base_price || undefined,
+          image_front: product.image_front || undefined,
+          image_back: product.image_back || undefined,
+          image_side1: product.image_side1 || undefined,
+          image_side2: product.image_side2 || undefined,
+          variants: product.variants || [],
+          print_areas: product.print_areas || undefined,
+        },
+        userId: product.user_id || USER_ID || null,
+        storeId: sid || null,
+        wcProductId: wcProductId || null,
+        wcVariationId: wcVariationId || null,
+        wcAttributes: augmentWooAttributesWithSelectLabels(wcAttributes, getWooProductForm()) || null,
+        shopifyVariantId: shopifyVariantId || null,
+        onComplete: function (result) {
+          var evt = new CustomEvent('customizer:complete', { detail: result });
+          document.dispatchEvent(evt);
+        },
+        onCancel: function () {
+          var evt = new CustomEvent('customizer:cancel');
+          document.dispatchEvent(evt);
+        },
+      });
     });
   }
 
@@ -642,7 +650,7 @@
     if (window.CustomizerStudio) return cb();
     var s = document.createElement('script');
     // Cache-bust to ensure store pages pick up latest SDK logic immediately.
-    s.src = BASE_URL + '/customizer-sdk.js?v=20260603-cart-thumb-selectors-fix';
+    s.src = BASE_URL + '/customizer-sdk.js?v=20260608-shopify-design-order-capture';
     s.onload = cb;
     s.onerror = function () { console.error('[CustomizerLoader] Failed to load SDK'); };
     document.head.appendChild(s);
