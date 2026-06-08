@@ -57,7 +57,7 @@ export default function ReviewDesign() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const [session, setSession] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +112,15 @@ export default function ReviewDesign() {
         setLoading(false);
       });
   }, [sessionId]);
+
+  // If this session is already in the local cart, mark it as added so the
+  // button shows disabled when arriving from a cart link.
+  useEffect(() => {
+    if (!sessionId) return;
+    if (items.some((i) => i.sessionId === sessionId)) {
+      setAddedToCart(true);
+    }
+  }, [items, sessionId]);
 
   const designOutput = session?.design_output as DesignOutput | null;
 
