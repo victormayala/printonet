@@ -89,7 +89,7 @@ export function ProductPrintAreasDialog({
     try {
       const { error } = await supabase
         .from("inventory_products")
-        .update({ print_areas: areas as unknown as Record<string, unknown> })
+        .update({ print_areas: areas as never })
         .eq("id", product.id);
       if (error) throw error;
       toast({ title: "Print areas saved", description: product.name });
