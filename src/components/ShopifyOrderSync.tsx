@@ -20,6 +20,13 @@ export default function ShopifyOrderSync({ storeId, onDone }: Props) {
         body: { storeId },
       });
       if (error) throw error;
+      const registrations = (data as any)?.registrations || {};
+      const failedRegistration = Object.values(registrations).find((r: any) => r && r.ok === false) as
+        | { error?: string }
+        | undefined;
+      if (failedRegistration?.error) {
+        throw new Error(failedRegistration.error);
+      }
       const backfilled = (data as any)?.backfill?.backfilled ?? 0;
       toast({
         title: "Shopify orders synced",
@@ -32,7 +39,12 @@ export default function ShopifyOrderSync({ storeId, onDone }: Props) {
     } catch (e) {
       toast({
         title: "Could not sync Shopify orders",
-        description: e instanceof Error ? e.message : "Unknown error",
+        description:
+          e instanceof Error && /protected customer data/i.test(e.message)
+            ? "Shopify is blocking Orders API/webhooks until the app is approved for protected customer data. New customized products will still be captured from the storefront when buyers add designs to cart."
+            : e instanceof Error
+              ? e.message
+              : "Unknown error",
         variant: "destructive",
       });
     } finally {
