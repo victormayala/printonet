@@ -210,9 +210,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    let dashboardStoreId: string | null = null;
     try {
-      dashboardStoreId = await ensureSyncStore(supabase, {
+      await ensureSyncStore(supabase, {
         user_id: userId,
         platform: "shopify",
         store_url: storeUrl,
