@@ -526,29 +526,13 @@ export default function ReviewDesign() {
               </a>
             </Button>
           ) : (
-            <Button variant="outline" className="flex-1" asChild>
+            <Button variant="outline" className={alreadyInCart || isCartPreviewLink ? "w-full" : "flex-1"} asChild>
               <Link to={`/embed/${sessionId}?allowCompleted=1`}>
                 <ArrowLeft className="h-4 w-4 mr-2" /> Edit Design
               </Link>
             </Button>
           )}
-          {alreadyInCart || isCartPreviewLink ? (
-            <Button
-              className="flex-[2]"
-              variant="default"
-              onClick={() => {
-                if (window.opener) {
-                  window.close();
-                } else if (returnUrl) {
-                  window.location.href = returnUrl;
-                } else {
-                  navigate(-1);
-                }
-              }}
-            >
-              Close Preview
-            </Button>
-          ) : (
+          {!alreadyInCart && !isCartPreviewLink && (
             <Button
               className="flex-[2]"
               onClick={() => void handleAddToCart()}
