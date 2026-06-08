@@ -73,7 +73,7 @@ export function ProductPrintAreasDialog({
           variant: "destructive",
         });
       }
-      setAreas(((data?.print_areas as Record<string, PrintArea>) ?? {}) || {});
+      setAreas(((data?.print_areas as unknown as Record<string, PrintArea>) ?? {}) || {});
       setLoading(false);
     })();
     return () => {
@@ -89,7 +89,7 @@ export function ProductPrintAreasDialog({
     try {
       const { error } = await supabase
         .from("inventory_products")
-        .update({ print_areas: areas })
+        .update({ print_areas: areas as unknown as Record<string, unknown> })
         .eq("id", product.id);
       if (error) throw error;
       toast({ title: "Print areas saved", description: product.name });
