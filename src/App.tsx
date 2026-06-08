@@ -100,7 +100,7 @@ const App = () => (
             <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/dashboard" replace />} />
             <Route element={<DashboardRoute />}>
               <Route path="/dashboard" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Dashboard />} />
-              <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Products initialTab="products" />} />
+              <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <HostedStoresRoute><Products initialTab="products" /></HostedStoresRoute>} />
               <Route path="/storefront" element={<HostedStoresRoute><Navigate to="/corporate-stores?tab=shopify" replace /></HostedStoresRoute>} />
               <Route path="/corporate-stores" element={<CorporateStores />} />
               <Route path="/corporate-stores/:id" element={<CorporateStoreDetails />} />
