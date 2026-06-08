@@ -3,6 +3,7 @@
 // Orders tab surfaces print files and design info for customized products.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { encode as encodeBase64 } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { ingestShopifyOrder } from "../_shared/shopify-orders.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
