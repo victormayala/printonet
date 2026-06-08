@@ -120,6 +120,7 @@ export default function ReviewDesign() {
     if (!sessionId) return;
     if (items.some((i) => i.sessionId === sessionId)) {
       setAddedToCart(true);
+      setAlreadyInCart(true);
     }
   }, [items, sessionId]);
 
