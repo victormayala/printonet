@@ -14,6 +14,7 @@ import PrintAreaEditor, { type PrintArea } from "@/components/PrintAreaEditor";
 import PrintAreaOverlay from "@/components/PrintAreaOverlay";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { normalizePrintAreasMap } from "@/lib/print-areas";
 
 type ViewKey = "front" | "back" | "side1" | "side2";
 const ALL_VIEWS: ViewKey[] = ["front", "back", "side1", "side2"];
@@ -53,7 +54,7 @@ export function ProductPrintAreasDialog({
 }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [areas, setAreas] = useState<Record<string, PrintArea>>({});
+  const [areas, setAreas] = useState<Record<string, PrintArea[]>>({});
 
   useEffect(() => {
     if (!open || !product) return;
@@ -73,7 +74,7 @@ export function ProductPrintAreasDialog({
           variant: "destructive",
         });
       }
-      setAreas(((data?.print_areas as unknown as Record<string, PrintArea>) ?? {}) || {});
+      setAreas(normalizePrintAreasMap(data?.print_areas as never));
       setLoading(false);
     })();
     return () => {
@@ -114,7 +115,7 @@ export function ProductPrintAreasDialog({
             <Crop className="h-4 w-4" /> Print areas
           </DialogTitle>
           <DialogDescription>
-            {product.name} · Define where customers can place designs on each view.
+            {product.name} · Define one or more print areas per view (e.g. chest + sleeve).
           </DialogDescription>
         </DialogHeader>
 
@@ -131,23 +132,25 @@ export function ProductPrintAreasDialog({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {availableViews.map((v) => {
                 const url = getMockup(product, v)!;
-                const area = areas[v] || null;
+                const list = areas[v] || [];
                 return (
                   <div key={v} className="space-y-2">
                     <Label className="text-xs font-semibold">{VIEW_LABEL[v]}</Label>
                     <div className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
                       <img src={url} alt={VIEW_LABEL[v]} className="w-full h-full object-contain" />
-                      {area && <PrintAreaOverlay imageUrl={url} printArea={area} />}
+                      {list.length > 0 && (
+                        <PrintAreaOverlay imageUrl={url} printArea={list} />
+                      )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <PrintAreaEditor
                         imageUrl={url}
                         sideLabel={VIEW_LABEL[v]}
-                        value={area}
+                        value={list}
                         onChange={(next) => {
                           setAreas((prev) => {
                             const copy = { ...prev };
-                            if (next) copy[v] = next;
+                            if (next && next.length > 0) copy[v] = next;
                             else delete copy[v];
                             return copy;
                           });
