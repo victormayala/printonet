@@ -530,23 +530,39 @@ export default function ReviewDesign() {
               </Link>
             </Button>
           )}
-          <Button
-            className="flex-[2]"
-            onClick={() => void handleAddToCart()}
-            disabled={addedToCart || sendingToWoo}
-            variant={addedToCart ? "outline" : "default"}
-          >
-            {sendingToWoo ? (
-              <><ShoppingCart className="h-4 w-4 mr-2" /> Sending to store…</>
-            ) : addedToCart ? (
-              <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
-            ) : (
-              <>
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Add to Cart{unitPrice > 0 ? ` · $${(unitPrice * quantity).toFixed(2)}` : ""}
-              </>
-            )}
-          </Button>
+          {alreadyInCart ? (
+            <Button
+              className="flex-[2]"
+              variant="default"
+              onClick={() => {
+                if (window.opener) {
+                  window.close();
+                } else {
+                  navigate("/cart");
+                }
+              }}
+            >
+              Close Preview
+            </Button>
+          ) : (
+            <Button
+              className="flex-[2]"
+              onClick={() => void handleAddToCart()}
+              disabled={addedToCart || sendingToWoo}
+              variant={addedToCart ? "outline" : "default"}
+            >
+              {sendingToWoo ? (
+                <><ShoppingCart className="h-4 w-4 mr-2" /> Sending to store…</>
+              ) : addedToCart ? (
+                <><CheckCircle className="h-4 w-4 mr-2" /> Added!</>
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Add to Cart{unitPrice > 0 ? ` · $${(unitPrice * quantity).toFixed(2)}` : ""}
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
