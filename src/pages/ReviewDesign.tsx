@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
@@ -56,6 +56,7 @@ interface SessionRow {
 export default function ReviewDesign() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { addItem, items } = useCart();
   const [session, setSession] = useState<SessionRow | null>(null);
@@ -76,6 +77,7 @@ export default function ReviewDesign() {
   const wcVariationId = searchParams.get("wcVariationId") || "";
   const wcAttributesParam = searchParams.get("wcAttributes") || "";
   const shopifyVariantId = searchParams.get("shopifyVariantId") || "";
+  const isCartPreviewLink = location.pathname.startsWith("/r/");
 
   useEffect(() => {
     if (!sessionId) return;
@@ -530,15 +532,17 @@ export default function ReviewDesign() {
               </Link>
             </Button>
           )}
-          {alreadyInCart ? (
+          {alreadyInCart || isCartPreviewLink ? (
             <Button
               className="flex-[2]"
               variant="default"
               onClick={() => {
                 if (window.opener) {
                   window.close();
+                } else if (returnUrl) {
+                  window.location.href = returnUrl;
                 } else {
-                  navigate("/cart");
+                  navigate(-1);
                 }
               }}
             >
