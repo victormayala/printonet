@@ -844,7 +844,7 @@ function ProductForm({
         unlimited_stock: unlimitedStock,
         stock: unlimitedStock ? null : (stockQty.trim() === "" ? 0 : Math.max(0, Math.floor(Number(stockQty) || 0))),
       },
-      print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
+      print_areas: (Object.keys(printAreas).length > 0 ? printAreas : {}) as never,
       decoration_methods: decorationMethods,
       price_source: priceReference,
       ...(productType === "variable" ? {
@@ -1013,7 +1013,7 @@ function ProductForm({
                 <>
                   <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
                     <img src={value} alt={label} className="w-full h-full object-contain" />
-                    {printAreas[printAreaKey] && (
+                    {printAreas[printAreaKey] && printAreas[printAreaKey].length > 0 && (
                       <PrintAreaOverlay imageUrl={value} printArea={printAreas[printAreaKey]} />
                     )}
                     <button
@@ -1027,17 +1027,14 @@ function ProductForm({
                     <PrintAreaEditor
                       imageUrl={value}
                       sideLabel={label}
-                      value={printAreas[printAreaKey] || null}
-                      onChange={(area) => {
-                        if (area) {
-                          setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
-                        } else {
-                          setPrintAreas((prev) => {
-                            const next = { ...prev };
-                            delete next[printAreaKey];
-                            return next;
-                          });
-                        }
+                      value={printAreas[printAreaKey] || []}
+                      onChange={(next) => {
+                        setPrintAreas((prev) => {
+                          const copy = { ...prev };
+                          if (next && next.length > 0) copy[printAreaKey] = next;
+                          else delete copy[printAreaKey];
+                          return copy;
+                        });
                       }}
                     />
                     <Button
