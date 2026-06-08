@@ -63,6 +63,7 @@ export default function ReviewDesign() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [alreadyInCart, setAlreadyInCart] = useState(false);
   const [sendingToWoo, setSendingToWoo] = useState(false);
   const [transferDebug, setTransferDebug] = useState("idle");
   const [basePriceFallback, setBasePriceFallback] = useState<number>(0);
