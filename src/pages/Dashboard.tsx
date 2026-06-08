@@ -143,8 +143,10 @@ export default function Dashboard() {
           .from("store_integrations")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user!.id)
+          .in("platform", ["shopify", "woocommerce"])
           .is("archived_at", null),
       ]);
+
 
       const allStoreRows = (storesRes.data || []) as StoreRow[];
       const storeRows = hostedStoresEnabled
