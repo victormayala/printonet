@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Search, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, RotateCw } from "lucide-react";
+import { Loader2, Package, Search, RefreshCw, Plus, Trash2, CloudUpload, ImagePlus, RotateCw, Crop } from "lucide-react";
 import { PushProductsDialog } from "@/components/PushProductsDialog";
 import { ProductLogoThumbnail, type LogoOverlay } from "@/components/ProductLogoThumbnail";
 import { EditProductLogoDialog, type EditableProduct } from "@/components/EditProductLogoDialog";
+import { ProductPrintAreasDialog, type PrintAreasProduct } from "@/components/ProductPrintAreasDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +57,7 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
   const [syncBusy, setSyncBusy] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
+  const [printAreasProduct, setPrintAreasProduct] = useState<PrintAreasProduct | null>(null);
 
   const isCorporate = store.store_type === "corporate";
   const queryKey = ["store_customizer_flags", store.id];
@@ -526,6 +528,21 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
                         )}
                         <Tooltip>
                           <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              disabled={busy || bulkBusy}
+                              onClick={() => setPrintAreasProduct(p)}
+                              aria-label={`Edit print areas for ${p.name}`}
+                            >
+                              <Crop className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Edit print areas</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <div className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted/60">
                               <span className="text-xs text-muted-foreground hidden sm:inline">
                                 {r.customizable ? "Customizable" : "Not customizable"}
@@ -580,6 +597,14 @@ export function StoreCustomizableProducts({ store }: { store: CorporateStore }) 
         open={!!editingProduct}
         onOpenChange={(v) => {
           if (!v) setEditingProduct(null);
+        }}
+        onSaved={() => qc.invalidateQueries({ queryKey })}
+      />
+      <ProductPrintAreasDialog
+        product={printAreasProduct}
+        open={!!printAreasProduct}
+        onOpenChange={(v) => {
+          if (!v) setPrintAreasProduct(null);
         }}
         onSaved={() => qc.invalidateQueries({ queryKey })}
       />
