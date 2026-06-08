@@ -85,7 +85,7 @@ type Product = {
   variants: any;
   is_active: boolean;
   created_at: string;
-  print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
+  print_areas?: Record<string, PrintArea | PrintArea[]> | null;
   product_type?: "single" | "variable" | null;
   status?: "draft" | "published" | null;
   weight?: number | null;
@@ -493,9 +493,15 @@ function ProductForm({
   const [saving, setSaving] = useState(false);
   const [savedOnce, setSavedOnce] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
-    (product?.print_areas as any) || {}
-  );
+  const [printAreas, setPrintAreas] = useState<Record<string, PrintArea[]>>(() => {
+    const raw = (product?.print_areas as Record<string, PrintArea | PrintArea[]> | null) || {};
+    const out: Record<string, PrintArea[]> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (!v) continue;
+      out[k] = Array.isArray(v) ? v : [v];
+    }
+    return out;
+  });
   const [detecting, setDetecting] = useState<string | null>(null);
   const [decorationMethods, setDecorationMethods] = useState<DecorationMethod[]>(
     (product?.decoration_methods as DecorationMethod[] | undefined) ?? []
@@ -770,7 +776,7 @@ function ProductForm({
       });
       if (error) throw error;
       if (data?.printArea) {
-        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: data.printArea }));
+        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: [data.printArea] }));
         toast({ title: `Print area detected for ${sideKey}` });
       } else {
         throw new Error("No print area detected");
@@ -838,7 +844,7 @@ function ProductForm({
         unlimited_stock: unlimitedStock,
         stock: unlimitedStock ? null : (stockQty.trim() === "" ? 0 : Math.max(0, Math.floor(Number(stockQty) || 0))),
       },
-      print_areas: Object.keys(printAreas).length > 0 ? printAreas : {},
+      print_areas: (Object.keys(printAreas).length > 0 ? printAreas : {}) as never,
       decoration_methods: decorationMethods,
       price_source: priceReference,
       ...(productType === "variable" ? {
@@ -1007,7 +1013,7 @@ function ProductForm({
                 <>
                   <div className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
                     <img src={value} alt={label} className="w-full h-full object-contain" />
-                    {printAreas[printAreaKey] && (
+                    {printAreas[printAreaKey] && printAreas[printAreaKey].length > 0 && (
                       <PrintAreaOverlay imageUrl={value} printArea={printAreas[printAreaKey]} />
                     )}
                     <button
@@ -1021,17 +1027,14 @@ function ProductForm({
                     <PrintAreaEditor
                       imageUrl={value}
                       sideLabel={label}
-                      value={printAreas[printAreaKey] || null}
-                      onChange={(area) => {
-                        if (area) {
-                          setPrintAreas((prev) => ({ ...prev, [printAreaKey]: area }));
-                        } else {
-                          setPrintAreas((prev) => {
-                            const next = { ...prev };
-                            delete next[printAreaKey];
-                            return next;
-                          });
-                        }
+                      value={printAreas[printAreaKey] || []}
+                      onChange={(next) => {
+                        setPrintAreas((prev) => {
+                          const copy = { ...prev };
+                          if (next && next.length > 0) copy[printAreaKey] = next;
+                          else delete copy[printAreaKey];
+                          return copy;
+                        });
                       }}
                     />
                     <Button
