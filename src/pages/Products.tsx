@@ -1650,8 +1650,11 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
     setStoreUrl("");
     setToken("");
     setDisconnecting(false);
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["corporate_stores"] });
     toast({ title: "Shopify disconnected" });
   };
+
 
   if (loadingIntegration) {
     return <SupplierTabSkeleton />;
