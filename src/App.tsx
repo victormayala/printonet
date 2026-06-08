@@ -100,13 +100,13 @@ const App = () => (
             <Route path="/" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Navigate to="/dashboard" replace />} />
             <Route element={<DashboardRoute />}>
               <Route path="/dashboard" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Dashboard />} />
-              <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <Products initialTab="products" />} />
+              <Route path="/products" element={isPotentialStoreHost ? <StoreShop customDomainHost={currentHost} /> : <HostedStoresRoute><Products initialTab="products" /></HostedStoresRoute>} />
               <Route path="/storefront" element={<HostedStoresRoute><Navigate to="/corporate-stores?tab=shopify" replace /></HostedStoresRoute>} />
               <Route path="/corporate-stores" element={<CorporateStores />} />
               <Route path="/corporate-stores/:id" element={<CorporateStoreDetails />} />
               <Route path="/websites" element={<Navigate to="/corporate-stores" replace />} />
               <Route path="/websites/:id" element={<HostedStoresRoute><WebsiteDetails /></HostedStoresRoute>} />
-              <Route path="/suppliers" element={<Products initialTab="suppliers" />} />
+              <Route path="/suppliers" element={<HostedStoresRoute><Products initialTab="suppliers" /></HostedStoresRoute>} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/customizer" element={<Navigate to="/corporate-stores" replace />} />
               <Route path="/customizer/brand" element={<Navigate to="/corporate-stores" replace />} />
