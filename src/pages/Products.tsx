@@ -1801,6 +1801,7 @@ export function ShopifyImport({ onDone }: { onDone: () => void }) {
 
 export function WooCommerceImport({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [siteUrl, setSiteUrl] = useState("");
   const [consumerKey, setConsumerKey] = useState("");
   const [consumerSecret, setConsumerSecret] = useState("");
