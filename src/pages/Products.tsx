@@ -85,7 +85,7 @@ type Product = {
   variants: any;
   is_active: boolean;
   created_at: string;
-  print_areas?: Record<string, { x: number; y: number; width: number; height: number }> | null;
+  print_areas?: Record<string, PrintArea | PrintArea[]> | null;
   product_type?: "single" | "variable" | null;
   status?: "draft" | "published" | null;
   weight?: number | null;
@@ -493,9 +493,15 @@ function ProductForm({
   const [saving, setSaving] = useState(false);
   const [savedOnce, setSavedOnce] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [printAreas, setPrintAreas] = useState<Record<string, { x: number; y: number; width: number; height: number }>>(
-    (product?.print_areas as any) || {}
-  );
+  const [printAreas, setPrintAreas] = useState<Record<string, PrintArea[]>>(() => {
+    const raw = (product?.print_areas as Record<string, PrintArea | PrintArea[]> | null) || {};
+    const out: Record<string, PrintArea[]> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (!v) continue;
+      out[k] = Array.isArray(v) ? v : [v];
+    }
+    return out;
+  });
   const [detecting, setDetecting] = useState<string | null>(null);
   const [decorationMethods, setDecorationMethods] = useState<DecorationMethod[]>(
     (product?.decoration_methods as DecorationMethod[] | undefined) ?? []
@@ -770,7 +776,7 @@ function ProductForm({
       });
       if (error) throw error;
       if (data?.printArea) {
-        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: data.printArea }));
+        setPrintAreas((prev) => ({ ...prev, [printAreaKey]: [data.printArea] }));
         toast({ title: `Print area detected for ${sideKey}` });
       } else {
         throw new Error("No print area detected");
