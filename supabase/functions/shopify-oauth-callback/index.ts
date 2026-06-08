@@ -221,6 +221,41 @@ Deno.serve(async (req) => {
       return new Response("Shopify connected, but dashboard store creation failed. Please sync products and try again.", { status: 500 });
     }
 
+    // ---- Auto-register orders webhooks so the Printonet Orders tab populates ----
+    // Best-effort: failures here are non-fatal (e.g. dev stores without Orders API access).
+    try {
+      const ORDERS_WEBHOOK_URL = `${Deno.env.get("SUPABASE_URL")}/functions/v1/shopify-orders-webhook`;
+      for (const topic of ["orders/paid", "orders/create", "orders/updated"]) {
+        try {
+          const listRes = await fetch(
+            `https://${shop}/admin/api/2025-01/webhooks.json?topic=${encodeURIComponent(topic)}`,
+            { headers: { "X-Shopify-Access-Token": accessToken } },
+          );
+          let exists = false;
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            exists = (listData.webhooks || []).some((w: any) => w.address === ORDERS_WEBHOOK_URL);
+          }
+          if (!exists) {
+            const createRes = await fetch(`https://${shop}/admin/api/2025-01/webhooks.json`, {
+              method: "POST",
+              headers: { "X-Shopify-Access-Token": accessToken, "Content-Type": "application/json" },
+              body: JSON.stringify({ webhook: { topic, address: ORDERS_WEBHOOK_URL, format: "json" } }),
+            });
+            if (!createRes.ok) {
+              console.error(`Webhook ${topic} register failed:`, await createRes.text());
+            } else {
+              console.log(`Registered Shopify webhook: ${topic}`);
+            }
+          }
+        } catch (wErr) {
+          console.error(`Webhook ${topic} error:`, wErr);
+        }
+      }
+    } catch (webhookErr) {
+      console.error("Orders webhook auto-registration failed:", webhookErr);
+    }
+
     // Redirect user back to the app via a proper 302 + meta-refresh fallback.
     // We avoid an HTML interstitial because some contexts (Shopify admin / new-tab popups)
     // render the response as plain text if Content-Type isn't honored.
