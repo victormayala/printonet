@@ -958,17 +958,22 @@ export default function DesignStudio({
     return resolvedViewImages[activeView] ?? imageForViewWithVariant(activeView);
   }
 
-  // Get print area for current view (percentage-based). When a view has
-  // multiple print areas, we use their bounding union as the containment region
-  // so legacy single-area logic keeps working without changes.
-  function getCurrentPrintArea(): { x: number; y: number; width: number; height: number } | null {
-    if (!invProduct?.print_areas) return null;
+  // Get all print-area rects for the current view (percentage-based).
+  function getCurrentPrintAreasList(): Array<{ x: number; y: number; width: number; height: number }> {
+    if (!invProduct?.print_areas) return [];
     const viewKey = activeView === "side1" ? "side1" : activeView === "side2" ? "side2" : activeView;
     const raw = (invProduct.print_areas as Record<string, unknown>)[viewKey];
-    if (!raw) return null;
+    if (!raw) return [];
     const list = Array.isArray(raw)
       ? (raw as Array<{ x: number; y: number; width: number; height: number }>)
       : [raw as { x: number; y: number; width: number; height: number }];
+    return list.filter((a) => a && typeof a.x === "number" && typeof a.width === "number");
+  }
+
+  // Bounding union of all print areas for the current view. Used for centering helpers
+  // and as a fallback when only a single containment region is needed.
+  function getCurrentPrintArea(): { x: number; y: number; width: number; height: number } | null {
+    const list = getCurrentPrintAreasList();
     if (list.length === 0) return null;
     if (list.length === 1) return list[0];
     let minX = 100, minY = 100, maxX = 0, maxY = 0;
@@ -981,38 +986,41 @@ export default function DesignStudio({
     return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }
 
+
   const PRINT_AREA_RECT_NAME = "__print_area_boundary__";
 
-  // Add/update print area boundary rect on canvas
+  // Add/update print area boundary rect(s) on canvas
   function updatePrintAreaRect(canvas: FabricCanvas) {
-    // Remove existing boundary
+    // Remove existing boundaries
     const existing = canvas.getObjects().filter((o: any) => o.customName === PRINT_AREA_RECT_NAME);
     existing.forEach((o) => canvas.remove(o));
 
-    const pa = getCurrentPrintArea();
-    if (!pa || !showPrintAreaBoundary) return;
+    if (!showPrintAreaBoundary) return;
+    const list = getCurrentPrintAreasList();
+    if (list.length === 0) return;
 
-    const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
-
-    const boundary = new Rect({
-      left: px,
-      top: py,
-      width: pw,
-      height: ph,
-      fill: "transparent",
-      stroke: "#6366f1",
-      strokeWidth: 2,
-      strokeDashArray: [8, 4],
-      selectable: false,
-      evented: false,
-      excludeFromExport: true,
-    });
-    (boundary as any).customName = PRINT_AREA_RECT_NAME;
-    canvas.add(boundary);
-    // Send to back so it's behind design objects
-    canvas.sendObjectToBack(boundary);
+    for (const pa of list) {
+      const { px, py, pw, ph } = printAreaToCanvasCoords(pa);
+      const boundary = new Rect({
+        left: px,
+        top: py,
+        width: pw,
+        height: ph,
+        fill: "transparent",
+        stroke: "#6366f1",
+        strokeWidth: 2,
+        strokeDashArray: [8, 4],
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+      });
+      (boundary as any).customName = PRINT_AREA_RECT_NAME;
+      canvas.add(boundary);
+      canvas.sendObjectToBack(boundary);
+    }
     canvas.renderAll();
   }
+
 
   // Toggle print area boundary visibility / update when image bounds change
   useEffect(() => {
@@ -1022,29 +1030,72 @@ export default function DesignStudio({
 
   // Hard containment: clamp movement to the print area and revert unsupported transforms that exit it
   function getCurrentPrintAreaCoords() {
+    const list = getCurrentPrintAreaCoordsList();
+    if (list.length === 0) return null;
+    // Legacy single-region behaviour: return bounding union
+    if (list.length === 1) return list[0];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const c of list) {
+      minX = Math.min(minX, c.px);
+      minY = Math.min(minY, c.py);
+      maxX = Math.max(maxX, c.px + c.pw);
+      maxY = Math.max(maxY, c.py + c.ph);
+    }
+    return { px: minX, py: minY, pw: maxX - minX, ph: maxY - minY };
+  }
+
+  function getCurrentPrintAreaCoordsList(): Array<{ px: number; py: number; pw: number; ph: number }> {
     const canvas = fabricRef.current;
-    if (!canvas) return null;
+    if (!canvas) return [];
     const product = invProductRef.current;
-    if (!product?.print_areas) return null;
+    if (!product?.print_areas) return [];
     const viewKey = currentCanvasViewRef.current === "side1" ? "side1" : currentCanvasViewRef.current === "side2" ? "side2" : currentCanvasViewRef.current;
-    const pa = product.print_areas[viewKey];
-    if (!pa) return null;
-    return printAreaToCanvasCoords(pa);
+    const raw = (product.print_areas as Record<string, unknown>)[viewKey];
+    if (!raw) return [];
+    const list = Array.isArray(raw)
+      ? (raw as Array<{ x: number; y: number; width: number; height: number }>)
+      : [raw as { x: number; y: number; width: number; height: number }];
+    return list
+      .filter((a) => a && typeof a.x === "number" && typeof a.width === "number")
+      .map((a) => printAreaToCanvasCoords(a));
   }
 
   function isObjectInsidePrintArea(obj: any) {
-    const coords = getCurrentPrintAreaCoords();
-    if (!coords) return true;
-    const { px, py, pw, ph } = coords;
-    const TOLERANCE = 2; // pixels of slack to prevent edge-locking
+    const list = getCurrentPrintAreaCoordsList();
+    if (list.length === 0) return true;
+    const TOLERANCE = 2;
     const bound = obj.getBoundingRect();
-    return (
-      bound.left >= px - TOLERANCE &&
-      bound.top >= py - TOLERANCE &&
-      bound.left + bound.width <= px + pw + TOLERANCE &&
-      bound.top + bound.height <= py + ph + TOLERANCE
+    return list.some(
+      ({ px, py, pw, ph }) =>
+        bound.left >= px - TOLERANCE &&
+        bound.top >= py - TOLERANCE &&
+        bound.left + bound.width <= px + pw + TOLERANCE &&
+        bound.top + bound.height <= py + ph + TOLERANCE,
     );
   }
+
+  // Picks the print-area region whose center is nearest the object's center.
+  function pickNearestPrintAreaCoords(obj: any) {
+    const list = getCurrentPrintAreaCoordsList();
+    if (list.length === 0) return null;
+    if (list.length === 1) return list[0];
+    const bound = obj.getBoundingRect();
+    const cx = bound.left + bound.width / 2;
+    const cy = bound.top + bound.height / 2;
+    let best = list[0];
+    let bestD = Infinity;
+    for (const c of list) {
+      const dx = c.px + c.pw / 2 - cx;
+      const dy = c.py + c.ph / 2 - cy;
+      const d = dx * dx + dy * dy;
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
 
   function rememberLastValidTransform(obj: any) {
     if (!obj || (obj as any).customName === PRINT_AREA_RECT_NAME) return;
@@ -1072,7 +1123,8 @@ export default function DesignStudio({
   }
 
   function clampObjectPositionInsidePrintArea(obj: any) {
-    const coords = getCurrentPrintAreaCoords();
+    const coords = pickNearestPrintAreaCoords(obj) || getCurrentPrintAreaCoords();
+
     if (!coords || !obj) return false;
 
     const { px, py, pw, ph } = coords;
@@ -1151,7 +1203,8 @@ export default function DesignStudio({
   }
 
   function clampScaleInsidePrintArea(obj: any) {
-    const coords = getCurrentPrintAreaCoords();
+    const coords = pickNearestPrintAreaCoords(obj) || getCurrentPrintAreaCoords();
+
     if (!coords) return;
     const { px, py, pw, ph } = coords;
 
