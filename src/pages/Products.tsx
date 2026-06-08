@@ -1911,6 +1911,8 @@ export function WooCommerceImport({ onDone }: { onDone: () => void }) {
     setConsumerKey("");
     setConsumerSecret("");
     setDisconnecting(false);
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["corporate_stores"] });
     toast({ title: "WooCommerce disconnected" });
   };
 
